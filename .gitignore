@@ -1,0 +1,21 @@
+# Isolated DSH homes (contain copied real sessions/credentials - never commit)
+.spike-home*/
+.spike-homes/
+
+# Node / build
+node_modules/
+.pnpm-store/
+*.log
+*.pid
+
+# Spike runtime evidence that may contain real session content
+spike/**/evidence/server/
+spike/**/evidence/screenshots/
+spike/**/evidence/real-home-quarantine/
+spike/**/evidence/*.png
+spike/**/evidence/*.webm
+spike/**/evidence/*.zip
+
+# OS
+Thumbs.db
+.DS_Store
