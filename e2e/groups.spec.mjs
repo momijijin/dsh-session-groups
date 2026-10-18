@@ -16,7 +16,7 @@
 // Exit codes: 0 = all 12 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -96,6 +96,16 @@ function spawnPwsh(script, args) {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     timeout: 300000,
+  });
+}
+
+/** Fire-and-collect for helper phases whose spawned server would otherwise inherit
+ *  our stdio pipes and keep spawnSync waiting for EOF until the server stops. */
+function spawnPwshQuiet(script, args) {
+  return spawnSync('pwsh', ['-NoProfile', '-File', script, ...args], {
+    cwd: REPO_ROOT,
+    stdio: 'ignore',
+    timeout: 180000,
   });
 }
 
@@ -359,16 +369,31 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
   };
 
   const restartServer = async () => {
-    const stop = spawnPwsh(join(SCRIPTS_QA, 'stop-web.ps1'), ['-Port', String(args.port), '-QaHome', QA_HOME, '-EvidenceDir', evidenceDir]);
-    if (stop.status !== 0) throw new Error(`stop-web failed: ${stop.stderr || stop.stdout}`);
-    const start = spawnPwsh(join(SCRIPTS_QA, 'start-web.ps1'), ['-Port', String(args.port), '-QaHome', QA_HOME, '-EvidenceDir', evidenceDir]);
-    if (start.status !== 0) throw new Error(`start-web failed: ${start.stderr || start.stdout}`);
+    console.log('    · restart: stopping server');
+    const stop = spawnPwshQuiet(join(SCRIPTS_QA, 'stop-web.ps1'), ['-Port', String(args.port), '-QaHome', QA_HOME, '-EvidenceDir', evidenceDir]);
+    if (stop.status !== 0) throw new Error(`stop-web failed with exit ${stop.status}`);
+    console.log('    · restart: starting server');
+    const start = spawnPwshQuiet(join(SCRIPTS_QA, 'start-web.ps1'), ['-Port', String(args.port), '-QaHome', QA_HOME, '-EvidenceDir', evidenceDir]);
+    if (start.status !== 0) throw new Error(`start-web failed with exit ${start.status}`);
+    console.log('    · restart: navigating to fresh token URL');
     const stateNow = webState(evidenceDir);
     if (!stateNow?.url) throw new Error('web.json missing token url after restart');
     await driver.navigate(stateNow.url);
     await driver.waitFor(`typeof globalThis.__DSH_BOOT__ !== 'undefined'`, { timeoutMs: 30000, description: 'app boot after restart' });
     await ui.dismissOverlay();
     await sleep(500);
+  };
+
+  const safeScreenshot = async (path) => {
+    if (!args.screenshot) return null;
+    try {
+      return await Promise.race([
+        driver.screenshot(path),
+        sleep(5000).then(() => null),
+      ]);
+    } catch {
+      return null;
+    }
   };
 
   const runAudit = (extraArgs) => spawnPwsh(join(SCRIPTS_QA, 'audit.ps1'), [
@@ -378,6 +403,90 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
     '-EvidenceDir', evidenceDir,
     ...extraArgs,
   ]);
+
+  /** Session ids that have a real session directory under the isolated home
+   *  (a blank placeholder without a log cannot be renamed/archived by the host). */
+  const hostSessionIds = () => {
+    const ids = new Set();
+    try {
+      const sessionsRoot = join(QA_HOME, 'sessions');
+      for (const workspaceDir of readdirSync(sessionsRoot, { withFileTypes: true })) {
+        if (!workspaceDir.isDirectory()) continue;
+        for (const sessionDir of readdirSync(join(sessionsRoot, workspaceDir.name), { withFileTypes: true })) {
+          if (sessionDir.isDirectory()) ids.add(sessionDir.name);
+        }
+      }
+    } catch { /* sessions root missing */ }
+    return ids;
+  };
+
+  /** Registry-global archived session ids from the isolated home. */
+  const archivedSessionIds = () => {
+    try {
+      const doc = JSON.parse(readFileSync(join(QA_HOME, 'storages', 'workspace.json'), 'utf8'));
+      return new Set(doc?.global?.archivedSessionIds ?? []);
+    } catch {
+      return new Set();
+    }
+  };
+
+  /** Owning workspace title from the isolated home's workspace registry. */
+  const workspaceTitleForSession = (sessionId) => {
+    try {
+      const doc = JSON.parse(readFileSync(join(QA_HOME, 'storages', 'workspace.json'), 'utf8'));
+      for (const workspace of Object.values(doc?.tables?.workspaces ?? {})) {
+        if (Array.isArray(workspace.sessionIds) && workspace.sessionIds.includes(sessionId)) return String(workspace.title ?? '');
+      }
+    } catch { /* registry unreadable */ }
+    return '';
+  };
+
+  const waitForBodyText = async (text, waitMs = 6000) => {
+    const end = Date.now() + waitMs;
+    while (Date.now() < end) {
+      if ((await ui.bodyText()).includes(text)) return true;
+      await sleep(250);
+    }
+    return false;
+  };
+
+  /** Expand the official workspace row that owns `sessionId`, so its sessions render. */
+  const revealOfficialSession = async (sessionId, title) => {
+    const workspaceTitle = workspaceTitleForSession(sessionId);
+    const expanded = await driver.evaluate(`(() => {
+      const rows = Array.from(document.querySelectorAll('[role="treeitem"][data-row-key^="workspace:"]'));
+      const wanted = ${JSON.stringify(workspaceTitle)};
+      const row = wanted ? rows.find((el) => (el.textContent ?? '').includes(wanted)) : null;
+      if (!row) return { found: false, rows: rows.map((el) => (el.textContent ?? '').trim()).slice(0, 10) };
+      if (row.getAttribute('aria-expanded') !== 'true') row.click();
+      return { found: true, expanded: row.getAttribute('aria-expanded') };
+    })()`);
+    await sleep(600);
+    return { workspaceTitle, ...expanded };
+  };
+
+  /** Official content search fallback (button[aria-label=search] + text input). */
+  const searchOfficialSidebar = async (title) => {
+    const opened = await driver.evaluate(`(() => {
+      const button = Array.from(document.querySelectorAll('button[aria-label]'))
+        .find((el) => /搜索|search/i.test(el.getAttribute('aria-label') ?? ''));
+      if (!button) return false;
+      button.click();
+      return true;
+    })()`);
+    if (!opened) return false;
+    await sleep(500);
+    const typed = await driver.evaluate(`(() => {
+      const input = document.querySelector('input[type="text"][placeholder]');
+      if (!input) return false;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      setter?.call(input, ${JSON.stringify(title)});
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    })()`);
+    await sleep(900);
+    return typed;
+  };
 
   return [
     {
@@ -575,6 +684,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const restored = (await ui.sessions()).find((row) => row.sid === target);
         if (!restored) throw new Error('unarchived session did not return');
         if (targetGroup && restored.groupId !== targetGroup) throw new Error(`unarchived session returned to ${restored.groupId}, expected ${targetGroup}`);
+        state.archivedSession = target;
         return { session: target, group: targetGroup };
       },
     },
@@ -584,28 +694,64 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
       async run() {
         const rows = await ui.sessions();
         const registered = workspaceSessionIds();
-        // Rename a session the official workspace sidebar actually renders
-        // (registered in workspace.json); synthetic fixture fillers appear only
-        // in the global tree.
-        const target = rows.find((row) => row.groupId === state.groups.a && registered.has(row.sid) && !/新会话/.test(row.text || ''))?.sid
-          ?? rows.find((row) => row.groupId && registered.has(row.sid) && !/新会话/.test(row.text || ''))?.sid;
-        if (!target) throw new Error('no registered rendered non-blank session available to rename');
+        const archivedIds = archivedSessionIds();
+        // Prefer the session created in step 6: it is current, not archived, and the
+        // blank->title rename path is an explicit V1 contract. Fall back to any
+        // registered, rendered, non-blank, non-archived session.
+        const isBlankRow = (row) => /新会话/.test(row.text || '') || row.sid === state.createdSession;
+        const hostIds = hostSessionIds();
+        const usable = (row) => row
+          && !isBlankRow(row)
+          && registered.has(row.sid)
+          && hostIds.has(row.sid)
+          && !archivedIds.has(row.sid)
+          && row.sid !== state.archivedSession;
+        const realFirst = (row) => usable(row) && !/^session-00000000-/.test(row.sid);
+        const candidates = [
+          rows.find((row) => realFirst(row) && row.groupId === state.groups.a),
+          rows.find((row) => realFirst(row) && row.groupId),
+          rows.find((row) => usable(row) && row.groupId === state.groups.a),
+          rows.find((row) => row.sid === state.createdSession && hostIds.has(row.sid)),
+        ].filter(Boolean);
+        const target = candidates[0]?.sid;
+        if (!target) throw new Error('no suitable session available to rename');
+        console.log('    · step 8: target=' + target);
         await ui.openSessionMenu(target);
         const items = await ui.menuItems();
         if (!items.some((text) => /重命名/.test(text))) throw new Error(`session menu has no rename entry (items: ${JSON.stringify(items.slice(0, 20))})`);
         if (items.some((text) => /删除/.test(text))) throw new Error('session menu must not offer delete (D5)');
         await ui.clickMenuItem(/重命名|Rename/);
         const newTitle = `E2E-重命名-${Date.now().toString(36).slice(-4)}`;
+        console.log('    · step 8: rename dialog');
         await ui.fillDialog(newTitle);
         await ui.confirmDialog();
         await ui.waitFor(`Array.from(document.querySelectorAll(${JSON.stringify(SESSION)}), (el) => (el.textContent ?? '')).some((t) => t.includes(${JSON.stringify(newTitle)}))`, 'renamed row shows new title');
+        console.log('    · step 8: switching back to workspace view');
         await ui.toggleMode();
         await ui.waitWorkspaceView();
-        await sleep(500);
-        const body = await ui.bodyText();
-        if (!body.includes(newTitle)) throw new Error(`official sidebar did not show renamed title '${newTitle}' (second title source?)`);
+        await sleep(600);
+        let appeared = await waitForBodyText(newTitle, 3000);
+        let reveal = null;
+        let searched = false;
+        if (!appeared) {
+          // The official browser only renders a workspace's sessions when that
+          // workspace row is expanded.
+          console.log('    · step 8: expanding owning workspace');
+          reveal = await revealOfficialSession(target, newTitle);
+          appeared = await waitForBodyText(newTitle, 6000);
+        }
+        if (!appeared) {
+          console.log('    · step 8: search fallback');
+          searched = await searchOfficialSidebar(newTitle);
+          appeared = await waitForBodyText(newTitle, 6000);
+        }
+        if (!appeared) {
+          const expandedRows = await driver.evaluate(`Array.from(document.querySelectorAll('[role="treeitem"][aria-expanded]')).map((el) => ({ key: el.getAttribute('data-row-key'), expanded: el.getAttribute('aria-expanded'), text: (el.textContent ?? '').trim().slice(0, 60) })).slice(0, 12)`);
+          const bodyTail = (await ui.bodyText()).slice(-1200);
+          throw new Error(`official sidebar did not show renamed title '${newTitle}' (workspace=${JSON.stringify(reveal)} search=${searched} rows=${JSON.stringify(expandedRows)} bodyTail=${JSON.stringify(bodyTail)})`);
+        }
         state.renamedTitle = newTitle;
-        return { session: target, title: newTitle };
+        return { session: target, title: newTitle, reveal, searched };
       },
     },
     {
@@ -645,6 +791,10 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
       async run() {
         const beforeGroups = await ui.groups();
         const beforeFilter = await ui.filterState();
+        const isBlankRow = (row) => /新会话/.test(row.text || '') || row.sid === state.createdSession;
+        const realOrder = async () => (await ui.sessions()).filter((row) => row.groupId === state.groups.a && !isBlankRow(row)).map((row) => row.sid);
+        const beforeOrder = await realOrder();
+        const beforeBlankActive = (await ui.sessions()).filter((row) => isBlankRow(row) && row.groupId === state.groups.a).map((row) => row.sid);
         await restartServer();
         const mode = (await ui.attrs(TOGGLE, 'data-mode'))[0] ?? null;
         if (mode !== 'groups') await ui.toggleMode();
@@ -658,22 +808,42 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (JSON.stringify(beforeByName) !== JSON.stringify(afterByName)) {
           throw new Error('group names changed across restart');
         }
-        const reordered = state.reordered?.order;
-        if (reordered?.length) {
-          const actual = await ui.sessionIdsInGroup(state.reordered.group);
-          if (JSON.stringify(actual) !== JSON.stringify(reordered)) {
-            throw new Error(`group order not persisted across restart: ${JSON.stringify(reordered)} -> ${JSON.stringify(actual)}`);
-          }
+        const actual = await realOrder();
+        if (JSON.stringify(actual) !== JSON.stringify(beforeOrder)) {
+          throw new Error(`non-blank group order not persisted across restart: ${JSON.stringify(beforeOrder)} -> ${JSON.stringify(actual)}`);
         }
         const afterFilter = await ui.filterState();
         if (beforeFilter && afterFilter && beforeFilter !== afterFilter) {
-          throw new Error(`archive filter not persisted: ${beforeFilter} -> ${afterFilter}`);
+          throw new Error(`archive filter not persisted across restart: ${beforeFilter} -> ${afterFilter}`);
+        }
+        // Blank sessions are temporary placeholders. DSH may drop the old blank id and
+        // allocate a new one on restart (drift); when that happens the OLD id must not
+        // reappear inside a group, and the NEW blank must sit in the ungrouped inbox
+        // (never auto-assigned to a group). When the id is stable (no drift),
+        // continuity of the same current blank is fine.
+        const afterRows = await ui.sessions();
+        const blankIdsBefore = new Set(beforeBlankActive);
+        const blankIdsAfter = afterRows.filter((row) => isBlankRow(row)).map((row) => row.sid);
+        const oldBlankKept = blankIdsAfter.some((sid) => blankIdsBefore.has(sid));
+        const drift = blankIdsBefore.size > 0 && blankIdsAfter.length > 0 && !oldBlankKept;
+        const blankLifecycle = { drift, before: [...blankIdsBefore], after: blankIdsAfter, oldResurrected: [], autoGroupedNew: [] };
+        if (drift) {
+          const oldResurrected = afterRows.filter((row) => blankIdsBefore.has(row.sid) && row.groupId !== null);
+          if (oldResurrected.length > 0) {
+            throw new Error(`old blank id resurrected into a group after restart drift: ${JSON.stringify(oldResurrected)}`);
+          }
+          const newBlankIds = blankIdsAfter.filter((sid) => !blankIdsBefore.has(sid));
+          const autoGroupedNew = afterRows.filter((row) => newBlankIds.includes(row.sid) && row.groupId !== null);
+          if (autoGroupedNew.length > 0) {
+            throw new Error(`new blank session auto-assigned to a group after restart: ${JSON.stringify(autoGroupedNew.map((row) => ({ sid: row.sid, groupId: row.groupId })))}`);
+          }
+          blankLifecycle.autoGroupedNew = [];
         }
         if (state.renamedTitle) {
           const body = await ui.bodyText();
           if (!body.includes(state.renamedTitle)) throw new Error('renamed title lost after restart');
         }
-        return { groups: afterGroups.length, filter: afterFilter };
+        return { groups: afterGroups.length, filter: afterFilter, blankLifecycle };
       },
     },
     {
@@ -719,6 +889,15 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
   ];
 }
 
+/** Capture a screenshot but never let a broken CDP session hang the run. */
+async function captureScreenshot(driver, args, path) {
+  if (!args.screenshot) return null;
+  try {
+    return await Promise.race([driver.screenshot(path), sleep(5000).then(() => null)]);
+  } catch {
+    return null;
+  }
+}
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
@@ -785,7 +964,7 @@ async function main() {
       evidence.result = 'BLOCKED';
       evidence.blockedReason = `client UI missing: ${TOGGLE} not rendered (client bundle not loaded or plugin not installed)`;
       console.log(`[BLOCKED] ${evidence.blockedReason}`);
-      await driver.screenshot(join(evidenceDir, 'screenshots', 'e2e', '00-blocked-no-toggle.png')).catch(() => null);
+      await captureScreenshot(driver, args, join(evidenceDir, 'screenshots', 'e2e', '00-blocked-no-toggle.png'));
       return 3;
     }
 
@@ -793,14 +972,18 @@ async function main() {
     for (const step of steps) {
       const started = Date.now();
       try {
-        const detail = await step.run();
+        const stepTimeoutMs = Number(process.env.E2E_STEP_TIMEOUT_MS ?? 90000);
+        const detail = await Promise.race([
+          step.run(),
+          sleep(stepTimeoutMs).then(() => { throw new Error(`step timed out after ${stepTimeoutMs}ms`); }),
+        ]);
         const screenshot = await (args.screenshot
-          ? driver.screenshot(join(evidenceDir, 'screenshots', 'e2e', `${String(step.id).padStart(2, '0')}-${step.name}.png`)).catch(() => null)
+          ? captureScreenshot(driver, args, join(evidenceDir, 'screenshots', 'e2e', `${String(step.id).padStart(2, '0')}-${step.name}.png`)).catch(() => null)
           : null);
         evidence.steps.push({ id: step.id, name: step.name, status: 'PASS', ms: Date.now() - started, detail, screenshot });
         console.log(`  [PASS] step ${step.id}: ${step.name}`);
       } catch (error) {
-        const screenshot = await driver.screenshot(join(evidenceDir, 'screenshots', 'e2e', `${String(step.id).padStart(2, '0')}-${step.name}-FAIL.png`)).catch(() => null);
+        const screenshot = await captureScreenshot(driver, args, join(evidenceDir, 'screenshots', 'e2e', `${String(step.id).padStart(2, '0')}-${step.name}-FAIL.png`)).catch(() => null);
         const blocked = error?.blocked === true;
         evidence.steps.push({
           id: step.id,
@@ -852,6 +1035,18 @@ main().then((code) => { process.exitCode = code; }).catch((error) => {
   console.error(error);
   process.exitCode = 2;
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

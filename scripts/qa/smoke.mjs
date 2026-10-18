@@ -606,18 +606,23 @@ async function browserChecks(args, evidence, tokenUrl) {
         expression: `(async () => {
           const response = await fetch(${JSON.stringify(args.loadPath.replace(/^\//, ''))}, { headers: { accept: 'application/json' } });
           const text = await response.text();
-          return { status: response.status, body: text.slice(0, 300) };
+          let ok = false;
+          let revision = null;
+          try {
+            const parsed = JSON.parse(text);
+            ok = parsed?.ok === true;
+            revision = parsed?.revision ?? null;
+          } catch { /* non-JSON body */ }
+          return { status: response.status, ok, revision, bodyLength: text.length };
         })()`,
         awaitPromise: true,
         returnByValue: true,
       }, sessionId);
       const value = fetchResult.result?.value || {};
-      let parsed = null;
-      try { parsed = JSON.parse(value.body || ''); } catch { }
-      const ok = value.status === 200 && parsed && parsed.ok === true;
+      const ok = value.status === 200 && value.ok === true;
       result.inPageFetch = value;
       addCheck('UI-6', 'in-page same-origin fetch of the load route succeeds', ok,
-        `status=${value.status}; body=${(value.body || '').slice(0, 180)}`);
+        `status=${value.status}; ok=${value.ok}; revision=${value.revision}; bytes=${value.bodyLength}`);
     } catch (error) {
       addCheck('UI-6', 'in-page same-origin fetch of the load route succeeds', false, String(error));
     }
@@ -723,5 +728,6 @@ main().then((code) => {
   console.error(error);
   process.exitCode = 2;
 });
+
 
 

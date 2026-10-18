@@ -67,6 +67,13 @@ try {
     Assert-QaProfile -Profile $script:QaAllowedProfile
     Assert-QaPort -Port $Port
 
+    # A previous run may have left our isolated server alive; stop it before setup
+    # recreates the profile/home under it.
+    if (Get-QaPortOwnerPid -Port $Port) {
+        Write-QaLogLine -Message "stale harness server on port $Port detected before setup; stopping it"
+        & (Join-Path $PSScriptRoot 'stop-web.ps1') -Port $Port -SpikeHome (Get-QaHome) -EvidenceDir $evidence *>&1 | Out-Host
+    }
+
     # -- 1. setup -----------------------------------------------------------
     if (-not $SkipSetup) {
         Write-Host ''
@@ -252,5 +259,6 @@ try {
     } catch { }
     exit 2
 }
+
 
 

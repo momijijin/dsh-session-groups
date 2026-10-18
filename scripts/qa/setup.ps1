@@ -125,6 +125,16 @@ try {
     $qaHomePath = Get-QaHome
     if (-not (Test-Path -LiteralPath $qaHomePath)) { New-Item -ItemType Directory -Force -Path $qaHomePath | Out-Null }
     Add-QaCheck -Id 'HOME-1' -Description 'disposable DSH home exists inside the repo' -Pass (Test-Path -LiteralPath $qaHomePath) -Detail $qaHomePath
+    # The disposable home may be retained between runs; reset ONLY the plugin record
+    # file family so every run starts from an empty group document (E2E step 2 contract).
+    $storagesDir = Join-Path $qaHomePath 'storages'
+    $recordFamily = @()
+    if (Test-Path -LiteralPath $storagesDir -PathType Container) {
+        $recordFamily = @(Get-ChildItem -LiteralPath $storagesDir -File -Force -Filter 'dsh-session-groups.json*' -ErrorAction SilentlyContinue)
+        foreach ($recordFile in $recordFamily) { Remove-Item -LiteralPath $recordFile.FullName -Force }
+    }
+    Add-QaCheck -Id 'HOME-0' -Description 'previous run plugin record reset (fresh empty group doc)' -Pass $true `
+        -Detail ("removed={0}" -f $recordFamily.Count)
     if (-not $NoFixtures) {
         Write-QaLogLine -Message 'seeding frozen fixtures (read-only copy of real workspace.json + sessions + session_projcache)...' -LogFile $setupLog
         $fixtures = Copy-QaHomeFixtures -SkipSessions:$NoSessionFixtures
@@ -289,3 +299,4 @@ if ($exitCode -eq 0) {
     Write-Host 'NEXT: pwsh -NoProfile -File scripts/qa/run-v1.ps1   (integration -> build -> start -> smoke -> E2E -> audit -> teardown)'
 }
 exit $exitCode
+

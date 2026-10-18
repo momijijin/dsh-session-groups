@@ -92,13 +92,20 @@ export class CDP {
     });
   }
 
-  send(method, params = {}, sessionId = undefined) {
+  send(method, params = {}, sessionId = undefined, timeoutMs = 30000) {
     const id = this.nextId++;
     const payload = { id, method, params };
     if (sessionId) payload.sessionId = sessionId;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        if (!this.pending.has(id)) return;
+        this.pending.delete(id);
+        reject(new Error(`CDP ${method} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+      const settle = (fn) => (value) => { clearTimeout(timer); fn(value); };
+      this.pending.set(id, { resolve: settle(resolve), reject: settle(reject) });
       try { this.ws.send(JSON.stringify(payload)); } catch (error) {
+        clearTimeout(timer);
         this.pending.delete(id);
         reject(error);
       }
@@ -243,3 +250,4 @@ export async function launchDriver({ browser: preference = 'auto', timeoutMs = 2
   };
   return driver;
 }
+
