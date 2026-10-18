@@ -9,9 +9,7 @@ node_modules/
 *.pid
 
 # Spike runtime evidence that may contain real session content
-spike/**/evidence/server/
-spike/**/evidence/screenshots/
-spike/**/evidence/real-home-quarantine/
+spike/**/evidence/
 spike/**/evidence/*.png
 spike/**/evidence/*.webm
 spike/**/evidence/*.zip

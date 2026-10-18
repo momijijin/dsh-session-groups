@@ -177,3 +177,14 @@ PASS：动线可用；取消无副作用；文案不误导。
 
 - S1–S7 PASS，S3b/S4b/S8/S9/S10 有明确答案；每个 FAIL 有书面降级方案并被用户接受。
 - 架构评审签字；QA 确认审计与 E2E 可搭；才冻结 CONTRACTS 进入实现。
+
+## 7. 当前结果（滚动）
+
+| 线 | 状态 | 证据 | 备注 |
+|---|---|---|---|
+| Host S5/S7 | **PASS 78/78**（2026-10-18 22:19，隔离 home 4400） | `spike/host-plugin/evidence/10-summary.json` | `requestRejection` 生效 401/403；`connection.fetch.register` 存在；`dshHomePath('storages')` 来源正确；10/10 重启、4 次写中 kill、坏文件隔离、409/422/413/415、卸载/重装全过；真实 home 无 record family，workspace hash 未变 |
+| Client S1/S2/S3b/S4/S6 | 进行中 | `spike/client-plugin/**` | 4401；S6 bundle/hooks/footer/官方默认视图已 PASS；E2E 曾被宿主引导遮罩拦截，处理中 |
+| QA S1-S10 清单/审计/smoke | **PASS**（22:22:55，28s 一键流水线） | `spike/qa/evidence/run-gate0-20261018-222227.json`、`evidence/smoke-20261018-222244.json`、`screenshots/smoke-20261018-222243.png` | setup 15/15、start 4/4、smoke 12/12、audit load 10/10、commit 11/11、teardown 6/6；真实 home profile 已清理、零残留；S3/S4 交互仍以 Client REPORT 为准 |
+
+已确认命令：rc.2 上启动必须 `--profile groups-spike --port 44xx --no-open`，不能带 `web` 子命令；`dsh.cmd` 硬编码 `DSH_HOME`，隔离必须直调 Desktop runtime。
+

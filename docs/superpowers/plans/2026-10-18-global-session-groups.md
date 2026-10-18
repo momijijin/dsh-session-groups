@@ -22,6 +22,7 @@
 - 所有宿主 API 名称以 Gate 0 `docs/SPIKE.md` 实测为准；未验证的调用必须先 feature-detect。
 - 默认中文文案；zh/en 词典；不引入 UI 框架。
 - 代码无构建产物漂移：`lib/client.js` 由 `pnpm build` 生成并提交；CI/验收先跑 build 再测。
+- Cordis `apply` 必须返回 void；注册一律 `ctx.effect`。linked 插件 import 安装侧包（如 `@deepseek-ai/dsh-home-paths`）必须写进 `peerDependencies`。
 
 ## Review Focus
 
@@ -48,7 +49,7 @@
 
 - [ ] **Step 1: 写 `package.json`**
 
-`name: dsh-session-groups`，`type: module`，`main: src/index.js`，`exports: {".":"./src/index.js","./client":"./lib/client.js","./package.json":"./package.json"}`，`dsh.bundle.patch: ./cordis.patch.yml`，`dsh.client.platform: web`，`dsh.client.inject` 只列真正的 client 包依赖（Gate 0 实测；不要混入 Cordis 服务名）；`scripts.build = node scripts/build-client.mjs`，`scripts.test = node --test tests`；devDependencies `esbuild`、`playwright`。
+`name: dsh-session-groups`，`type: module`，`main: src/index.js`，`exports: {".":"./src/index.js","./client":"./lib/client.js","./package.json":"./package.json"}`，`dsh.bundle.patch: ./cordis.patch.yml`，`dsh.client.platform: web`，`dsh.client.inject` 只列真正的 client 包依赖（Gate 0 实测；不要混入 Cordis 服务名）；`scripts.build = node scripts/build-client.mjs`，`scripts.test = node --test tests`；devDependencies `esbuild`、`playwright`；peerDependencies 至少 `@deepseek-ai/dsh-home-paths`（linked 解析前提）。
 
 - [ ] **Step 2: 写 `cordis.patch.yml`**
 
@@ -222,7 +223,7 @@ git commit -m "feat(host): group routes and loopback fence"
 
 - [ ] **Step 2: 实现 `src/index.js`**
 
-`createStore({ dir: path.join(dshHome, 'storages'), fileName: 'dsh-session-groups.json' })`；`registerRoutes(ctx, store)`；没有 `webServer` 时 fail-soft 日志，不抛。
+`createStore({ dir: path.join(dshHomePath('storages')), fileName: 'dsh-session-groups.json' })`；`registerRoutes(ctx, store)`；`apply` 返回 void（不要返回对象）；注册用 `ctx.effect`；没有 `webServer` 时 fail-soft 日志，不抛。
 
 - [ ] **Step 3: 在 disposable profile 安装 smoke**
 

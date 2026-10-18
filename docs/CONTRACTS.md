@@ -96,16 +96,16 @@ Responses:
 
 - 200 `{ "ok": true, "revision": 13, "doc": { ... } }`
 - 409 `{ "ok": false, "code": "conflict", "revision": 14, "doc": { ... } }`
-- 422 `{ "ok": false, "code": "invalid", "message": "duplicate session id: s1" }`
+- 422 `{ "ok": false, "code": "invalid", "message": "duplicate session id: s1" }`（含 malformed JSON body）
 - 409 `{ "ok": false, "code": "unsupported-version" }`
-- 413 body too large; 415 non-JSON; 503 fence unavailable/io.
+- 405 + `Allow`（方法不符）；413 body too large；415 non-JSON；503 `fence-unavailable`/io。
 
 Rules:
 
 - Body limit 256 KiB; JSON only.
-- Fence: `ctx.connection.requestRejection(req)` required. If missing, register via `ctx.connection.fetch.register({ path, methods, requestBody:'buffered', fetch })`; if neither, **fail closed 503**. Do not ship a weak loopback-only fallback as the production path.
-- Serialize writes in-process via promise tail; `fsync` file + directory where supported; temp+rename; keep `.bak`; retry rename on Windows `EPERM/EBUSY` 3× with 20ms backoff.
-- Corrupt file: rename to `dsh-session-groups.corrupt-<ts>.json`, return empty doc + warning, do not overwrite until first successful commit (which writes `.bak`).
+- Fence: `ctx.connection.requestRejection(req)` required. If missing, **fail closed 503 `fence-unavailable`**. `ctx.connection.fetch.register` is **P1 evaluation only**（path 必须在 `/api` 下、客户端 base 不同，需单独 spike），不进 V1 正式路径。Do not ship a weak loopback-only fallback.
+- Serialize writes in-process via promise tail; `fsync` file + directory where supported; temp name unique (`<name>.<pid>.<rand>.tmp`) + rename; keep `.bak`; retry rename on Windows `EPERM/EBUSY` 3× with 20ms backoff.
+- Corrupt file: rename to `dsh-session-groups.corrupt-<ts>.json`, return empty doc + `warning:"corrupt-file"`; invariant violation returns `warning:"invalid-file"`; do not overwrite until first successful commit (which writes `.bak`). `detail`/`quarantinedTo` may be additive; client depends only on `code`/`warning`.
 - No CORS; no egress; no auth token.
 
 ### File
@@ -113,7 +113,8 @@ Rules:
 `path.join(dshHomePath('storages'), 'dsh-session-groups.json')`
 
 - `dshHomePath` from `@deepseek-ai/dsh-home-paths`; fallback `profileContext.home` → `$DSH_HOME` → `~/.dsh`, log source.
-- Only this file is written by group operations.
+- `@deepseek-ai/dsh-home-paths` 必须写进 package.json `peerDependencies`（linked 插件 import 安装侧包的解析前提）。
+- Only this file is written by group operations; `.tmp` 用唯一名，避免跨进程重名。
 
 ## 3. Shared model API
 
@@ -217,6 +218,15 @@ Visibility/status:
 - Missing host API: disable that action with tooltip; never throw on render.
 - Render error: error boundary -> flat list; slot abdication is last resort.
 
+## 6.5 Implementation constraints（Gate 0 实测）
+
+- Cordis 4.0.5：插件 `apply` **必须返回 void**；返回对象会被当作 effect 列表并导致 `TypeError: Invalid effect`/静默 unload。注册一律 `ctx.effect`。
+- linked (`link:`) 插件 import 安装侧包（如 `@deepseek-ai/dsh-home-paths`）必须在 package.json **peerDependencies** 声明，app-boot 才按 peer 名路由；否则静默解析失败。
+- `ctx.connection` 在 apply 时可能不可见（`connectionAtApply=deferred`），请求时可见；围栏按请求 feature-detect，不要 `inject:['connection']` 硬等。
+- 卸载后 `GET /dsh-session-groups/load` 落 SPA fallback：**404 + 无 content-type**；客户端降级按非 JSON 处理。
+- 无围栏时两路由 **503 `fence-unavailable`**；`connection.fetch.register` 仅 P1 评估。
+- `apply` 不要依赖 import 时的 host service 单例；所有服务在请求/渲染时从 ctx 取。
+
 ## 7. Forbidden
 
 - No writes to `workspace.json`, session logs, `cordis.patch.yml` at runtime.
@@ -234,7 +244,7 @@ Visibility/status:
 2. `useSessions`/`useWorkspaces`/`useSessionStatus`（Map）/`archivedSessionIds`（数组）/`origin`/`blank`/`retainedBy` 形状。
 3. `uiWorkspace.connectWorkspace(id)` 返回 id 且不导航；`startSession` 返回 void；hero 切换 id 变化记录。
 4. rename/archive/unarchive/pin 精确形状；运行中归档 `workspace/session-active` + `stopActivity:true`。
-5. `requestRejection` 401/403；`connection.fetch.register` 是否存在；293 坏 body/409/坏文件/重启。
+5. `requestRejection` 401/403；`connection.fetch.register` 是否存在；坏 body/409/坏文件/重启。
 6. bundle `__ModuleLoader__.load` + react externals + 禁用/启用干净。
 7. 56px rail；`DSH_HOME` 隔离；`dshHomePath` 来源。
 8. 第二个 -1 占用者的错误文本与捕获。
