@@ -127,6 +127,29 @@ try {
     Add-QaCheck -Id 'TD-3' -Description 'disposable home deletion path re-validated (repo/.spike-homes/<agent> or legacy .spike-home*, not real home)' `
         -Pass $safe -Detail $homePath
     if (-not $safe) { throw "refusing to delete '$homePath' (unsafe disposable home path)" }
+    # Remove package junctions/symlinks WITHOUT following them. A recursive delete
+    # over a junction to the repo can wipe .git/node_modules (incident 2026-10-19).
+    $profilesRoot = Join-Path $homePath 'profiles'
+    if (Test-Path -LiteralPath $profilesRoot) {
+        Get-ChildItem -LiteralPath $profilesRoot -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object {
+            $nodeModules = Join-Path $_.FullName 'node_modules'
+            if (Test-Path -LiteralPath $nodeModules) {
+                Get-ChildItem -LiteralPath $nodeModules -Force -ErrorAction SilentlyContinue |
+                    Where-Object { ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 } |
+                    ForEach-Object {
+                        try {
+                            if (Test-Path -LiteralPath $_.FullName -PathType Container) {
+                                [System.IO.Directory]::Delete($_.FullName, $false)
+                            } else {
+                                [System.IO.File]::Delete($_.FullName)
+                            }
+                        } catch {
+                            cmd /c rmdir "$($_.FullName)" 2>$null | Out-Null
+                        }
+                    }
+            }
+        }
+    }
     if (Test-Path -LiteralPath $homePath) {
         Remove-Item -LiteralPath $homePath -Recurse -Force
     }

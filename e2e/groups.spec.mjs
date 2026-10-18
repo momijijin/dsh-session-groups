@@ -81,6 +81,16 @@ function workspaceTitles() {
   return Array.from(Object.values(tables), (workspace) => String(workspace.title ?? '')).filter(Boolean);
 }
 
+function workspaceSessionIds() {
+  const workspaceJson = readJson(join(QA_HOME, 'storages', 'workspace.json'));
+  const tables = workspaceJson?.tables?.workspaces ?? {};
+  const ids = new Set();
+  for (const workspace of Object.values(tables)) {
+    for (const id of Array.isArray(workspace?.sessionIds) ? workspace.sessionIds : []) ids.add(id);
+  }
+  return ids;
+}
+
 function spawnPwsh(script, args) {
   return spawnSync('pwsh', ['-NoProfile', '-File', script, ...args], {
     cwd: REPO_ROOT,
@@ -99,6 +109,7 @@ function makeUi(driver, helpers) {
   const waitFor = (expression, description, waitMs = timeoutMs) => driver.waitFor(expression, { timeoutMs: waitMs, description });
 
   const ui = {
+    waitFor,
     async exists(selector) {
       return Boolean(await evaluate(`!!document.querySelector(${JSON.stringify(selector)})`));
     },
@@ -151,13 +162,24 @@ function makeUi(driver, helpers) {
       if (!ok) throw new Error(`input not found: ${selector}`);
     },
     async dismissOverlay() {
-      // The preview notice can mount a moment after the shell boots; retry briefly.
+      // Preview Notice ("Continue") and the account "Get started" modal can mount
+      // a moment after boot. Close by text, then by the dialog close button, then
+      // Escape; never click "Sign in" / "Add API Key".
       for (let attempt = 0; attempt < 12; attempt++) {
         const clicked = await evaluate(`(() => {
-          const button = Array.from(document.querySelectorAll('button')).find((el) => /^(Continue|继续|知道了|关闭)$/i.test((el.textContent ?? '').trim()));
-          if (!button) return false;
-          button.click();
-          return true;
+          const textButton = Array.from(document.querySelectorAll('button')).find((el) => /^(Continue|继续|知道了|关闭)$/i.test((el.textContent ?? '').trim()));
+          if (textButton) { textButton.click(); return 'text'; }
+          const closeButton = Array.from(document.querySelectorAll('button,[role="button"]')).find((el) => {
+            const text = (el.textContent ?? '').trim();
+            const label = el.getAttribute('aria-label') ?? '';
+            return /^(Close|关闭|×|✕)$/i.test(text) || /^(close|关闭)$/i.test(label);
+          });
+          if (closeButton) { closeButton.click(); return 'close'; }
+          if (document.querySelector('[role="dialog"]')) {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+            return 'escape';
+          }
+          return false;
         })()`);
         if (!clicked) return attempt > 0;
         await sleep(350);
@@ -182,6 +204,7 @@ function makeUi(driver, helpers) {
         sid: el.getAttribute('data-session-id'),
         groupId: el.getAttribute('data-group-id') ?? null,
         ungrouped: el.getAttribute('data-ungrouped') === 'true',
+        archived: el.getAttribute('data-archived') === 'true',
         text: (el.textContent ?? '').trim(),
       }))`);
     },
@@ -195,18 +218,18 @@ function makeUi(driver, helpers) {
       return ui.exists(DIALOG);
     },
     async fillDialog(value) {
-      await waitFor(`!!document.querySelector(${JSON.stringify(DIALOG_INPUT)})`, 'dialog input');
+      await ui.waitFor(`!!document.querySelector(${JSON.stringify(DIALOG_INPUT)})`, 'dialog input');
       await ui.setNativeValue(DIALOG_INPUT, value);
     },
     async confirmDialog() {
       await ui.click(DIALOG_CONFIRM);
-      await waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'dialog closed');
+      await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'dialog closed');
     },
     async createGroup(name, trigger = 'new-group') {
       if (trigger === 'new-group') await ui.click('[data-testid="session-groups-new-group"]');
       await ui.fillDialog(name);
       await ui.confirmDialog();
-      await waitFor(`Array.from(document.querySelectorAll(${JSON.stringify(GROUP)}), (el) => (el.textContent ?? '')).some((t) => t.includes(${JSON.stringify(name)}))`, `group '${name}' visible`);
+      await ui.waitFor(`Array.from(document.querySelectorAll(${JSON.stringify(GROUP)}), (el) => (el.textContent ?? '')).some((t) => t.includes(${JSON.stringify(name)}))`, `group '${name}' visible`);
       return ui.groupIdByName(name);
     },
     async createChildGroup(parentGid, name) {
@@ -218,7 +241,7 @@ function makeUi(driver, helpers) {
       await ui.clickText('body', label);
       await ui.fillDialog(name);
       await ui.confirmDialog();
-      await waitFor(`Array.from(document.querySelectorAll(${JSON.stringify(GROUP)}), (el) => (el.textContent ?? '')).some((t) => t.includes(${JSON.stringify(name)}))`, `child group '${name}' visible`);
+      await ui.waitFor(`Array.from(document.querySelectorAll(${JSON.stringify(GROUP)}), (el) => (el.textContent ?? '')).some((t) => t.includes(${JSON.stringify(name)}))`, `child group '${name}' visible`);
       return ui.groupIdByName(name);
     },
     async toggleMode() {
@@ -226,10 +249,10 @@ function makeUi(driver, helpers) {
       await sleep(300);
     },
     async waitGroupsView() {
-      await waitFor(`!!document.querySelector(${JSON.stringify(VIEW)})`, 'groups view mounted');
+      await ui.waitFor(`!!document.querySelector(${JSON.stringify(VIEW)})`, 'groups view mounted');
     },
     async waitWorkspaceView() {
-      await waitFor(`!document.querySelector(${JSON.stringify(VIEW)})`, 'official workspace view restored');
+      await ui.waitFor(`!document.querySelector(${JSON.stringify(VIEW)})`, 'official workspace view restored');
     },
     async dragSessionToGroup(sid, gid) {
       const result = await evaluate(`(() => {
@@ -301,7 +324,7 @@ function makeUi(driver, helpers) {
       return await evaluate(`Array.from(document.querySelectorAll('[data-testid="session-groups-menu"] button, [role="menuitem"]'), (el) => (el.textContent ?? '').trim()).filter(Boolean)`);
     },
     async clickMenuItem(pattern) {
-      const source = String(pattern);
+      const source = pattern instanceof RegExp ? pattern.source : String(pattern);
       const clicked = await evaluate(`(() => {
         const re = new RegExp(${JSON.stringify(source)});
         const menu = document.querySelector('[data-testid="session-groups-menu"]');
@@ -415,6 +438,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
       id: 4,
       name: 'drag-ten-cross-workspace-sessions',
       async run() {
+        await ui.dismissOverlay();
         const before = await ui.ungroupedSessionIds();
         if (before.length < 10) throw new Error(`fixtures expose only ${before.length} ungrouped session rows; need >=10 for the 10-session drag step`);
         const picks = before.slice(0, 10);
@@ -424,7 +448,10 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           ...picks.slice(4, 7).map((sid) => [sid, child]),
           ...picks.slice(7, 10).map((sid) => [sid, b]),
         ];
-        for (const [sid, gid] of plan) await ui.dragSessionToGroup(sid, gid);
+        for (const [sid, gid] of plan) {
+          await ui.dismissOverlay();
+          await ui.dragSessionToGroup(sid, gid);
+        }
         const sessions = await ui.sessions();
         for (const [sid, gid] of plan) {
           const row = sessions.find((session) => session.sid === sid);
@@ -503,8 +530,12 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
       id: 7,
       name: 'archive-tri-state',
       async run() {
-        const target = state.createdSession ?? (await ui.sessions()).find((row) => row.groupId)?.sid;
-        if (!target) throw new Error('no session available to archive');
+        // Archive a normal (non-blank) session that is currently rendered. The
+        // step-6 session is intentionally blank and blank rows are current-only.
+        const rows = await ui.sessions();
+        const target = rows.find((row) => row.groupId === state.groups.a && !/新会话/.test(row.text || ''))?.sid
+          ?? rows.find((row) => row.groupId && !/新会话/.test(row.text || ''))?.sid;
+        if (!target) throw new Error('no rendered non-blank session available to archive');
         await ui.openSessionMenu(target);
         let items = [];
         try { items = await ui.menuItems(); } catch { /* menu may be closed */ }
@@ -532,7 +563,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         await ui.setFilter('only');
         const onlyRows = await ui.sessions();
         if (!onlyRows.some((row) => row.sid === target)) throw new Error('archived session missing under the "only archived" filter');
-        if (onlyRows.some((row) => row.sid !== target && row.groupId === targetGroup)) {
+        if (onlyRows.some((row) => row.archived !== true)) {
           throw new Error('"only archived" filter shows non-archived sessions');
         }
 
@@ -551,8 +582,14 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
       id: 8,
       name: 'rename-syncs-with-official-sidebar',
       async run() {
-        const target = state.createdSession ?? (await ui.sessions()).find((row) => row.groupId)?.sid;
-        if (!target) throw new Error('no session available to rename');
+        const rows = await ui.sessions();
+        const registered = workspaceSessionIds();
+        // Rename a session the official workspace sidebar actually renders
+        // (registered in workspace.json); synthetic fixture fillers appear only
+        // in the global tree.
+        const target = rows.find((row) => row.groupId === state.groups.a && registered.has(row.sid) && !/新会话/.test(row.text || ''))?.sid
+          ?? rows.find((row) => row.groupId && registered.has(row.sid) && !/新会话/.test(row.text || ''))?.sid;
+        if (!target) throw new Error('no registered rendered non-blank session available to rename');
         await ui.openSessionMenu(target);
         const items = await ui.menuItems();
         if (!items.some((text) => /重命名/.test(text))) throw new Error(`session menu has no rename entry (items: ${JSON.stringify(items.slice(0, 20))})`);
@@ -561,7 +598,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const newTitle = `E2E-重命名-${Date.now().toString(36).slice(-4)}`;
         await ui.fillDialog(newTitle);
         await ui.confirmDialog();
-        await waitFor(`Array.from(document.querySelectorAll(${JSON.stringify(SESSION)}), (el) => (el.textContent ?? '')).some((t) => t.includes(${JSON.stringify(newTitle)}))`, 'renamed row shows new title');
+        await ui.waitFor(`Array.from(document.querySelectorAll(${JSON.stringify(SESSION)}), (el) => (el.textContent ?? '')).some((t) => t.includes(${JSON.stringify(newTitle)}))`, 'renamed row shows new title');
         await ui.toggleMode();
         await ui.waitWorkspaceView();
         await sleep(500);

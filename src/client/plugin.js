@@ -99,11 +99,18 @@ export const createPlugin = () => {
   }
 
   // --- document commit queue -------------------------------------------------
-  const commitDoc = (nextDoc) => {
+  const commitDoc = (nextDocOrUpdater) => {
     const run = commitTail.then(async () => {
       store.dispatch('saving', { saving: true })
       try {
-        const baseRevision = store.getSnapshot().revision
+        const snapshot = store.getSnapshot()
+        // A drop can arrive while a previous commit is still in flight. Resolve
+        // updater functions against the latest confirmed doc inside the queue so
+        // two rapid drops cannot overwrite each other with stale snapshots.
+        const nextDoc = typeof nextDocOrUpdater === 'function'
+          ? nextDocOrUpdater(snapshot.doc)
+          : nextDocOrUpdater
+        const baseRevision = snapshot.revision
         const result = await api.commit(nextDoc, baseRevision)
         if (result.ok === true) {
           store.dispatch('doc', { doc: result.doc, revision: result.revision })

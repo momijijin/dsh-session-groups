@@ -45,7 +45,13 @@ export const currentSessionIdOf = (sessionsSnapshot) => {
 /** Display title per CONTRACTS §4: displayTitle/title, blank -> "新会话". */
 export const sessionTitle = (row, { blankLabel = '新会话', untitledLabel = '未命名' } = {}) => {
   if (!row || typeof row !== 'object') return untitledLabel
-  if (row.blank === true) return blankLabel
+  if (row.blank === true) {
+    // A blank session can still be renamed by the user; show that title instead
+    // of pinning the row to the blank label forever. Fall back to blankLabel when
+    // the host has no title yet.
+    const renamed = typeof row.title === 'string' ? row.title.trim() : ''
+    return renamed || blankLabel
+  }
   const display = typeof row.displayTitle === 'string' ? row.displayTitle.trim() : ''
   if (display) return display
   const title = typeof row.title === 'string' ? row.title.trim() : ''

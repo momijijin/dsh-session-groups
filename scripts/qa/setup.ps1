@@ -16,8 +16,10 @@
 #   2. create .spike-homes/qa and seed frozen fixtures;
 #   3. create profile groups-spike from the shipped web template (--dump-config);
 #   4. validate the repo package (dsh.bundle.patch / dsh.client / main / build output);
-#   5. install the V1 package with `dsh plugin ... add link:<repoRoot>` and verify it is in
-#      dependencies + dsh.profile.bundles + node_modules;
+#   5. stage ONLY the publishable package files under the isolated home and install
+#      `link:<staging>`; never link the repo root (a junction to the repo makes pnpm
+#      recurse into .spike-homes and teardown can follow it into .git); verify the
+#      package is in dependencies + dsh.profile.bundles + node_modules;
 #   6. re-check the real home fingerprints (must be unchanged);
 #   7. optionally start the isolated server (start-web.ps1).
 #
@@ -209,7 +211,25 @@ try {
 
     # -- 5. install the V1 package into the isolated profile ----------------
     if (-not $SkipInstall) {
-        $linkArg = 'link:' + $repoRoot
+        # Stage the publishable files under the isolated home. `link:<repoRoot>` is
+        # forbidden: it creates a junction back into the repo, pnpm recurses into
+        # .spike-homes, and Remove-Item -Recurse on teardown can follow it into .git.
+        $stagingRoot = Join-Path (Get-QaHome) 'staging\dsh-session-groups'
+        $stagingFull = [System.IO.Path]::GetFullPath($stagingRoot)
+        $homeFull = [System.IO.Path]::GetFullPath((Get-QaHome))
+        $stagingSafe = $stagingFull.StartsWith($homeFull + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
+        Add-QaCheck -Id 'PLUGIN-0' -Description 'install staging dir is inside the isolated QA home (never the repo root)' `
+            -Pass $stagingSafe -Detail $stagingFull
+        if (-not $stagingSafe) { throw "unsafe staging dir: $stagingFull" }
+        if (Test-Path -LiteralPath $stagingRoot) { Remove-Item -LiteralPath $stagingRoot -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $stagingRoot | Out-Null
+        foreach ($rel in @('src', 'lib', 'locale')) {
+            Copy-Item -LiteralPath (Join-Path $repoRoot $rel) -Destination $stagingRoot -Recurse -Force
+        }
+        foreach ($file in @('package.json', 'cordis.patch.yml', 'dsh.plugin.json', 'README.md')) {
+            Copy-Item -LiteralPath (Join-Path $repoRoot $file) -Destination $stagingRoot -Force
+        }
+        $linkArg = 'link:' + $stagingRoot
         $installArgs = @('plugin', '--profile', $script:QaAllowedProfile, 'add', $linkArg)
         $installOut = Join-Path $logs "setup-plugin-add-$timestamp.out.log"
         $installErr = Join-Path $logs "setup-plugin-add-$timestamp.err.log"

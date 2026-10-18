@@ -35,6 +35,7 @@ test('sessionTitle follows blank/displayTitle/title rules', () => {
   assert.equal(sessionTitle(sessionsById.s1), 'alpha')
   assert.equal(sessionTitle(sessionsById.s2), 'beta')
   assert.equal(sessionTitle(sessionsById.s3, { blankLabel: '新会话' }), '新会话')
+  assert.equal(sessionTitle({ id: 'x', blank: true, title: '改名后的空会话' }, { blankLabel: '新会话' }), '改名后的空会话')
   assert.equal(sessionTitle({ id: 'x' }, { untitledLabel: '未命名' }), '未命名')
   assert.equal(sessionTitle(null), '未命名')
 })

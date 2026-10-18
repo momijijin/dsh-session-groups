@@ -55,15 +55,24 @@ const makeActions = (overrides = {}) => {
   doc = createGroup(doc, { name: 'G' })
   const groupId = doc.groups[0].id
   doc = assignSession(doc, 'existing', groupId)
+  const snapshot = { ids: ['existing'], byId: { existing: { id: 'existing' } } }
   const services = {
     sessions: {
       using: async (id, options, fn) => {
         const reference = { binding: { session: { rename: async (title) => { calls.renames.push({ id, title, source: options.source }); return { ok: true } } } } }
         return fn(reference)
       },
-      list: { getSnapshot: () => ({ byId: { fresh: { id: 'fresh', blank: true } } }) },
+      list: { getSnapshot: () => snapshot },
     },
     uiWorkspace: {
+      startSession: (workspaceId) => {
+        calls.started = workspaceId
+        if (overrides.startReturns !== null) {
+          const created = overrides.startReturns ?? 'fresh'
+          snapshot.ids.push(created)
+          snapshot.byId[created] = { id: created, blank: true }
+        }
+      },
       connectWorkspace: async (workspaceId) => {
         calls.connected = workspaceId
         return overrides.connectReturns ?? 'fresh'
@@ -128,22 +137,23 @@ test('pin/unpin use uiWorkspace feature-detected methods', async () => {
   assert.deepEqual(calls.pins, [{ id: 's1', pinned: true }, { id: 's1', pinned: false }])
 })
 
-test('createSessionInGroup dedupes a reused blank and moves it to the group head', async () => {
-  const { actions, calls, groupId, getDoc } = makeActions({ connectReturns: 'existing' })
-  const result = await actions.createSessionInGroup({ groupId, workspaceId: 'w1' })
-  assert.equal(result.sessionId, 'existing')
-  const group = findGroup(getDoc(), groupId)
-  assert.deepEqual(group.sessionIds, ['existing'])
-  assert.equal(calls.commits.length, 1)
-  assert.deepEqual(calls.opens, ['existing'])
-})
-
-test('createSessionInGroup inserts a newly created id at the group head', async () => {
-  const { actions, calls, groupId, getDoc } = makeActions({ connectReturns: 'fresh' })
-  await actions.createSessionInGroup({ groupId, workspaceId: 'w2' })
+test('createSessionInGroup uses startSession and inserts the new id at the group head', async () => {
+  const { actions, calls, groupId, getDoc } = makeActions({ startReturns: 'fresh' })
+  const result = await actions.createSessionInGroup({ groupId, workspaceId: 'w2' })
+  assert.equal(result.sessionId, 'fresh')
   const group = findGroup(getDoc(), groupId)
   assert.deepEqual(group.sessionIds, ['fresh', 'existing'])
-  assert.equal(calls.connected, 'w2')
+  assert.equal(calls.started, 'w2')
+  assert.equal(calls.commits.length, 1)
+  assert.deepEqual(calls.opens, ['fresh'])
+})
+
+test('createSessionInGroup refuses to steal an already-placed blank via the connect fallback', async () => {
+  const { actions, calls, groupId, getDoc } = makeActions({ startReturns: null, connectReturns: 'existing' })
+  await assert.rejects(() => actions.createSessionInGroup({ groupId, workspaceId: 'w1' }), /create-failed/)
+  const group = findGroup(getDoc(), groupId)
+  assert.deepEqual(group.sessionIds, ['existing'])
+  assert.equal(calls.commits.length, 0)
 })
 
 test('moveSession to ungrouped removes the session from its group', async () => {

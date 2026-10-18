@@ -131,17 +131,41 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t }) => 
    */
   const createSessionInGroup = async ({ groupId, workspaceId }) => {
     const { uiWorkspace, sessions } = services()
-    if (typeof uiWorkspace?.connectWorkspace !== 'function') throw new Error('connect-unavailable')
+    if (typeof uiWorkspace?.startSession !== 'function') throw new Error('start-unavailable')
     if (typeof workspaceId !== 'string' || workspaceId === '') throw new Error('workspace-required')
-    const sessionId = await uiWorkspace.connectWorkspace(workspaceId)
-    if (typeof sessionId !== 'string' || sessionId === '') throw new Error('connect-failed')
     const group = findGroup(getDoc(), groupId)
     if (!group) throw new Error('group-not-found')
+
+    // `connectWorkspace` may REUSE an existing blank, which would steal a blank
+    // that already belongs to another group instead of creating a new one.
+    // `startSession` creates and navigates but returns void, so diff the session
+    // snapshot to learn the new id (Gate 0 S3: delta +1).
+    const snapshot = () => sessions?.list?.getSnapshot?.() ?? { ids: [], byId: {} }
+    const before = new Set(snapshot().ids ?? [])
+    uiWorkspace.startSession(workspaceId)
+    let sessionId = null
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const now = snapshot()
+      const found = (now.ids ?? []).find((id) => !before.has(id) && now.byId?.[id])
+      if (found) { sessionId = found; break }
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    }
+    if (!sessionId) {
+      // Fallback: connectWorkspace returns an id but may reuse a blank. Only use
+      // it when it is not already placed in a group; otherwise fail visibly.
+      if (typeof uiWorkspace.connectWorkspace !== 'function') throw new Error('create-failed')
+      const fallback = await uiWorkspace.connectWorkspace(workspaceId)
+      const docNow = getDoc()
+      const placed = new Set([...docNow.ungrouped, ...docNow.groups.flatMap((entry) => entry.sessionIds)])
+      if (typeof fallback === 'string' && fallback !== '' && !placed.has(fallback)) sessionId = fallback
+    }
+    if (!sessionId) throw new Error('create-failed')
+
     const nextDoc = assignSession(getDoc(), sessionId, groupId, 0)
     await commitDoc(nextDoc)
     openSession(sessionId)
     // Read back from the host snapshot so callers can verify the placement.
-    const sessionsSnapshot = sessions?.list?.getSnapshot?.()
+    const sessionsSnapshot = snapshot()
     return {
       sessionId,
       created: sessionsSnapshot?.byId?.[sessionId] !== undefined,

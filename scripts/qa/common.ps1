@@ -675,7 +675,7 @@ function Copy-QaHomeFixtures {
     # home so S2/E2E can exercise "cross-workspace drag 10 sessions". The real
     # workspace.json / session dirs are never modified.
     if (-not $SkipWorkspaceJson -and -not $SkipSessions) {
-        $augment = Add-QaFixtureRootSessions -WorkspaceJsonPath (Join-Path $storages 'workspace.json') -SessionsRoot $sessionsDest -ExtraPerWorkspace 4
+        $augment = Add-QaFixtureRootSessions -WorkspaceJsonPath (Join-Path $storages 'workspace.json') -SessionsRoot $sessionsDest -ExtraPerWorkspace 10
         $result.syntheticRootSessions = $augment.added
         $result.registryWorkspaces = @($augment.workspaces)
         $result.syntheticTemplate = $augment.template
@@ -695,70 +695,32 @@ function ConvertTo-QaWorkspaceDirName {
 }
 
 function Add-QaFixtureRootSessions {
-    <# Register frozen fixture sessions in the COPIED workspace.json and synthesise a
-       bounded number of ROOT session copies per workspace, so the UI exposes the
-       documented multi-workspace session shape (the real home is dominated by
-       filtered subagent sessions). Only the disposable home is written. #>
+    <# Register frozen fixture sessions plus a bounded number of valid synthetic ROOT
+       session copies per workspace, so the UI exposes the documented multi-workspace
+       session shape (the real home is dominated by filtered subagent sessions).
+       The clone/rewrite work happens in make-fixtures.mjs (the host validates the
+       session id inside the zstd v4 JSONL header, so a raw file copy would break the
+       workspace list). Only the disposable home is written. #>
     param(
         [Parameter(Mandatory)][string]$WorkspaceJsonPath,
         [Parameter(Mandatory)][string]$SessionsRoot,
         [int]$ExtraPerWorkspace = 4
     )
-    $out = [ordered]@{ added = 0; workspaces = @(); template = $null }
-    if (-not (Test-Path -LiteralPath $WorkspaceJsonPath -PathType Leaf)) { return [pscustomobject]$out }
-    if (-not (Test-Path -LiteralPath $SessionsRoot -PathType Container)) { return [pscustomobject]$out }
-    $workspaceDoc = Get-Content -LiteralPath $WorkspaceJsonPath -Raw | ConvertFrom-Json
-    $tables = $workspaceDoc.tables
-    if (-not $tables -or -not $tables.workspaces) { return [pscustomobject]$out }
-
-    # Pick the smallest real session directory as the synthetic root template.
-    $templateDir = $null
-    $templateSize = [long]::MaxValue
-    foreach ($property in $tables.workspaces.PSObject.Properties) {
-        $workspace = $property.Value
-        if (-not $workspace.path) { continue }
-        $encoded = ConvertTo-QaWorkspaceDirName -Path ([string]$workspace.path)
-        $workspaceDir = Get-ChildItem -LiteralPath $SessionsRoot -Directory -Force -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -ieq $encoded } | Select-Object -First 1
-        if (-not $workspaceDir) { continue }
-        foreach ($sessionId in @($workspace.sessionIds)) {
-            if (-not $sessionId) { continue }
-            $candidate = Join-Path $workspaceDir.FullName ([string]$sessionId)
-            if (-not (Test-Path -LiteralPath $candidate -PathType Container)) { continue }
-            $files = @(Get-ChildItem -LiteralPath $candidate -Recurse -File -Force -ErrorAction SilentlyContinue)
-            if ($files.Count -eq 0) { continue }
-            $size = [long](($files | Measure-Object -Property Length -Sum).Sum)
-            if ($size -lt $templateSize) { $templateSize = $size; $templateDir = $candidate }
-        }
-    }
-    if (-not $templateDir) { return [pscustomobject]$out }
-    $out.template = $templateDir
-
-    $index = 0
-    foreach ($property in $tables.workspaces.PSObject.Properties) {
-        $workspace = $property.Value
-        if (-not $workspace.path) { continue }
-        $encoded = ConvertTo-QaWorkspaceDirName -Path ([string]$workspace.path)
-        $workspaceDir = Get-ChildItem -LiteralPath $SessionsRoot -Directory -Force -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -ieq $encoded } | Select-Object -First 1
-        if (-not $workspaceDir) { continue }
-        $ids = New-Object System.Collections.Generic.List[string]
-        foreach ($existing in @($workspace.sessionIds)) { if ($existing) { [void]$ids.Add([string]$existing) } }
-        for ($n = 0; $n -lt $ExtraPerWorkspace; $n++) {
-            $index += 1
-            # Valid-looking v4 UUID form: the host session registry validates ids.`n            $syntheticId = "session-00000000-0000-4000-8000-{0:D12}" -f $index
-            if ($ids -contains $syntheticId) { continue }
-            $destination = Join-Path $workspaceDir.FullName $syntheticId
-            if (Test-Path -LiteralPath $destination) { continue }
-            Copy-Item -LiteralPath $templateDir -Destination $destination -Recurse -Force
-            $ids.Add($syntheticId)
-            $out.added += 1
-        }
-        $workspace.sessionIds = @($ids)
-        if ($ids.Count -gt 0) { $out.workspaces += $property.Name }
-    }
-    $json = $workspaceDoc | ConvertTo-Json -Depth 40
-    [System.IO.File]::WriteAllText($WorkspaceJsonPath, $json, [System.Text.UTF8Encoding]::new($false))
+    $out = [ordered]@{ added = 0; workspaces = @(); template = $null; templateId = $null; syntheticIds = @() }
+    $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+    if (-not $nodeCommand) { throw 'node is required to synthesise fixture sessions' }
+    $scriptPath = Join-Path $PSScriptRoot 'make-fixtures.mjs'
+    if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) { throw "missing fixture generator: $scriptPath" }
+    $lines = & $nodeCommand.Source $scriptPath --workspace-json $WorkspaceJsonPath --sessions-root $SessionsRoot --extra-per-workspace $ExtraPerWorkspace 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "make-fixtures.mjs failed (exit $LASTEXITCODE): $($lines -join ' ')" }
+    $jsonLine = @($lines | ForEach-Object { [string]$_ } | Where-Object { $_.TrimStart().StartsWith('{') } | Select-Object -Last 1)
+    if (-not $jsonLine) { throw 'make-fixtures.mjs produced no JSON result' }
+    $parsed = $jsonLine | ConvertFrom-Json
+    $out.added = [int]$parsed.added
+    $out.workspaces = @($parsed.registryWorkspaces)
+    $out.template = $parsed.template
+    $out.templateId = $parsed.templateId
+    $out.syntheticIds = @($parsed.syntheticIds)
     return [pscustomobject]$out
 }
 # ---------------------------------------------------------------------------
@@ -809,6 +771,8 @@ function Write-QaSummary {
     if ($EvidencePath) { Write-Host ("evidence: {0}" -f $EvidencePath) }
     return ($failed.Count -eq 0)
 }
+
+
 
 
 

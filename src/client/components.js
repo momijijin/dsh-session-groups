@@ -763,10 +763,10 @@ export const GroupsView = (props) => {
     setDragState(null)
     if (!source || !target || target.kind === 'invalid') return
     const visibleUngrouped = tree.ungrouped.map((node) => node.session.id)
-    const { doc: nextDoc, applied } = applyDrop(store.doc, source, target, visibleUngrouped)
-    if (!applied) return
     try {
-      await rt()?.commitDoc(nextDoc)
+      // Resolve against the latest confirmed doc inside the commit queue; the
+      // rendered doc can lag one or more in-flight drops.
+      await rt()?.commitDoc((currentDoc) => applyDrop(currentDoc, source, target, visibleUngrouped).doc)
     } catch (error) {
       toast('error', t('toast.dropFailed'))
       if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] drop failed', error)
@@ -896,11 +896,25 @@ export const GroupsView = (props) => {
     },
     onDropSession: (event, sessionId, groupId, ungrouped) => {
       event.preventDefault()
+      event.stopPropagation()
       const drag = dragRef.current
-      const target = dropTarget
       clearAutoExpand()
       rt()?.setFloatingLabel?.(null)
-      if (!drag || !target) return commitDrop(drag, { kind: 'invalid' })
+      if (!drag) return
+      // Resolve from this drop event instead of the react state mirror: a
+      // dragover and drop can arrive in one tick (synthetic E2E / fast pointer),
+      // and the state may not have committed yet.
+      const rect = event.currentTarget.getBoundingClientRect()
+      const target = hitTest({
+        source: drag,
+        rowKind: 'session',
+        pointerY: event.clientY,
+        rowTop: rect.top,
+        rowHeight: rect.height,
+        targetGroupId: ungrouped ? null : groupId,
+        targetSessionId: sessionId,
+      })
+      if (!target || target.kind === 'invalid') return commitDrop(drag, { kind: 'invalid' })
       return commitDrop(drag, target)
     },
     onDragOverGroup: (event, groupId) => {
@@ -912,6 +926,7 @@ export const GroupsView = (props) => {
     },
     onDropGroup: (event, groupId) => {
       event.preventDefault()
+      event.stopPropagation()
       const drag = dragRef.current
       clearAutoExpand()
       rt()?.setFloatingLabel?.(null)
@@ -925,6 +940,7 @@ export const GroupsView = (props) => {
     },
     onDropGroupHead: (event, groupId) => {
       event.preventDefault()
+      event.stopPropagation()
       const drag = dragRef.current
       clearAutoExpand()
       rt()?.setFloatingLabel?.(null)
@@ -938,6 +954,7 @@ export const GroupsView = (props) => {
     },
     onDropUngrouped: (event) => {
       event.preventDefault()
+      event.stopPropagation()
       const drag = dragRef.current
       rt()?.setFloatingLabel?.(null)
       commitDrop(drag, { kind: 'ungrouped' })
