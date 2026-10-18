@@ -1,6 +1,6 @@
 # V1 契约（Host / Client / Shared）— Gate 0 修订稿
 
-- 状态：Gate 0 修订中；实测后冻结
+- 状态：**Frozen（Gate 0 PASS，2026-10-18）**；后续变更需 Gate 1 评审
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
@@ -169,7 +169,7 @@ Injected services:
 
 - `slots` — `sidebar.workspaces` (single, priority -1), `sidebar.footer.action` (list, id required).
 - `sessions` — `useSessions`; `sessions.using(id, { source:'workspaceOperation' }, ref => ref.binding.session.rename(title))` (exact shape Gate 0).
-- `workspaces` — `useWorkspaces`; membership; `workspaceDisplayTitle`.
+- `workspaces` — `useWorkspaces`; membership。`workspaceDisplayTitle` **未暴露**，V1 自实现 `workspaceLabel(ws)`：`title?.trim() || basename(path) || workspaceId`。
 - `uiWorkspace` — `connectWorkspace(workspaceId)` returns session id, **does not navigate**; `startSession` returns void; `openSession(id)`; `archiveSession(id, { stopActivity:true })`; `unarchiveSession`; `pinSession`/`unpinSession`.
 - `connection` — same-origin HTTP; `fetch` uses `document.baseURI` relative path.
 - `locale`, `ui` optional.
@@ -186,9 +186,9 @@ Visibility/status:
 - `archivedSessionIds` is an **array**; use `.includes`.
 - `useSessionStatus` is a **Map**; fields `running`, `pendingInteraction?.kind`, `completionUnread`.
 - Current session: `retainedBy.mainView > 0`; do not highlight when a panel is active (`activePanelId !== null`).
-- Subagent: `origin === 'subagent'`; `parentId` is fork lineage, do not use for hiding.
+- Subagent: `origin === 'subagent'`; `parentId` is fork lineage, do not use for hiding。普通 `SessionListEntry` 的键只有 `blank,cwd,displayTitle,formatStatus,id,projectionValues,retainedBy,running,updatedAt`，**`origin`/`parentId` 可缺失**（仅 subagent 行带），读取必须容错。
 - Blank: only current blank visible.
-- Title: `summary.title?.trim()`; blank -> “新会话”; missing -> “未命名”; workspace label uses `workspaceDisplayTitle`.
+- Title: `summary.title?.trim()`; blank -> “新会话”; missing -> “未命名”; workspace label 用 shared `workspaceLabel`（title/path basename/id）。
 - Archived rows are not openable; provide unarchive.
 
 ## 5. Host action mapping
@@ -199,7 +199,7 @@ Visibility/status:
 | Rename | `sessions.using(id,{source:'workspaceOperation'}, ref=>ref.binding.session.rename(title))` | Gate 0; no local title |
 | Archive | `uiWorkspace.archiveSession(id,{stopActivity:true})` after confirmation | running -> `workspace/session-active` details.activity |
 | Unarchive | `uiWorkspace.unarchiveSession(id)` | returns to group |
-| New in group | `uiWorkspace.connectWorkspace(workspaceId)` → id → `openSession(id)` → unshift group | composer/menu, not host hero |
+| New in group | `uiWorkspace.connectWorkspace(workspaceId)` → id → `openSession(id)` → 移到组首 | `connectWorkspace` 可能复用该工作区已有的 blank，不保证“新建”；返回 id 已在 doc 中时按移动处理，不重复插入 |
 | Pin | `uiWorkspace.pinSession(id)` / `unpinSession` | P1 |
 | Delete | none | DSH has no session delete |
 

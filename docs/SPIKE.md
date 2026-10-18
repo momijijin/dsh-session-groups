@@ -43,6 +43,8 @@ Remove-Item Env:DSH_PROFILE, Env:DSH_PROFILE_DIR, Env:DSH_SESSION_ID, Env:DSH_WE
 
 预期：`0.2.1-rc.2`（与 Desktop 一致）。
 
+> PowerShell 注意：`DSH Desktop.exe` 是 GUI 子系统，`&` call operator 不会等待；用 `Start-Process -Wait` 或把 `desktop-cli.js` 交给 node 执行，否则 `$LASTEXITCODE` 为空、dump-config 会 EPIPE。
+
 初始化 profile（首次）：
 
 ```powershell
@@ -84,20 +86,20 @@ Remove-Item Env:DSH_PROFILE, Env:DSH_PROFILE_DIR, Env:DSH_SESSION_ID, Env:DSH_WE
 PASS：10/10 无重复行/未捕获错误；官方搜索、添加工作区恢复；rail 可展开；记录官方展开/滚动状态是否丢失。
 
 ### S2. 全局 hooks 与真实形状
-- `useSessions()`：覆盖 3 个工作区；记录 id 数。
-- `useWorkspaces()`：3 个；`workspaceDisplayTitle`。
-- `archivedSessionIds`：**数组**，`.length` 应为 2（真实 home 当前值；以实测为准）。
+- `useSessions()`：覆盖 3 个工作区；记录 id 数（实测 34）。
+- `useWorkspaces()`：3 个；`workspaceDisplayTitle` **未暴露**，V1 自实现。
+- `archivedSessionIds`：**数组**，`.length` 应为 2（实测与 workspace.json 一致）。
 - `useSessionStatus()`：**Map**，字段 `running`/`pendingInteraction.kind`/`completionUnread`。
 - 抽样真实样本：普通、fork（parentId 有值但 origin 不是 subagent）、subagent（origin==='subagent'）、blank、归档、当前会话（retainedBy.mainView）。
 
 PASS：形状与上述一致；subagent 用 origin 判定；fork 不被误藏；blank 规则与官方一致。
 
 ### S3. 新建会话
-- `uiWorkspace.connectWorkspace(workspaceId)`：返回 session id？是否导航？
+- `uiWorkspace.connectWorkspace(workspaceId)`：返回 session id？是否导航？**是否复用该工作区已有 blank？**
 - `uiWorkspace.startSession(workspaceId)`：返回什么？
 - 新会话出现在 `workspace.sessionIds` 的时机。
 
-PASS：connect 返回 id 且不导航；start 返回 void；能 openSession(newId)。
+PASS：connect 返回 id 且不导航；start 返回 void；能 openSession(newId)；**明确 blank 复用语义**（实测：无 args 会复用该工作区第一个可复用 blank，不能假设返回 id 一定是新建）。
 
 ### S3b. 宿主 hero 切换工作区
 - 在 blank 会话的 hero 里切换工作区，记录旧 id / 新 id / 旧 blank 是否复用/残留。
@@ -110,6 +112,7 @@ PASS：有明确结论；据此确认组内 `+` 必须用我们自己的预创�
 - `archiveSession(id,{stopActivity:true})` 是否成功。
 
 PASS：形状记录完整；运行中归档可确认后强制；取消不动。
+**环境限制（已确认）**：隔离 fixture 无模型凭据，无法制造 running 会话；该项标 **BLOCKED-ENV**，V1 在真实 profile 手工验收时补跑，不在 Gate 0 判 FAIL。
 
 ### S5. 路由 + 存储
 - `ctx.webServer.register` 两个路由；`ctx.connection.requestRejection` 围栏（无 cookie 401、坏 Host 403、跨站 Origin 403、同源+cookie 200）。
@@ -183,7 +186,7 @@ PASS：动线可用；取消无副作用；文案不误导。
 | 线 | 状态 | 证据 | 备注 |
 |---|---|---|---|
 | Host S5/S7 | **PASS 78/78**（2026-10-18 22:19，隔离 home 4400） | `spike/host-plugin/evidence/10-summary.json` | `requestRejection` 生效 401/403；`connection.fetch.register` 存在；`dshHomePath('storages')` 来源正确；10/10 重启、4 次写中 kill、坏文件隔离、409/422/413/415、卸载/重装全过；真实 home 无 record family，workspace hash 未变 |
-| Client S1/S2/S3b/S4/S6 | 进行中 | `spike/client-plugin/**` | 4401；S6 bundle/hooks/footer/官方默认视图已 PASS；E2E 曾被宿主引导遮罩拦截，处理中 |
+| Client S1/S2/S3/S4/S6 | **PASS 101/58 断言，0 FAIL**（2026-10-18 23:02） | `spike/client-plugin/REPORT.md`、`evidence/run-final-20261018/results.json` | S4 运行中归档 **BLOCKED-ENV**（隔离 fixture 无模型凭据）；S3b 按 M1 不采用；S8 未测（V1 try/catch fail-soft） |
 | QA S1-S10 清单/审计/smoke | **PASS**（22:22:55，28s 一键流水线） | `spike/qa/evidence/run-gate0-20261018-222227.json`、`evidence/smoke-20261018-222244.json`、`screenshots/smoke-20261018-222243.png` | setup 15/15、start 4/4、smoke 12/12、audit load 10/10、commit 11/11、teardown 6/6；真实 home profile 已清理、零残留；S3/S4 交互仍以 Client REPORT 为准 |
 
 已确认命令：rc.2 上启动必须 `--profile groups-spike --port 44xx --no-open`，不能带 `web` 子命令；`dsh.cmd` 硬编码 `DSH_HOME`，隔离必须直调 Desktop runtime。

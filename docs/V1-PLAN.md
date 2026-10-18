@@ -19,7 +19,7 @@
 | D3 | 重命名 | 调用宿主 `session.rename`；视图订阅宿主标题，不建第二标题。 |
 | D4 | 归档 | 调用宿主归档动作；视图读取 `archivedSessionIds`（数组，`includes`），只做三态筛选，不复制归档状态。运行中会话归档会被宿主以 `workspace/session-active` 拒绝；V1 弹确认框列出 turn/subagent/job/schedule 活动，确认后 `stopActivity:true` 强制归档，取消则不动。 |
 | D5 | 删除 | 本视图不提供会话删除；DSH 没有 session delete API。分组删除是非破坏性的。 |
-| D6 | 分组与工作区 | 分组**没有工作区概念**。组内 `+` 打开我们自己的「预创建工作区菜单」：默认推断（同质→该工作区；混合/空组→当前会话工作区），菜单列出全部工作区供用户切换；选定后 `uiWorkspace.connectWorkspace(id)` 创建 → `openSession(newId)` → 把**这个 id** 放组首。不依赖宿主 hero 新建界面切换工作区（会换 id/留 blank）。 |
+| D6 | 分组与工作区 | 分组**没有工作区概念**。组内 `+` 打开我们自己的「预创建工作区菜单」：默认推断（同质→该工作区；混合/空组→当前会话工作区），菜单列出全部工作区供用户切换；选定后 `uiWorkspace.connectWorkspace(id)` 创建 → 返回 id 可能复用该工作区已有 blank，**不能假设新建**；若 id 已在 doc 中按移动/去重处理 → `openSession(id)` → 放组首。不依赖宿主 hero 新建界面切换工作区（会换 id/留 blank）。 |
 | D7 | 其他面板新建的会话 | 进入顶部「未归组」收件箱，最新在前，永久保留到被拖走；不自动 pin。 |
 | D8 | 分组能力 | 任意嵌套（建议 ≤4 层）、同级拖拽排序、拖组时子树跟随；拖入改父级 V1 用菜单，拖拽改父级 P1。 |
 | D9 | 颜色/图标 | V1 用插件自带的 8 个 16px inline SVG 图标（不绑定宿主图标集版本），颜色 P2。 |
@@ -36,7 +36,7 @@
 - 会话是全局可读的：`useSessions` / `useWorkspaces` / `archivedSessionIds`（数组，`includes`）/ `useSessionStatus`（Map）；subagent 判定用 `origin === 'subagent'`，不要用 `parentId`（fork 血缘）。
 - 新建会话走 `uiWorkspace.connectWorkspace(workspaceId)`：返回 session id、**不导航**；`uiWorkspace.startSession` 返回 void。组内 `+` 用我们自己的预创建工作区菜单，不依赖宿主 hero 切换。
 - 独立记录文件放 `dshHomePath('storages')`；JSON 后端单次整单元重写、原子替换，但**没有跨进程写锁**，所以 V1 单窗口 + revision。
-- 当前真实数据：3 个工作区、约 30 个会话目录、`archivedSessionIds` 实测 2 条；首版按 200 会话设计，超过再做虚拟化。
+- 当前真实数据：3 个工作区、34–36 条 session 条目（随宿主活动变化）、归档 2–3 条；V1 一律按运行时快照计数，不写死；首版按 200 会话设计，超过再做虚拟化。
 
 ## 4. 信息架构
 
@@ -191,7 +191,7 @@
 
 ## 9. 验收
 
-在 3 工作区、约 30 个会话目录（真实 home 当前量级）的**隔离 home 夹具**上：
+在 3 工作区、34–36 条 session 条目（真实 home 当前量级）的**隔离 home 夹具**上：
 
 1. 建 3 组，其中 1 个二级嵌套。
 2. 10 个跨工作区会话拖入/拖出/排序。
