@@ -54,7 +54,7 @@ Invariants:
 4. `revision` host-owned; clients send only `baseRevision`.
 5. Doc stores no titles, paths, workspace ids, archive flags, timestamps.
 6. Empty groups valid.
-7. Missing session ids allowed (orphans), never rendered, preserved until P1 cleanup.
+7. Missing session ids allowed (orphans), never rendered, preserved until P1 cleanup. **Blank sessions are ephemeral**: DSH may discard a never-messaged blank on restart and allocate a new id. A placement referencing a vanished blank is an orphan; the client hides it and never auto-assigns the replacement blank to that group. The new blank appears ungrouped top (D7).
 8. `ungrouped` is **not** the full session list: it is the persisted manual order for sessions the user explicitly ungrouped. Rendering derives:
    - `assigned = all group sessionIds`
    - `stored = ungrouped.filter(id => known && !assigned)`
@@ -187,7 +187,7 @@ Visibility/status:
 - `useSessionStatus` is a **Map**; fields `running`, `pendingInteraction?.kind`, `completionUnread`.
 - Current session: `retainedBy.mainView > 0`; do not highlight when a panel is active (`activePanelId !== null`).
 - Subagent: `origin === 'subagent'`; `parentId` is fork lineage, do not use for hiding。普通 `SessionListEntry` 的键只有 `blank,cwd,displayTitle,formatStatus,id,projectionValues,retainedBy,running,updatedAt`，**`origin`/`parentId` 可缺失**（仅 subagent 行带），读取必须容错。
-- Blank: only current blank visible.
+- Blank: only current blank visible; a renamed blank still shows its title. Blank placement is host-ephemeral: after restart the old id may vanish (orphan hidden) and the new blank starts ungrouped.
 - Title: `summary.title?.trim()`; blank -> “新会话”; missing -> “未命名”; workspace label 用 shared `workspaceLabel`（title/path basename/id）。
 - Archived rows are not openable; provide unarchive.
 
@@ -226,7 +226,7 @@ V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 
 | Rename | `sessions.using(id,{source:'workspaceOperation'}, ref=>ref.binding.session.rename(title))` | Gate 0; no local title |
 | Archive | `uiWorkspace.archiveSession(id,{stopActivity:true})` after confirmation | running -> `workspace/session-active` details.activity |
 | Unarchive | `uiWorkspace.unarchiveSession(id)` | returns to group |
-| New in group | `uiWorkspace.connectWorkspace(workspaceId)` → id → `openSession(id)` → 移到组首 | `connectWorkspace` 可能复用该工作区已有的 blank，不保证“新建”；返回 id 已在 doc 中时按移动处理，不重复插入 |
+| New in group | `uiWorkspace.startSession(workspaceId)` → sessions 快照 diff 捕获新 id → `openSession(id)` → 移到组首 | `startSession` 返回 void；`connectWorkspace` 只作 fallback，且仅接受未被任何组/未归组占用的 id；blank 重启换 id，不承诺归属保留 |
 | Pin | `uiWorkspace.pinSession(id)` / `unpinSession` | P1 |
 | Delete | none | DSH has no session delete |
 

@@ -19,7 +19,7 @@
 | D3 | 重命名 | 调用宿主 `session.rename`；视图订阅宿主标题，不建第二标题。 |
 | D4 | 归档 | 调用宿主归档动作；视图读取 `archivedSessionIds`（数组，`includes`），只做三态筛选，不复制归档状态。运行中会话归档会被宿主以 `workspace/session-active` 拒绝；V1 弹确认框列出 turn/subagent/job/schedule 活动，确认后 `stopActivity:true` 强制归档，取消则不动。 |
 | D5 | 删除 | 本视图不提供会话删除；DSH 没有 session delete API。分组删除是非破坏性的。 |
-| D6 | 分组与工作区 | 分组**没有工作区概念**。组内 `+` 打开我们自己的「预创建工作区菜单」：默认推断（同质→该工作区；混合/空组→当前会话工作区），菜单列出全部工作区供用户切换；选定后 `uiWorkspace.connectWorkspace(id)` 创建 → 返回 id 可能复用该工作区已有 blank，**不能假设新建**；若 id 已在 doc 中按移动/去重处理 → `openSession(id)` → 放组首。不依赖宿主 hero 新建界面切换工作区（会换 id/留 blank）。 |
+| D6 | 分组与工作区 | 分组**没有工作区概念**。组内 `+` 打开我们自己的「预创建工作区菜单」：默认推断（同质→该工作区；混合/空组→当前会话工作区），菜单列出全部工作区供用户切换；选定后 `uiWorkspace.startSession(id)` 创建并导航，通过 sessions 快照 diff 捕获新 id（60×50ms），再放组首。`connectWorkspace` 可能复用已有 blank，只作 fallback 且仅接受未被任何组/未归组占用的 id。不依赖宿主 hero 新建界面切换工作区。**blank 是宿主临时占位，重启后可能换 id；不承诺 blank 归属跨重启保留。** |
 | D7 | 其他面板新建的会话 | 进入顶部「未归组」收件箱，最新在前，永久保留到被拖走；不自动 pin。 |
 | D8 | 分组能力 | 任意嵌套（建议 ≤4 层）、同级拖拽排序、拖组时子树跟随；拖入改父级 V1 用菜单，拖拽改父级 P1。 |
 | D9 | 颜色/图标 | V1 用插件自带的 8 个 16px inline SVG 图标（不绑定宿主图标集版本），颜色 P2。 |
@@ -102,7 +102,8 @@
 ### 5.3 组内新建
 
 - 组头 `+` 打开**我们自己的预创建工作区菜单**：默认推断（同质→该工作区；混合/空组→当前会话工作区）；菜单列出全部工作区，用户可切换；没有可用工作区时提示先添加工作区/切回工作区视图。
-- 选定后 `uiWorkspace.connectWorkspace(workspaceId)` 创建，拿到返回的 session id，`openSession(id)`，把这个 id 放到该组第一行；不依赖宿主 hero 的新建界面（hero 切换工作区可能换 id/留 blank）。
+- 选定后 `uiWorkspace.startSession(workspaceId)` 创建并导航；通过 sessions 快照 diff 捕获新 id（60×50ms），`openSession(id)` 后放组首。`connectWorkspace` 只作 fallback，且仅当返回 id 未被任何组/未归组占用；不依赖宿主 hero 新建界面。
+- blank 是宿主临时占位：重启后可能被丢弃并分配新 id。V1 不自动把新 blank 塞进旧组；旧 blank 成为孤儿隐藏，新 blank 按 D7 出现在未归组顶部。
 - 如果当前归档筛选是「仅已归档」，创建后切到「全部」并 toast 说明。
 - 失败：toast；不写分组记录。
 
@@ -154,7 +155,7 @@
 | 打开会话 | 宿主 open session | 不改归属 |
 | 重命名 | `sessions.using(id,{source:'workspaceOperation'}, ref=>ref.binding.session.rename(title))` | 视图只读标题 |
 | 归档/取消归档 | `uiWorkspace.archiveSession(id,{stopActivity:true})` / `unarchiveSession` | 视图读 `archivedSessionIds`（数组） |
-| 组头 `+` 新建 | `uiWorkspace.connectWorkspace(workspaceId)` | 返回 id，不导航；再 openSession |
+| 组头 `+` 新建 | `uiWorkspace.startSession(workspaceId)` + sessions 快照 diff 捕获 id | `connectWorkspace` 仅 fallback；blank 重启换 id 不承诺归属 |
 | 置顶/取消置顶 | 宿主 pin | 视图显示 pin 徽标，不改变组内手动序（P1） |
 | 删除会话 | 不提供 | 宿主无 delete API |
 
