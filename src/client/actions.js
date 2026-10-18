@@ -1,0 +1,203 @@
+/**
+ * Host-action bridge for the groups view.
+ *
+ * Every action delegates to a DSH host service (CONTRACTS §5) and reads the
+ * result back from host snapshots — the view never keeps a second copy of
+ * titles/archive flags. Pure classifiers (`classifyArchiveError`,
+ * `workspaceChoices`) are exported for tests; the async bound actions receive
+ * the live services from the plugin shell.
+ */
+import { assignSession, findGroup, inferWorkspaceId, workspaceLabel, workspaceOfSession } from '../shared/model.js'
+
+export { workspaceLabel }
+
+/** Error families reported by `workspace/session-active`. */
+export const ACTIVITY_KEYS = Object.freeze(['turn', 'subagent', 'job', 'schedule'])
+
+/**
+ * Normalize the activity detail of a `workspace/session-active` refusal.
+ * The official client identifies the error by `name` (client bundles do not
+ * share error-class identity) and reads `rpcError.code`.
+ * @returns {{ activity: string[] } | null}
+ */
+export const classifyArchiveError = (error) => {
+  if (!error || typeof error !== 'object') return null
+  if (error.name !== 'WorkspaceArchiveError') return null
+  const code = error.rpcError?.code
+  if (code !== 'workspace/session-active') return null
+  const details = error.rpcError?.details
+  const activity = details?.activity
+  return { activity: Array.isArray(activity) ? activity.filter((entry) => typeof entry === 'string') : [] }
+}
+
+/** Format the activity families for the confirm dialog. */
+export const formatActivity = (activity) => {
+  if (!Array.isArray(activity) || activity.length === 0) return ''
+  return activity.map((family) => (ACTIVITY_KEYS.includes(family) ? family : String(family))).join(', ')
+}
+
+/**
+ * Workspace choices for the group-head "+" menu: inferred workspace first, then
+ * every workspace once (CONTRACTS §5 — our own pre-created workspace menu).
+ */
+export const workspaceChoices = (doc, groupId, sessionsById, workspaces, currentSessionId) => {
+  const list = Array.isArray(workspaces) ? workspaces : []
+  if (list.length === 0) return { inferred: null, choices: [] }
+  const inferredId = inferWorkspaceId(doc, groupId, sessionsById, list, currentSessionId)
+  const ordered = []
+  if (inferredId) {
+    const inferred = list.find((workspace) => workspace.workspaceId === inferredId)
+    if (inferred) ordered.push(inferred)
+  }
+  for (const workspace of list) {
+    if (!ordered.some((entry) => entry.workspaceId === workspace.workspaceId)) ordered.push(workspace)
+  }
+  return { inferred: inferredId, choices: ordered }
+}
+
+/** Result of a host rename call: RemoteResult. */
+const assertRemoteOk = (result, fallback) => {
+  if (result && result.ok === true) return result
+  const message = result?.error?.message ?? fallback
+  throw new Error(message)
+}
+
+/**
+ * Create the bound action set.
+ * @param {{
+ *   getServices: () => { sessions?: object, workspaces?: object, uiWorkspace?: object },
+ *   getDoc: () => object,
+ *   commitDoc: (nextDoc: object) => Promise<object>,
+ *   notify: (toast: { kind: string, message?: string }) => void,
+ *   t: (key: string, params?: object) => string,
+ * }} deps
+ */
+export const createActions = ({ getServices, getDoc, commitDoc, notify, t }) => {
+  const services = () => getServices() ?? {}
+
+  const renameSession = async (sessionId, title) => {
+    const sessions = services().sessions
+    if (typeof sessions?.using !== 'function') throw new Error('sessions-unavailable')
+    const clean = typeof title === 'string' ? title.trim() : ''
+    if (clean === '') throw new Error('title-required')
+    const result = await sessions.using(sessionId, { source: 'workspaceOperation' }, (reference) => reference.binding.session.rename(clean))
+    assertRemoteOk(result, 'rename-failed')
+  }
+
+  const openSession = (sessionId) => {
+    const { uiWorkspace, sessions } = services()
+    if (typeof uiWorkspace?.openSession === 'function') {
+      uiWorkspace.openSession(sessionId)
+      return true
+    }
+    if (typeof sessions?.retain === 'function') {
+      sessions.retain(sessionId, { source: 'mainView' })
+      return true
+    }
+    return false
+  }
+
+  const archiveSession = async (sessionId, { stopActivity = false } = {}) => {
+    const { uiWorkspace } = services()
+    if (typeof uiWorkspace?.archiveSession !== 'function') throw new Error('archive-unavailable')
+    const options = stopActivity === true ? { stopActivity: true } : undefined
+    try {
+      await uiWorkspace.archiveSession(sessionId, options)
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, refusal: classifyArchiveError(error), error }
+    }
+  }
+
+  const unarchiveSession = async (sessionId) => {
+    const { uiWorkspace } = services()
+    if (typeof uiWorkspace?.unarchiveSession !== 'function') throw new Error('unarchive-unavailable')
+    await uiWorkspace.unarchiveSession(sessionId)
+  }
+
+  const pinSession = async (sessionId, pinned) => {
+    const { uiWorkspace } = services()
+    const method = pinned ? 'pinSession' : 'unpinSession'
+    if (typeof uiWorkspace?.[method] !== 'function') return false
+    await uiWorkspace[method](sessionId)
+    return true
+  }
+
+  /**
+   * Group-head "+": pre-created workspace menu -> connectWorkspace -> openSession
+   * -> move to the group head (dedupe: connectWorkspace may reuse an existing
+   * blank, CONTRACTS §5).
+   * @param {{ groupId: string, workspaceId: string }} input
+   */
+  const createSessionInGroup = async ({ groupId, workspaceId }) => {
+    const { uiWorkspace, sessions } = services()
+    if (typeof uiWorkspace?.connectWorkspace !== 'function') throw new Error('connect-unavailable')
+    if (typeof workspaceId !== 'string' || workspaceId === '') throw new Error('workspace-required')
+    const sessionId = await uiWorkspace.connectWorkspace(workspaceId)
+    if (typeof sessionId !== 'string' || sessionId === '') throw new Error('connect-failed')
+    const group = findGroup(getDoc(), groupId)
+    if (!group) throw new Error('group-not-found')
+    const nextDoc = assignSession(getDoc(), sessionId, groupId, 0)
+    await commitDoc(nextDoc)
+    openSession(sessionId)
+    // Read back from the host snapshot so callers can verify the placement.
+    const sessionsSnapshot = sessions?.list?.getSnapshot?.()
+    return {
+      sessionId,
+      created: sessionsSnapshot?.byId?.[sessionId] !== undefined,
+      doc: nextDoc,
+    }
+  }
+
+  /** Move a session to a group (append) or out of all groups. */
+  const moveSession = async (sessionId, groupId, index) => {
+    const doc = getDoc()
+    if (groupId !== null && !findGroup(doc, groupId)) throw new Error('group-not-found')
+    const nextDoc = assignSession(doc, sessionId, groupId, index)
+    await commitDoc(nextDoc)
+    return nextDoc
+  }
+
+  /** Session's workspace ref (for badges/labels). */
+  const workspaceForSession = (sessionId) => {
+    const workspaces = services().workspaces?.list?.getSnapshot?.()?.items ?? []
+    return workspaceOfSession(workspaces, sessionId)
+  }
+
+  const notifyFailure = (key, error) => {
+    notify({ kind: 'error', message: t(key) })
+    if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups]', key, String(error?.message ?? error))
+  }
+
+  return {
+    renameSession: async (sessionId, title) => {
+      try {
+        await renameSession(sessionId, title)
+      } catch (error) {
+        notifyFailure('toast.renameFailed', error)
+        throw error
+      }
+    },
+    openSession,
+    archiveSession,
+    unarchiveSession: async (sessionId) => {
+      try {
+        await unarchiveSession(sessionId)
+      } catch (error) {
+        notifyFailure('toast.unarchiveFailed', error)
+        throw error
+      }
+    },
+    pinSession: async (sessionId, pinned) => {
+      try {
+        return await pinSession(sessionId, pinned)
+      } catch (error) {
+        notifyFailure('toast.pinFailed', error)
+        return false
+      }
+    },
+    createSessionInGroup,
+    moveSession,
+    workspaceForSession,
+  }
+}

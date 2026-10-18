@@ -8,7 +8,9 @@ node_modules/
 *.log
 *.pid
 
-# Spike runtime evidence that may contain real session content
+# Test runtime evidence that may contain real session content / paths
+scripts/qa/evidence/
+tests/**/evidence/
 spike/**/evidence/
 spike/**/evidence/*.png
 spike/**/evidence/*.webm

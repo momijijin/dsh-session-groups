@@ -10,7 +10,7 @@
 |---|---|---|
 | 存储后端 | **自带 JSON**（V1）；storageDomain 作为 P1 备选 | Host spike 已实测 temp+rename+.bak/409/坏文件；原样 `GroupDoc` 可读可备份；storageDomain 信封不是原样 doc，且 `.bak` 要另做 |
 | 存储路径 | `dshHomePath('storages')` + `dsh-session-groups.json` | 尊重 `$DSH_HOME`；不硬编码 `~/.dsh` |
-| 路由围栏 | **`ctx.connection.requestRejection(req)` 必需**；缺失时改用 `ctx.connection.fetch.register`；两者都没有则 fail-closed 503 | 已实测 401/403；弱 loopback fallback 不作为正式路径 |
+| 路由围栏 | **`ctx.connection.requestRejection(req)` 必需**；缺失时 **fail-closed 503 `fence-unavailable`**；`connection.fetch.register` 仅 P1 评估，不进 V1 正式路径 | 已实测 401/403；弱 loopback fallback 不作为正式路径 |
 | 组内新建 | 自己的预创建工作区菜单 → `uiWorkspace.connectWorkspace(id)` → 落组首 | 宿主 hero 切换可能换 session id/留 blank |
 | 运行中归档 | 捕获 `workspace/session-active`，确认后 `archiveSession(id,{stopActivity:true})` | 与官方同形；不静默失败 |
 | 图标 | 插件自带 8 个 16px inline SVG | 宿主图标集命名/集合不稳定 |
@@ -191,6 +191,33 @@ Visibility/status:
 - Title: `summary.title?.trim()`; blank -> “新会话”; missing -> “未命名”; workspace label 用 shared `workspaceLabel`（title/path basename/id）。
 - Archived rows are not openable; provide unarchive.
 
+### 4.1 Stable UI test ids（E2E 契约）
+
+V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 `docs/TEST-PLAN.md`。
+
+| testid | 位置 | 附加属性 |
+|---|---|---|
+| `session-groups-toggle` | footer 切换按钮 | `data-mode="workspace|groups"` |
+| `session-groups-view` | 分组视图根 | `data-mode="groups"` |
+| `session-groups-header` | 视图头 | — |
+| `session-groups-return` | 返回工作区 | — |
+| `session-groups-archive-filter` | 归档三态控件 | `data-filter` |
+| `session-groups-new-group` | 新建分组 | — |
+| `session-groups-ungrouped` | 未归组区块/头 | — |
+| `session-groups-group` | 组行 | `data-group-id`, `data-depth`, `data-expanded` |
+| `session-groups-group-add` | 组头 `+` | `data-group-id` |
+| `session-groups-group-menu` | 组 `…` | `data-group-id` |
+| `session-groups-session` | 会话行 | `data-session-id`, `data-group-id` 或 `data-ungrouped="true"` |
+| `session-groups-workspace-badge` | 悬浮工作区标签 | `data-session-id` |
+| `session-groups-drop-indicator` | 吸附插入线/高亮 | `data-drop-kind`, `data-drop-target` |
+| `session-groups-empty` | 空组/空筛选 | `data-group-id` |
+| `session-groups-flat-fallback` | 加载失败扁平回退 | — |
+| `session-groups-error` | 错误 banner | — |
+| `session-groups-dialog` | 新建/改名/确认对话框根 | `data-kind` |
+| `session-groups-dialog-input` | 对话框输入 | — |
+| `session-groups-dialog-confirm` | 对话框确认 | — |
+| `session-groups-rail` / `session-groups-rail-expand` | 56px rail / 展开 | — |
+
 ## 5. Host action mapping
 
 | UI action | Call | Notes |
@@ -214,7 +241,7 @@ Visibility/status:
 - Load failure: flat session list + banner “分组数据加载失败，已降级为扁平列表” + retry.
 - Commit failure: revert to last confirmed doc, toast; no silent overwrite.
 - Corrupt file: banner; empty doc; first commit writes `.bak`.
-- Route unavailable: flat fallback.
+- Route unavailable: flat fallback。503 `fence-unavailable` 与 503 `io` 都按路由不可用处理；404 无 content-type 同样降级。
 - Missing host API: disable that action with tooltip; never throw on render.
 - Render error: error boundary -> flat list; slot abdication is last resort.
 

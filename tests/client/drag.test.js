@@ -1,0 +1,101 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { applyDrop, canDropGroupInto, hitTest, sessionLocation } from '../../src/client/drag.js'
+import { assignSession, createGroup, emptyDoc, findGroup } from '../../src/shared/model.js'
+
+const docWithTwoGroups = () => {
+  let doc = emptyDoc()
+  doc = createGroup(doc, { name: 'A' })
+  const a = doc.groups[0].id
+  doc = createGroup(doc, { name: 'B' })
+  const b = doc.groups[1].id
+  doc = assignSession(doc, 's1', a)
+  doc = assignSession(doc, 's2', a)
+  doc = assignSession(doc, 's3', b)
+  return { doc, a, b }
+}
+
+test('hitTest splits session rows into before/after halves', () => {
+  const source = { kind: 'session', sessionId: 's1' }
+  const top = hitTest({ source, rowKind: 'session', pointerY: 10, rowTop: 0, rowHeight: 20, targetGroupId: 'g', targetSessionId: 's2' })
+  assert.deepEqual(top, { kind: 'session-before', groupId: 'g', sessionId: 's2' })
+  const bottom = hitTest({ source, rowKind: 'session', pointerY: 18, rowTop: 0, rowHeight: 20, targetGroupId: 'g', targetSessionId: 's2' })
+  assert.deepEqual(bottom, { kind: 'session-after', groupId: 'g', sessionId: 's2' })
+})
+
+test('hitTest maps group rows, ungrouped and invalid targets', () => {
+  const source = { kind: 'session', sessionId: 's1' }
+  assert.deepEqual(hitTest({ source, rowKind: 'group', pointerY: 5, rowTop: 0, rowHeight: 20, targetGroupId: 'g1' }), { kind: 'group-append', groupId: 'g1' })
+  assert.deepEqual(hitTest({ source, rowKind: 'group-head', pointerY: 5, rowTop: 0, rowHeight: 20, targetGroupId: 'g1' }), { kind: 'group-head', groupId: 'g1' })
+  assert.deepEqual(hitTest({ source, rowKind: 'ungrouped', pointerY: 0, rowTop: 0, rowHeight: 10 }), { kind: 'ungrouped' })
+  assert.deepEqual(hitTest({ source, rowKind: 'session', pointerY: 5, rowTop: 0, rowHeight: 20, targetSessionId: 's1' }), { kind: 'invalid' })
+  assert.deepEqual(hitTest({ source: null, rowKind: 'group', pointerY: 5, rowTop: 0, rowHeight: 20, targetGroupId: 'g1' }), { kind: 'invalid' })
+})
+
+test('applyDrop moves a session between groups without duplicates', () => {
+  const { doc, a, b } = docWithTwoGroups()
+  const result = applyDrop(doc, { kind: 'session', sessionId: 's1' }, { kind: 'group-append', groupId: b })
+  assert.equal(result.applied, true)
+  assert.deepEqual(findGroup(result.doc, b).sessionIds, ['s3', 's1'])
+  assert.deepEqual(findGroup(result.doc, a).sessionIds, ['s2'])
+  const all = result.doc.groups.flatMap((group) => group.sessionIds)
+  assert.equal(new Set(all).size, all.length)
+})
+
+test('applyDrop reorders inside the same group with anchor shift', () => {
+  const { doc, a } = docWithTwoGroups()
+  const moved = applyDrop(doc, { kind: 'session', sessionId: 's1' }, { kind: 'session-after', groupId: a, sessionId: 's2' })
+  assert.equal(moved.applied, true)
+  assert.deepEqual(findGroup(moved.doc, a).sessionIds, ['s2', 's1'])
+  const noop = applyDrop(moved.doc, { kind: 'session', sessionId: 's1' }, { kind: 'session-after', groupId: a, sessionId: 's2' })
+  assert.equal(noop.applied, false)
+})
+
+test('applyDrop group-append and group-head place the session', () => {
+  const { doc, a, b } = docWithTwoGroups()
+  const head = applyDrop(doc, { kind: 'session', sessionId: 's3' }, { kind: 'group-head', groupId: a })
+  assert.deepEqual(findGroup(head.doc, a).sessionIds, ['s3', 's1', 's2'])
+  const append = applyDrop(head.doc, { kind: 'session', sessionId: 's3' }, { kind: 'group-append', groupId: b })
+  assert.deepEqual(findGroup(append.doc, b).sessionIds, ['s3'])
+})
+
+test('applyDrop ungrouped removes the session from its group', () => {
+  const { doc, a } = docWithTwoGroups()
+  const result = applyDrop(doc, { kind: 'session', sessionId: 's1' }, { kind: 'ungrouped' })
+  assert.equal(result.applied, true)
+  assert.deepEqual(findGroup(result.doc, a).sessionIds, ['s2'])
+  assert.deepEqual(result.doc.ungrouped, ['s1'])
+})
+
+test('applyDrop ungrouped reorder writes the full visible order once', () => {
+  const { doc } = docWithTwoGroups()
+  const withUngrouped = assignSession(doc, 'u1', null)
+  const visible = ['u2', 'u1']
+  const result = applyDrop(withUngrouped, { kind: 'session', sessionId: 'u1' }, { kind: 'ungrouped' }, visible)
+  assert.equal(result.applied, true)
+  assert.deepEqual(result.doc.ungrouped, ['u1', 'u2'])
+})
+
+test('applyDrop invalid target returns the original doc', () => {
+  const { doc } = docWithTwoGroups()
+  const result = applyDrop(doc, { kind: 'session', sessionId: 's1' }, { kind: 'invalid' })
+  assert.equal(result.applied, false)
+  assert.equal(result.doc, doc)
+})
+
+test('sessionLocation finds group and index', () => {
+  const { doc, a, b } = docWithTwoGroups()
+  assert.deepEqual(sessionLocation(doc, 's2'), { groupId: a, index: 1 })
+  assert.deepEqual(sessionLocation(doc, 's3'), { groupId: b, index: 0 })
+  assert.deepEqual(sessionLocation(doc, 'missing'), { groupId: null, index: -1 })
+})
+
+test('canDropGroupInto rejects cycles', () => {
+  const { doc, a } = docWithTwoGroups()
+  const withChild = createGroup(doc, { name: 'child', parentId: a })
+  const child = withChild.groups.find((group) => group.name === 'child')
+  const withGrand = createGroup(withChild, { name: 'grand', parentId: child.id })
+  assert.equal(canDropGroupInto(withGrand, a, child.id), false)
+  assert.equal(canDropGroupInto(withGrand, child.id, child.id), false)
+  assert.equal(canDropGroupInto(withGrand, child.id, a), true)
+})
