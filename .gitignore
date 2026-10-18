@@ -22,3 +22,6 @@ Thumbs.db
 
 # Release artifacts
 *.tgz
+
+# Local Gate 0 spike packages/reports (summarized in docs/GATE0-SUMMARY.md)
+spike/
