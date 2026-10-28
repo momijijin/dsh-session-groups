@@ -1,7 +1,8 @@
-# V1 契约（Host / Client / Shared）— Gate 0 修订稿
+# V1/V1.1 契约（Host / Client / Shared）— Gate 0 修订稿
 
 - 状态：**Frozen（Gate 0 PASS，2026-10-18）**；后续变更需 Gate 1 评审
-- 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`
+- V1.1（0.2.0，2026-10-28）：**additive** 扩展——左栏宽度覆盖、分组拖拽排序/改父级、会话搜索下拉；数据模型、Host 路由、存储路径均不变
+- 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
 ## 0. 已裁决的实现选择
@@ -62,6 +63,7 @@ Invariants:
    - display = `[...derivedNewestFirst, ...stored]` (new/unseen first, then manual order)
    - On first drag/reorder of ungrouped, write the full visible order into `ungrouped`.
    - **Opening the view never writes the doc.** New sessions appear via derivation only.
+   - **V1.1 search/reveal**：搜索索引从 `sessionsById` 派生（含归档、未归组、blank；排除 subagent）；选中普通会话只 `openSession` + 展开 `collapsed` 视图态 + 滚动高亮，**不写 `ungrouped`/`groups`**。`revealSession` 仅返回新 `collapsed`；doc 中找不到的会话（宿主派生未归组）统一展开 `__ungrouped__`（视图态容器，不持久化）。
 
 ## 2. Host 路由
 
@@ -195,11 +197,14 @@ Visibility/status:
 
 V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 `docs/TEST-PLAN.md`。
 
+V1.1（0.2.0）additive 追加：`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up` / `session-groups-group-move-down`；`session-groups-menu` 为既有菜单根，本批补登记。旧 testid 一律保留。
+
 | testid | 位置 | 附加属性 |
 |---|---|---|
 | `session-groups-toggle` | footer 切换按钮 | `data-mode="workspace|groups"` |
 | `session-groups-view` | 分组视图根 | `data-mode="groups"` |
-| `session-groups-header` | 视图头 | — |
+| `session-groups-header` | 视图头（V1.1 起两行） | — |
+| `session-groups-header-row` | 视图头第一行（V1.1） | — |
 | `session-groups-return` | 返回工作区 | — |
 | `session-groups-archive-filter` | 归档三态控件 | `data-filter` |
 | `session-groups-new-group` | 新建分组 | — |
@@ -225,6 +230,9 @@ V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 
 | `session-groups-search-results` | 搜索下拉列表 | `role="listbox"` |
 | `session-groups-search-result` | 单条搜索结果 | `data-session-id`, `data-archived`, `aria-disabled`（归档项） |
 | `session-groups-search-empty` | 搜索无结果空态 | — |
+| `session-groups-banner` | 加载/冲突/错误 banner | `data-kind` |
+| `session-groups-toast` | 操作提示 toast | — |
+| `session-groups-dialog-workspace` | 组内新建的工作区选择 | — |
 
 ## 5. Host action mapping
 

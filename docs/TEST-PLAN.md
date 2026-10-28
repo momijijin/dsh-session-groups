@@ -1,9 +1,9 @@
-# V1 测试计划
+# V1/V1.1 测试计划
 
-- 目标：证明“分组只改视图、不改宿主数据”，同时证明拖拽/嵌套/筛选/新建在真实 DSH 中可用
+- 目标：证明“分组只改视图、不改宿主数据”，同时证明拖拽/嵌套/筛选/新建在真实 DSH 中可用；V1.1 追加证明左栏宽度、分组拖拽、会话搜索
 - 负责人：QA（计划、证据、验收结论）；Host/Client 各写自己模块的测试；Lead 做最终审计
 - 环境：先用独立 `DSH_HOME`（`.spike-homes/qa`）+ `groups-spike` profile，再 desktop profile 人工验收；profile 不隔离 `sessions/`/`storages/`，禁止用真实 `~/.dsh` 跑 E2E
-- 关联：`docs/V1-PLAN.md`、`docs/CONTRACTS.md`、`docs/SPIKE.md`
+- 关联：`docs/V1-PLAN.md`、`docs/CONTRACTS.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 
 ## 1. 测试分层
 
@@ -12,7 +12,7 @@
 | 单元 | Node `node --test` | `src/shared/model.js` 纯函数 | Host/Client 写，QA 审 | 每次提交 |
 | Host 集成 | Node `node --test` + 临时目录 | 存储、原子写、revision、路由围栏 | Host | 每次提交 |
 | Client 逻辑 | Node `node --test` | 可见性、筛选、工作区映射、拖拽 hit-test | Client | 每次提交 |
-| E2E | Playwright（Chromium） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 | QA | 每日/合并前 |
+| E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索（15 步） | QA | 每日/合并前 |
 | 人工验收 | 清单 + 截图 | desktop profile 9 步 | QA + 用户 | 发布前 |
 | 回归审计 | 脚本 + hash | 只写记录文件 | QA | 每次 E2E |
 | 性能 | 合成数据/手工 | 200/1000 会话 | QA | P1 |
@@ -72,8 +72,11 @@
 | C8 | 新建推断工作区 | 同质/混合/空组符合 D6 |
 | C9 | 工作区标签 | 正确标题/路径；无归属显示“无工作区” |
 | C10 | 失败降级 | load 失败渲染扁平列表 + banner |
+| C11 | 左栏宽度（V1.1） | `clampSidebarWidth` min−1/min/max/max+1/窗口过小（返回 null）；存储键/默认 420/非法值回退/存储抛错不崩；覆盖只在 groups+wide，卸载/rail/官方恢复 |
+| C12 | 分组拖拽（V1.1） | `resolveGroupDrop` 同父前/后、跨父 child、有会话但 0 子组/空组=0 号槽、根末尾；同父移除后下标 −1；自身/后代 invalid；最新 `childrenOf` 重算锚点；no-op 不提交 |
+| C13 | 会话搜索（V1.1） | `buildSearchIndex` 排除 subagent、标题/工作区/组路径、归档标记；`matchSessions` 前缀优先/大小写/空查询/20 上限/稳定排序；`revealSession` 展开所在组+全部祖先、未归组 `__ungrouped__`、已展开同引用 |
 
-## 5. E2E（Playwright）
+## 5. E2E（Playwright/CDP，15 步）
 
 环境：
 
@@ -100,6 +103,9 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 10. 重启 profile → 结构/顺序/筛选保持。
 11. 切回工作区视图 → 官方浏览器原样；搜索/添加工作区可用。
 12. 数据审计：`workspace.json` 与一个 sample session 目录 hash 不变；只新增/修改 `dsh-session-groups.json`。
+13. **V1.1 宽度**：记录官方宽度 → 分组视图在 1024px 挂载（存储 620 → clamp 544）→ 1440px 恢复 620 → 拖到 760/620 → reload 保持 → 700px rail 不覆盖且无把手 → 双击复位 420 → 拖到 264 头部无水平溢出 → 折叠/展开保持 → 切回官方宽度恢复、官方把手回来。
+14. **V1.1 组拖**：组 c → 有会话但 0 子组的组 b 体槽（index 0）；组 a（带子树）→ 空组 e；组 c → 未归组头（根末尾）；a → b 上缘；快速双拖 before/child 锚点按最新 doc 重算；自身/末位 no-op 不涨 revision；组菜单上移/下移首尾禁用；全树 n+1 槽审计。
+15. **V1.1 搜索**：折叠组 a → 输入唯一标题 → ArrowDown/Enter → 组展开、行高亮、树滚动；归档结果 `aria-disabled=true`、Enter 不改当前会话；无结果空态；Esc/点击外部关闭；搜索前后 `groups`/`ungrouped` 字节一致。
 
 Playwright 拖拽注意：
 
@@ -107,10 +113,20 @@ Playwright 拖拽注意：
 - 每次拖拽后断言 DOM 行顺序 + 记录文件内容。
 - 失败时保存 trace/video/screenshot。
 
+V1.1 回归注意：
+
+- **step 10**：restart 后必须等待 sessions 快照（组数、可见行数、已知会话都就绪，最多 30s）再比对，避免半 hydration 误判。
+- **step 13**：官方宽度在进入分组视图前实测记录，切回后按记录值 ±2px 比较，不写死 420。
+- **step 14**：step 13 结束时停在官方视图，step 14 自己切回分组视图；step 15 依赖分组视图。
+- **step 15**：会通过宿主归档一条会话（宿主侧副作用，记录文件不变），证据中记录该 sid/title。
+
 ## 6. 人工验收（desktop profile）
 
-在真实 desktop profile 上重复 E2E 的 9 步；重点：
+在真实 desktop profile 上重复 E2E 的 9 步；V1.1 追加重点：
 
+- 左栏拖宽到 620/760、双击复位、切官方恢复原宽；264px 下搜索框/按钮不溢出；
+- 组拖同级排序/改父级、菜单上移/下移、折叠组不提供子组落点；
+- 搜索折叠组显现、归档置灰、264px 下拉不溢出；
 - 官方视图/插件市场/设置不受影响；
 - 主题深色、280px、150% 缩放；
 - 中文文案；
@@ -146,7 +162,7 @@ Playwright 拖拽注意：
 
 - 单测/集成输出（TAP/日志）
 - E2E trace/video（失败必存）
-- 截图：分组视图、拖拽插入线、组内新建、归档三态、rail、切回官方
-- 数据审计输出
+- E2E 15 步 JSON（`scripts/qa/evidence/e2e-<ts>.json`）+ 截图（分组视图、拖拽插入线、组内新建、归档三态、rail、切回官方、宽度把手、组拖、搜索下拉）
+- 数据审计输出（load-only + commit probe）
 - 手工验收签字
 - 已知问题清单（含 P2）
