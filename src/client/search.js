@@ -22,6 +22,18 @@ export const UNGROUPED_ID = '__ungrouped__'
 /** Hard cap on rendered search results (spec §3.3: at most 20 rows). */
 const DEFAULT_LIMIT = 20
 
+/**
+ * Locale-neutral aliases for placeholder titles.
+ *
+ * The index stores `sessionTitle(row)` with its default (zh) labels, so a blank
+ * row is indexed as `新会话` and an untitled row as `未命名`. Display stays
+ * localized (`SearchBox` re-renders through the active locale), but matching
+ * must also accept the English placeholder words: an English user typing
+ * "new session" or "untitled" has to find those rows.
+ */
+const BLANK_ALIASES = Object.freeze(['new session', 'blank session', '新会话', '新建会话'])
+const UNTITLED_ALIASES = Object.freeze(['untitled', 'no title', '未命名'])
+
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 const asArray = (value) => (Array.isArray(value) ? value : [])
 
@@ -40,13 +52,30 @@ const groupOfSession = (doc, sessionId) => {
 }
 
 /**
+ * Extra match-only words for placeholder titles. Kept out of `title` so the
+ * displayed row stays localized; empty for a renamed blank or a titled session.
+ *
+ * @param {object} row session snapshot row
+ * @returns {string[]} lowercase alias words
+ */
+const aliasesFor = (row) => {
+  if (row.blank === true) {
+    const renamed = typeof row.title === 'string' && row.title.trim() !== ''
+    return renamed ? [] : [...BLANK_ALIASES]
+  }
+  const display = typeof row.displayTitle === 'string' ? row.displayTitle.trim() : ''
+  const title = typeof row.title === 'string' ? row.title.trim() : ''
+  return display === '' && title === '' ? [...UNTITLED_ALIASES] : []
+}
+
+/**
  * Build the flat search index.
  * @param {{
  *   doc?: object,
  *   sessionsById?: Record<string, object>,
  *   workspaces?: object[],
  *   archivedSessionIds?: string[],
- * }} [input]
+ * } | null} [input] omitted or null is treated as an empty index
  * @returns {Array<{
  *   sessionId: string,
  *   title: string,
@@ -54,9 +83,12 @@ const groupOfSession = (doc, sessionId) => {
  *   groupPath: string,
  *   groupIds: string[],
  *   archived: boolean,
+ *   aliases: string[],
  * }>}
  */
-export const buildSearchIndex = ({ doc, sessionsById, workspaces, archivedSessionIds } = {}) => {
+export const buildSearchIndex = (input = {}) => {
+  const source = isObject(input) ? input : {}
+  const { doc, sessionsById, workspaces, archivedSessionIds } = source
   const sessions = isObject(sessionsById) ? sessionsById : {}
   const workspaceList = asArray(workspaces)
   const archived = asArray(archivedSessionIds)
@@ -79,6 +111,7 @@ export const buildSearchIndex = ({ doc, sessionsById, workspaces, archivedSessio
       groupPath: groupId ? groupPath(doc, groupId) : '',
       groupIds,
       archived: archived.includes(sessionId),
+      aliases: aliasesFor(row),
     })
   }
 
@@ -89,13 +122,16 @@ const normalizeQuery = (query) => (typeof query === 'string' ? query.trim().toLo
 
 const lower = (value) => (typeof value === 'string' ? value.toLowerCase() : '')
 
-/** 0 = title prefix, 1 = title contains, 2 = workspace / group path, -1 = no match. */
+/** 0 = title prefix, 1 = title contains, 2 = workspace / group path / placeholder alias, -1 = no match. */
 const rankEntry = (entry, needle) => {
   const title = lower(entry.title)
   if (title.startsWith(needle)) return 0
   if (title.includes(needle)) return 1
   if (lower(entry.workspace).includes(needle)) return 2
   if (lower(entry.groupPath).includes(needle)) return 2
+  for (const alias of asArray(entry.aliases)) {
+    if (lower(alias).includes(needle)) return 2
+  }
   return -1
 }
 
@@ -107,8 +143,9 @@ const normalizeLimit = (limit) => (Number.isFinite(limit) ? Math.max(0, Math.flo
 /**
  * Filter the index for a query, best match first.
  *
- * Ranking: title prefix > title substring > workspace / group path substring.
- * Ties are sorted by title, then session id, so repeated calls are stable.
+ * Ranking: title prefix > title substring > workspace / group path / placeholder
+ * alias substring. Ties are sorted by title, then session id, so repeated calls
+ * are stable.
  *
  * @param {object[]} index - output of {@link buildSearchIndex}
  * @param {string} query
@@ -142,7 +179,8 @@ export const matchSessions = (index, query, limit = DEFAULT_LIMIT) => {
 /**
  * Compute the collapsed map that reveals one session.
  *
- * Expanded-by-default model: `collapsed[groupId] === true` means collapsed. The
+ * Expanded-by-default model: only `collapsed[groupId] === true` means collapsed
+ * (any other value, including truthy ones, leaves the group expanded). The
  * patch removes the containing group (or {@link UNGROUPED_ID}) plus every
  * ancestor, so one call reveals nested rows. A session absent from `doc.groups`
  * is always treated as ungrouped — this covers host-derived ungrouped sessions
@@ -164,7 +202,7 @@ export const revealSession = (doc, collapsed, sessionId) => {
 
   let next = null
   for (const id of revealIds) {
-    if (!collapsed[id]) continue
+    if (collapsed[id] !== true) continue
     if (next === null) next = { ...collapsed }
     delete next[id]
   }

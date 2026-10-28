@@ -5,7 +5,7 @@ DSH 左侧栏的全局会话分组视图：分组只服务显示层，跨工作�
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 - 工作名：`dsh-session-groups`（显示名：全局会话分组）
 - 版本：`0.2.0`（V1.1）
-- 状态：**V1.1 QA 全绿（15/15 E2E、181/181 tests、audit PASS）**，待用户验收；未安装到 desktop profile
+- 状态：**V1.1 QA 全绿（15/15 E2E、183/183 tests、audit PASS）**，待用户验收；未安装到 desktop profile
 
 ## V1.1 新增（0.2.0）
 
@@ -33,7 +33,7 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 - [契约](docs/CONTRACTS.md) — 数据模型、路由、API、testid、生命周期
 - [Gate 0 Spike](docs/SPIKE.md) / [Gate 0 结论](docs/GATE0-SUMMARY.md)
 - [测试计划](docs/TEST-PLAN.md) — 单测/宿主集成/15 步 E2E/数据审计
-- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 15/15 E2E、181/181、审计与打包证据
+- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 15/15 E2E、183/183、审计与打包证据
 - [发布说明](docs/RELEASE.md) — 构建/打包/安装/卸载/已知限制
 - [ADR-001 左栏模式切换](docs/adr/0001-sidebar-mode-switch.md) / [ADR-002 分组存储](docs/adr/0002-group-storage.md) / [ADR-003 路由围栏](docs/adr/0003-route-fence.md)
 
@@ -48,6 +48,6 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 ## 当前阶段
 
 - V1 实现完成；V1.1（0.2.0）完成左栏宽度、分组拖拽排序/改父级、会话搜索。
-- 验证：`npm test` 181/181；官方 E2E 15/15（含 step 10 重启 hydration wait）；数据审计只写记录文件；真实 `~/.dsh` 零写入。
+- 验证：`npm test` 183/183；官方 E2E 15/15（含 step 10 重启 hydration wait）；数据审计只写记录文件；真实 `~/.dsh` 零写入。
 - **尚未安装到用户 desktop profile**；等待用户验收后再安装。
 - 已知限制见 `docs/RELEASE.md` §5（运行中归档 BLOCKED-ENV、宽度 DOM 依赖、搜索范围、P1/P2 未实现项）。

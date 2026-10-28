@@ -72,9 +72,9 @@
 | C8 | 新建推断工作区 | 同质/混合/空组符合 D6 |
 | C9 | 工作区标签 | 正确标题/路径；无归属显示“无工作区” |
 | C10 | 失败降级 | load 失败渲染扁平列表 + banner |
-| C11 | 左栏宽度（V1.1） | `clampSidebarWidth` min−1/min/max/max+1/窗口过小（返回 null）；存储键/默认 420/非法值回退/存储抛错不崩；覆盖只在 groups+wide，卸载/rail/官方恢复 |
-| C12 | 分组拖拽（V1.1） | `resolveGroupDrop` 同父前/后、跨父 child、有会话但 0 子组/空组=0 号槽、根末尾；同父移除后下标 −1；自身/后代 invalid；最新 `childrenOf` 重算锚点；no-op 不提交 |
-| C13 | 会话搜索（V1.1） | `buildSearchIndex` 排除 subagent、标题/工作区/组路径、归档标记；`matchSessions` 前缀优先/大小写/空查询/20 上限/稳定排序；`revealSession` 展开所在组+全部祖先、未归组 `__ungrouped__`、已展开同引用 |
+| C11 | 左栏宽度（V1.1） | `clampSidebarWidth` min−1/min/max/max+1/窗口过小（返回 null）；存储键/默认 420/非法值回退/存储抛错不崩；覆盖只在 groups+wide，卸载/rail/官方恢复；**窄视口双击复位持久化 420（非 clamp 值），放宽后恢复 420；快速释放时 applied=stored** |
+| C12 | 分组拖拽（V1.1） | `resolveGroupDrop` 同父前/后、跨父 child、有会话但 0 子组/空组=0 号槽、根末尾；同父移除后下标 −1；自身/后代 invalid；最新 `childrenOf` 重算锚点；no-op 不提交；**组 `+` 的 pointerdown 起点守卫（真实指针拖拽不产生 drag/drop 提交）；中间 50% invalid；同位置 after no-op；组菜单 move-up 启用路径** |
+| C13 | 会话搜索（V1.1） | `buildSearchIndex` 排除 subagent、标题/工作区/组路径、归档标记；`matchSessions` 前缀优先/大小写/空查询/20 上限/稳定排序；`revealSession` 展开所在组+全部祖先、未归组 `__ungrouped__`、已展开同引用；**`buildSearchIndex(null)` 容忍；仅 `collapsed[id] === true` 视为折叠；blank/untitled 的英文别名匹配（显示仍本地化）** |
 
 ## 5. E2E（Playwright/CDP，15 步）
 
@@ -103,9 +103,13 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 10. 重启 profile → 结构/顺序/筛选保持。
 11. 切回工作区视图 → 官方浏览器原样；搜索/添加工作区可用。
 12. 数据审计：`workspace.json` 与一个 sample session 目录 hash 不变；只新增/修改 `dsh-session-groups.json`。
-13. **V1.1 宽度**：记录官方宽度 → 分组视图在 1024px 挂载（存储 620 → clamp 544）→ 1440px 恢复 620 → 拖到 760/620 → reload 保持 → 700px rail 不覆盖且无把手 → 双击复位 420 → 拖到 264 头部无水平溢出 → 折叠/展开保持 → 切回官方宽度恢复、官方把手回来。
-14. **V1.1 组拖**：组 c → 有会话但 0 子组的组 b 体槽（index 0）；组 a（带子树）→ 空组 e；组 c → 未归组头（根末尾）；a → b 上缘；快速双拖 before/child 锚点按最新 doc 重算；自身/末位 no-op 不涨 revision；组菜单上移/下移首尾禁用；全树 n+1 槽审计。
-15. **V1.1 搜索**：折叠组 a → 输入唯一标题 → ArrowDown/Enter → 组展开、行高亮、树滚动；归档结果 `aria-disabled=true`、Enter 不改当前会话；无结果空态；Esc/点击外部关闭；搜索前后 `groups`/`ungrouped` 字节一致。
+13. **V1.1 宽度**：记录官方宽度 → 分组视图在 1024px 挂载（存储 620 → clamp 544）→ 1440px 恢复 620 → 拖到 760/620 → reload 保持 → 700px rail 不覆盖且无把手 → 双击复位 420 → 拖到 264 头部无水平溢出 → 折叠/展开保持 → **快速释放（move 后立即 up）断言 applied=stored** → **800px 双击复位持久化 420、applied=320；回 1440px 恢复 420** → 切回官方宽度恢复、官方把手回来。
+14. **V1.1 组拖**：组 c → 有会话但 0 子组的组 b 体槽（index 0）；组 a（带子树）→ 空组 e；组 c → 未归组头（根末尾）；a → b 上缘；快速双拖 before/child 锚点按最新 doc 重算；自身/末位 no-op 不涨 revision；**同位置 after no-op**；**组头中间 50% 无效（toast、不提交）**；组菜单上移/下移首尾禁用 + **启用 move-up 实际生效**；全树 n+1 槽审计；**真实 CDP 指针从组 `+` 按钮拖向另一组：dragstart 被 preventDefault，根顺序/parent/revision 不变**。
+15. **V1.1 搜索**：折叠组 a → 输入唯一标题 → ArrowDown/Enter → 组展开、行高亮、树滚动；**目标移入嵌套子组并折叠子组+祖先 a、筛选切 `only` 后选中：only→all、两级同时展开**；归档结果 `aria-disabled=true`、Enter 不改当前会话；**宽查询结果 >12，连按 ArrowDown 后 active option 保持在 320px listbox 可视 rect 内（listbox scrollTop>0）**；无结果空态；Esc/点击外部关闭；搜索前后 `groups`/`ungrouped` 字节一致。
+
+V1.1 新增/相关 stable testids（详见 `docs/CONTRACTS.md §4.1`）：
+
+`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`。
 
 Playwright 拖拽注意：
 
@@ -115,6 +119,7 @@ Playwright 拖拽注意：
 
 V1.1 回归注意：
 
+- **step 2**：fresh server 的 session 快照异步 hydrate；进入分组视图后先等 session rows >0（30s）再计数/断言零组，避免冷启动误判。
 - **step 10**：restart 后必须等待 sessions 快照（组数、可见行数、已知会话都就绪，最多 30s）再比对，避免半 hydration 误判。
 - **step 13**：官方宽度在进入分组视图前实测记录，切回后按记录值 ±2px 比较，不写死 420。
 - **step 14**：step 13 结束时停在官方视图，step 14 自己切回分组视图；step 15 依赖分组视图。

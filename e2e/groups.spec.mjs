@@ -401,6 +401,26 @@ function makeUi(driver, helpers) {
       await send('mouseReleased', targetX, 0);
       await sleep(200);
     },
+    /**
+     * Fast release: press, one move and release with no wait, so the last
+     * pointermove's animation frame is still pending when pointerup commits.
+     * The applied sidebar width must still match the persisted width.
+     */
+    async dragResizeHandleFast(targetX) {
+      const point = await stableResizeHandlePoint();
+      const send = (type, x, buttons) => driver.cdp.send('Input.dispatchMouseEvent', {
+        type,
+        x,
+        y: point.y,
+        button: 'left',
+        buttons,
+        clickCount: 1,
+      }, driver.sessionId);
+      await send('mousePressed', point.x, 1);
+      await send('mouseMoved', targetX, 1);
+      await send('mouseReleased', targetX, 0);
+      await sleep(400);
+    },
     /** Double-click the plugin resize handle (DOM dblclick; the drag itself uses real CDP). */
     async doubleClickResizeHandle() {
       const dispatched = await evaluate(`(() => {
@@ -512,7 +532,7 @@ function makeUi(driver, helpers) {
      * Synthetic HTML5 drag of one or more group headers / body slots. All specs
      * are dispatched in one evaluate so "rapid" sequences queue their commits
      * before React can re-render the tree.
-     * Spec: {kind:'before'|'after', dragged, target}
+     * Spec: {kind:'before'|'after'|'middle', dragged, target}
      *     | {kind:'child', dragged, parentId, beforeGroupId}
      *     | {kind:'root-end', dragged}
      */
@@ -530,12 +550,13 @@ function makeUi(driver, helpers) {
           let target = null;
           let x = 0;
           let y = 0;
-          if (spec.kind === 'before' || spec.kind === 'after') {
+          if (spec.kind === 'before' || spec.kind === 'after' || spec.kind === 'middle') {
             target = groupRow(spec.target);
             if (target) {
               const rect = target.getBoundingClientRect();
               x = rect.left + rect.width / 2;
-              y = rect.top + Math.max(2, rect.height * (spec.kind === 'before' ? 0.2 : 0.8));
+              const ratio = spec.kind === 'before' ? 0.2 : spec.kind === 'after' ? 0.8 : 0.5;
+              y = rect.top + Math.max(2, rect.height * ratio);
             }
           } else if (spec.kind === 'child') {
             target = slotFor(spec.parentId, spec.beforeGroupId ?? null);
@@ -570,6 +591,83 @@ function makeUi(driver, helpers) {
     },
     async dragGroup(spec) {
       return ui.dragGroupMany([spec]);
+    },
+    /**
+     * Real CDP pointer drag starting on a group `+` button and releasing over
+     * another group header. Native HTML5 drag promises the dragstart on the
+     * draggable row (not the button), which is exactly the dead-guard scenario:
+     * the client must cancel it from the pointerdown origin. Returns every
+     * dragstart seen (group id + defaultPrevented after React's handler ran).
+     */
+    async dragGroupFromButton(gid, targetGid, { ratio = 0.2 } = {}) {
+      const start = await evaluate(`(() => {
+        const button = document.querySelector(${JSON.stringify(GROUP_ADD)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+        if (!button) return null;
+        // ui.click() scrolls targets into view; earlier menu steps can leave the
+        // dragged root row clipped under the header. Centre it before measuring.
+        button.scrollIntoView({ block: 'center' });
+        const rect = button.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, rect: [rect.left, rect.top, rect.width, rect.height].map((n) => Math.round(n)) };
+      })()`);
+      if (!start) throw new Error(`group + button not found for ${gid}`);
+      await sleep(150);
+      const hit = await evaluate(`(() => {
+        const button = document.querySelector(${JSON.stringify(GROUP_ADD)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+        const el = document.elementFromPoint(${Number(start.x)}, ${Number(start.y)});
+        const topmost = el && typeof el.closest === 'function' ? el.closest('button') : null;
+        return {
+          ok: topmost === button,
+          topmost: el ? (el.tagName + ':' + (el.getAttribute('data-testid') ?? el.className ?? '')) : null,
+          stack: document.elementsFromPoint(${Number(start.x)}, ${Number(start.y)}).slice(0, 5).map((node) => node.tagName + ':' + (node.getAttribute('data-testid') ?? node.className ?? '')),
+          button: button ? [button.getBoundingClientRect().left, button.getBoundingClientRect().top, button.getBoundingClientRect().width, button.getBoundingClientRect().height].map((n) => Math.round(n)) : null,
+        };
+      })()`);
+      if (!hit?.ok) {
+        throw new Error(`group + button is not the topmost element at its point (hit ${JSON.stringify(hit)}; start=${JSON.stringify(start)}); an overlay may be blocking real pointer input`);
+      }
+      const target = await evaluate(`(() => {
+        const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(targetGid)} + '"]');
+        if (!row) return null;
+        const rect = row.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + Math.max(2, rect.height * ${Number(ratio)}) };
+      })()`);
+      if (!target) throw new Error(`group header not found for ${targetGid}`);
+      await evaluate(`(() => {
+        window.__dsgGroupDragProbe = [];
+        const handler = (event) => {
+          const row = event.target && typeof event.target.closest === 'function'
+            ? event.target.closest(${JSON.stringify(GROUP)})
+            : null;
+          window.__dsgGroupDragProbe.push({ gid: row ? row.getAttribute('data-group-id') : null, prevented: event.defaultPrevented === true });
+        };
+        document.addEventListener('dragstart', handler);
+        window.__dsgGroupDragProbeCleanup = () => document.removeEventListener('dragstart', handler);
+      })()`);
+      const send = (type, x, y, buttons) => driver.cdp.send('Input.dispatchMouseEvent', {
+        type,
+        x,
+        y,
+        button: 'left',
+        buttons,
+        clickCount: 1,
+      }, driver.sessionId);
+      await send('mousePressed', start.x, start.y, 1);
+      const steps = 10;
+      for (let step = 1; step <= steps; step++) {
+        const x = start.x + ((target.x - start.x) * step) / steps;
+        const y = start.y + ((target.y - start.y) * step) / steps;
+        await send('mouseMoved', x, y, 1);
+        await sleep(25);
+      }
+      await send('mouseReleased', target.x, target.y, 0);
+      await sleep(700);
+      return await evaluate(`(() => {
+        const probe = window.__dsgGroupDragProbe ?? [];
+        window.__dsgGroupDragProbeCleanup?.();
+        delete window.__dsgGroupDragProbeCleanup;
+        window.__dsgGroupDragProbe = [];
+        return probe;
+      })()`);
     },
     async openGroupMenu(gid) {
       await ui.click(`${GROUP_MENU}[data-group-id="${gid}"]`);
@@ -732,6 +830,27 @@ function makeUi(driver, helpers) {
       })()`);
       if (!pressed) throw new Error(`search input ${SEARCH} not found`);
       await sleep(120);
+    },
+    /** Geometry of the keyboard-active option relative to the scrolling listbox. */
+    async searchActiveInfo() {
+      return await evaluate(`(() => {
+        const list = document.querySelector(${JSON.stringify(SEARCH_RESULTS)});
+        const option = document.querySelector(${JSON.stringify(SEARCH_RESULT)} + '[data-active="true"]');
+        if (!list || !option) return null;
+        const listRect = list.getBoundingClientRect();
+        const optionRect = option.getBoundingClientRect();
+        return {
+          sessionId: option.getAttribute('data-session-id'),
+          inside: optionRect.top >= listRect.top - 0.5 && optionRect.bottom <= listRect.bottom + 0.5,
+          scrollTop: list.scrollTop,
+          clientHeight: list.clientHeight,
+          scrollHeight: list.scrollHeight,
+          listTop: listRect.top,
+          listBottom: listRect.bottom,
+          optionTop: optionRect.top,
+          optionBottom: optionRect.bottom,
+        };
+      })()`);
     },
     async treeScrollTop() {
       return Number(await evaluate(`document.querySelector(${JSON.stringify(TREE)})?.scrollTop ?? NaN`));
@@ -914,6 +1033,14 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         await ui.waitGroupsView();
         const mode = (await ui.attrs(TOGGLE, 'data-mode'))[0];
         if (mode !== 'groups') throw new Error(`toggle data-mode should become "groups", got ${mode}`);
+        // Fresh cold starts deliver the host session snapshot asynchronously; an
+        // immediate count against a half-hydrated tree reports zero (same class
+        // of flake step 10 guards against with its restart hydration wait).
+        await ui.waitFor(
+          `document.querySelectorAll(${JSON.stringify(SESSION)}).length > 0`,
+          'groups view session rows hydrated',
+          30000,
+        );
         const sessions = await ui.sessions();
         if (sessions.length === 0) throw new Error('groups view rendered zero session rows');
         const groups = await ui.groups();
@@ -1433,6 +1560,46 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const persistedMinimum = await waitWidth(264, 'persisted width after the rail round-trip');
         if (!(await overrideMarker())) throw new Error('width override marker missing after expanding the rail');
 
+        // Fast release (D): pointerup commits while the last move's rAF may still
+        // be pending. The applied width must match the persisted width, otherwise
+        // a later reload would jump to a width the sidebar never took.
+        await ui.closeOnboarding(1000);
+        await ui.dragResizeHandleFast(500);
+        const fastApplied = await waitWidth(500, 'width after a fast-release drag to 500');
+        await sleep(250);
+        const fastStored = Number(await driver.evaluate(`localStorage.getItem(${JSON.stringify(SIDEBAR_WIDTH_KEY)})`));
+        if (!(Number.isFinite(fastStored) && Math.abs(fastStored - fastApplied) <= 2)) {
+          throw new Error(`fast release persisted ${fastStored}px but applied ${fastApplied}px`);
+        }
+
+        // Width reset at a narrow viewport (C): the preference must stay 420, not
+        // the 320px clamp for 800px, so widening back restores 420.
+        await ui.setViewport(800);
+        await sleep(400);
+        if (await ui.exists(RAIL_EXPAND)) {
+          await ui.click(RAIL_EXPAND);
+          await sleep(600);
+        }
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle at 800px', 8000);
+        await ui.doubleClickResizeHandle();
+        const narrowReset = await waitWidth(320, 'width after resetting at 800px (clamped preference)');
+        const narrowStored = await driver.evaluate(`localStorage.getItem(${JSON.stringify(SIDEBAR_WIDTH_KEY)})`);
+        if (narrowStored !== '420') {
+          throw new Error(`reset at 800px must persist the 420 preference, got ${JSON.stringify(narrowStored)}`);
+        }
+        await ui.resetViewport();
+        await sleep(400);
+        if (await ui.exists(RAIL_EXPAND)) {
+          await ui.click(RAIL_EXPAND);
+          await sleep(600);
+        }
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle after widening back', 8000);
+        const widenedReset = await waitWidth(420, 'width after widening back from the narrow reset');
+        const widenedStored = await driver.evaluate(`localStorage.getItem(${JSON.stringify(SIDEBAR_WIDTH_KEY)})`);
+        if (widenedStored !== '420') {
+          throw new Error(`widened sidebar preference expected "420", got ${JSON.stringify(widenedStored)}`);
+        }
+
         // Back to the official view: handle gone, no override, width restored.
         await ui.toggleMode();
         await ui.waitWorkspaceView();
@@ -1453,6 +1620,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           reset,
           minimum,
           persistedMinimum,
+          fastRelease: { applied: fastApplied, stored: fastStored },
+          narrowReset: { applied: narrowReset, stored: narrowStored },
+          widenedReset: { applied: widenedReset, stored: widenedStored },
           officialRestored,
           header,
         };
@@ -1486,6 +1656,15 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             return Number(record.revision);
           } catch {
             return -1;
+          }
+        };
+        /** groupId -> parentId map from the record (used by the button-guard check). */
+        const recordParents = () => {
+          try {
+            const record = JSON.parse(readFileSync(join(QA_HOME, 'storages', 'dsh-session-groups.json'), 'utf8'));
+            return Object.fromEntries((record.groups ?? []).map((group) => [group.id, group.parentId ?? null]));
+          } catch {
+            return {};
           }
         };
 
@@ -1593,7 +1772,37 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         }
         if (lastDown.groupId !== e) throw new Error(`move-down data-group-id expected ${e}, got ${lastDown.groupId}`);
         if (lastUp.dataDisabled === 'true') throw new Error('move-up must stay enabled for the last (non-first) root group');
-        await ui.closeMenu();
+        // Enabled move-up path: e (last root) moves one slot up to [b, e, a].
+        await ui.clickMenuControl(GROUP_MOVE_UP);
+        await ui.waitRootGroups([b, e, a]);
+        if (await ui.exists(MENU)) throw new Error('group menu must close after move-up');
+
+        // (10b) Middle 50% of a group header is an invalid drop for a group drag
+        // (it must not fall through to a session-append or commit anything).
+        const revisionBeforeMiddle = recordRevision();
+        const toastBeforeMiddle = await ui.text(TOAST);
+        await ui.dragGroup({ kind: 'middle', dragged: b, target: a });
+        await sleep(700);
+        await ui.waitRootGroups([b, e, a]);
+        const revisionAfterMiddle = recordRevision();
+        if (revisionAfterMiddle !== revisionBeforeMiddle) {
+          throw new Error(`middle-zone group drop committed a revision (${revisionBeforeMiddle} -> ${revisionAfterMiddle})`);
+        }
+        const toastAfterMiddle = await ui.text(TOAST);
+        if (!/不能放入|Cannot drop/i.test(toastAfterMiddle) || toastAfterMiddle === toastBeforeMiddle) {
+          throw new Error(`middle-zone group drop should surface the invalid-drop toast, got ${JSON.stringify(toastAfterMiddle)}`);
+        }
+
+        // (10c) Generic same-position no-op: a is already the last root, so
+        // dropping it after e resolves to its current index and must not commit.
+        const revisionBeforeSame = recordRevision();
+        await ui.dragGroup({ kind: 'after', dragged: a, target: e });
+        await sleep(700);
+        await ui.waitRootGroups([b, e, a]);
+        const revisionAfterSame = recordRevision();
+        if (revisionAfterSame !== revisionBeforeSame) {
+          throw new Error(`same-position group drop committed a revision (${revisionBeforeSame} -> ${revisionAfterSame})`);
+        }
 
         // (10) Body slot contract across the whole tree: n child groups => n+1
         // direct slots, and no slot is ever rendered after a session row.
@@ -1613,6 +1822,53 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (bSessionsAfter.length !== bSessionsBefore.length) {
           throw new Error(`group moves changed b's sessions (${bSessionsBefore.length} -> ${bSessionsAfter.length})`);
         }
+
+        // (10d) Real pointer drag starting on b's group `+` button. A dragstart
+        // always targets the draggable row, so the button guard must come from the
+        // pointerdown origin; otherwise a slight movement reorders/reparents the
+        // group and suppresses the button click. No order/parent/revision change.
+        const orderBeforeGuard = await ui.rootGroupIds();
+        const parentsBeforeGuard = recordParents();
+        const revisionBeforeGuard = recordRevision();
+        // Real pointer input is blocked by the late-mounting onboarding overlay;
+        // close it first (the earlier group drags are synthetic and bypass it).
+        await ui.dismissOverlay();
+        await ui.closeOnboarding(2000);
+        const guardProbe = await ui.dragGroupFromButton(b, e);
+        await sleep(400);
+        if (await ui.dialogOpen()) {
+          await evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+          await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'button-drag dialog dismissed', 5000);
+        }
+        if (await ui.exists(MENU)) await ui.closeMenu();
+        const orderAfterGuard = await ui.rootGroupIds();
+        const parentsAfterGuard = recordParents();
+        const revisionAfterGuard = recordRevision();
+        if (JSON.stringify(orderAfterGuard) !== JSON.stringify(orderBeforeGuard)) {
+          throw new Error(`group + pointer drag reordered roots: ${JSON.stringify(orderBeforeGuard)} -> ${JSON.stringify(orderAfterGuard)}`);
+        }
+        if (JSON.stringify(parentsAfterGuard) !== JSON.stringify(parentsBeforeGuard)) {
+          throw new Error(`group + pointer drag changed parents: ${JSON.stringify(parentsBeforeGuard)} -> ${JSON.stringify(parentsAfterGuard)}`);
+        }
+        if (revisionAfterGuard !== revisionBeforeGuard) {
+          throw new Error(`group + pointer drag committed a revision (${revisionBeforeGuard} -> ${revisionAfterGuard})`);
+        }
+        if (!guardProbe.some((entry) => entry.gid === b)) {
+          throw new Error(`real pointer drag from the group + button never fired a row dragstart (probe=${JSON.stringify(guardProbe)})`);
+        }
+        if (!guardProbe.some((entry) => entry.gid === b && entry.prevented === true)) {
+          throw new Error(`group + dragstart was not cancelled by the pointerdown guard (probe=${JSON.stringify(guardProbe)})`);
+        }
+        // A mouseup over the target row can synthesise a click there; restore any
+        // collapsed expansion so step 15 starts from a normal tree.
+        await sleep(500);
+        for (const gid of [b, e]) {
+          const expanded = (await ui.attrs(`${GROUP}[data-group-id="${gid}"]`, 'data-expanded'))[0];
+          if (expanded === 'false') {
+            await ui.click(`${GROUP}[data-group-id="${gid}"]`);
+            await sleep(300);
+          }
+        }
         // Step 15 continues in the groups view.
         if (!(await ui.exists(VIEW))) throw new Error('step 14 must end in the groups view');
 
@@ -1623,7 +1879,21 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           rootOrder: await ui.rootGroupIds(),
           bSessions: bSessionsAfter.length,
           slotAudit,
-          revision: { beforeNoop: revisionBeforeNoop, afterSelf: revisionAfterSelf, afterRootEnd: revisionAfterRootEnd },
+          menuMoveUp: [b, e, a],
+          middleInvalid: true,
+          samePositionNoop: true,
+          buttonGuard: { probe: guardProbe, revision: revisionAfterGuard },
+          revision: {
+            beforeNoop: revisionBeforeNoop,
+            afterSelf: revisionAfterSelf,
+            afterRootEnd: revisionAfterRootEnd,
+            beforeMiddle: revisionBeforeMiddle,
+            afterMiddle: revisionAfterMiddle,
+            beforeSame: revisionBeforeSame,
+            afterSame: revisionAfterSame,
+            beforeGuard: revisionBeforeGuard,
+            afterGuard: revisionAfterGuard,
+          },
         };
       },
     },
@@ -1634,8 +1904,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         // Step 14 leaves the groups view active (asserted there); this step owns
         // the search dropdown: reveal on select, archived rows disabled, empty
         // state and the read-only guarantee for dsh-session-groups.json.
-        const { a } = state.groups;
+        const { a, child } = state.groups;
         if (!a) throw new Error('step 15 needs group a from step 3');
+        if (!child) throw new Error('step 15 needs the nested child group from step 3');
         if (!(await ui.exists(VIEW))) throw new Error('step 15 must start in the groups view');
         if (!(await ui.exists(SEARCH))) throw new Error(`search input ${SEARCH} is missing (search UI not implemented)`);
 
@@ -1713,15 +1984,34 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         state.searchTitle = target.title;
         state.searchSession = target.sid;
 
-        // The record snapshot is taken after the rename (host-side only) and
+        // (1b) Move the cheap renamed target into the nested child group. The
+        // reveal below must then expand both the containing child and its ancestor
+        // a (nested-ancestor reveal coverage). This is a host-side group write, so
+        // it happens before the read-only record snapshot.
+        await sleep(500); // the group-drag click guard swallows clicks for 400 ms after a dragstart
+        await ui.dragSessionToGroup(target.sid, child);
+        await ui.waitFor(
+          `document.querySelector(${JSON.stringify(SESSION)} + '[data-session-id="${target.sid}"]')?.getAttribute('data-group-id') === ${JSON.stringify(child)}`,
+          'search target moved into the nested child group',
+          8000,
+        );
+
+        // The record snapshot is taken after the rename/move (host-side only) and
         // before any search call: everything below must leave it untouched.
         const before = await settledRecord();
         assertSettled(before, 'record before search');
 
-        // (2) Collapse group a, search the title, ArrowDown to it, Enter: group a
-        // must expand, the row must render, be highlighted and be scrolled into
-        // view inside the tree's own scroll container.
+        // (2) Collapse the nested child and its ancestor a, switch the archive
+        // filter to "only" (the target row is then hidden), search the title,
+        // ArrowDown to it, Enter: the filter must fall back to "all", both groups
+        // must expand, and the row must render, highlight and scroll into view.
         await sleep(500); // the group-drag click guard swallows clicks for 400 ms after a dragstart
+        await ui.click(`${GROUP}[data-group-id="${child}"]`);
+        await ui.waitFor(
+          `document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="${child}"]')?.getAttribute('data-expanded') === 'false'`,
+          `nested child group ${child} collapsed`,
+          8000,
+        );
         await ui.click(`${GROUP}[data-group-id="${a}"]`);
         await ui.waitFor(
           `document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="${a}"]')?.getAttribute('data-expanded') === 'false'`,
@@ -1731,6 +2021,8 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (await ui.exists(`${SESSION}[data-session-id="${target.sid}"]`)) {
           throw new Error(`collapsed group ${a} still renders the target row`);
         }
+        await ui.setFilter('only');
+        if ((await ui.filterState()) !== 'only') throw new Error('archive filter must be "only" before the search selection');
         const scrollBefore = await ui.setTreeScrollTop(0);
         if (!Number.isFinite(scrollBefore)) throw new Error(`tree scroll container ${TREE} missing`);
 
@@ -1751,6 +2043,14 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (activeSid !== target.sid) throw new Error(`ArrowDown active result expected ${target.sid}, got ${activeSid}`);
         await ui.pressSearchKey('Enter');
 
+        // only -> all visibility correction (spec §3.3 step 2).
+        await ui.waitFor(
+          `document.querySelector(${JSON.stringify(FILTER)})?.getAttribute('data-filter') === 'all'`,
+          'archive filter switched only -> all for the hidden search result',
+          5000,
+        );
+        const filterAfterSelect = await ui.filterState();
+        if (filterAfterSelect !== 'all') throw new Error(`only -> all filter correction failed (got ${filterAfterSelect})`);
         await ui.waitFor(
           `(() => {
             const row = document.querySelector(${JSON.stringify(SESSION)} + '[data-session-id="${target.sid}"]');
@@ -1759,8 +2059,14 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           'revealed row rendered with the dsg-search-hit highlight',
           5000,
         );
-        const expandedAfter = (await ui.attrs(`${GROUP}[data-group-id="${a}"]`, 'data-expanded'))[0];
-        if (expandedAfter !== 'true') throw new Error(`group ${a} must expand after the search selection (data-expanded=${expandedAfter})`);
+        const ancestorExpanded = (await ui.attrs(`${GROUP}[data-group-id="${a}"]`, 'data-expanded'))[0];
+        if (ancestorExpanded !== 'true') {
+          throw new Error(`ancestor group ${a} must expand after the nested search selection (data-expanded=${ancestorExpanded})`);
+        }
+        const childExpanded = (await ui.attrs(`${GROUP}[data-group-id="${child}"]`, 'data-expanded'))[0];
+        if (childExpanded !== 'true') {
+          throw new Error(`containing child group ${child} must expand after the nested search selection (data-expanded=${childExpanded})`);
+        }
         await ui.waitFor(`document.querySelector(${JSON.stringify(TREE)})?.scrollTop !== ${scrollBefore}`, 'tree scrolled to the revealed row', 5000);
         const scrollAfter = await ui.treeScrollTop();
         if (!(Number.isFinite(scrollAfter) && Math.abs(scrollAfter - scrollBefore) > 1)) {
@@ -1770,6 +2076,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if ((await driver.evaluate(`document.querySelector(${JSON.stringify(SEARCH)})?.value ?? null`)) !== '') {
           throw new Error('search input must clear after a selection');
         }
+        // Restore the default filter for the archive-side checks below.
+        await ui.setFilter('hidden');
+        if ((await ui.filterState()) !== 'hidden') throw new Error('archive filter must return to "hidden" after the only -> all check');
 
         // (3) Archive another visible non-blank session through its ... menu, then
         // search its old title: the result is listed but disabled and Enter must
@@ -1834,6 +2143,27 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         await ui.waitFor(`!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'search dropdown closed on an outside pointerdown', 3000);
         await ui.fillSearch('');
 
+        // (5b) Keyboard-active result inside the 320px scrolling listbox: a broad
+        // workspace query yields a full page of rows; repeated ArrowDown must keep
+        // the active option inside the listbox rect (and the listbox scrolled).
+        await ui.fillSearch('Projects');
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'broad search dropdown open');
+        await ui.waitFor(`document.querySelectorAll(${JSON.stringify(SEARCH_RESULT)}).length > 0`, 'broad search results rendered');
+        const broadCount = await ui.count(SEARCH_RESULT);
+        if (broadCount < 12) throw new Error(`broad query 'Projects' yielded only ${broadCount} results; need >=12 for the keyboard-scroll check`);
+        const keyboardTarget = Math.min(15, broadCount - 1);
+        for (let step = 0; step <= keyboardTarget; step += 1) await ui.pressSearchKey('ArrowDown');
+        const activeInfo = await ui.searchActiveInfo();
+        if (!activeInfo) throw new Error('no keyboard-active search option after repeated ArrowDown');
+        if (!activeInfo.inside) {
+          throw new Error(`keyboard-active search option is clipped by the listbox: ${JSON.stringify(activeInfo)}`);
+        }
+        if (!(activeInfo.scrollTop > 0)) {
+          throw new Error(`keyboard navigation did not scroll the search listbox (scrollTop=${activeInfo.scrollTop})`);
+        }
+        await ui.fillSearch('');
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'broad search dropdown closed after clearing');
+
         // (6) The whole search flow left groups + ungrouped byte-identical.
         const after = await settledRecord();
         assertSettled(after, 'record after search');
@@ -1846,6 +2176,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         return {
           searchSession: target.sid,
           searchTitle: state.searchTitle,
+          nestedReveal: { ancestor: a, child, ancestorExpanded, childExpanded },
+          onlyToAll: { before: 'only', after: filterAfterSelect },
+          keyboardScroll: { targetIndex: keyboardTarget, info: activeInfo },
           scroll: { before: scrollBefore, after: scrollAfter },
           archivedSession: victim.sid,
           archivedTitle: state.archivedTitle,

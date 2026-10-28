@@ -246,7 +246,7 @@ const GroupDropSlot = ({ parentId, beforeGroupId, store, handlers }) => {
   const forbidden =
     dropTarget && dropTarget.kind === 'group-forbidden' && dropTarget.parentId === parentId && (dropTarget.beforeGroupId ?? null) === anchor
   return h('div', {
-    class: classNames('dsg-group-drop-slot', active && 'dsg-drop-active'),
+    class: 'dsg-group-drop-slot',
     'data-testid': 'session-groups-group-drop',
     'data-parent-id': parentId,
     'data-before-group-id': anchor ?? '',
@@ -292,8 +292,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
           'dsg-group-row',
           isAppendTarget && 'dsg-insert-after',
           isBefore && 'dsg-insert-before',
-          isAfter && 'dsg-insert-after',
-          dragging && 'dsg-dragging'
+          isAfter && 'dsg-insert-after'
         ),
         role: 'treeitem',
         tabindex: '0',
@@ -309,6 +308,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
         'data-dragging': dragging ? 'true' : 'false',
         title: groupPath(store.doc, group.id),
         onClick: () => handlers.onGroupClick(group.id),
+        onPointerDown: (event) => handlers.onGroupPointerDown(event, group),
         onKeyDown: (event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
@@ -487,7 +487,13 @@ const ResizeHandle = ({ width, min, max, onChange, onCommit, onReset }) => {
     setDragging(false)
     if (commit) {
       const clamped = clampSidebarWidth(drag.width, globalThis.innerWidth)
-      if (clamped !== null) commitRef.current?.(clamped)
+      if (clamped !== null) {
+        // The last pointermove only scheduled a rAF that the cancel above may
+        // have discarded. Apply the final width before persisting so a fast
+        // release cannot store a width the sidebar never took.
+        changeRef.current?.(clamped)
+        commitRef.current?.(clamped)
+      }
     }
   }, [])
 
@@ -617,6 +623,7 @@ const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionI
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const boxRef = useRef(null)
+  const listboxRef = useRef(null)
 
   const index = useMemo(
     () => buildSearchIndex({ doc: store?.doc, sessionsById, workspaces, archivedSessionIds }),
@@ -647,6 +654,22 @@ const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionI
     doc?.addEventListener?.('keydown', onKeyDown, true)
     return () => doc?.removeEventListener?.('keydown', onKeyDown, true)
   }, [visible])
+
+  // Keep the keyboard-active option visible inside the 320px scrolling listbox
+  // (spec §3.3): ArrowDown past the fold must never leave the active row clipped.
+  // Uses rect difference rather than `scrollIntoView` so the page/tree does not
+  // scroll as a side effect.
+  useEffect(() => {
+    if (!visible || activeIndex < 0) return
+    const listbox = listboxRef.current
+    if (!listbox) return
+    const option = listbox.querySelector?.(`#${SEARCH_LISTBOX_ID}-${activeIndex}`)
+    if (!option) return
+    const boxRect = listbox.getBoundingClientRect()
+    const optionRect = option.getBoundingClientRect()
+    if (optionRect.top < boxRect.top) listbox.scrollTop -= boxRect.top - optionRect.top
+    else if (optionRect.bottom > boxRect.bottom) listbox.scrollTop += optionRect.bottom - boxRect.bottom
+  }, [activeIndex, visible, results.length])
 
   /** Apply a new query: typing always re-evaluates and clears the active row. */
   const openFor = (value) => {
@@ -741,6 +764,7 @@ const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionI
           'div',
           {
             id: SEARCH_LISTBOX_ID,
+            ref: listboxRef,
             class: 'dsg-search-results',
             role: 'listbox',
             'data-testid': 'session-groups-search-results',
@@ -1195,6 +1219,10 @@ export const GroupsView = (props) => {
   const autoExpandRef = useRef({ groupId: null, timer: null })
   const dragRef = useRef(null)
   const suppressedClickRef = useRef(null)
+  // Pointerdown origin for the group row: a dragstart always targets the
+  // draggable row, so the button check must be captured on pointerdown (where the
+  // target really is the `+`/`…` button) and consumed by onGroupDragStart.
+  const buttonPointerRef = useRef(null)
   dragRef.current = dragState
 
   // Sidebar width override state. `preferredWidth` is the persisted preference;
@@ -1299,12 +1327,15 @@ export const GroupsView = (props) => {
 
   const handleWidthReset = () => {
     const viewport = globalThis.innerWidth || viewportWidth
+    // The preference is always the design default (420); the applied width is
+    // only its viewport clamp. Persisting the clamp would permanently downgrade
+    // a narrow-window reset (e.g. 320 at 800px) and widening later would stay
+    // narrow instead of restoring 420.
     const next = clampSidebarWidth(SIDEBAR_WIDTH_DEFAULT, viewport)
-    if (next === null) return
-    preferredWidthRef.current = next
-    setPreferredWidth(next)
-    widthControllerRef.current?.update(next, viewport)
-    writeSidebarWidth(next)
+    preferredWidthRef.current = SIDEBAR_WIDTH_DEFAULT
+    setPreferredWidth(SIDEBAR_WIDTH_DEFAULT)
+    if (next !== null) widthControllerRef.current?.update(next, viewport)
+    writeSidebarWidth(SIDEBAR_WIDTH_DEFAULT)
   }
 
   const t = rt()?.t ?? ((key) => key)
@@ -1653,9 +1684,36 @@ export const GroupsView = (props) => {
       setDragState(dragRef.current)
       rt()?.startDragLabel?.(dragRef.current.label)
     },
+    onGroupPointerDown: (event, group) => {
+      const target = event.target
+      const insideButton = target && typeof target.closest === 'function' && target.closest('button')
+      if (!insideButton) {
+        buttonPointerRef.current = null
+        return
+      }
+      const marker = { groupId: group.id, at: Date.now() }
+      buttonPointerRef.current = marker
+      const doc = globalThis.document
+      const clear = () => {
+        if (buttonPointerRef.current === marker) buttonPointerRef.current = null
+        doc?.removeEventListener?.('pointerup', clear, true)
+        doc?.removeEventListener?.('pointercancel', clear, true)
+      }
+      doc?.addEventListener?.('pointerup', clear, true)
+      doc?.addEventListener?.('pointercancel', clear, true)
+    },
     onGroupDragStart: (event, group) => {
+      // A dragstart always targets the draggable row, never the inner button, so
+      // the origin is remembered from pointerdown. Without this, a slight
+      // movement while pressing `+`/`…` starts a real group drag (and its drop
+      // can reorder/reparent) even though the click is suppressed afterwards.
+      const pointer = buttonPointerRef.current
+      buttonPointerRef.current = null
+      const fromButton =
+        pointer !== null && pointer !== undefined && pointer.groupId === group.id && Date.now() - pointer.at <= 5000
       const origin = event.target
-      if (origin && typeof origin.closest === 'function' && origin.closest('button')) {
+      const originIsButton = origin && typeof origin.closest === 'function' && origin.closest('button')
+      if (fromButton || originIsButton) {
         event.preventDefault()
         return
       }
@@ -1672,6 +1730,7 @@ export const GroupsView = (props) => {
       rt()?.startDragLabel?.(group.name)
     },
     onDragEnd: () => {
+      buttonPointerRef.current = null
       clearAutoExpand()
       dragRef.current = null
       setDragState(null)

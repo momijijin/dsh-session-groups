@@ -99,7 +99,7 @@ test('index excludes subagent rows and keeps every other session (archived, ungr
   assert.equal(entries.some((entry) => entry.sessionId === 'sub' || entry.sessionId === 'sub2'), false)
 })
 
-test('index entries expose the exact Entry fields: title, workspace, groupPath, groupIds, archived', () => {
+test('index entries expose the exact Entry fields: title, workspace, groupPath, groupIds, archived, aliases', () => {
   const byId = indexedById()
   assert.deepEqual(byId.s1, {
     sessionId: 's1',
@@ -108,6 +108,7 @@ test('index entries expose the exact Entry fields: title, workspace, groupPath, 
     groupPath: 'Alpha',
     groupIds: ['g-a'],
     archived: false,
+    aliases: [],
   })
   assert.deepEqual(byId.s3, {
     sessionId: 's3',
@@ -116,6 +117,7 @@ test('index entries expose the exact Entry fields: title, workspace, groupPath, 
     groupPath: 'Alpha / Alpha One',
     groupIds: ['g-a', 'g-a1'],
     archived: false,
+    aliases: [],
   })
   assert.deepEqual(byId.s4, {
     sessionId: 's4',
@@ -124,6 +126,7 @@ test('index entries expose the exact Entry fields: title, workspace, groupPath, 
     groupPath: 'Alpha / Alpha One / Alpha One X',
     groupIds: ['g-a', 'g-a1', 'g-a1x'],
     archived: false,
+    aliases: [],
   })
   assert.deepEqual(byId.u1, {
     sessionId: 'u1',
@@ -132,6 +135,7 @@ test('index entries expose the exact Entry fields: title, workspace, groupPath, 
     groupPath: '',
     groupIds: [],
     archived: false,
+    aliases: [],
   })
   // Derived (host-only) ungrouped sessions have an empty group path too.
   assert.deepEqual(byId.derived, {
@@ -141,6 +145,7 @@ test('index entries expose the exact Entry fields: title, workspace, groupPath, 
     groupPath: '',
     groupIds: [],
     archived: false,
+    aliases: [],
   })
 })
 
@@ -158,8 +163,11 @@ test('index titles follow sessionTitle rules and archive flags follow the host a
   assert.equal(withArchive.s1.archived, false)
 })
 
-test('index tolerates missing or malformed inputs without throwing', () => {
+test('index tolerates missing, null or malformed inputs without throwing', () => {
   assert.deepEqual(buildSearchIndex(), [])
+  assert.deepEqual(buildSearchIndex(null), [])
+  assert.deepEqual(buildSearchIndex(42), [])
+  assert.deepEqual(buildSearchIndex('nope'), [])
   assert.deepEqual(buildSearchIndex({ doc: null, sessionsById: null, workspaces: null, archivedSessionIds: null }), [])
   const entries = buildSearchIndex({ sessionsById: { x: { id: 'x', title: 'Solo' } } })
   assert.equal(entries.length, 1)
@@ -170,7 +178,26 @@ test('index tolerates missing or malformed inputs without throwing', () => {
     groupPath: '',
     groupIds: [],
     archived: false,
+    aliases: [],
   })
+})
+
+test('placeholder rows carry locale-neutral match aliases without changing the localized display title', () => {
+  const byId = indexedById()
+  assert.equal(byId.blank.title, '新会话')
+  assert.deepEqual(byId.blank.aliases, ['new session', 'blank session', '新会话', '新建会话'])
+  assert.equal(byId.untitled.title, '未命名')
+  assert.deepEqual(byId.untitled.aliases, ['untitled', 'no title', '未命名'])
+  // A user-renamed blank keeps its custom title and must not match "new session".
+  assert.deepEqual(byId.renamedBlank.aliases, [])
+  assert.deepEqual(byId.s1.aliases, [])
+
+  const index = buildSearchIndex(indexFixture())
+  assert.deepEqual(matchSessions(index, 'new session').map((entry) => entry.sessionId), ['blank'])
+  assert.deepEqual(matchSessions(index, 'NEW SESSION').map((entry) => entry.sessionId), ['blank'])
+  assert.deepEqual(matchSessions(index, 'untitled').map((entry) => entry.sessionId), ['untitled'])
+  assert.deepEqual(matchSessions(index, 'renamed blank').map((entry) => entry.sessionId), ['renamedBlank'])
+  assert.deepEqual(matchSessions(index, 'new session').some((entry) => entry.sessionId === 'renamedBlank'), false)
 })
 
 // ---------------------------------------------------------------------- matchSessions
@@ -280,4 +307,16 @@ test('revealSession returns the same collapsed reference when nothing is collaps
   const empty = {}
   assert.equal(revealSession(doc, empty, 's1'), empty)
   assert.equal(revealSession(doc, empty, 'derived'), empty)
+})
+
+test('revealSession treats only the boolean true as collapsed (truthy values stay expanded)', () => {
+  const doc = revealFixture()
+  // The store only ever writes `true`, but a legacy/foreign truthy value must not
+  // be mistaken for a collapsed flag: expanded-by-default means non-true = open.
+  const collapsed = { 'g-a': 1, 'g-a1': 'yes', [UNGROUPED_ID]: {} }
+  assert.equal(revealSession(doc, collapsed, 's3'), collapsed)
+  assert.equal(revealSession(doc, collapsed, 'derived'), collapsed)
+  // A real `true` next to truthy noise is still removed and only that key.
+  const mixed = { 'g-a': true, 'g-a1': 'yes', 'g-b': true }
+  assert.deepEqual(revealSession(doc, mixed, 's1'), { 'g-a1': 'yes', 'g-b': true })
 })
