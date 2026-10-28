@@ -1,5 +1,7 @@
 # Session Groups V1.1 Implementation Plan
 
+> **Implemented (2026-10-28):** V1.1 shipped as **0.2.1**（0.2.0 + typography patch）。E2E 现为 **16 步**（新增 step 16 `typography-matches-official-sidebar`）；本计划 Step 3 中“15-step / 0.2.0 tarball”为当时的实施预期，最终以 `docs/TEST-PLAN.md` §5、`docs/TEST-RESULTS.md` §0 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 在现有 dsh-session-groups 上交付 V1.1：分组视图左栏可拖宽、分组可拖拽排序/改父级、会话搜索下拉，并通过完整回归与用户验收。

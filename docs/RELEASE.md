@@ -1,16 +1,16 @@
 # V1.1 发布与安装说明（未安装到用户 desktop）
 
-- 版本：`0.2.0`
+- 版本：`0.2.1`（V1.1 排版对齐 patch）
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：**V1.1 QA 全绿（15/15 E2E、183/183 tests、audit PASS）**；等待用户验收后才安装到 desktop profile
-- 范围：V1 全部能力 + 左栏宽度 264–760、分组拖拽排序/改父级、会话搜索下拉
+- 状态：**V1.1 QA 全绿（16/16 E2E、183/183 tests、audit PASS）**；等待用户验收后才安装到 desktop profile
+- 范围：V1 全部能力 + 左栏宽度 264–760、分组拖拽排序/改父级、会话搜索下拉、官方侧栏排版/图标对齐
 
 ## 1. 构建
 
 ```powershell
 cd C:\Users\Momiji\Projects\dsh-session-groups
 pnpm install          # 已安装过可跳过；本版未新增依赖
-npm run build         # 生成 lib/client.js（157928 bytes）
+npm run build         # 生成 lib/client.js（159450 bytes）
 npm test              # 183/183
 node --check lib/client.js
 ```
@@ -19,7 +19,7 @@ node --check lib/client.js
 
 ```powershell
 npm pack
-# dsh-session-groups-0.2.0.tgz（102,152 bytes / 约 99.8 KB；tarball 内 32 files）
+# dsh-session-groups-0.2.1.tgz（103,391 bytes / 约 101.0 KB；tarball 内 32 files）
 ```
 
 包内容固定为 `src/**`、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`。
@@ -27,15 +27,15 @@ npm pack
 
 最终 tarball 记录（以实际产物为准）：
 
-- 文件：`dsh-session-groups-0.2.0.tgz`
-- 大小：**102,152 bytes**（unpacked 402,471 bytes；32 files）
-- SHA256：`96BDBF5252B1BD785E63D6FF9DFDF5D1B92FDA4F0ECFE99D3BFFCBDABCE82C8A`
+- 文件：`dsh-session-groups-0.2.1.tgz`
+- 大小：**103,391 bytes**（unpacked 406,821 bytes；32 files）
+- SHA256：`88DF099F449636F80CC0C7748BFFAE7EC382DA189EA997DE93E6EB3705952D8B`
 
 ## 3. 安装
 
 ### Desktop（用户验收后）
 
-设置 → 插件 → 添加插件 → 选择 `dsh-session-groups-0.2.0.tgz`（或本地目录），启用后重启/刷新。
+设置 → 插件 → 添加插件 → 选择 `dsh-session-groups-0.2.1.tgz`（或本地目录），启用后重启/刷新。
 
 不要用 `dsh plugin --profile desktop` 改 App 管理的 profile。
 
@@ -46,7 +46,7 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\releas
 $desktop = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 & $desktop --expose-internals $cli --profile groups-spike --from-default-profile web
-& $desktop --expose-internals $cli plugin --profile groups-spike add "file:C:\...\dsh-session-groups-0.2.0.tgz"
+& $desktop --expose-internals $cli plugin --profile groups-spike add "file:C:\...\dsh-session-groups-0.2.1.tgz"
 & $desktop --expose-internals $cli --profile groups-spike --port 4405 --no-open
 ```
 
@@ -60,6 +60,7 @@ $cli = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\resources\app\lib\des
 ## 5. 已知限制
 
 - 运行中会话归档确认框未 live 验证（隔离 home 无 running 会话）；真实 profile 手工补验（BLOCKED-ENV，沿用 V1）。E2E step 15 会归档一条**非运行**会话作为宿主侧副作用，分组记录不变。
+- 排版无插件字号/字体设置：`.dsg-root` 继承宿主侧栏基线（DSH Desktop 2.0.18 为 14px），固定尺寸通过官方 `--dsw-font-*` token（px fallback）对齐工作区侧栏；宿主升级改变基线时继承字号随动，行高/图标仍按官方 2.0.18 度量（step 16 守护）。
 - 宽度覆盖依赖宿主布局 DOM（DSH Desktop 2.0.18）：找不到 frame/sidebarRoot 时 fail-soft（把手隐藏）；宿主升级若改 DOM，加宽可能失效，但分组/搜索不受影响；视口 <744px 或余量不足时不覆盖。
 - 搜索只匹配标题/工作区/组路径，最多 20 条；无全文搜索（P2）。
 - 组拖到折叠组时不给子组落点（需先展开）；组拖不做悬停自动展开。
@@ -69,5 +70,5 @@ $cli = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\resources\app\lib\des
 
 ## 6. 验证证据
 
-- `docs/TEST-RESULTS.md`：V1.1（npm test 183/183、E2E 15/15、audit load/commit、打包 sha256）
-- `scripts/qa/evidence/`：`e2e-20261028-192421.json` + 15 步截图、`audit-exercise-20261028-192609-commit.json`、`setup-20261028-192032.json`（本地，不随包发布）
+- `docs/TEST-RESULTS.md`：V1.1（npm test 183/183、E2E 16/16、E2E step 12 数据审计、打包 sha256）
+- `scripts/qa/evidence/`：`e2e-20261028-212407.json` + 16 步截图、`setup-20261028-212010.json`（本地，不随包发布）

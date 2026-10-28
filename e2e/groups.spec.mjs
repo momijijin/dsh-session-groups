@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // e2e/groups.spec.mjs
 //
-// V1 E2E acceptance (docs/TEST-PLAN.md §5, 15 steps) - zero-dependency.
+// V1 E2E acceptance (docs/TEST-PLAN.md §5, 16 steps) - zero-dependency.
 //
 // Drives the real isolated DSH web UI (`.spike-homes/qa`, port 4402) through the
 // Chrome DevTools Protocol using the Chromium already present on this machine.
@@ -13,7 +13,7 @@
 // When the client UI is not present yet the runner exits 3 (BLOCKED) with a
 // diagnostic, so the pipeline can distinguish "not implemented" from "broken".
 //
-// Exit codes: 0 = all 15 steps PASS, 1 = a step FAILED, 2 = harness error,
+// Exit codes: 0 = all 16 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -25,7 +25,9 @@ import { launchDriver, sleep } from './cdp.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..');
-const QA_HOME = join(REPO_ROOT, '.spike-homes', 'qa');
+// Isolated DSH home used by the QA harness; overridable with --qa-home so a
+// fresh home can be used without deleting a previous run's artifacts.
+let QA_HOME = join(REPO_ROOT, '.spike-homes', 'qa');
 const SCRIPTS_QA = join(REPO_ROOT, 'scripts', 'qa');
 const DEFAULT_EVIDENCE = join(SCRIPTS_QA, 'evidence');
 const TOGGLE = '[data-testid="session-groups-toggle"]';
@@ -62,7 +64,7 @@ const TREE = '.dsg-tree';
 // args / small utils
 // ---------------------------------------------------------------------------
 function parseArgs(argv) {
-  const args = { port: 4402, evidenceDir: DEFAULT_EVIDENCE, browser: 'auto', timeoutMs: 20000, screenshot: true };
+  const args = { port: 4402, evidenceDir: DEFAULT_EVIDENCE, browser: 'auto', timeoutMs: 20000, screenshot: true, qaHome: null };
   for (let i = 2; i < argv.length; i++) {
     const key = argv[i];
     const next = () => argv[++i];
@@ -71,6 +73,7 @@ function parseArgs(argv) {
     else if (key === '--browser') args.browser = next();
     else if (key === '--timeout-ms') args.timeoutMs = Number(next());
     else if (key === '--no-screenshot') args.screenshot = false;
+    else if (key === '--qa-home') args.qaHome = next();
     else throw new Error(`unknown argument: ${key}`);
   }
   return args;
@@ -2190,6 +2193,167 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         };
       },
     },
+    {
+      id: 16,
+      name: 'typography-matches-official-sidebar',
+      async run() {
+        // Step 15 leaves the groups view active. This step is pure measurement
+        // (no screenshots required): computed styles + row rects must match the
+        // official DSH 2.0.18 workspace sidebar metrics while `.dsg-root` keeps
+        // inheriting the host sidebar font.
+        if (!(await ui.exists(VIEW))) throw new Error('step 16 must start in the groups view');
+        await sleep(200); // let the last step's layout settle before measuring
+        const metrics = await driver.evaluate(`(() => {
+          const px = (value) => {
+            const n = Number.parseFloat(value);
+            return Number.isFinite(n) ? n : null;
+          };
+          const root = document.querySelector('[data-testid="session-groups-view"]');
+          if (!root) return { error: 'groups view missing' };
+
+          // Nearest host ancestor of the groups root (the sidebar wrapper that
+          // supplies the inherited base font). Falls back to the 14px contract
+          // when the root is mounted directly under <body>.
+          let host = root.parentElement;
+          while (host && host !== document.body && host.nodeType === 1) {
+            if (getComputedStyle(host).fontSize) break;
+            host = host.parentElement;
+          }
+          const hostStyle = host && host !== document.body ? getComputedStyle(host) : null;
+
+          const styleOf = (el) => (el ? getComputedStyle(el) : null);
+          const rectOf = (el) => (el ? el.getBoundingClientRect() : null);
+          const sizeOf = (el) => ({ width: px(styleOf(el)?.width), height: px(styleOf(el)?.height) });
+          const fontOf = (el) => ({
+            fontSize: px(styleOf(el)?.fontSize),
+            lineHeight: px(styleOf(el)?.lineHeight),
+          });
+
+          const groupRow = document.querySelector('.dsg-group-row');
+          const sessionRow = document.querySelector('.dsg-session-row');
+          const groupName = document.querySelector('.dsg-group-name');
+          const sessionTitle = document.querySelector('.dsg-session-title');
+          const workspaceBadge = document.querySelector('.dsg-workspace-badge');
+          const searchInput = document.querySelector('.dsg-search-input');
+          const groupIcon = document.querySelector('.dsg-group-icon svg');
+          const groupCaret = document.querySelector('.dsg-group-caret svg');
+          const groupActionGlyph = document.querySelector('.dsg-group-actions .dsg-glyph');
+          const headerTitle = document.querySelector('.dsg-header-title');
+          const textButton = document.querySelector('.dsg-text-button');
+          const rootStyle = getComputedStyle(root);
+
+          return {
+            root: {
+              fontSize: px(rootStyle.fontSize),
+              fontFamily: rootStyle.fontFamily,
+              lineHeight: rootStyle.lineHeight,
+              font14Token: rootStyle.getPropertyValue('--dsg-font-14').trim(),
+            },
+            host: {
+              found: !!hostStyle,
+              tag: host ? host.tagName.toLowerCase() : null,
+              fontSize: hostStyle ? px(hostStyle.fontSize) : null,
+              fontFamily: hostStyle ? hostStyle.fontFamily : null,
+            },
+            rows: {
+              groupRowHeight: rectOf(groupRow)?.height ?? null,
+              sessionRowHeight: rectOf(sessionRow)?.height ?? null,
+              groupRows: document.querySelectorAll('.dsg-group-row').length,
+              sessionRows: document.querySelectorAll('.dsg-session-row').length,
+            },
+            text: {
+              groupName: fontOf(groupName),
+              sessionTitle: fontOf(sessionTitle),
+              workspaceBadge: fontOf(workspaceBadge),
+              searchInput: { ...fontOf(searchInput), height: rectOf(searchInput)?.height ?? null },
+              headerTitle: fontOf(headerTitle),
+            },
+            buttons: {
+              textButton: { ...fontOf(textButton), height: rectOf(textButton)?.height ?? null },
+            },
+            icons: {
+              groupIcon: sizeOf(groupIcon),
+              groupCaret: sizeOf(groupCaret),
+              groupActionGlyph: sizeOf(groupActionGlyph),
+              groupActionButton: {
+                width: rectOf(groupActionGlyph?.parentElement)?.width ?? null,
+                height: rectOf(groupActionGlyph?.parentElement)?.height ?? null,
+              },
+              glyphSizes: Array.from(document.querySelectorAll('.dsg-root .dsg-glyph, .dsg-root .dsg-icon')).map((svg) => ({
+                width: px(getComputedStyle(svg).width),
+                height: px(getComputedStyle(svg).height),
+              })),
+            },
+          };
+        })()`);
+        if (metrics.error) throw new Error(metrics.error);
+
+        const near = (actual, expected, label, tolerance = 0) => {
+          if (typeof actual !== 'number' || Math.abs(actual - expected) > tolerance) {
+            throw new Error(`${label}: expected ${expected}${tolerance ? ` ±${tolerance}` : ''}, got ${actual}`);
+          }
+        };
+
+        // (1) `.dsg-root` consumes the host's inherited font-size: it must equal
+        // the nearest host sidebar ancestor (or the 14px fallback), with the same
+        // inherited font family.
+        const expectedRootFont = metrics.host.found ? metrics.host.fontSize : 14;
+        near(metrics.root.fontSize, expectedRootFont, `dsg-root font-size (host ${metrics.host.tag ?? 'none'} = ${expectedRootFont})`);
+        if (metrics.host.found) {
+          if (metrics.root.fontFamily !== metrics.host.fontFamily) {
+            throw new Error(`dsg-root font-family must inherit the host (root=${metrics.root.fontFamily}, host=${metrics.host.fontFamily})`);
+          }
+        }
+        // (2) Officially sized rows: project/group 34px, session 32px.
+        near(metrics.rows.groupRowHeight, 34, 'dsg-group-row height', 1);
+        near(metrics.rows.sessionRowHeight, 32, 'dsg-session-row height', 1);
+        if (metrics.rows.groupRows < 1 || metrics.rows.sessionRows < 1) {
+          throw new Error(`typography probe needs rendered rows (groups=${metrics.rows.groupRows}, sessions=${metrics.rows.sessionRows})`);
+        }
+        // (3) Official title/meta sizes.
+        near(metrics.text.groupName.fontSize, 14, 'dsg-group-name font-size');
+        near(metrics.text.groupName.lineHeight, 20, 'dsg-group-name line-height');
+        near(metrics.text.sessionTitle.fontSize, 14, 'dsg-session-title font-size');
+        near(metrics.text.sessionTitle.lineHeight, 20, 'dsg-session-title line-height');
+        near(metrics.text.workspaceBadge.fontSize, 12, 'dsg-workspace-badge font-size');
+        near(metrics.text.searchInput.fontSize, 13, 'dsg-search-input font-size');
+        near(metrics.text.searchInput.height, 30, 'dsg-search-input height', 1);
+        near(metrics.text.headerTitle.fontSize, 14, 'dsg-header-title font-size');
+        near(metrics.buttons.textButton.fontSize, 13, 'dsg-text-button font-size');
+        near(metrics.buttons.textButton.height, 28, 'dsg-text-button height', 1);
+        // (4) Official 16px glyphs (group icon, caret, group action glyph, and
+        // every icon rendered inside the groups root).
+        for (const [label, size] of [
+          ['dsg-group-icon svg', metrics.icons.groupIcon],
+          ['dsg-group-caret svg', metrics.icons.groupCaret],
+          ['group action glyph', metrics.icons.groupActionGlyph],
+        ]) {
+          near(size.width, 16, `${label} width`);
+          near(size.height, 16, `${label} height`);
+        }
+        near(metrics.icons.groupActionButton.width, 16, 'group action button width');
+        near(metrics.icons.groupActionButton.height, 16, 'group action button height');
+        for (const [index, size] of metrics.icons.glyphSizes.entries()) {
+          near(size.width, 16, `glyph[${index}] width`);
+          near(size.height, 16, `glyph[${index}] height`);
+        }
+        if (metrics.root.font14Token !== '14px') {
+          throw new Error(`official font token --dsg-font-14 should resolve to 14px, got ${JSON.stringify(metrics.root.font14Token)}`);
+        }
+
+        return {
+          official: {
+            hostBase: metrics.host.fontSize,
+            hostAncestor: metrics.host.tag,
+            rows: { group: 34, session: 32 },
+            titles: { fontSize: 14, lineHeight: 20 },
+            meta: { workspaceBadge: 12, searchInput: 13 },
+            icons: 16,
+          },
+          measured: metrics,
+        };
+      },
+    },
   ];
 }
 
@@ -2207,6 +2371,7 @@ async function captureScreenshot(driver, args, path) {
 // ---------------------------------------------------------------------------
 async function main() {
   const args = parseArgs(process.argv);
+  if (args.qaHome) QA_HOME = resolve(args.qaHome);
   const evidenceDir = resolve(args.evidenceDir);
   mkdirSync(join(evidenceDir, 'screenshots', 'e2e'), { recursive: true });
   const startedAt = new Date().toISOString();
@@ -2249,7 +2414,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 15-step acceptance (isolated .spike-homes/qa, CDP)');
+  console.log(' V1 E2E - 16-step acceptance (isolated DSH home, CDP)');
   console.log('============================================================');
 
   let driver = null;

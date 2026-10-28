@@ -1,7 +1,7 @@
 {
   "id": "dsh-session-groups",
   "name": "dsh-session-groups",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": "Global session groups for the DSH left sidebar."

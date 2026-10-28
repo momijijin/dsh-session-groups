@@ -2,6 +2,7 @@
 
 - 状态：**Frozen（Gate 0 PASS，2026-10-18）**；后续变更需 Gate 1 评审
 - V1.1（0.2.0，2026-10-28）：**additive** 扩展——左栏宽度覆盖、分组拖拽排序/改父级、会话搜索下拉；数据模型、Host 路由、存储路径均不变
+- V1.1（0.2.1，2026-10-28）：**typography-only patch**——分组视图排版/图标对齐官方侧栏，消费宿主继承字体；无契约/数据/路由变化
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 

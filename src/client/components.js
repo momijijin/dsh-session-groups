@@ -320,8 +320,8 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
         onDragOver: (event) => handlers.onDragOverGroup(event, group.id),
         onDrop: (event) => handlers.onDropGroup(event, group.id),
       },
-      h('span', { class: 'dsg-group-caret' }, renderGlyph(h, expanded ? 'chevronDown' : 'chevronRight', 12)),
-      h('span', { class: 'dsg-group-icon' }, renderIcon(h, group.icon, 14)),
+      h('span', { class: 'dsg-group-caret' }, renderGlyph(h, expanded ? 'chevronDown' : 'chevronRight', 16)),
+      h('span', { class: 'dsg-group-icon' }, renderIcon(h, group.icon, 16)),
       h('span', { class: 'dsg-group-name' }, group.name),
       h('span', { class: 'dsg-group-count' }, node.visibleCount),
       h(
@@ -408,7 +408,7 @@ const UngroupedSection = ({ node, store, props, handlers }) => {
         onDragOver: (event) => handlers.onDragOverUngrouped(event),
         onDrop: (event) => handlers.onDropUngrouped(event),
       },
-      h('span', { class: 'dsg-group-caret' }, renderGlyph(h, expanded ? 'chevronDown' : 'chevronRight', 12)),
+      h('span', { class: 'dsg-group-caret' }, renderGlyph(h, expanded ? 'chevronDown' : 'chevronRight', 16)),
       h('span', { class: 'dsg-group-name' }, rt()?.t('ungrouped.title')),
       h('span', { class: 'dsg-ungrouped-count' }, node.length),
       isDrop
@@ -1112,12 +1112,13 @@ export const FooterAction = (props) => {
         border: '1px solid var(--dsw-alias-border-secondary, rgba(128,128,128,.35))',
         background: 'transparent',
         color: 'var(--dsw-alias-label-secondary, #57606a)',
-        fontSize: '11px',
+        fontSize: 'var(--dsw-font-xxxs-11-font-size, 11px)',
+        fontFamily: 'inherit',
         cursor: 'pointer',
         boxSizing: 'border-box',
       },
     },
-    renderGlyph(h, 'folderAdjust', 14),
+    renderGlyph(h, 'folderAdjust', 16),
     wide ? h('span', null, label) : null
   )
 }

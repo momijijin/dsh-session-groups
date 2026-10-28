@@ -1,6 +1,6 @@
 # V1/V1.1 测试计划
 
-- 目标：证明“分组只改视图、不改宿主数据”，同时证明拖拽/嵌套/筛选/新建在真实 DSH 中可用；V1.1 追加证明左栏宽度、分组拖拽、会话搜索
+- 目标：证明“分组只改视图、不改宿主数据”，同时证明拖拽/嵌套/筛选/新建在真实 DSH 中可用；V1.1 追加证明左栏宽度、分组拖拽、会话搜索、官方侧栏排版对齐
 - 负责人：QA（计划、证据、验收结论）；Host/Client 各写自己模块的测试；Lead 做最终审计
 - 环境：先用独立 `DSH_HOME`（`.spike-homes/qa`）+ `groups-spike` profile，再 desktop profile 人工验收；profile 不隔离 `sessions/`/`storages/`，禁止用真实 `~/.dsh` 跑 E2E
 - 关联：`docs/V1-PLAN.md`、`docs/CONTRACTS.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
@@ -12,7 +12,7 @@
 | 单元 | Node `node --test` | `src/shared/model.js` 纯函数 | Host/Client 写，QA 审 | 每次提交 |
 | Host 集成 | Node `node --test` + 临时目录 | 存储、原子写、revision、路由围栏 | Host | 每次提交 |
 | Client 逻辑 | Node `node --test` | 可见性、筛选、工作区映射、拖拽 hit-test | Client | 每次提交 |
-| E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索（15 步） | QA | 每日/合并前 |
+| E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索/排版（16 步） | QA | 每日/合并前 |
 | 人工验收 | 清单 + 截图 | desktop profile 9 步 | QA + 用户 | 发布前 |
 | 回归审计 | 脚本 + hash | 只写记录文件 | QA | 每次 E2E |
 | 性能 | 合成数据/手工 | 200/1000 会话 | QA | P1 |
@@ -76,7 +76,7 @@
 | C12 | 分组拖拽（V1.1） | `resolveGroupDrop` 同父前/后、跨父 child、有会话但 0 子组/空组=0 号槽、根末尾；同父移除后下标 −1；自身/后代 invalid；最新 `childrenOf` 重算锚点；no-op 不提交；**组 `+` 的 pointerdown 起点守卫（真实指针拖拽不产生 drag/drop 提交）；中间 50% invalid；同位置 after no-op；组菜单 move-up 启用路径** |
 | C13 | 会话搜索（V1.1） | `buildSearchIndex` 排除 subagent、标题/工作区/组路径、归档标记；`matchSessions` 前缀优先/大小写/空查询/20 上限/稳定排序；`revealSession` 展开所在组+全部祖先、未归组 `__ungrouped__`、已展开同引用；**`buildSearchIndex(null)` 容忍；仅 `collapsed[id] === true` 视为折叠；blank/untitled 的英文别名匹配（显示仍本地化）** |
 
-## 5. E2E（Playwright/CDP，15 步）
+## 5. E2E（Playwright/CDP，16 步）
 
 环境：
 
@@ -106,6 +106,13 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 13. **V1.1 宽度**：记录官方宽度 → 分组视图在 1024px 挂载（存储 620 → clamp 544）→ 1440px 恢复 620 → 拖到 760/620 → reload 保持 → 700px rail 不覆盖且无把手 → 双击复位 420 → 拖到 264 头部无水平溢出 → 折叠/展开保持 → **快速释放（move 后立即 up）断言 applied=stored** → **800px 双击复位持久化 420、applied=320；回 1440px 恢复 420** → 切回官方宽度恢复、官方把手回来。
 14. **V1.1 组拖**：组 c → 有会话但 0 子组的组 b 体槽（index 0）；组 a（带子树）→ 空组 e；组 c → 未归组头（根末尾）；a → b 上缘；快速双拖 before/child 锚点按最新 doc 重算；自身/末位 no-op 不涨 revision；**同位置 after no-op**；**组头中间 50% 无效（toast、不提交）**；组菜单上移/下移首尾禁用 + **启用 move-up 实际生效**；全树 n+1 槽审计；**真实 CDP 指针从组 `+` 按钮拖向另一组：dragstart 被 preventDefault，根顺序/parent/revision 不变**。
 15. **V1.1 搜索**：折叠组 a → 输入唯一标题 → ArrowDown/Enter → 组展开、行高亮、树滚动；**目标移入嵌套子组并折叠子组+祖先 a、筛选切 `only` 后选中：only→all、两级同时展开**；归档结果 `aria-disabled=true`、Enter 不改当前会话；**宽查询结果 >12，连按 ArrowDown 后 active option 保持在 320px listbox 可视 rect 内（listbox scrollTop>0）**；无结果空态；Esc/点击外部关闭；搜索前后 `groups`/`ungrouped` 字节一致。
+16. **V1.1 排版对齐（0.2.1）**：step 15 结束时分组视图仍激活；只用 `getComputedStyle`/`getBoundingClientRect`（不截图）断言：
+    - `.dsg-root` 的 `font-size` 等于宿主侧栏祖先的 computed `font-size`（无祖先时按 14px 契约）且 font-family 继承；
+    - `.dsg-group-row` 高 34px、`.dsg-session-row` 高 32px（±1）；
+    - `.dsg-group-name`/`.dsg-session-title` 14px/20px、`.dsg-workspace-badge` 12px、`.dsg-search-input` 13px（高 30px）、header 标题 14px、文本按钮 13px/28px；
+    - `.dsg-group-icon svg`、group caret、group action glyph 均 16×16，组操作按钮 16×16，根内所有 `.dsg-glyph`/`.dsg-icon` 均 16px；
+    - `--dsg-font-14` 解析为 14px（官方 token 生效）。
+    - 反例约束：不存在插件专属 font-size 设置/配置；宿主继承值变化时根字号随动。
 
 V1.1 新增/相关 stable testids（详见 `docs/CONTRACTS.md §4.1`）：
 
@@ -124,6 +131,7 @@ V1.1 回归注意：
 - **step 13**：官方宽度在进入分组视图前实测记录，切回后按记录值 ±2px 比较，不写死 420。
 - **step 14**：step 13 结束时停在官方视图，step 14 自己切回分组视图；step 15 依赖分组视图。
 - **step 15**：会通过宿主归档一条会话（宿主侧副作用，记录文件不变），证据中记录该 sid/title。
+- **step 16**：依赖 step 15 结束时仍在分组视图；只读 DOM（computed style/rect），不写记录文件、不改视图状态；失败信息必须列出「期望值 vs 实测值」。
 
 ## 6. 人工验收（desktop profile）
 
@@ -167,7 +175,7 @@ V1.1 回归注意：
 
 - 单测/集成输出（TAP/日志）
 - E2E trace/video（失败必存）
-- E2E 15 步 JSON（`scripts/qa/evidence/e2e-<ts>.json`）+ 截图（分组视图、拖拽插入线、组内新建、归档三态、rail、切回官方、宽度把手、组拖、搜索下拉）
+- E2E 16 步 JSON（`scripts/qa/evidence/e2e-<ts>.json`）+ 截图（分组视图、拖拽插入线、组内新建、归档三态、rail、切回官方、宽度把手、组拖、搜索下拉、排版断言）
 - 数据审计输出（load-only + commit probe）
 - 手工验收签字
 - 已知问题清单（含 P2）

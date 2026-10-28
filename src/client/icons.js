@@ -66,8 +66,8 @@ export const UI_GLYPHS = Object.freeze({
   close: 'M4 4l8 8M12 4l-8 8',
 })
 
-/** Render a small stroke UI glyph. */
-export const renderGlyph = (h, name, size = 14) =>
+/** Render a small stroke UI glyph. Default 16px to match official sidebar icons. */
+export const renderGlyph = (h, name, size = 16) =>
   h(
     'svg',
     {
