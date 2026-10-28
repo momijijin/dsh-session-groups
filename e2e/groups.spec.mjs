@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // e2e/groups.spec.mjs
 //
-// V1 E2E acceptance (docs/TEST-PLAN.md §5, 14 steps) - zero-dependency.
+// V1 E2E acceptance (docs/TEST-PLAN.md §5, 15 steps) - zero-dependency.
 //
 // Drives the real isolated DSH web UI (`.spike-homes/qa`, port 4402) through the
 // Chrome DevTools Protocol using the Chromium already present on this machine.
@@ -13,7 +13,7 @@
 // When the client UI is not present yet the runner exits 3 (BLOCKED) with a
 // diagnostic, so the pipeline can distinguish "not implemented" from "broken".
 //
-// Exit codes: 0 = all 14 steps PASS, 1 = a step FAILED, 2 = harness error,
+// Exit codes: 0 = all 15 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -51,6 +51,12 @@ const OFFICIAL_HANDLE = '[data-side="sidebar"]';
 const HEADER = '[data-testid="session-groups-header"]';
 const SIDEBAR_FRAME_MARKER = '[data-dsg-sidebar-frame]';
 const SIDEBAR_WIDTH_KEY = 'dsh-session-groups.width.v1';
+const SEARCH = '[data-testid="session-groups-search"]';
+const SEARCH_RESULTS = '[data-testid="session-groups-search-results"]';
+const SEARCH_RESULT = '[data-testid="session-groups-search-result"]';
+const SEARCH_EMPTY = '[data-testid="session-groups-search-empty"]';
+const TOAST = '[data-testid="session-groups-toast"]';
+const TREE = '.dsg-tree';
 
 // ---------------------------------------------------------------------------
 // args / small utils
@@ -678,6 +684,70 @@ function makeUi(driver, helpers) {
       return clicked;
     },    async bodyText() {
       return String(await evaluate(`(document.body?.innerText ?? '').slice(0, 20000)`));
+    },
+    // --- session search helpers (step 15) -----------------------------------
+    /**
+     * Title of one session row. Reads `.dsg-session-title` (or the row
+     * `aria-label`), never the full row text which appends the workspace badge.
+     */
+    async sessionTitle(sid) {
+      return await evaluate(`(() => {
+        const row = Array.from(document.querySelectorAll(${JSON.stringify(SESSION)}))
+          .find((el) => el.getAttribute('data-session-id') === ${JSON.stringify(sid)});
+        if (!row) return null;
+        const titleElement = row.querySelector('.dsg-session-title');
+        const text = (titleElement?.textContent ?? '').trim() || (row.getAttribute('aria-label') ?? '').trim();
+        return text || null;
+      })()`);
+    },
+    /** Id of the row marked as the main-view session (`data-current="true"`). */
+    async currentSessionId() {
+      return await evaluate(`document.querySelector(${JSON.stringify(SESSION)} + '[data-current="true"]')?.getAttribute('data-session-id') ?? null`);
+    },
+    async fillSearch(value) {
+      await ui.setNativeValue(SEARCH, value);
+      await sleep(180);
+    },
+    async searchExpanded() {
+      return await evaluate(`document.querySelector(${JSON.stringify(SEARCH)})?.getAttribute('aria-expanded') ?? null`);
+    },
+    /** Rendered search results (combobox listbox options). */
+    async searchResults() {
+      return await evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(SEARCH_RESULT)}), (el) => ({
+        sid: el.getAttribute('data-session-id'),
+        archived: el.getAttribute('data-archived'),
+        ariaDisabled: el.getAttribute('aria-disabled'),
+        active: el.getAttribute('data-active') === 'true',
+        text: (el.textContent ?? '').trim(),
+      }))`);
+    },
+    /** Dispatch a keydown on the focused search input (React keyboard handler). */
+    async pressSearchKey(key) {
+      const pressed = await evaluate(`(() => {
+        const input = document.querySelector(${JSON.stringify(SEARCH)});
+        if (!input) return false;
+        input.focus();
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, bubbles: true, cancelable: true }));
+        return true;
+      })()`);
+      if (!pressed) throw new Error(`search input ${SEARCH} not found`);
+      await sleep(120);
+    },
+    async treeScrollTop() {
+      return Number(await evaluate(`document.querySelector(${JSON.stringify(TREE)})?.scrollTop ?? NaN`));
+    },
+    async setTreeScrollTop(value) {
+      return Number(await evaluate(`(() => {
+        const tree = document.querySelector(${JSON.stringify(TREE)});
+        if (!tree) return NaN;
+        tree.scrollTop = ${Number(value)};
+        return tree.scrollTop;
+      })()`));
+    },
+    /** Outside pointerdown closes the search dropdown (spec §3.3). */
+    async clickOutsideSearch() {
+      await evaluate(`document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }))`);
+      await sleep(180);
     },
   };
   return ui;
@@ -1557,6 +1627,236 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         };
       },
     },
+    {
+      id: 15,
+      name: 'search-session-reveal',
+      async run() {
+        // Step 14 leaves the groups view active (asserted there); this step owns
+        // the search dropdown: reveal on select, archived rows disabled, empty
+        // state and the read-only guarantee for dsh-session-groups.json.
+        const { a } = state.groups;
+        if (!a) throw new Error('step 15 needs group a from step 3');
+        if (!(await ui.exists(VIEW))) throw new Error('step 15 must start in the groups view');
+        if (!(await ui.exists(SEARCH))) throw new Error(`search input ${SEARCH} is missing (search UI not implemented)`);
+
+        // -- settled record snapshots (search must never write the group doc) --
+        const recordPath = join(QA_HOME, 'storages', 'dsh-session-groups.json');
+        const readRecord = () => JSON.parse(readFileSync(recordPath, 'utf8'));
+        const comparable = (record) => JSON.stringify({ groups: record.groups ?? [], ungrouped: record.ungrouped ?? [] });
+        const settledRecord = async () => {
+          const first = readRecord();
+          await sleep(300);
+          const second = readRecord();
+          return { first, second };
+        };
+        const assertSettled = (pair, label) => {
+          if (comparable(pair.first) !== comparable(pair.second)) {
+            throw new Error(`${label}: group record still changing between two reads 300 ms apart`);
+          }
+        };
+
+        const isBlankTitle = (title) => !title || /^(新会话|New session|未命名|Untitled)$/.test(title.trim());
+        /** First rendered row matching `filter` that has a real (non-blank) title. */
+        const pickTitledRow = async (filter) => {
+          for (const row of await ui.sessions()) {
+            if (!filter(row)) continue;
+            const title = await ui.sessionTitle(row.sid);
+            if (isBlankTitle(title)) continue;
+            return { sid: row.sid, title, groupId: row.groupId };
+          }
+          return null;
+        };
+
+        // (1) Pick a cheap non-blank group-a title BEFORE collapsing the group.
+        // The frozen fixture's historical sessions are multi-MB transcripts and
+        // the host blocks the renderer while loading one, so first rename the
+        // group-a blank placeholder (a few hundred bytes) into a unique non-blank
+        // title and search for that. Only `.dsg-session-title` is read (the full
+        // row text appends the workspace badge).
+        const expandedNow = (await ui.attrs(`${GROUP}[data-group-id="${a}"]`, 'data-expanded'))[0];
+        if (expandedNow !== 'true') {
+          await ui.click(`${GROUP}[data-group-id="${a}"]`);
+          await ui.waitFor(
+            `document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="${a}"]')?.getAttribute('data-expanded') === 'true'`,
+            `group ${a} expanded`,
+            8000,
+          );
+        }
+        let blankRow = null;
+        for (const row of await ui.sessions()) {
+          if (row.groupId !== a || row.archived === true) continue;
+          if (isBlankTitle(await ui.sessionTitle(row.sid))) {
+            blankRow = { sid: row.sid };
+            break;
+          }
+        }
+        if (!blankRow) throw new Error('group a has no blank session row to turn into a cheap non-blank search target');
+        const searchTitle = `E2E-搜索-${Date.now().toString(36).slice(-4)}`;
+        await ui.openSessionMenu(blankRow.sid);
+        const renameItems = await ui.menuItems();
+        if (!renameItems.some((text) => /重命名|Rename/.test(text))) {
+          throw new Error(`session menu has no rename entry for the search target (items: ${JSON.stringify(renameItems.slice(0, 12))})`);
+        }
+        await ui.clickMenuItem(/重命名|Rename/);
+        await ui.fillDialog(searchTitle);
+        await ui.confirmDialog();
+        await ui.waitFor(
+          `Array.from(document.querySelectorAll(${JSON.stringify(SESSION)}), (el) => (el.querySelector('.dsg-session-title')?.textContent ?? '')).some((text) => text.includes(${JSON.stringify(searchTitle)}))`,
+          'renamed cheap search target row',
+          8000,
+        );
+        // Read the title back through the helper on the now non-blank row.
+        const target = { sid: blankRow.sid, title: await ui.sessionTitle(blankRow.sid) };
+        if (target.title !== searchTitle) {
+          throw new Error(`renamed search target title expected ${JSON.stringify(searchTitle)}, got ${JSON.stringify(target.title)}`);
+        }
+        state.searchTitle = target.title;
+        state.searchSession = target.sid;
+
+        // The record snapshot is taken after the rename (host-side only) and
+        // before any search call: everything below must leave it untouched.
+        const before = await settledRecord();
+        assertSettled(before, 'record before search');
+
+        // (2) Collapse group a, search the title, ArrowDown to it, Enter: group a
+        // must expand, the row must render, be highlighted and be scrolled into
+        // view inside the tree's own scroll container.
+        await sleep(500); // the group-drag click guard swallows clicks for 400 ms after a dragstart
+        await ui.click(`${GROUP}[data-group-id="${a}"]`);
+        await ui.waitFor(
+          `document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="${a}"]')?.getAttribute('data-expanded') === 'false'`,
+          `group ${a} collapsed`,
+          8000,
+        );
+        if (await ui.exists(`${SESSION}[data-session-id="${target.sid}"]`)) {
+          throw new Error(`collapsed group ${a} still renders the target row`);
+        }
+        const scrollBefore = await ui.setTreeScrollTop(0);
+        if (!Number.isFinite(scrollBefore)) throw new Error(`tree scroll container ${TREE} missing`);
+
+        if ((await ui.searchExpanded()) !== 'false') throw new Error('search input must start with aria-expanded="false"');
+        await ui.fillSearch(state.searchTitle);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'search dropdown open');
+        await ui.waitFor(`document.querySelectorAll(${JSON.stringify(SEARCH_RESULT)}).length > 0`, 'search results rendered');
+        if ((await ui.searchExpanded()) !== 'true') throw new Error('search input must report aria-expanded="true" while open');
+        const listboxRole = (await ui.attrs(SEARCH_RESULTS, 'role'))[0];
+        if (listboxRole !== 'listbox') throw new Error(`search dropdown role expected "listbox", got ${JSON.stringify(listboxRole)}`);
+        const results = await ui.searchResults();
+        const targetIndex = results.findIndex((entry) => entry.sid === target.sid);
+        if (targetIndex === -1) {
+          throw new Error(`search results for ${JSON.stringify(state.searchTitle)} do not include ${target.sid} (got ${JSON.stringify(results.map((entry) => entry.sid))})`);
+        }
+        for (let step = 0; step <= targetIndex; step += 1) await ui.pressSearchKey('ArrowDown');
+        const activeSid = await driver.evaluate(`document.querySelector(${JSON.stringify(SEARCH_RESULT)} + '[data-active="true"]')?.getAttribute('data-session-id') ?? null`);
+        if (activeSid !== target.sid) throw new Error(`ArrowDown active result expected ${target.sid}, got ${activeSid}`);
+        await ui.pressSearchKey('Enter');
+
+        await ui.waitFor(
+          `(() => {
+            const row = document.querySelector(${JSON.stringify(SESSION)} + '[data-session-id="${target.sid}"]');
+            return !!row && row.classList.contains('dsg-search-hit');
+          })()`,
+          'revealed row rendered with the dsg-search-hit highlight',
+          5000,
+        );
+        const expandedAfter = (await ui.attrs(`${GROUP}[data-group-id="${a}"]`, 'data-expanded'))[0];
+        if (expandedAfter !== 'true') throw new Error(`group ${a} must expand after the search selection (data-expanded=${expandedAfter})`);
+        await ui.waitFor(`document.querySelector(${JSON.stringify(TREE)})?.scrollTop !== ${scrollBefore}`, 'tree scrolled to the revealed row', 5000);
+        const scrollAfter = await ui.treeScrollTop();
+        if (!(Number.isFinite(scrollAfter) && Math.abs(scrollAfter - scrollBefore) > 1)) {
+          throw new Error(`tree scrollTop did not change after reveal (before=${scrollBefore}, after=${scrollAfter})`);
+        }
+        if (await ui.exists(SEARCH_RESULTS)) throw new Error('search dropdown must close after a selection');
+        if ((await driver.evaluate(`document.querySelector(${JSON.stringify(SEARCH)})?.value ?? null`)) !== '') {
+          throw new Error('search input must clear after a selection');
+        }
+
+        // (3) Archive another visible non-blank session through its ... menu, then
+        // search its old title: the result is listed but disabled and Enter must
+        // leave the main session untouched.
+        const currentBefore = await ui.currentSessionId();
+        const victim = await pickTitledRow(
+          (row) => row.archived !== true && row.sid !== target.sid && row.sid !== currentBefore && row.sid !== state.createdSession,
+        );
+        if (!victim) throw new Error('no other visible non-blank session available to archive');
+        state.archivedTitle = victim.title;
+        state.archivedSession = victim.sid;
+        await ui.openSessionMenu(victim.sid);
+        const menu = await ui.menuItems();
+        if (!menu.some((text) => /^(归档|Archive)$/.test(text.trim()))) {
+          throw new Error(`session menu has no archive entry for ${victim.sid} (items: ${JSON.stringify(menu.slice(0, 12))})`);
+        }
+        await ui.clickMenuItem(/^(归档|Archive)$/);
+        await sleep(500);
+        if (await ui.dialogOpen()) {
+          // Running session: the client confirms before stopping activity.
+          await ui.click(DIALOG_CONFIRM);
+          await sleep(500);
+        }
+        await ui.waitFor(
+          `!Array.from(document.querySelectorAll(${JSON.stringify(SESSION)})).some((el) => el.getAttribute('data-session-id') === ${JSON.stringify(victim.sid)})`,
+          `archived session ${victim.sid} hidden under the hidden filter`,
+          10000,
+        );
+
+        await ui.fillSearch(state.archivedTitle);
+        await ui.waitFor(`document.querySelectorAll(${JSON.stringify(SEARCH_RESULT)}).length > 0`, 'archived search results');
+        const archivedResults = await ui.searchResults();
+        const archivedIndex = archivedResults.findIndex((entry) => entry.sid === victim.sid);
+        if (archivedIndex === -1) {
+          throw new Error(`archived session ${victim.sid} is missing from search results (got ${JSON.stringify(archivedResults.map((entry) => entry.sid))})`);
+        }
+        const archivedEntry = archivedResults[archivedIndex];
+        if (archivedEntry.archived !== 'true') throw new Error(`archived result data-archived expected "true", got ${JSON.stringify(archivedEntry.archived)}`);
+        if (archivedEntry.ariaDisabled !== 'true') throw new Error(`archived result aria-disabled expected "true", got ${JSON.stringify(archivedEntry.ariaDisabled)}`);
+        for (let step = 0; step <= archivedIndex; step += 1) await ui.pressSearchKey('ArrowDown');
+        const archivedActive = await driver.evaluate(`document.querySelector(${JSON.stringify(SEARCH_RESULT)} + '[data-active="true"]')?.getAttribute('data-session-id') ?? null`);
+        if (archivedActive !== victim.sid) throw new Error(`ArrowDown active archived result expected ${victim.sid}, got ${archivedActive}`);
+        await ui.pressSearchKey('Enter');
+        await sleep(400);
+        await ui.waitFor(`/已归档|Archived/.test(document.querySelector(${JSON.stringify(TOAST)})?.textContent ?? '')`, 'archived-disabled toast', 3000);
+        const currentAfter = await ui.currentSessionId();
+        if (currentAfter !== currentBefore) {
+          throw new Error(`Enter on an archived result changed the main session (${JSON.stringify(currentBefore)} -> ${JSON.stringify(currentAfter)})`);
+        }
+
+        // (4) Nonsense query renders the empty state; Escape closes the dropdown.
+        await ui.fillSearch(`zzz-no-such-session-${Date.now().toString(36)}`);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH_EMPTY)})`, 'search empty state', 5000);
+        if ((await ui.count(SEARCH_RESULT)) !== 0) throw new Error('empty search state kept result rows');
+        await ui.pressSearchKey('Escape');
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'search dropdown closed on Escape', 3000);
+
+        // (5) Click-outside also closes the dropdown.
+        await ui.fillSearch(state.searchTitle);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'search dropdown re-opened');
+        await ui.clickOutsideSearch();
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'search dropdown closed on an outside pointerdown', 3000);
+        await ui.fillSearch('');
+
+        // (6) The whole search flow left groups + ungrouped byte-identical.
+        const after = await settledRecord();
+        assertSettled(after, 'record after search');
+        if (comparable(before.first) !== comparable(after.first)) {
+          throw new Error(
+            `search changed groups/ungrouped in dsh-session-groups.json: before=${comparable(before.first).slice(0, 240)} after=${comparable(after.first).slice(0, 240)}`,
+          );
+        }
+
+        return {
+          searchSession: target.sid,
+          searchTitle: state.searchTitle,
+          scroll: { before: scrollBefore, after: scrollAfter },
+          archivedSession: victim.sid,
+          archivedTitle: state.archivedTitle,
+          archivedEnterBlocked: true,
+          emptyState: true,
+          clickOutside: true,
+          record: { unchanged: true, revision: before.first.revision, groups: (before.first.groups ?? []).length },
+          sideEffect: `session ${victim.sid} left archived by step 15 (host-side archive; the group record file is unchanged)`,
+        };
+      },
+    },
   ];
 }
 
@@ -1616,7 +1916,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 14-step acceptance (isolated .spike-homes/qa, CDP)');
+  console.log(' V1 E2E - 15-step acceptance (isolated .spike-homes/qa, CDP)');
   console.log('============================================================');
 
   let driver = null;

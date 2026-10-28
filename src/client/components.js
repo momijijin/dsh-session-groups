@@ -6,7 +6,7 @@
  * `usePanelInfo`, `…`) plus the slot owner share. Everything host-derived is read
  * from those hooks; the only local state is this plugin's view store.
  */
-import { Component, createElement, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { Component, createElement, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { MAX_GROUP_NAME } from '../shared/constants.js'
 import { childrenOf, findGroup, moveGroup } from '../shared/model.js'
 import { createActions, formatActivity, workspaceChoices, workspaceLabel } from './actions.js'
@@ -23,6 +23,7 @@ import {
 import { hitTest, applyDrop } from './drag.js'
 import { GROUP_DRAG_MIME, resolveGroupDrop } from './group-drag.js'
 import { renderGlyph, renderIcon } from './icons.js'
+import { buildSearchIndex, matchSessions, revealSession } from './search.js'
 import {
   applyWidthOverride,
   clampSidebarWidth,
@@ -595,9 +596,194 @@ const ResizeHandle = ({ width, min, max, onChange, onCommit, onReset }) => {
 }
 
 // ---------------------------------------------------------------------------
+// Search combobox (groups view header, second row)
+// ---------------------------------------------------------------------------
+/** Stable id so `aria-controls` points at the listbox while it is rendered. */
+const SEARCH_LISTBOX_ID = 'dsg-session-search-listbox'
+
+/**
+ * Session search combobox (spec §3.3 / §4.4).
+ *
+ * Controlled input + listbox. The immutable index is memoized by the host data
+ * (`doc`, `sessionsById`, `workspaces`, `archivedSessionIds`) so typing never
+ * rebuilds it; filtering, active-row and open state stay local. Archived
+ * entries render (disabled) but never select. Selecting a normal entry delegates
+ * to `handlers.searchSelect` — opening, revealing, scrolling and highlighting
+ * live in GroupsView because they need the tree ref and the live store.
+ */
+const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionIds }) => {
+  const t = rt()?.t ?? ((key) => key)
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const boxRef = useRef(null)
+
+  const index = useMemo(
+    () => buildSearchIndex({ doc: store?.doc, sessionsById, workspaces, archivedSessionIds }),
+    [store?.doc, sessionsById, workspaces, archivedSessionIds]
+  )
+  const results = useMemo(() => matchSessions(index, query), [index, query])
+  const visible = open && query.trim() !== ''
+
+  // Click outside the combobox closes the dropdown (query is kept for editing).
+  useEffect(() => {
+    if (!visible) return undefined
+    const doc = globalThis.document
+    const onPointerDown = (event) => {
+      if (boxRef.current?.contains?.(event?.target)) return
+      setOpen(false)
+    }
+    doc?.addEventListener?.('pointerdown', onPointerDown, true)
+    return () => doc?.removeEventListener?.('pointerdown', onPointerDown, true)
+  }, [visible])
+
+  // Escape closes even after focus has left the input.
+  useEffect(() => {
+    if (!visible) return undefined
+    const doc = globalThis.document
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    doc?.addEventListener?.('keydown', onKeyDown, true)
+    return () => doc?.removeEventListener?.('keydown', onKeyDown, true)
+  }, [visible])
+
+  /** Apply a new query: typing always re-evaluates and clears the active row. */
+  const openFor = (value) => {
+    const next = typeof value === 'string' ? value : ''
+    setQuery(next)
+    setActiveIndex(-1)
+    setOpen(next.trim() !== '')
+  }
+
+  const select = (entry) => {
+    if (!entry) return
+    if (entry.archived === true) {
+      handlers.searchArchived?.(entry)
+      return
+    }
+    setQuery('')
+    setActiveIndex(-1)
+    setOpen(false)
+    handlers.searchSelect?.(entry)
+  }
+
+  /** Localized display title; the index itself keeps Task 5's title contract. */
+  const titleOf = (entry) => {
+    const row = sessionsById?.[entry.sessionId]
+    if (!row) return entry.title ?? ''
+    return sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') })
+  }
+
+  const move = (delta) => {
+    if (!visible) {
+      if (query.trim() === '') return
+      setOpen(true)
+      if (results.length > 0) setActiveIndex(delta > 0 ? 0 : results.length - 1)
+      return
+    }
+    if (results.length === 0) return
+    setActiveIndex((current) => {
+      if (current < 0) return delta > 0 ? 0 : results.length - 1
+      return (current + delta + results.length) % results.length
+    })
+  }
+
+  const onKeyDown = (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      move(1)
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      move(-1)
+      return
+    }
+    if (event.key === 'Escape') {
+      if (visible) {
+        event.preventDefault()
+        setOpen(false)
+      }
+      return
+    }
+    if (event.key === 'Enter' && visible) {
+      event.preventDefault()
+      select(activeIndex >= 0 ? results[activeIndex] : undefined)
+    }
+  }
+
+  return h(
+    'div',
+    { ref: boxRef, class: 'dsg-search', 'data-open': visible ? 'true' : 'false' },
+    h('input', {
+      class: 'dsg-search-input',
+      type: 'text',
+      role: 'combobox',
+      'data-testid': 'session-groups-search',
+      'aria-label': t('search.label'),
+      'aria-expanded': visible ? 'true' : 'false',
+      'aria-controls': SEARCH_LISTBOX_ID,
+      'aria-autocomplete': 'list',
+      'aria-activedescendant': visible && activeIndex >= 0 ? `${SEARCH_LISTBOX_ID}-${activeIndex}` : undefined,
+      placeholder: t('search.placeholder'),
+      autoComplete: 'off',
+      spellCheck: false,
+      value: query,
+      onChange: (event) => openFor(event.target.value),
+      onFocus: () => {
+        if (query.trim() !== '') setOpen(true)
+      },
+      onKeyDown,
+    }),
+    visible
+      ? h(
+          'div',
+          {
+            id: SEARCH_LISTBOX_ID,
+            class: 'dsg-search-results',
+            role: 'listbox',
+            'data-testid': 'session-groups-search-results',
+            'aria-label': t('search.results'),
+          },
+          results.length === 0
+            ? h('div', { class: 'dsg-search-empty', 'data-testid': 'session-groups-search-empty' }, t('search.empty'))
+            : results.map((entry, position) => {
+                const title = titleOf(entry)
+                const meta = [entry.groupPath, entry.workspace].filter(Boolean).join(' · ')
+                const archived = entry.archived === true
+                return h(
+                  'div',
+                  {
+                    key: entry.sessionId,
+                    id: `${SEARCH_LISTBOX_ID}-${position}`,
+                    class: 'dsg-search-result',
+                    role: 'option',
+                    'data-testid': 'session-groups-search-result',
+                    'data-session-id': entry.sessionId,
+                    'data-archived': archived ? 'true' : 'false',
+                    'data-active': position === activeIndex ? 'true' : 'false',
+                    'aria-selected': position === activeIndex ? 'true' : 'false',
+                    'aria-disabled': archived ? 'true' : undefined,
+                    'aria-label': archived ? `${title} (${t('session.archivedBadge')})` : title,
+                    onMouseDown: (event) => event.preventDefault(),
+                    onMouseEnter: () => setActiveIndex(position),
+                    onClick: () => select(entry),
+                  },
+                  h('span', { class: 'dsg-search-result-title' }, title),
+                  meta ? h('span', { class: 'dsg-search-result-meta' }, meta) : null,
+                  archived ? h('span', { class: 'dsg-search-result-badge' }, t('session.archivedBadge')) : null
+                )
+              })
+        )
+      : null
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Header / banner / toast / dialogs / menus / rail / footer / flat fallback
 // ---------------------------------------------------------------------------
-const Header = ({ store, handlers }) => {
+const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds }) => {
   const t = rt()?.t
   const filter = store.archiveFilter
   return h(
@@ -624,6 +810,11 @@ const Header = ({ store, handlers }) => {
       ),
       TextButton({ label: t('view.newGroup'), onClick: (event) => handlers.openNewGroup(event, null), testId: 'session-groups-new-group' }),
       TextButton({ label: t('view.returnWorkspace'), onClick: () => handlers.returnToWorkspace(), testId: 'session-groups-return' })
+    ),
+    h(
+      'div',
+      { class: 'dsg-header-row dsg-header-search-row' },
+      h(SearchBox, { store, handlers, sessionsById, workspaces, archivedSessionIds })
     )
   )
 }
@@ -996,6 +1187,11 @@ export const GroupsView = (props) => {
 
   const [dragState, setDragState] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
+  // Search highlight is a transient DOM class (1.5 s) on the revealed row: the
+  // rows are plain React nodes and the class must survive the host-triggered
+  // re-render right after openSession without adding new view-store state.
+  const searchHitTimerRef = useRef(null)
+  const searchHitRowRef = useRef(null)
   const autoExpandRef = useRef({ groupId: null, timer: null })
   const dragRef = useRef(null)
   const suppressedClickRef = useRef(null)
@@ -1121,6 +1317,19 @@ export const GroupsView = (props) => {
     const ancestors = expandAncestors(store.collapsed, store.doc, entry.id)
     if (ancestors !== store.collapsed) store.update({ collapsed: ancestors })
   }, [currentId, store?.docState, store?.doc])
+
+  // Drop the 1.5 s search highlight timer if the view unmounts mid-highlight.
+  useEffect(
+    () => () => {
+      if (searchHitTimerRef.current !== null) {
+        clearTimeout(searchHitTimerRef.current)
+        searchHitTimerRef.current = null
+      }
+      searchHitRowRef.current?.classList?.remove?.('dsg-search-hit')
+      searchHitRowRef.current = null
+    },
+    []
+  )
 
   if (!wide) return h(Rail, { props })
 
@@ -1305,6 +1514,74 @@ export const GroupsView = (props) => {
     return marker.groupId === groupId && Date.now() - marker.at <= 400
   }
 
+  /** Drop the current search highlight class/timer (safe to call repeatedly). */
+  const clearSearchHit = () => {
+    if (searchHitTimerRef.current !== null) {
+      clearTimeout(searchHitTimerRef.current)
+      searchHitTimerRef.current = null
+    }
+    searchHitRowRef.current?.classList?.remove?.('dsg-search-hit')
+    searchHitRowRef.current = null
+  }
+
+  /**
+   * Highlight + scroll the revealed row (spec §4.4). The row may not exist on
+   * the first frame after the collapsed update, so retry for up to two frames;
+   * add `dsg-search-hit` for 1.5 s; scroll with
+   * `scrollTop + (row.top - tree.top) - 0.3 * tree.clientHeight`, clamped to the
+   * scrollable range. A row that never appears (orphan / filtered out) is a
+   * no-op: no scroll, no highlight, no throw.
+   */
+  const revealSearchRow = (sessionId) => {
+    const root = rootRef.current
+    let attempts = 0
+    const tick = () => {
+      const tree = root?.querySelector?.('.dsg-tree')
+      const row = tree
+        ? Array.from(tree.querySelectorAll('[data-session-id]')).find((element) => element.getAttribute('data-session-id') === sessionId)
+        : null
+      if (!tree || !row) {
+        attempts += 1
+        if (attempts <= 2) requestAnimationFrame(tick)
+        return
+      }
+      clearSearchHit()
+      row.classList.add('dsg-search-hit')
+      searchHitRowRef.current = row
+      searchHitTimerRef.current = setTimeout(() => {
+        searchHitTimerRef.current = null
+        row.classList.remove('dsg-search-hit')
+        if (searchHitRowRef.current === row) searchHitRowRef.current = null
+      }, 1500)
+      const rowRect = row.getBoundingClientRect()
+      const treeRect = tree.getBoundingClientRect()
+      const maxScroll = Math.max(0, tree.scrollHeight - tree.clientHeight)
+      const next = Math.min(Math.max(0, tree.scrollTop + (rowRect.top - treeRect.top) - tree.clientHeight * 0.3), maxScroll)
+      tree.scrollTop = next
+    }
+    requestAnimationFrame(tick)
+  }
+
+  /**
+   * Search result selection (spec §3.3 / §4.4): archived entries only toast;
+   * normal entries switch `only` -> `all` when needed, open the session, reveal
+   * its containing group/ancestors in one store update, then highlight + scroll.
+   */
+  const selectSearchResult = (entry) => {
+    if (!entry || typeof entry.sessionId !== 'string') return
+    if (entry.archived === true) {
+      toast('info', t('search.archivedDisabled'))
+      return
+    }
+    // Read the live snapshot: the rendered `store` prop can lag a queued commit.
+    const live = rt()?.store?.getSnapshot?.() ?? store
+    if (live?.archiveFilter === 'only') dispatch('archive-filter', { filter: 'all' })
+    rt()?.actions.openSession(entry.sessionId)
+    const collapsed = revealSession(live?.doc, live?.collapsed ?? {}, entry.sessionId)
+    if (collapsed !== live?.collapsed) rt()?.store?.update({ collapsed })
+    revealSearchRow(entry.sessionId)
+  }
+
   const handlers = {
     toggleGroup: (id) => dispatch('toggle-group', { id }),
     onGroupClick: (id) => {
@@ -1316,6 +1593,8 @@ export const GroupsView = (props) => {
     retryLoad: () => rt()?.retryLoad(),
     openSession: (id) => rt()?.actions.openSession(id),
     setArchiveFilter: (filter) => dispatch('archive-filter', { filter }),
+    searchSelect: (entry) => selectSearchResult(entry),
+    searchArchived: () => toast('info', t('search.archivedDisabled')),
     openNewGroup: (event, parentId) => rt()?.openDialog({ kind: 'new-group', parentId, titleKey: parentId ? 'dialog.newSubgroup' : 'dialog.newGroup' }),
     openRenameGroup: (groupId) => rt()?.openDialog({ kind: 'rename-group', groupId, titleKey: 'dialog.renameGroup', value: findGroup(store.doc, groupId)?.name ?? '' }),
     openIconGroup: (groupId) => rt()?.openDialog({ kind: 'icon', groupId, titleKey: 'group.icon', icons: ['folder', 'folder-open', 'star', 'flag', 'bookmark', 'tag', 'bulb', 'rocket'] }),
@@ -1543,7 +1822,7 @@ export const GroupsView = (props) => {
   return h(
     'div',
     { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true' },
-    h(Header, { store, handlers }),
+    h(Header, { store: viewState, handlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds }),
     wide && widthSupported && appliedWidth !== null
       ? h(ResizeHandle, {
           width: appliedWidth,

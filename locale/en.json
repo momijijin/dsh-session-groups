@@ -90,5 +90,10 @@
   "error.title": "The groups view failed",
   "error.body": "Fell back to the flat session list — switch back to workspaces or retry.",
   "error.retry": "Retry",
-  "empty.none": "No sessions"
+  "empty.none": "No sessions",
+  "search.label": "Search sessions",
+  "search.placeholder": "Search sessions…",
+  "search.results": "Search results",
+  "search.empty": "No matching sessions",
+  "search.archivedDisabled": "Archived sessions cannot be opened"
 }

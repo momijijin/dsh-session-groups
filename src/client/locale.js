@@ -105,6 +105,11 @@ export const zh = {
   'error.body': '已降级为扁平会话列表，可切回工作区视图或重试。',
   'error.retry': '重试',
   'empty.none': '暂无会话',
+  'search.label': '搜索会话',
+  'search.placeholder': '搜索会话…',
+  'search.results': '搜索结果',
+  'search.empty': '没有匹配的会话',
+  'search.archivedDisabled': '已归档会话不可打开',
 }
 
 /** English dictionary (complete relative to zh). */
@@ -201,6 +206,11 @@ export const en = {
   'error.body': 'Fell back to the flat session list — switch back to workspaces or retry.',
   'error.retry': 'Retry',
   'empty.none': 'No sessions',
+  'search.label': 'Search sessions',
+  'search.placeholder': 'Search sessions…',
+  'search.results': 'Search results',
+  'search.empty': 'No matching sessions',
+  'search.archivedDisabled': 'Archived sessions cannot be opened',
 }
 
 /** Dictionaries keyed by host locale id prefix. */
