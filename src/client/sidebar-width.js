@@ -177,23 +177,45 @@ export const findLayoutNodes = (rootElement) => {
 }
 
 /**
+ * Resolve a viewport width, falling back to the live one. `update()` is called
+ * long after the controller was created (window resize, or a drag after the
+ * user widened the window), so a captured value must never win over the live
+ * viewport: mounting at 1024px and widening to 1440px would otherwise leave the
+ * old 1024px cap in place.
+ *
+ * @param {number} value explicit viewport candidate
+ * @param {number} fallback value captured when the controller was created
+ * @returns {number}
+ */
+const resolveViewportWidth = (value, fallback) => {
+  const numeric = Number(value)
+  if (Number.isFinite(numeric) && numeric > 0) return numeric
+  const live = Number(globalThis.innerWidth)
+  if (Number.isFinite(live) && live > 0) return live
+  return Number(fallback) > 0 ? Number(fallback) : 0
+}
+
+/**
  * Install (or refresh) the width override on the host layout nodes.
  *
  * @param {ReturnType<typeof findLayoutNodes>} nodes
  * @param {number} width requested width (clamped here)
  * @param {number} viewportWidth current viewport width
- * @returns {{ update: (width: number) => number | null, clear: () => void } | null}
+ * @param {{ onLost?: () => void }} [options] `onLost` runs when the host removed
+ *   the frame / sidebar root; the caller must hide the handle and re-find nodes.
+ * @returns {{ update: (width: number, viewportWidth?: number) => number | null, clear: () => void } | null}
  *   `null` when the nodes are unsupported, disconnected, or the viewport cannot
  *   host a wider-than-minimum sidebar.
  */
-export const applyWidthOverride = (nodes, width, viewportWidth) => {
+export const applyWidthOverride = (nodes, width, viewportWidth, { onLost } = {}) => {
   if (!nodes?.supported || !nodes.frame || !nodes.sidebarRoot) return null
   const frame = nodes.frame
   const sidebarRoot = nodes.sidebarRoot
   const doc = frame.ownerDocument
   if (!doc || !frame.isConnected || !sidebarRoot.isConnected) return null
 
-  let current = clampSidebarWidth(width, viewportWidth)
+  let viewport = resolveViewportWidth(viewportWidth, 0)
+  let current = clampSidebarWidth(width, viewport)
   if (current === null) return null
   let rest = nodes.rest || restOfTemplate(frame.style.gridTemplateColumns)
 
@@ -228,9 +250,11 @@ export const applyWidthOverride = (nodes, width, viewportWidth) => {
   const refresh = () => {
     if (!active) return
     // The host replaced the frame or the sidebar root: drop the override so the
-    // shipped layout owns the width again (the caller hides the handle).
+    // shipped layout owns the width again and let the caller re-find the nodes
+    // (and hide the handle) instead of silently keeping a stale controller.
     if (!frame.isConnected || !sidebarRoot.isConnected) {
       clear()
+      onLost?.()
       return
     }
     const latestRest = restOfTemplate(frame.style.gridTemplateColumns)
@@ -250,13 +274,16 @@ export const applyWidthOverride = (nodes, width, viewportWidth) => {
   if (!existing) doc.head?.appendChild(style)
 
   return {
-    update(nextWidth) {
+    update(nextWidth, nextViewportWidth) {
       if (!active) return null
-      const next = clampSidebarWidth(nextWidth, viewportWidth)
+      // Always re-clamp against the live viewport, never the creation one.
+      const nextViewport = resolveViewportWidth(nextViewportWidth, viewport)
+      const next = clampSidebarWidth(nextWidth, nextViewport)
       if (next === null) {
         clear()
         return null
       }
+      viewport = nextViewport
       current = next
       writeStyle()
       applyAttrs()

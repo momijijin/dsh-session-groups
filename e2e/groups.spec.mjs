@@ -43,6 +43,7 @@ const FLAT_FALLBACK = '[data-testid="session-groups-flat-fallback"]';
 const RAIL = '[data-testid="session-groups-rail"]';
 const RAIL_EXPAND = '[data-testid="session-groups-rail-expand"]';
 const RESIZE_HANDLE = '[data-testid="session-groups-resize-handle"]';
+const OFFICIAL_HANDLE = '[data-side="sidebar"]';
 const HEADER = '[data-testid="session-groups-header"]';
 const SIDEBAR_FRAME_MARKER = '[data-dsg-sidebar-frame]';
 const SIDEBAR_WIDTH_KEY = 'dsh-session-groups.width.v1';
@@ -355,6 +356,19 @@ function makeUi(driver, helpers) {
         let column = toggle;
         while (column && column.parentElement !== frame) column = column.parentElement;
         return column ? rectWidth(column) : -1;
+      })()`));
+    },
+    /**
+     * Whether the host's own sidebar resize handle (`[data-side="sidebar"]`) is
+     * actually visible. The width override hides it with CSS (the element stays
+     * in the DOM), so existence alone is not enough.
+     */
+    async officialHandleVisible() {
+      return Boolean(await evaluate(`(() => {
+        const el = document.querySelector(${JSON.stringify(OFFICIAL_HANDLE)});
+        if (!el) return false;
+        const style = getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden' && el.getClientRects().length > 0;
       })()`));
     },
     /** Drag the plugin resize handle with real CDP mouse input to absolute x = targetX. */
@@ -928,16 +942,45 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
       id: 10,
       name: 'restart-preserves-structure',
       async run() {
+        const beforeRows = await ui.sessions();
         const beforeGroups = await ui.groups();
         const beforeFilter = await ui.filterState();
         const isBlankRow = (row) => /新会话/.test(row.text || '') || row.sid === state.createdSession;
-        const realOrder = async () => (await ui.sessions()).filter((row) => row.groupId === state.groups.a && !isBlankRow(row)).map((row) => row.sid);
-        const beforeOrder = await realOrder();
-        const beforeBlankActive = (await ui.sessions()).filter((row) => isBlankRow(row) && row.groupId === state.groups.a).map((row) => row.sid);
+        const beforeOrder = beforeRows.filter((row) => row.groupId === state.groups.a && !isBlankRow(row)).map((row) => row.sid);
+        const beforeBlankActive = beforeRows.filter((row) => isBlankRow(row) && row.groupId === state.groups.a).map((row) => row.sid);
+        // A row that must be visible again after hydration (any non-blank row).
+        const knownSession = (beforeOrder[0] ?? beforeRows.find((row) => !isBlankRow(row))?.sid) ?? null;
         await restartServer();
         const mode = (await ui.attrs(TOGGLE, 'data-mode'))[0] ?? null;
         if (mode !== 'groups') await ui.toggleMode();
         await ui.waitGroupsView();
+        // The QA fixture has grown to ~1.3 GB / ~1476 files, so the restarted
+        // server can take well over the old fixed 500 ms to deliver the session
+        // snapshot. Wait for the expected group rows, the same number of visible
+        // session rows and the known session before comparing names/order;
+        // otherwise the counts render as 0 against a half-hydrated tree.
+        const snapshotWaitMs = 30000;
+        const snapshotDeadline = Date.now() + snapshotWaitMs;
+        let snapshot = { groups: -1, rows: -1 };
+        for (;;) {
+          const groupsNow = await ui.groups();
+          const rowsNow = await ui.sessions();
+          const idsNow = new Set(rowsNow.map((row) => row.sid));
+          snapshot = { groups: groupsNow.length, rows: rowsNow.length };
+          const groupsReady = groupsNow.length === beforeGroups.length;
+          const rowsReady = rowsNow.length === beforeRows.length;
+          const knownReady = knownSession === null || idsNow.has(knownSession);
+          if (groupsReady && rowsReady && knownReady) break;
+          if (Date.now() >= snapshotDeadline) {
+            throw new Error(
+              `restarted server did not deliver the session snapshot within ${snapshotWaitMs}ms: ` +
+                `groups ${snapshot.groups}/${beforeGroups.length}, ` +
+                `visible session rows ${snapshot.rows}/${beforeRows.length}, ` +
+                `known session ${JSON.stringify(knownSession)} present=${knownReady}`
+            );
+          }
+          await sleep(250);
+        }
         const afterGroups = await ui.groups();
         if (afterGroups.length !== beforeGroups.length) {
           throw new Error(`groups count changed across restart: ${beforeGroups.length} -> ${afterGroups.length}`);
@@ -945,9 +988,12 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const beforeByName = beforeGroups.map((group) => group.text).sort();
         const afterByName = afterGroups.map((group) => group.text).sort();
         if (JSON.stringify(beforeByName) !== JSON.stringify(afterByName)) {
-          throw new Error('group names changed across restart');
+          throw new Error(
+            `group names changed across restart: before=${JSON.stringify(beforeByName)} ` +
+              `after=${JSON.stringify(afterByName)} (visible session rows ${beforeRows.length} -> ${(await ui.sessions()).length})`
+          );
         }
-        const actual = await realOrder();
+        const actual = (await ui.sessions()).filter((row) => row.groupId === state.groups.a && !isBlankRow(row)).map((row) => row.sid);
         if (JSON.stringify(actual) !== JSON.stringify(beforeOrder)) {
           throw new Error(`non-blank group order not persisted across restart: ${JSON.stringify(beforeOrder)} -> ${JSON.stringify(actual)}`);
         }
@@ -1049,13 +1095,28 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         // Step 12 leaves the official workspace view active: record its width first.
         const official = await ui.sidebarWidth();
         if (!(official > 0)) throw new Error(`could not measure the official sidebar width before switching (got ${official})`);
+        // Mount at 1024px (the host is still wide at exactly 1024) with a stored
+        // 620px: the applied width is the 544px clamp for that viewport. Widening
+        // to 1440px must re-clamp against the LIVE viewport (620), and a following
+        // drag must reach the 760px maximum instead of staying at the mount cap.
+        await driver.evaluate(`localStorage.setItem(${JSON.stringify(SIDEBAR_WIDTH_KEY)}, '620')`);
+        await ui.setViewport(1024);
         await ui.toggleMode();
         await ui.waitGroupsView();
-        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle mounts in groups view');
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle mounts at 1024px');
         if (!(await overrideMarker())) throw new Error('width override marker missing after mounting the groups view');
-
+        if (await ui.officialHandleVisible()) throw new Error('official sidebar handle must be hidden while the width override is active');
+        const mountedNarrow = await waitWidth(544, 'width after mounting at 1024px with the stored 620');
+        await ui.setViewport(1440);
+        const widened = await waitWidth(620, 'width after widening to 1440px');
+        // A late-mounting onboarding dialog covers the handle's hit area.
+        await ui.closeOnboarding(1500);
+        await ui.dragResizeHandle(760);
+        const maxDrag = await waitWidth(760, 'width after dragging to 760 at 1440px');
+        await ui.closeOnboarding(1000);
         await ui.dragResizeHandle(620);
-        const widened = await waitWidth(620, 'width after dragging the resize handle');
+        await waitWidth(620, 'width after dragging back to 620');
+
         const stored = await driver.evaluate(`localStorage.getItem(${JSON.stringify(SIDEBAR_WIDTH_KEY)})`);
         if (stored !== '620') throw new Error(`localStorage ${SIDEBAR_WIDTH_KEY} expected "620", got ${JSON.stringify(stored)}`);
 
@@ -1138,7 +1199,21 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (await overrideMarker()) throw new Error('width override marker must be cleared in the workspace view');
         const officialRestored = await ui.sidebarWidth();
         assertNear(officialRestored, official, 'official sidebar width after switch-back');
-        return { official, widened, reloaded, narrow, restored, reset, minimum, persistedMinimum, officialRestored, header };
+        if (!(await ui.officialHandleVisible())) throw new Error('official sidebar handle must be restored after returning to the official view');
+        return {
+          official,
+          mountedNarrow,
+          widened,
+          maxDrag,
+          reloaded,
+          narrow,
+          restored,
+          reset,
+          minimum,
+          persistedMinimum,
+          officialRestored,
+          header,
+        };
       },
     },
   ];

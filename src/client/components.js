@@ -510,7 +510,7 @@ const Header = ({ store, handlers }) => {
   const filter = store.archiveFilter
   return h(
     'div',
-    { class: 'dsg-header', 'data-testid': 'session-groups-header' },
+    { class: 'dsg-header dsg-header-stacked', 'data-testid': 'session-groups-header' },
     h(
       'div',
       { class: 'dsg-header-row', 'data-testid': 'session-groups-header-row' },
@@ -948,18 +948,29 @@ export const GroupsView = (props) => {
         return
       }
       if (widthControllerRef.current === null) {
-        const controller = applyWidthOverride(nodes, clamped, viewport)
+        const controller = applyWidthOverride(nodes, clamped, viewport, { onLost })
         if (!controller) {
           setWidthSupported(false)
           return
         }
         widthControllerRef.current = controller
-      } else if (widthControllerRef.current.update(clamped) === null) {
+      } else if (widthControllerRef.current.update(clamped, viewport) === null) {
         clearController()
         setWidthSupported(false)
         return
       }
       setWidthSupported(true)
+    }
+
+    // The host replaced the frame / sidebar root underneath us: the adapter has
+    // already cleared the override, so hide the handle and re-find the nodes.
+    // When the groups root itself is detached, `findLayoutNodes` reports
+    // unsupported and the handle stays hidden.
+    function onLost() {
+      if (disposed) return
+      clearController()
+      setWidthSupported(false)
+      sync()
     }
 
     const onResize = () => {
@@ -980,7 +991,7 @@ export const GroupsView = (props) => {
   const handleWidthChange = (next) => {
     preferredWidthRef.current = next
     setPreferredWidth(next)
-    widthControllerRef.current?.update(next)
+    widthControllerRef.current?.update(next, globalThis.innerWidth)
   }
 
   const handleWidthCommit = (next) => {
@@ -993,7 +1004,7 @@ export const GroupsView = (props) => {
     if (next === null) return
     preferredWidthRef.current = next
     setPreferredWidth(next)
-    widthControllerRef.current?.update(next)
+    widthControllerRef.current?.update(next, viewport)
     writeSidebarWidth(next)
   }
 

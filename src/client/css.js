@@ -20,11 +20,18 @@ export const CSS = `
 }
 .dsg-header {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+  align-items: center;
+  gap: 6px;
   padding: 2px 4px 6px 2px;
   flex: none;
+}
+/* Two-row groups header (title row + room for the future search row); the flat
+ * fallback keeps the plain single-row .dsg-header layout. */
+.dsg-header-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
 }
 .dsg-header-row {
   display: flex;
