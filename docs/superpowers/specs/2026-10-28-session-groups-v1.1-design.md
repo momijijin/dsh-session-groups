@@ -97,11 +97,11 @@
 
 新增：
 
-- `src/client/sidebar-width.js`：纯函数 `clampSidebarWidth`、`readStoredWidth`/`writeStoredWidth`，DOM 适配 `findLayoutNodes`/`applyWidthOverride`/`clearWidthOverride`。
-- `src/client/group-drag.js`：纯函数 `resolveGroupDrop`（输入 draggedId、target、zone、doc、index，返回 `{parentId,index}` 或 `{invalid}`），以及同一父级下标修正。
+- `src/client/sidebar-width.js`：纯函数 `clampSidebarWidth`、`readSidebarWidth`/`writeSidebarWidth`（沿用 `safeStorage`），DOM 适配 `findLayoutNodes`/`applyWidthOverride`/`clearWidthOverride`。
+- `src/client/group-drag.js`：纯函数 `resolveGroupDrop`（输入 draggedId、target、doc，返回 `{parentId,index}` 或 `{invalid}`），以及同一父级下标修正。
 - `src/client/search.js`：纯函数 `buildSearchIndex`/`matchSessions`/`revealSession`（所在组/未归组 + 全部祖先）。
 - `src/client/components.js`：新增 width handle、group drop slots、search box/dropdown；组头改为可拖；组菜单加上移/下移。
-- `src/client/state.js`：宽度读写（沿用 `safeStorage`）。
+- `src/client/state.js`：不变，宽度存储归 `sidebar-width.js`。
 - `src/client/css.js`：宽度把手、组拖插入线、搜索下拉、高亮样式。
 - `src/client/locale.js` + `locale/zh.json` + `locale/en.json`：搜索/宽度/拖组/归档禁用等新文案，zh/en 必须同步（parity 测试）。
 - `src/shared/model.js`：不新增数据模型；复用 `moveGroup(doc, id, parentId, index)`；仅补测试。
@@ -175,7 +175,7 @@
 
 ### 4.5 状态与持久化
 
-- 新增 `SIDEBAR_WIDTH_KEY='dsh-session-groups.width.v1'`；`readSidebarWidth`/`writeSidebarWidth` 复用 `safeStorage`，非法值回退 420。
+- 新增 `SIDEBAR_WIDTH_KEY='dsh-session-groups.width.v1'`；`readSidebarWidth`/`writeSidebarWidth` 位于 `sidebar-width.js` 并复用 `state.js` 的 `safeStorage`，非法值回退 420。
 - 搜索 query/activeIndex 仅组件 state，不持久化。
 - 分组拖拽只改 doc，沿用现有 `commitDoc` 队列/409 处理；不新增 host route。
 - 不修改 `dsh-session-groups.json` 的 version/字段。
