@@ -66,7 +66,7 @@
 - 落点计算：
   - 同级排序用 `target` 在 `childrenOf(doc, target.parentId)` 中的下标；after=下标+1；
   - **所有落点**（before/after/child）统一由 `resolveGroupDrop` 按“移除拖拽组后的兄弟数组”修正：同父且原下标 < 插入下标时 `-1`；
-  - 子组槽 index = 槽前的子组数量（0..n）；无子组=0；
+  - 子组槽用 `beforeGroupId` 锚点（下一个子组 id；末尾/空组为 null），resolve 时按最新 `childrenOf` 计算 index（0..n）；
   - 根末尾 index = 根组数量。
 - 提交：`moveGroup(doc, draggedId, parentId, index)`；已存在 cycle/depth 校验；失败 toast，不提交。
 - 子树跟随：仅改 `group.parentId` 与 `doc.groups` 顺序；`sessionIds` 不变。
@@ -138,12 +138,12 @@
 
 - 组头 `draggable=true`；`onDragStart` 写入 `application/x-dsh-group-id`；若事件源在 `button` 内则 `preventDefault` 并 return。
 - 组头 `onDragOver` 根据 `event.clientY` 与 rect 计算上/下缘；上/下 25% 设置 `dropTarget={kind:'group-before'|'group-after', targetId}`；**中间 50% 对组拖为 invalid**（不落 session append）。
-- `GroupDropSlot` 渲染在每个子组前和最后一个子组后（n 个子组 = n+1 个槽）；无子组时在组体顶部渲染一个 index=0 的槽；`data-parent-id`、`data-index`；`onDragOver`/`onDrop` 设置 `group-child`。槽不渲染在会话行之间。
+- `GroupDropSlot` 渲染在每个子组前和最后一个子组后（n 个子组 = n+1 个槽）；无子组时在组体顶部渲染一个 `beforeGroupId=null` 的槽；`data-parent-id`、`data-before-group-id`；`onDragOver`/`onDrop` 设置 `group-child`。槽不渲染在会话行之间。
 - 未归组头部 `onDragOver`/`onDrop` 设置 `{kind:'group-root-end'}`。
 - 纯函数 `resolveGroupDrop`：
   - 校验 draggedId 存在；
   - **`targetId===draggedId` 一律 invalid**（含组头上/下缘，避免同父 no-op 被当作可落点）；
-  - target 父级/序号；
+  - child target 用稳定锚点 `{kind:'child', parentId, beforeGroupId:string|null}`；`beforeGroupId=null` 表示末尾，空组为 0；**索引在 resolve 时按最新 `childrenOf` 计算**，不在拖动时缓存数字；
   - `isDescendant(doc,parentId,draggedId)` 或 `parentId===draggedId` → invalid；
   - 所有 kind（before/after/child）统一按“移除拖拽组后的兄弟数组”修正同父下标；
   - 返回 `{parentId,index}`；`parentId` 为目标组自身（child）或目标组父级（before/after）。
@@ -208,7 +208,7 @@
 ### 单元/逻辑
 
 - `clampSidebarWidth` 的 min−1/min/max/max+1/窗口过小/存储非法。
-- `resolveGroupDrop`：同父前/后、跨父、**有会话但 0 子组** index 0、空组 index 0、根末尾、自身/后代 invalid、深度边界；同父 child 槽的移除后下标修正；移动后顺序与子树。
+- `resolveGroupDrop`：同父前/后、跨父、**有会话但 0 子组** index 0、空组 index 0、根末尾、自身/后代 invalid、深度边界；child 槽用 `beforeGroupId` 锚点在最新 children 上重算 index，快速双拖同一 child 槽不复用旧数字；移动后顺序与子树。
 - 组菜单上移/下移：首/尾禁用、同父顺序、子树跟随、跨父不出现。
 - `buildSearchIndex`/`matchSessions`：标题前缀/包含、工作区、组路径、归档标记、subagent 排除、空查询、20 条上限、稳定排序。
 - `revealSession`：目标组折叠→同时展开所在组；嵌套→展开全部祖先；未归组折叠 `__ungrouped__`→展开；**doc.groups 找不到的派生未归组会话→展开 `__ungrouped__`**；普通已展开→collapsed 不变（引用相等）。
@@ -223,12 +223,13 @@
 | `session-groups-search-results` | 下拉列表 | `role=listbox` |
 | `session-groups-search-result` | 单条结果 | `data-session-id`, `data-archived` |
 | `session-groups-search-empty` | 无结果 | — |
-| `session-groups-group-drop` | 组体子组缝隙 | `data-parent-id`, `data-index` |
+| `session-groups-group-drop` | 组体子组缝隙 | `data-parent-id`, `data-before-group-id` |
+| `session-groups-group-move-up` / `-move-down` | 组菜单上移/下移 | `data-group-id`, `data-disabled` |
 
 ### E2E（新增，全部走 CONTRACTS §4.1 testid）
 
 - `session-groups-resize-handle`：进入分组视图前记录官方 sidebar 宽度；拖到 620；断言 sidebar 根宽/frame 第一轨；reload 后仍 620；双击回 420；再拖到 264 断言头部搜索/按钮无水平溢出；切官方后把手消失且宽度等于记录的官方值。
-- 组拖：4 组，A/B/C/D；D 拖到 A 上缘→顺序 D,A,B,C；先把 C 放入 **有会话但 0 子组** 的 B 组体槽（断言 `{parentId:B,index:0}` 生效，覆盖 B2）；再把 D 拖到 B 的子组 C 前/后；尝试把 B 拖进 B 的子组→无效；拖到未归组头→根末尾。
+- 组拖：4 组，A/B/C/D；D 拖到 A 上缘→顺序 D,A,B,C；先把 C 放入 **有会话但 0 子组** 的 B 组体槽（断言 `{parentId:B,index:0}` 生效，覆盖 B2）；再把 D 拖到 B 的子组 C 前/后；快速双拖同一 child 槽（`beforeGroupId` 锚点）断言最新 children 重算；尝试把 B 拖进 B 的子组→无效；拖到未归组头→根末尾。
 - 搜索：折叠目标组后输入唯一标题→结果；↓/Enter 选中→会话打开、**目标组与祖先全部展开**（`data-expanded=true`）、行可见、行高亮、滚动容器 rect 位置变化（覆盖 B1）；归档结果 `aria-disabled=true`；无结果空态。
 - locale parity：`locale/zh.json` 与 `locale/en.json` key 集合一致，新 key 都有翻译。
 - 回归 V1 12 步全 PASS。
