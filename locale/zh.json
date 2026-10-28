@@ -66,6 +66,8 @@
   "flat.title": "会话（扁平列表）",
   "rail.expand": "打开侧边栏（分组视图）",
   "rail.groups": "分组",
+  "width.handle": "调整侧边栏宽度",
+  "width.resetHint": "双击恢复默认宽度（420）",
   "toast.saved": "分组已保存",
   "toast.renameFailed": "重命名失败",
   "toast.archiveFailed": "归档失败",

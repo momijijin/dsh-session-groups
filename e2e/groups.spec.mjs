@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // e2e/groups.spec.mjs
 //
-// V1 E2E acceptance (docs/TEST-PLAN.md §5, 12 steps) - zero-dependency.
+// V1 E2E acceptance (docs/TEST-PLAN.md §5, 13 steps) - zero-dependency.
 //
 // Drives the real isolated DSH web UI (`.spike-homes/qa`, port 4402) through the
 // Chrome DevTools Protocol using the Chromium already present on this machine.
@@ -13,7 +13,7 @@
 // When the client UI is not present yet the runner exits 3 (BLOCKED) with a
 // diagnostic, so the pipeline can distinguish "not implemented" from "broken".
 //
-// Exit codes: 0 = all 12 steps PASS, 1 = a step FAILED, 2 = harness error,
+// Exit codes: 0 = all 13 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -42,6 +42,10 @@ const FILTER = '[data-testid="session-groups-archive-filter"]';
 const FLAT_FALLBACK = '[data-testid="session-groups-flat-fallback"]';
 const RAIL = '[data-testid="session-groups-rail"]';
 const RAIL_EXPAND = '[data-testid="session-groups-rail-expand"]';
+const RESIZE_HANDLE = '[data-testid="session-groups-resize-handle"]';
+const HEADER = '[data-testid="session-groups-header"]';
+const SIDEBAR_FRAME_MARKER = '[data-dsg-sidebar-frame]';
+const SIDEBAR_WIDTH_KEY = 'dsh-session-groups.width.v1';
 
 // ---------------------------------------------------------------------------
 // args / small utils
@@ -117,6 +121,42 @@ function makeUi(driver, helpers) {
 
   const evaluate = (expression, options) => driver.evaluate(expression, options);
   const waitFor = (expression, description, waitMs = timeoutMs) => driver.waitFor(expression, { timeoutMs: waitMs, description });
+
+  const readResizeHandlePoint = () =>
+    evaluate(`(() => {
+      const el = document.querySelector(${JSON.stringify(RESIZE_HANDLE)});
+      if (!el) return null;
+      const toggle = document.querySelector(${JSON.stringify(TOGGLE)});
+      let sidebarWidth = -1;
+      for (let node = toggle; node && node !== document.body; node = node.parentElement) {
+        if (node.hasAttribute('data-testid')) continue;
+        const width = node.style && node.style.width;
+        if (width && /^\\d+(?:\\.\\d+)?px$/.test(width)) { sidebarWidth = node.getBoundingClientRect().width; break; }
+      }
+      const rect = el.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: Math.min(Math.max(rect.top + rect.height / 2, 20), window.innerHeight - 20),
+        left: rect.left,
+        sidebarWidth,
+      };
+    })()`);
+
+  /** Wait until the handle's fixed position aligns with the applied sidebar width. */
+  const stableResizeHandlePoint = async () => {
+    let previous = null;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const point = await readResizeHandlePoint();
+      if (!point) throw new Error(`resize handle not found: ${RESIZE_HANDLE}`);
+      const aligned = point.sidebarWidth > 0 && Math.abs(point.x - point.sidebarWidth) <= 2;
+      if (aligned && previous && Math.abs(point.x - previous.x) < 0.5) return point;
+      previous = aligned ? point : null;
+      await sleep(60);
+    }
+    const fallback = await readResizeHandlePoint();
+    if (!fallback) throw new Error(`resize handle not found: ${RESIZE_HANDLE}`);
+    return fallback;
+  };
 
   const ui = {
     waitFor,
@@ -196,6 +236,33 @@ function makeUi(driver, helpers) {
       }
       return true;
     },
+    /**
+     * Close the onboarding "Get started" dialog once it has mounted. The dialog
+     * mounts asynchronously after reload and its mask blocks real pointer input;
+     * only its own Close button is used (never "Sign in" / "Add API Key").
+     */
+    async closeOnboarding(waitMs = 6000) {
+      const end = Date.now() + waitMs;
+      while (Date.now() < end) {
+        const clicked = await evaluate(`(() => {
+          const dialogs = Array.from(document.querySelectorAll('[role="dialog"]'));
+          for (const dialog of dialogs) {
+            const label = dialog.getAttribute('aria-label') ?? '';
+            const text = (dialog.textContent ?? '').trim();
+            if (!/get started|开始使用/i.test(label) && !/Add API Key|Sign in to your DeepSeek|添加 API Key/i.test(text)) continue;
+            const close = dialog.querySelector('button[aria-label="Close"], button[aria-label="关闭"], button[title="Close"], button[title="关闭"]');
+            if (close) { close.click(); return true; }
+          }
+          return false;
+        })()`);
+        if (clicked) {
+          await sleep(350);
+          return true;
+        }
+        await sleep(150);
+      }
+      return false;
+    },
     async groups() {
       return await evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(GROUP)}), (el) => ({
         gid: el.getAttribute('data-group-id'),
@@ -263,6 +330,78 @@ function makeUi(driver, helpers) {
     },
     async waitWorkspaceView() {
       await ui.waitFor(`!document.querySelector(${JSON.stringify(VIEW)})`, 'official workspace view restored');
+    },
+    /**
+     * Width of the official sidebar root (the `SidebarRoot` div with an inline
+     * width). Falls back to the sidebar grid column in rail mode where the host
+     * omits the inline width. Never measures our own footer toggle.
+     */
+    async sidebarWidth() {
+      return Number(await evaluate(`(() => {
+        const toggle = document.querySelector(${JSON.stringify(TOGGLE)});
+        if (!toggle) return -1;
+        const rectWidth = (el) => el.getBoundingClientRect().width;
+        for (let el = toggle; el && el !== document.body; el = el.parentElement) {
+          if (el.hasAttribute('data-testid')) continue;
+          const width = el.style && el.style.width;
+          if (width && /^\\d+(?:\\.\\d+)?px$/.test(width)) return rectWidth(el);
+        }
+        // Rail / collapsed: the host sets no inline width; measure the sidebar column.
+        let frame = null;
+        for (let el = toggle.parentElement; el; el = el.parentElement) {
+          if (el.style && el.style.gridTemplateColumns) { frame = el; break; }
+        }
+        if (!frame) return -1;
+        let column = toggle;
+        while (column && column.parentElement !== frame) column = column.parentElement;
+        return column ? rectWidth(column) : -1;
+      })()`));
+    },
+    /** Drag the plugin resize handle with real CDP mouse input to absolute x = targetX. */
+    async dragResizeHandle(targetX) {
+      const point = await stableResizeHandlePoint();
+      const send = (type, x, buttons) => driver.cdp.send('Input.dispatchMouseEvent', {
+        type,
+        x,
+        y: point.y,
+        button: 'left',
+        buttons,
+        clickCount: 1,
+      }, driver.sessionId);
+      await send('mousePressed', point.x, 1);
+      const steps = 6;
+      for (let step = 1; step <= steps; step++) {
+        await send('mouseMoved', point.x + ((targetX - point.x) * step) / steps, 1);
+        await sleep(25);
+      }
+      await send('mouseReleased', targetX, 0);
+      await sleep(200);
+    },
+    /** Double-click the plugin resize handle (DOM dblclick; the drag itself uses real CDP). */
+    async doubleClickResizeHandle() {
+      const dispatched = await evaluate(`(() => {
+        const el = document.querySelector(${JSON.stringify(RESIZE_HANDLE)});
+        if (!el) return false;
+        el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window }));
+        return true;
+      })()`);
+      if (!dispatched) throw new Error(`resize handle not found: ${RESIZE_HANDLE}`);
+      await sleep(250);
+    },
+    /** Emulate a viewport width (desktop metrics) and let the host re-layout. */
+    async setViewport(width) {
+      await driver.cdp.send('Emulation.setDeviceMetricsOverride', {
+        width,
+        height: 900,
+        deviceScaleFactor: 1,
+        mobile: false,
+      }, driver.sessionId);
+      await sleep(500);
+    },
+    /** Drop the emulated viewport and let the host re-layout at the window size. */
+    async resetViewport() {
+      await driver.cdp.send('Emulation.clearDeviceMetricsOverride', {}, driver.sessionId);
+      await sleep(500);
     },
     async dragSessionToGroup(sid, gid) {
       const result = await evaluate(`(() => {
@@ -886,6 +1025,122 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         return { revision: record.revision, groups: record.groups.length, audit: 'PASS' };
       },
     },
+    {
+      id: 13,
+      name: 'resize-sidebar-and-restore-official',
+      async run() {
+        const assertNear = (actual, expected, label, tolerance = 2) => {
+          if (!Number.isFinite(actual) || Math.abs(actual - expected) > tolerance) {
+            throw new Error(`${label}: expected ${expected} ±${tolerance}px, got ${actual}`);
+          }
+        };
+        const waitWidth = async (expected, label, tolerance = 2, waitMs = 8000) => {
+          const end = Date.now() + waitMs;
+          let last = -1;
+          while (Date.now() < end) {
+            last = await ui.sidebarWidth();
+            if (Number.isFinite(last) && Math.abs(last - expected) <= tolerance) return last;
+            await sleep(120);
+          }
+          throw new Error(`${label}: expected ${expected} ±${tolerance}px, got ${last}`);
+        };
+        const overrideMarker = () => ui.exists(SIDEBAR_FRAME_MARKER);
+
+        // Step 12 leaves the official workspace view active: record its width first.
+        const official = await ui.sidebarWidth();
+        if (!(official > 0)) throw new Error(`could not measure the official sidebar width before switching (got ${official})`);
+        await ui.toggleMode();
+        await ui.waitGroupsView();
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle mounts in groups view');
+        if (!(await overrideMarker())) throw new Error('width override marker missing after mounting the groups view');
+
+        await ui.dragResizeHandle(620);
+        const widened = await waitWidth(620, 'width after dragging the resize handle');
+        const stored = await driver.evaluate(`localStorage.getItem(${JSON.stringify(SIDEBAR_WIDTH_KEY)})`);
+        if (stored !== '620') throw new Error(`localStorage ${SIDEBAR_WIDTH_KEY} expected "620", got ${JSON.stringify(stored)}`);
+
+        // The persisted width and the view mode survive a reload.
+        await driver.navigate(webState(args.evidenceDir).url);
+        await driver.waitFor(`typeof globalThis.__DSH_BOOT__ !== 'undefined'`, { timeoutMs: 30000, description: 'app boot after reload' });
+        await sleep(400);
+        await ui.dismissOverlay();
+        await ui.closeOnboarding();
+        await sleep(400);
+        if ((await ui.attrs(TOGGLE, 'data-mode'))[0] !== 'groups') await ui.toggleMode();
+        await ui.waitGroupsView();
+        const reloaded = await waitWidth(620, 'width after reload');
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle after reload');
+
+        // Narrow viewport: the host auto-collapses to the rail and the width
+        // override must be dropped (clampSidebarWidth returns null at 700px).
+        await ui.setViewport(700);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RAIL_EXPAND)})`, 'rail expand button at 700px');
+        await ui.click(RAIL_EXPAND);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(VIEW)})`, 'groups view after rail expand at 700px');
+        await sleep(400);
+        if (await ui.exists(RESIZE_HANDLE)) throw new Error('resize handle must be hidden when the viewport cannot host a wider sidebar (700px)');
+        if (await overrideMarker()) throw new Error('width override marker must be cleared when the viewport cannot host a wider sidebar');
+        const narrow = await ui.sidebarWidth();
+        if (!(narrow >= 264 && narrow <= 420)) throw new Error(`official narrow sidebar width expected within 264-420px, got ${narrow}`);
+
+        // Back to 1440: the stored width wins again (and the official sidebar is
+        // still expanded, since the narrow expand only set narrowExpanded).
+        await ui.resetViewport();
+        await sleep(300);
+        if (await ui.exists(RAIL_EXPAND)) {
+          await ui.click(RAIL_EXPAND);
+          await sleep(600);
+        }
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle returns at 1440', 8000);
+        const restored = await waitWidth(620, 'width restored at 1440px');
+
+        await ui.doubleClickResizeHandle();
+        const reset = await waitWidth(420, 'width after double-click reset');
+
+        // A late-mounting onboarding dialog would cover the handle's hit area.
+        await ui.closeOnboarding(1500);
+        await ui.dragResizeHandle(264);
+        const minimum = await waitWidth(264, 'width after dragging to the minimum');
+        const header = await driver.evaluate(`(() => {
+          const el = document.querySelector(${JSON.stringify(HEADER)});
+          return el ? { clientWidth: el.clientWidth, scrollWidth: el.scrollWidth } : null;
+        })()`);
+        if (!header) throw new Error('groups header is missing at 264px');
+        if (header.scrollWidth > header.clientWidth + 1) {
+          throw new Error(`groups header overflows horizontally at 264px: scrollWidth ${header.scrollWidth} > clientWidth ${header.clientWidth}`);
+        }
+
+        // Rail round-trip with the existing official collapse control: the override
+        // must be cleared, and expanding restores the last persisted width (§3.1).
+        const collapseSelector = await driver.evaluate(`(() => {
+          const selectors = ['button[aria-label*="收起"]', 'button[title*="收起"]', 'button[aria-label*="Collapse"]', 'button[title*="Collapse"]'];
+          for (const selector of selectors) {
+            const button = document.querySelector(selector);
+            if (button) { button.click(); return selector; }
+          }
+          return null;
+        })()`);
+        if (!collapseSelector) throw new Error('no official sidebar collapse control found to enter the rail');
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle removed in rail mode', 8000);
+        if (await overrideMarker()) throw new Error('width override marker must be cleared in rail mode');
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RAIL_EXPAND)})`, 'rail expand button after collapse', 8000);
+        await ui.click(RAIL_EXPAND);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(VIEW)})`, 'groups view after expanding the rail');
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle after expanding the rail', 8000);
+        const persistedMinimum = await waitWidth(264, 'persisted width after the rail round-trip');
+        if (!(await overrideMarker())) throw new Error('width override marker missing after expanding the rail');
+
+        // Back to the official view: handle gone, no override, width restored.
+        await ui.toggleMode();
+        await ui.waitWorkspaceView();
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(RESIZE_HANDLE)})`, 'resize handle removed in workspace view');
+        await sleep(400);
+        if (await overrideMarker()) throw new Error('width override marker must be cleared in the workspace view');
+        const officialRestored = await ui.sidebarWidth();
+        assertNear(officialRestored, official, 'official sidebar width after switch-back');
+        return { official, widened, reloaded, narrow, restored, reset, minimum, persistedMinimum, officialRestored, header };
+      },
+    },
   ];
 }
 
@@ -945,7 +1200,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 12-step acceptance (isolated .spike-homes/qa, CDP)');
+  console.log(' V1 E2E - 13-step acceptance (isolated .spike-homes/qa, CDP)');
   console.log('============================================================');
 
   let driver = null;

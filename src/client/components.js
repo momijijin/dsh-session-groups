@@ -23,6 +23,16 @@ import {
 import { hitTest, applyDrop } from './drag.js'
 import { renderGlyph, renderIcon } from './icons.js'
 import {
+  applyWidthOverride,
+  clampSidebarWidth,
+  findLayoutNodes,
+  readSidebarWidth,
+  writeSidebarWidth,
+  SIDEBAR_WIDTH_DEFAULT,
+  SIDEBAR_WIDTH_MAX,
+  SIDEBAR_WIDTH_MIN,
+} from './sidebar-width.js'
+import {
   displayDepth,
   expandAncestors,
   flattenTree,
@@ -339,6 +349,160 @@ const UngroupedSection = ({ node, store, props, handlers }) => {
 }
 
 // ---------------------------------------------------------------------------
+// Resize handle (groups view, wide only)
+// ---------------------------------------------------------------------------
+/**
+ * Six-pixel separator pinned to the right edge of the sidebar column. Dragging
+ * reports live clamped widths; commit persists. Pointer capture is best-effort
+ * because synthetic pointer events may not be capturable.
+ */
+const ResizeHandle = ({ width, min, max, onChange, onCommit, onReset }) => {
+  const t = rt()?.t ?? ((key) => key)
+  const dragRef = useRef(null)
+  const frameRef = useRef(null)
+  const trackingRef = useRef(null)
+  const [dragging, setDragging] = useState(false)
+  const changeRef = useRef(onChange)
+  const commitRef = useRef(onCommit)
+  changeRef.current = onChange
+  commitRef.current = onCommit
+
+  /** Remove the window-level drag listeners installed by onPointerDown. */
+  const stopTracking = () => {
+    const stop = trackingRef.current
+    trackingRef.current = null
+    if (typeof stop === 'function') stop()
+  }
+
+  const endDrag = useCallback((commit) => {
+    const drag = dragRef.current
+    if (!drag) {
+      stopTracking()
+      return
+    }
+    dragRef.current = null
+    stopTracking()
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current)
+      frameRef.current = null
+    }
+    try {
+      if (drag.element.hasPointerCapture?.(drag.pointerId)) drag.element.releasePointerCapture(drag.pointerId)
+    } catch {
+      /* synthetic pointer */
+    }
+    setDragging(false)
+    if (commit) {
+      const clamped = clampSidebarWidth(drag.width, globalThis.innerWidth)
+      if (clamped !== null) commitRef.current?.(clamped)
+    }
+  }, [])
+
+  // Unmount mid-drag: drop listeners/capture without committing.
+  useEffect(
+    () => () => {
+      const drag = dragRef.current
+      dragRef.current = null
+      stopTracking()
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+      }
+      try {
+        if (drag?.element.hasPointerCapture?.(drag.pointerId)) drag.element.releasePointerCapture(drag.pointerId)
+      } catch {
+        /* pointer already released */
+      }
+    },
+    []
+  )
+
+  const onPointerDown = (event) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    if (dragRef.current) endDrag(false)
+    const element = event.currentTarget
+    try {
+      element.setPointerCapture?.(event.pointerId)
+    } catch {
+      /* synthetic pointer events may not be capturable */
+    }
+    const start = clampSidebarWidth(width, globalThis.innerWidth) ?? width
+    const drag = { pointerId: event.pointerId, startX: event.clientX, startWidth: start, width: start, element }
+    dragRef.current = drag
+
+    // Attach synchronously: waiting for a React effect can miss the first
+    // pointermove events while the host is still hydrating.
+    const onMove = (moveEvent) => {
+      const active = dragRef.current
+      if (!active || active.pointerId !== moveEvent.pointerId) return
+      const next = clampSidebarWidth(active.startWidth + (moveEvent.clientX - active.startX), globalThis.innerWidth)
+      if (next === null) return
+      active.width = next
+      if (frameRef.current !== null) return
+      frameRef.current = requestAnimationFrame(() => {
+        frameRef.current = null
+        changeRef.current?.(active.width)
+      })
+    }
+    const onUp = (upEvent) => {
+      if (dragRef.current?.pointerId !== upEvent.pointerId) return
+      endDrag(true)
+    }
+    const onCancel = (cancelEvent) => {
+      if (dragRef.current?.pointerId !== cancelEvent.pointerId) return
+      endDrag(false)
+    }
+    globalThis.addEventListener('pointermove', onMove)
+    globalThis.addEventListener('pointerup', onUp)
+    globalThis.addEventListener('pointercancel', onCancel)
+    trackingRef.current = () => {
+      globalThis.removeEventListener('pointermove', onMove)
+      globalThis.removeEventListener('pointerup', onUp)
+      globalThis.removeEventListener('pointercancel', onCancel)
+    }
+    setDragging(true)
+  }
+
+  const onKeyDown = (event) => {
+    const viewport = globalThis.innerWidth
+    const maxWidth = clampSidebarWidth(SIDEBAR_WIDTH_MAX, viewport) ?? max
+    let requested = null
+    if (event.key === 'ArrowLeft') requested = width - 16
+    else if (event.key === 'ArrowRight') requested = width + 16
+    else if (event.key === 'Home') requested = min
+    else if (event.key === 'End') requested = maxWidth
+    if (requested === null) return
+    event.preventDefault()
+    const next = clampSidebarWidth(requested, viewport)
+    if (next === null) return
+    changeRef.current?.(next)
+    commitRef.current?.(next)
+  }
+
+  return h('div', {
+    class: 'dsg-resize-handle',
+    'data-testid': 'session-groups-resize-handle',
+    'data-dragging': dragging ? 'true' : 'false',
+    role: 'separator',
+    'aria-orientation': 'vertical',
+    'aria-label': t('width.handle'),
+    'aria-valuemin': String(min),
+    'aria-valuemax': String(max),
+    'aria-valuenow': String(Math.round(width)),
+    title: t('width.resetHint'),
+    tabindex: '0',
+    style: { left: `${width - 3}px` },
+    onPointerDown,
+    onDoubleClick: (event) => {
+      event.preventDefault()
+      onReset?.()
+    },
+    onKeyDown,
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Header / banner / toast / dialogs / menus / rail / footer / flat fallback
 // ---------------------------------------------------------------------------
 const Header = ({ store, handlers }) => {
@@ -347,24 +511,28 @@ const Header = ({ store, handlers }) => {
   return h(
     'div',
     { class: 'dsg-header', 'data-testid': 'session-groups-header' },
-    h('span', { class: 'dsg-header-title', title: t('view.title') }, t('view.title')),
     h(
-      'button',
-      {
-        type: 'button',
-        class: 'dsg-text-button dsg-filter',
-        'data-testid': 'session-groups-archive-filter',
-        'data-filter': filter,
-        title: `${t('archive.label')}：${t(ARCHIVE_FILTER_LABEL_KEYS[filter])}`,
-        onClick: (event) => {
-          event.stopPropagation()
-          handlers.setArchiveFilter(nextArchiveFilter(filter))
+      'div',
+      { class: 'dsg-header-row', 'data-testid': 'session-groups-header-row' },
+      h('span', { class: 'dsg-header-title', title: t('view.title') }, t('view.title')),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'dsg-text-button dsg-filter',
+          'data-testid': 'session-groups-archive-filter',
+          'data-filter': filter,
+          title: `${t('archive.label')}：${t(ARCHIVE_FILTER_LABEL_KEYS[filter])}`,
+          onClick: (event) => {
+            event.stopPropagation()
+            handlers.setArchiveFilter(nextArchiveFilter(filter))
+          },
         },
-      },
-      t(ARCHIVE_FILTER_LABEL_KEYS[filter])
-    ),
-    TextButton({ label: t('view.newGroup'), onClick: (event) => handlers.openNewGroup(event, null), testId: 'session-groups-new-group' }),
-    TextButton({ label: t('view.returnWorkspace'), onClick: () => handlers.returnToWorkspace(), testId: 'session-groups-return' })
+        t(ARCHIVE_FILTER_LABEL_KEYS[filter])
+      ),
+      TextButton({ label: t('view.newGroup'), onClick: (event) => handlers.openNewGroup(event, null), testId: 'session-groups-new-group' }),
+      TextButton({ label: t('view.returnWorkspace'), onClick: () => handlers.returnToWorkspace(), testId: 'session-groups-return' })
+    )
   )
 }
 
@@ -730,6 +898,105 @@ export const GroupsView = (props) => {
   const dragRef = useRef(null)
   dragRef.current = dragState
 
+  // Sidebar width override state. `preferredWidth` is the persisted preference;
+  // the applied width is always its viewport clamp, so a narrow viewport never
+  // destroys the stored preference.
+  const rootRef = useRef(null)
+  const widthControllerRef = useRef(null)
+  const preferredWidthRef = useRef(0)
+  const [preferredWidth, setPreferredWidth] = useState(() => readSidebarWidth())
+  const [viewportWidth, setViewportWidth] = useState(() => globalThis.innerWidth || 1440)
+  const [widthSupported, setWidthSupported] = useState(false)
+  preferredWidthRef.current = preferredWidth
+  const appliedWidth = clampSidebarWidth(preferredWidth, viewportWidth)
+  const maxAppliedWidth = clampSidebarWidth(SIDEBAR_WIDTH_MAX, viewportWidth) ?? SIDEBAR_WIDTH_MIN
+
+  useEffect(() => {
+    if (!wide) {
+      widthControllerRef.current?.clear()
+      widthControllerRef.current = null
+      setWidthSupported(false)
+      return undefined
+    }
+    const root = rootRef.current
+    if (!root) return undefined
+    let disposed = false
+
+    const clearController = () => {
+      if (!widthControllerRef.current) return
+      try {
+        widthControllerRef.current.clear()
+      } catch {
+        /* fail-soft: a detached host node is already gone */
+      }
+      widthControllerRef.current = null
+    }
+
+    const sync = () => {
+      if (disposed) return
+      const viewport = globalThis.innerWidth || viewportWidth
+      const nodes = findLayoutNodes(root)
+      if (!nodes.supported) {
+        clearController()
+        setWidthSupported(false)
+        return
+      }
+      const clamped = clampSidebarWidth(preferredWidthRef.current, viewport)
+      if (clamped === null) {
+        clearController()
+        setWidthSupported(false)
+        return
+      }
+      if (widthControllerRef.current === null) {
+        const controller = applyWidthOverride(nodes, clamped, viewport)
+        if (!controller) {
+          setWidthSupported(false)
+          return
+        }
+        widthControllerRef.current = controller
+      } else if (widthControllerRef.current.update(clamped) === null) {
+        clearController()
+        setWidthSupported(false)
+        return
+      }
+      setWidthSupported(true)
+    }
+
+    const onResize = () => {
+      setViewportWidth(globalThis.innerWidth)
+      sync()
+    }
+
+    sync()
+    globalThis.addEventListener('resize', onResize)
+    return () => {
+      disposed = true
+      globalThis.removeEventListener('resize', onResize)
+      clearController()
+      setWidthSupported(false)
+    }
+  }, [wide, store?.docState])
+
+  const handleWidthChange = (next) => {
+    preferredWidthRef.current = next
+    setPreferredWidth(next)
+    widthControllerRef.current?.update(next)
+  }
+
+  const handleWidthCommit = (next) => {
+    writeSidebarWidth(next)
+  }
+
+  const handleWidthReset = () => {
+    const viewport = globalThis.innerWidth || viewportWidth
+    const next = clampSidebarWidth(SIDEBAR_WIDTH_DEFAULT, viewport)
+    if (next === null) return
+    preferredWidthRef.current = next
+    setPreferredWidth(next)
+    widthControllerRef.current?.update(next)
+    writeSidebarWidth(next)
+  }
+
   const t = rt()?.t ?? ((key) => key)
 
   // Auto-expand ancestors of the current session when the view opens.
@@ -963,8 +1230,18 @@ export const GroupsView = (props) => {
 
   return h(
     'div',
-    { class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true' },
+    { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true' },
     h(Header, { store, handlers }),
+    wide && widthSupported && appliedWidth !== null
+      ? h(ResizeHandle, {
+          width: appliedWidth,
+          min: SIDEBAR_WIDTH_MIN,
+          max: maxAppliedWidth,
+          onChange: handleWidthChange,
+          onCommit: handleWidthCommit,
+          onReset: handleWidthReset,
+        })
+      : null,
     h(Banner, { store, handlers }),
     store.docState === 'loading'
       ? h('div', { class: 'dsg-empty' }, t('flat.title'))

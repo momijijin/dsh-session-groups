@@ -20,12 +20,47 @@ export const CSS = `
 }
 .dsg-header {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
   padding: 2px 4px 6px 2px;
   flex: none;
 }
+.dsg-header-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
 .dsg-header-title { font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary, #57606a); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsg-resize-handle {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  z-index: 30;
+  cursor: col-resize;
+  touch-action: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  outline: none;
+}
+.dsg-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background .12s ease, opacity .12s ease;
+}
+.dsg-resize-handle:hover::after,
+.dsg-resize-handle[data-dragging="true"]::after { background: var(--dsw-alias-state-business-primary, #4d6bfe); opacity: .6; }
+.dsg-resize-handle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); outline-offset: -2px; }
 .dsg-icon-button {
   appearance: none;
   display: inline-flex;

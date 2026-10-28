@@ -66,6 +66,8 @@
   "flat.title": "Sessions (flat list)",
   "rail.expand": "Open sidebar (group view)",
   "rail.groups": "Groups",
+  "width.handle": "Resize sidebar",
+  "width.resetHint": "Double-click to reset the width (420)",
   "toast.saved": "Groups saved",
   "toast.renameFailed": "Rename failed",
   "toast.archiveFailed": "Archive failed",

@@ -217,6 +217,7 @@ V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 
 | `session-groups-dialog-input` | 对话框输入 | — |
 | `session-groups-dialog-confirm` | 对话框确认 | — |
 | `session-groups-rail` / `session-groups-rail-expand` | 56px rail / 展开 | — |
+| `session-groups-resize-handle` | 左栏右边缘宽度把手（仅 `wide` 且可覆盖） | `role="separator"`, `aria-valuemin/max/now` |
 
 ## 5. Host action mapping
 
