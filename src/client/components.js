@@ -8,7 +8,7 @@
  */
 import { Component, createElement, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { MAX_GROUP_NAME } from '../shared/constants.js'
-import { findGroup } from '../shared/model.js'
+import { childrenOf, findGroup, moveGroup } from '../shared/model.js'
 import { createActions, formatActivity, workspaceChoices, workspaceLabel } from './actions.js'
 import {
   buildVisibleTree,
@@ -21,6 +21,7 @@ import {
   nextArchiveFilter,
 } from './filter.js'
 import { hitTest, applyDrop } from './drag.js'
+import { GROUP_DRAG_MIME, resolveGroupDrop } from './group-drag.js'
 import { renderGlyph, renderIcon } from './icons.js'
 import {
   applyWidthOverride,
@@ -38,6 +39,7 @@ import {
   flattenTree,
   groupPath,
   isExpanded,
+  siblingNeighbors,
   statusLabelKey,
   statusTone,
 } from './tree.js'
@@ -71,6 +73,40 @@ const dispatch = (action, payload) => rt()?.store.dispatch(action, payload)
 
 /** Show one toast through the plugin shell (auto-dismiss). */
 const toast = (kind, message) => rt()?.notify({ kind, message })
+
+/**
+ * Thrown inside a queued doc updater to abandon a no-op group drop before the
+ * commit queue sends a request. `commitDoc` resolves the updater against the
+ * latest confirmed doc first, so this keeps the latest-doc semantics while still
+ * skipping the write entirely (no revision bump).
+ */
+const GROUP_DROP_NOOP = Symbol('dsh-session-groups/group-drop-noop')
+
+/**
+ * Whether a resolved group drop lands on the dragged group's current position.
+ *
+ * `resolveGroupDrop` measures `resolved.index` on the pre-removal siblings, but
+ * `moveGroup` inserts after removing the dragged group. The effective insertion
+ * index is therefore `min(resolved.index, postRemovalCount)`; the group's
+ * post-removal original index is its pre-removal index (`moveGroup` restores it
+ * by inserting at that index). A generic `resolved.index >= count` shortcut is
+ * wrong: dragging the first root group to the end resolves index=rootCount, which
+ * is >= postRemovalCount yet is a real move.
+ *
+ * `root-end` is the one target whose index includes the dragged group, so a
+ * dragged group that is already the last root is explicitly a no-op.
+ */
+const isCurrentGroupPosition = (doc, draggedId, resolved, target) => {
+  const dragged = findGroup(doc, draggedId)
+  if (!dragged || !resolved || resolved.invalid) return false
+  if (resolved.parentId !== dragged.parentId) return false
+  const siblings = childrenOf(doc, dragged.parentId)
+  const originalIndex = siblings.findIndex((group) => group.id === draggedId)
+  if (originalIndex === -1) return false
+  const postRemovalCount = siblings.length - 1
+  if (target?.kind === 'root-end' && dragged.parentId === null && originalIndex === postRemovalCount) return true
+  return Math.min(resolved.index, postRemovalCount) === originalIndex
+}
 
 // ---------------------------------------------------------------------------
 // Small primitives
@@ -195,37 +231,91 @@ const SessionRow = ({
 // ---------------------------------------------------------------------------
 // Group tree node
 // ---------------------------------------------------------------------------
+/**
+ * One body drop slot between child groups. The slot carries the stable
+ * `beforeGroupId` anchor (next child group id, `null` for the last slot / empty
+ * group); the numeric index is always resolved against the latest doc, never
+ * cached in the drag gesture.
+ */
+const GroupDropSlot = ({ parentId, beforeGroupId, store, handlers }) => {
+  const dropTarget = store.dropTarget
+  const anchor = beforeGroupId ?? null
+  const active =
+    dropTarget && dropTarget.kind === 'group-child' && dropTarget.parentId === parentId && (dropTarget.beforeGroupId ?? null) === anchor
+  const forbidden =
+    dropTarget && dropTarget.kind === 'group-forbidden' && dropTarget.parentId === parentId && (dropTarget.beforeGroupId ?? null) === anchor
+  return h('div', {
+    class: classNames('dsg-group-drop-slot', active && 'dsg-drop-active'),
+    'data-testid': 'session-groups-group-drop',
+    'data-parent-id': parentId,
+    'data-before-group-id': anchor ?? '',
+    'data-drop-active': active ? 'true' : 'false',
+    'data-drop-forbidden': forbidden ? 'true' : 'false',
+    onDragOver: (event) => handlers.onDragOverGroupSlot(event, parentId, anchor),
+    onDrop: (event) => handlers.onDropGroupSlot(event, parentId, anchor),
+  })
+}
+
 const GroupNode = ({ node, depth, props, handlers, store }) => {
   const group = node.group
   const expanded = isExpanded(store.collapsed, group.id)
   const dropTarget = store.dropTarget
   const isAppendTarget = dropTarget && dropTarget.kind === 'group-append' && dropTarget.groupId === group.id
+  const headerKind = dropTarget && dropTarget.targetId === group.id ? dropTarget.kind : null
+  const isBefore = headerKind === 'group-before'
+  const isAfter = headerKind === 'group-after'
+  const isForbidden = headerKind === 'group-forbidden'
+  const dragging = store.draggedGroupId === group.id
   const visibleSessions = node.children.filter((child) => child.kind === 'session')
   const childGroups = node.children.filter((child) => child.kind === 'group')
   const notFound = rt()?.t('group.empty')
+  // n child groups => n+1 slots; every slot and child group renders before the
+  // session rows so slots never sit between sessions. Collapsed groups render no
+  // body and therefore no child slots.
+  const bodyChildren = []
+  for (let index = 0; index <= childGroups.length; index += 1) {
+    const beforeGroupId = childGroups[index]?.group.id ?? null
+    bodyChildren.push(h(GroupDropSlot, { key: `drop-${index}`, parentId: group.id, beforeGroupId, store, handlers }))
+    if (index < childGroups.length) {
+      const child = childGroups[index]
+      bodyChildren.push(h(GroupNode, { key: child.group.id, node: child, depth: depth + 1, props, handlers, store }))
+    }
+  }
   return h(
     'div',
     { class: 'dsg-group' },
     h(
       'div',
       {
-        class: classNames('dsg-group-row', isAppendTarget && 'dsg-insert-after'),
+        class: classNames(
+          'dsg-group-row',
+          isAppendTarget && 'dsg-insert-after',
+          isBefore && 'dsg-insert-before',
+          isAfter && 'dsg-insert-after',
+          dragging && 'dsg-dragging'
+        ),
         role: 'treeitem',
         tabindex: '0',
+        draggable: 'true',
         'aria-expanded': expanded ? 'true' : 'false',
         'data-testid': 'session-groups-group',
         'data-group-id': group.id,
         'data-depth': String(displayDepth(depth)),
         'data-expanded': expanded ? 'true' : 'false',
         'data-drop-active': isAppendTarget ? 'true' : 'false',
+        'data-drop-kind': headerKind ?? '',
+        'data-drop-forbidden': isForbidden ? 'true' : 'false',
+        'data-dragging': dragging ? 'true' : 'false',
         title: groupPath(store.doc, group.id),
-        onClick: () => handlers.toggleGroup(group.id),
+        onClick: () => handlers.onGroupClick(group.id),
         onKeyDown: (event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
             handlers.toggleGroup(group.id)
           }
         },
+        onDragStart: (event) => handlers.onGroupDragStart(event, group),
+        onDragEnd: handlers.onDragEnd,
         onDragOver: (event) => handlers.onDragOverGroup(event, group.id),
         onDrop: (event) => handlers.onDropGroup(event, group.id),
       },
@@ -272,10 +362,10 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
               onDragOver: (event) => handlers.onDragOverGroupHead(event, group.id),
               onDrop: (event) => handlers.onDropGroupHead(event, group.id),
             },
+            ...bodyChildren,
             node.visibleCount === 0
               ? h('div', { class: 'dsg-group-empty', 'data-testid': 'session-groups-empty' }, notFound)
               : null,
-            ...childGroups.map((child) => h(GroupNode, { key: child.group.id, node: child, depth: depth + 1, props, handlers, store })),
             ...visibleSessions.map((child) =>
               h(SessionRow, { key: child.session.id, sessionNode: child, depth: depth + 1, groupId: group.id, props, handlers })
             )
@@ -292,7 +382,8 @@ const UngroupedSection = ({ node, store, props, handlers }) => {
   const collapsedId = '__ungrouped__'
   const expanded = isExpanded(store.collapsed, collapsedId)
   const dropTarget = store.dropTarget
-  const isDrop = dropTarget && dropTarget.kind === 'ungrouped'
+  const dropKind = dropTarget?.kind === 'ungrouped' ? 'ungrouped' : dropTarget?.kind === 'group-root-end' ? 'group-root-end' : null
+  const isDrop = dropKind !== null
   return h(
     'div',
     { class: 'dsg-ungrouped' },
@@ -305,6 +396,7 @@ const UngroupedSection = ({ node, store, props, handlers }) => {
         'aria-expanded': expanded ? 'true' : 'false',
         'data-testid': 'session-groups-ungrouped',
         'data-drop-active': isDrop ? 'true' : 'false',
+        'data-drop-kind': dropKind ?? '',
         onClick: () => handlers.toggleGroup(collapsedId),
         onKeyDown: (event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -322,7 +414,7 @@ const UngroupedSection = ({ node, store, props, handlers }) => {
         ? h('div', {
             class: 'dsg-drop-indicator',
             'data-testid': 'session-groups-drop-indicator',
-            'data-drop-kind': 'ungrouped',
+            'data-drop-kind': dropKind,
             'data-drop-target': 'ungrouped',
           })
         : null
@@ -566,10 +658,20 @@ const MenuPopover = ({ store, handlers }) => {
     h('button', { key, type: 'button', class: 'dsg-menu-item', onClick: (event) => { event.stopPropagation(); handlers.closeMenu(); onClick() }, ...extra }, label)
   const children = []
   if (menu.kind === 'group') {
+    const { previous, next } = siblingNeighbors(store.doc, menu.groupId)
+    const moveItem = (key, label, testid, disabled, delta) =>
+      item(key, label, () => handlers.moveGroupStep(menu.groupId, delta), {
+        'data-testid': testid,
+        'data-group-id': menu.groupId,
+        'data-disabled': disabled ? 'true' : 'false',
+        ...(disabled ? { disabled: true } : {}),
+      })
     children.push(item('new-subgroup', t('group.newSubgroup'), () => handlers.openNewGroup(null, menu.groupId)))
     children.push(item('rename', t('group.rename'), () => handlers.openRenameGroup(menu.groupId)))
     children.push(item('icon', t('group.icon'), () => handlers.openIconGroup(menu.groupId)))
     children.push(item('move', t('group.moveTo'), () => handlers.openMoveGroup(menu.groupId)))
+    children.push(moveItem('move-up', t('group.moveUp'), 'session-groups-group-move-up', previous === null, -1))
+    children.push(moveItem('move-down', t('group.moveDown'), 'session-groups-group-move-down', next === null, 1))
     children.push(h('div', { key: 'sep', class: 'dsg-menu-separator' }))
     children.push(item('delete', t('group.delete'), () => handlers.openDeleteGroup(menu.groupId)))
   } else if (menu.kind === 'session') {
@@ -896,6 +998,7 @@ export const GroupsView = (props) => {
   const [dropTarget, setDropTarget] = useState(null)
   const autoExpandRef = useRef({ groupId: null, timer: null })
   const dragRef = useRef(null)
+  const suppressedClickRef = useRef(null)
   dragRef.current = dragState
 
   // Sidebar width override state. `preferredWidth` is the persisted preference;
@@ -1034,7 +1137,12 @@ export const GroupsView = (props) => {
   })
   const ungroupedCount = tree.ungrouped.length
   // Row components read current/drop state; merge it into the snapshot handed down.
-  const viewState = { ...store, currentSessionId: highlightCurrent, dropTarget }
+  const viewState = {
+    ...store,
+    currentSessionId: highlightCurrent,
+    dropTarget,
+    draggedGroupId: dragState?.kind === 'group' ? dragState.groupId : null,
+  }
 
   const commitDrop = async (source, target) => {
     setDropTarget(null)
@@ -1049,6 +1157,65 @@ export const GroupsView = (props) => {
       toast('error', t('toast.dropFailed'))
       if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] drop failed', error)
     }
+  }
+
+  /**
+   * Commit a group drag. The gesture stores only the stable target descriptor;
+   * the numeric parent/index is resolved inside the queued updater against the
+   * latest confirmed doc (B5). A same-parent/current-position drop throws the
+   * no-op sentinel before the queue sends any request, so no revision is bumped.
+   */
+  const commitGroupDrop = async (draggedId, target) => {
+    setDropTarget(null)
+    setDragState(null)
+    dragRef.current = null
+    rt()?.setFloatingLabel?.(null)
+    try {
+      await rt()?.commitDoc((latest) => {
+        const resolved = resolveGroupDrop({ doc: latest, draggedId, target })
+        if (resolved.invalid) {
+          const error = new Error(resolved.reason)
+          error.groupDropInvalid = true
+          throw error
+        }
+        if (isCurrentGroupPosition(latest, draggedId, resolved, target)) throw GROUP_DROP_NOOP
+        return moveGroup(latest, draggedId, resolved.parentId, resolved.index)
+      })
+    } catch (error) {
+      if (error === GROUP_DROP_NOOP) return
+      if (error?.groupDropInvalid) {
+        toast('error', t('drag.groupInvalid'))
+        return
+      }
+      if (error?.message === 'depth-exceeded') {
+        toast('error', t('drag.depthExceeded'))
+        return
+      }
+      if (error?.message === 'cycle') {
+        toast('error', t('drag.groupInvalid'))
+        return
+      }
+      toast('error', t('toast.dropFailed'))
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] group drop failed', error)
+    }
+  }
+
+  /** Menu move-up/move-down: one sibling step inside the latest confirmed doc. */
+  const moveGroupStep = (groupId, delta) => {
+    const task = rt()?.commitDoc((latest) => {
+      const group = findGroup(latest, groupId)
+      if (!group) throw GROUP_DROP_NOOP
+      const siblings = childrenOf(latest, group.parentId)
+      const currentIndex = siblings.findIndex((item) => item.id === groupId)
+      const nextIndex = currentIndex + delta
+      if (currentIndex === -1 || nextIndex < 0 || nextIndex >= siblings.length) throw GROUP_DROP_NOOP
+      return moveGroup(latest, groupId, group.parentId, nextIndex)
+    })
+    task?.catch((error) => {
+      if (error === GROUP_DROP_NOOP) return
+      toast('error', t('toast.dropFailed'))
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] group move failed', error)
+    })
   }
 
   const clearAutoExpand = () => {
@@ -1084,8 +1251,67 @@ export const GroupsView = (props) => {
     return group ? group.sessionIds : []
   }
 
+  const groupDragId = () => (dragRef.current?.kind === 'group' ? dragRef.current.groupId : null)
+
+  /** Translate the view drop-target vocabulary to the resolver target shape. */
+  const resolveTargetFor = (viewTarget) => {
+    switch (viewTarget?.kind) {
+      case 'group-before':
+        return { kind: 'before', targetId: viewTarget.targetId }
+      case 'group-after':
+        return { kind: 'after', targetId: viewTarget.targetId }
+      case 'group-child':
+        return { kind: 'child', parentId: viewTarget.parentId, beforeGroupId: viewTarget.beforeGroupId ?? null }
+      case 'group-root-end':
+        return { kind: 'root-end' }
+      default:
+        return null
+    }
+  }
+
+  /**
+   * Live indicator for a group drop. Invalid targets (self/descendant, missing
+   * anchors) render the forbidden state and never accept the drop.
+   */
+  const previewGroupDrop = (event, viewTarget, label) => {
+    const draggedId = groupDragId()
+    if (!draggedId) return
+    const resolved = resolveGroupDrop({ doc: store.doc, draggedId, target: resolveTargetFor(viewTarget) })
+    if (resolved.invalid) {
+      setDropTarget({ ...viewTarget, kind: 'group-forbidden' })
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
+      rt()?.setFloatingLabel?.(t('drag.groupInvalid'))
+      return
+    }
+    rowDragOver(event, viewTarget)
+    rt()?.setFloatingLabel?.(label)
+  }
+
+  /** Top/bottom edge zone of a group header; the middle 50% is invalid. */
+  const groupHeaderZone = (row, clientY) => {
+    const rect = row?.getBoundingClientRect?.()
+    if (!rect || !(rect.height > 0)) return null
+    const ratio = (clientY - rect.top) / rect.height
+    if (ratio < 0.25) return 'before'
+    if (ratio > 0.75) return 'after'
+    return null
+  }
+
+  /** Consume the click synthesized right after a dragstart (400 ms guard). */
+  const consumeDragClick = (groupId) => {
+    const marker = suppressedClickRef.current
+    if (!marker) return false
+    suppressedClickRef.current = null
+    return marker.groupId === groupId && Date.now() - marker.at <= 400
+  }
+
   const handlers = {
     toggleGroup: (id) => dispatch('toggle-group', { id }),
+    onGroupClick: (id) => {
+      if (consumeDragClick(id)) return
+      dispatch('toggle-group', { id })
+    },
+    moveGroupStep,
     returnToWorkspace: () => rt()?.setMode('workspace'),
     retryLoad: () => rt()?.retryLoad(),
     openSession: (id) => rt()?.actions.openSession(id),
@@ -1139,10 +1365,32 @@ export const GroupsView = (props) => {
     closeMenu: () => dispatch('menu', { menu: null }),
     onDragStart: (sessionId) => {
       const row = byId[sessionId]
-      const workspace = workspaceItems.find((item) => (item.sessionIds ?? []).includes(sessionId))
-      dragRef.current = { kind: 'session', sessionId, label: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }) }
+      dragRef.current = {
+        kind: 'session',
+        sessionId,
+        label: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
+      }
+      suppressedClickRef.current = null
       setDragState(dragRef.current)
       rt()?.startDragLabel?.(dragRef.current.label)
+    },
+    onGroupDragStart: (event, group) => {
+      const origin = event.target
+      if (origin && typeof origin.closest === 'function' && origin.closest('button')) {
+        event.preventDefault()
+        return
+      }
+      if (event.dataTransfer) {
+        event.dataTransfer.setData(GROUP_DRAG_MIME, group.id)
+        event.dataTransfer.setData('text/plain', group.name)
+        event.dataTransfer.effectAllowed = 'move'
+      }
+      const drag = { kind: 'group', groupId: group.id, label: group.name }
+      dragRef.current = drag
+      suppressedClickRef.current = { groupId: group.id, at: Date.now() }
+      setDragState(drag)
+      setDropTarget(null)
+      rt()?.startDragLabel?.(group.name)
     },
     onDragEnd: () => {
       clearAutoExpand()
@@ -1153,7 +1401,7 @@ export const GroupsView = (props) => {
     },
     onDragOverSession: (event, sessionId, groupId, ungrouped) => {
       const drag = dragRef.current
-      if (!drag) return
+      if (!drag || drag.kind !== 'session') return
       const rect = event.currentTarget.getBoundingClientRect()
       const target = hitTest({
         source: drag,
@@ -1173,12 +1421,12 @@ export const GroupsView = (props) => {
       rt()?.setFloatingLabel?.(label)
     },
     onDropSession: (event, sessionId, groupId, ungrouped) => {
+      const drag = dragRef.current
+      if (!drag || drag.kind !== 'session') return
       event.preventDefault()
       event.stopPropagation()
-      const drag = dragRef.current
       clearAutoExpand()
       rt()?.setFloatingLabel?.(null)
-      if (!drag) return
       // Resolve from this drop event instead of the react state mirror: a
       // dragover and drop can arrive in one tick (synthetic E2E / fast pointer),
       // and the state may not have committed yet.
@@ -1198,42 +1446,95 @@ export const GroupsView = (props) => {
     onDragOverGroup: (event, groupId) => {
       const drag = dragRef.current
       if (!drag) return
+      if (drag.kind === 'group') {
+        const name = findGroup(store.doc, groupId)?.name ?? ''
+        const zone = groupHeaderZone(event.currentTarget, event.clientY)
+        if (zone === null) {
+          setDropTarget({ kind: 'group-forbidden', targetId: groupId })
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
+          rt()?.setFloatingLabel?.(t('drag.groupInvalid'))
+          return
+        }
+        previewGroupDrop(event, { kind: `group-${zone}`, targetId: groupId }, t(zone === 'before' ? 'drag.groupBefore' : 'drag.groupAfter', { name }))
+        return
+      }
       rowDragOver(event, { kind: 'group-append', groupId })
       scheduleAutoExpand(groupId)
       rt()?.setFloatingLabel?.(`放入『${findGroup(store.doc, groupId)?.name ?? ''}』`)
     },
     onDropGroup: (event, groupId) => {
+      const drag = dragRef.current
+      if (drag?.kind === 'group') {
+        event.preventDefault()
+        event.stopPropagation()
+        clearAutoExpand()
+        setDropTarget(null)
+        rt()?.setFloatingLabel?.(null)
+        const zone = groupHeaderZone(event.currentTarget, event.clientY)
+        if (zone === null) {
+          toast('error', t('drag.groupInvalid'))
+          return
+        }
+        commitGroupDrop(drag.groupId, { kind: zone, targetId: groupId })
+        return
+      }
       event.preventDefault()
       event.stopPropagation()
-      const drag = dragRef.current
       clearAutoExpand()
       rt()?.setFloatingLabel?.(null)
       commitDrop(drag, { kind: 'group-append', groupId })
     },
     onDragOverGroupHead: (event, groupId) => {
       const drag = dragRef.current
-      if (!drag) return
+      if (!drag || drag.kind !== 'session') return
       rowDragOver(event, { kind: 'group-head', groupId })
       scheduleAutoExpand(groupId)
     },
     onDropGroupHead: (event, groupId) => {
+      const drag = dragRef.current
+      if (!drag || drag.kind !== 'session') return
       event.preventDefault()
       event.stopPropagation()
-      const drag = dragRef.current
       clearAutoExpand()
       rt()?.setFloatingLabel?.(null)
       commitDrop(drag, { kind: 'group-head', groupId })
     },
+    onDragOverGroupSlot: (event, parentId, beforeGroupId) => {
+      const drag = dragRef.current
+      if (!drag || drag.kind !== 'group') return
+      const name = findGroup(store.doc, parentId)?.name ?? ''
+      previewGroupDrop(event, { kind: 'group-child', parentId, beforeGroupId }, t('drag.groupInto', { name }))
+    },
+    onDropGroupSlot: (event, parentId, beforeGroupId) => {
+      const drag = dragRef.current
+      // A session dragged across the slot keeps its existing group-head drop
+      // behaviour (event bubbles to the body line); only group drags land here.
+      if (!drag || drag.kind !== 'group') return
+      event.preventDefault()
+      event.stopPropagation()
+      commitGroupDrop(drag.groupId, { kind: 'child', parentId, beforeGroupId })
+    },
     onDragOverUngrouped: (event) => {
       const drag = dragRef.current
       if (!drag) return
+      if (drag.kind === 'group') {
+        previewGroupDrop(event, { kind: 'group-root-end' }, t('drag.groupRootEnd'))
+        return
+      }
       rowDragOver(event, { kind: 'ungrouped' })
       rt()?.setFloatingLabel?.('移出分组')
     },
     onDropUngrouped: (event) => {
+      const drag = dragRef.current
+      if (drag?.kind === 'group') {
+        event.preventDefault()
+        event.stopPropagation()
+        rt()?.setFloatingLabel?.(null)
+        commitGroupDrop(drag.groupId, { kind: 'root-end' })
+        return
+      }
       event.preventDefault()
       event.stopPropagation()
-      const drag = dragRef.current
       rt()?.setFloatingLabel?.(null)
       commitDrop(drag, { kind: 'ungrouped' })
     },

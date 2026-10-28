@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // e2e/groups.spec.mjs
 //
-// V1 E2E acceptance (docs/TEST-PLAN.md §5, 13 steps) - zero-dependency.
+// V1 E2E acceptance (docs/TEST-PLAN.md §5, 14 steps) - zero-dependency.
 //
 // Drives the real isolated DSH web UI (`.spike-homes/qa`, port 4402) through the
 // Chrome DevTools Protocol using the Chromium already present on this machine.
@@ -13,7 +13,7 @@
 // When the client UI is not present yet the runner exits 3 (BLOCKED) with a
 // diagnostic, so the pipeline can distinguish "not implemented" from "broken".
 //
-// Exit codes: 0 = all 13 steps PASS, 1 = a step FAILED, 2 = harness error,
+// Exit codes: 0 = all 14 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -33,6 +33,10 @@ const VIEW = '[data-testid="session-groups-view"]';
 const GROUP = '[data-testid="session-groups-group"]';
 const GROUP_ADD = '[data-testid="session-groups-group-add"]';
 const GROUP_MENU = '[data-testid="session-groups-group-menu"]';
+const GROUP_DROP = '[data-testid="session-groups-group-drop"]';
+const GROUP_MOVE_UP = 'session-groups-group-move-up';
+const GROUP_MOVE_DOWN = 'session-groups-group-move-down';
+const MENU = '[data-testid="session-groups-menu"]';
 const SESSION = '[data-testid="session-groups-session"]';
 const UNGROUPED = '[data-testid="session-groups-ungrouped"]';
 const DIALOG = '[data-testid="session-groups-dialog"]';
@@ -452,6 +456,174 @@ function makeUi(driver, helpers) {
       })()`);
       if (!result.ok) throw new Error(`reorder ${sid} before ${targetSid} failed: ${result.reason}`);
       await sleep(250);
+    },
+    // --- group drag / group menu helpers (step 14) --------------------------
+    /**
+     * Root group ids in DOM order (`data-depth="0"` excludes nested child rows).
+     */
+    async rootGroupIds() {
+      return await evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(GROUP)} + '[data-depth="0"]'), (el) => el.getAttribute('data-group-id'))`);
+    },
+    async waitRootGroups(expected, waitMs = 8000) {
+      const expr = `JSON.stringify(Array.from(document.querySelectorAll(${JSON.stringify(GROUP)} + '[data-depth="0"]'), (el) => el.getAttribute('data-group-id')))`;
+      await ui.waitFor(`${expr} === ${JSON.stringify(JSON.stringify(expected))}`, `root group order ${expected.join(',')}`, waitMs);
+      return ui.rootGroupIds();
+    },
+    /**
+     * Direct child group ids of `gid` in render order (empty when collapsed or
+     * when the group has no child groups).
+     */
+    async groupChildren(gid) {
+      return await evaluate(`(() => {
+        const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+        const wrap = row ? row.closest('.dsg-group') : null;
+        const line = wrap ? wrap.querySelector(':scope > .dsg-group-body > .dsg-group-line') : null;
+        if (!line) return [];
+        return Array.from(line.querySelectorAll(':scope > .dsg-group'), (el) => {
+          const childRow = el.querySelector(':scope > [data-testid="session-groups-group"]');
+          return childRow ? childRow.getAttribute('data-group-id') : null;
+        }).filter(Boolean);
+      })()`);
+    },
+    async waitGroupChildren(gid, expected, waitMs = 8000) {
+      const expr = `JSON.stringify(Array.from((() => {
+        const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+        const wrap = row ? row.closest('.dsg-group') : null;
+        const line = wrap ? wrap.querySelector(':scope > .dsg-group-body > .dsg-group-line') : null;
+        if (!line) return [];
+        return Array.from(line.querySelectorAll(':scope > .dsg-group'), (el) => {
+          const childRow = el.querySelector(':scope > [data-testid="session-groups-group"]');
+          return childRow ? childRow.getAttribute('data-group-id') : null;
+        }).filter(Boolean);
+      })()))`;
+      await ui.waitFor(`${expr} === ${JSON.stringify(JSON.stringify(expected))}`, `child groups of ${gid} = ${expected.join(',')}`, waitMs);
+      return ui.groupChildren(gid);
+    },
+    async groupDepth(gid) {
+      return Number(await evaluate(`document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]')?.getAttribute('data-depth') ?? -1`));
+    },
+    /**
+     * Synthetic HTML5 drag of one or more group headers / body slots. All specs
+     * are dispatched in one evaluate so "rapid" sequences queue their commits
+     * before React can re-render the tree.
+     * Spec: {kind:'before'|'after', dragged, target}
+     *     | {kind:'child', dragged, parentId, beforeGroupId}
+     *     | {kind:'root-end', dragged}
+     */
+    async dragGroupMany(specs) {
+      const result = await evaluate(`(() => {
+        const specs = ${JSON.stringify(specs)};
+        const groupRow = (gid) => document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + gid + '"]');
+        const slotFor = (parentId, beforeGroupId) => Array.from(document.querySelectorAll(${JSON.stringify(GROUP_DROP)})).find((el) =>
+          el.getAttribute('data-parent-id') === parentId &&
+          (el.getAttribute('data-before-group-id') ?? '') === (beforeGroupId ?? ''));
+        const results = [];
+        for (const spec of specs) {
+          const source = groupRow(spec.dragged);
+          if (!source) { results.push({ ok: false, reason: 'source group missing', spec }); continue; }
+          let target = null;
+          let x = 0;
+          let y = 0;
+          if (spec.kind === 'before' || spec.kind === 'after') {
+            target = groupRow(spec.target);
+            if (target) {
+              const rect = target.getBoundingClientRect();
+              x = rect.left + rect.width / 2;
+              y = rect.top + Math.max(2, rect.height * (spec.kind === 'before' ? 0.2 : 0.8));
+            }
+          } else if (spec.kind === 'child') {
+            target = slotFor(spec.parentId, spec.beforeGroupId ?? null);
+            if (target) {
+              const rect = target.getBoundingClientRect();
+              x = rect.left + rect.width / 2;
+              y = rect.top + Math.max(1, rect.height / 2);
+            }
+          } else if (spec.kind === 'root-end') {
+            target = document.querySelector(${JSON.stringify(UNGROUPED)});
+            if (target) {
+              const rect = target.getBoundingClientRect();
+              x = rect.left + rect.width / 2;
+              y = rect.top + Math.max(2, rect.height / 2);
+            }
+          }
+          if (!target) { results.push({ ok: false, reason: 'drop target missing', spec }); continue; }
+          const dt = new DataTransfer();
+          source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+          for (const type of ['dragenter', 'dragover']) {
+            target.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt, clientX: x, clientY: y }));
+          }
+          target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: x, clientY: y }));
+          source.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
+          results.push({ ok: true, spec });
+        }
+        return results;
+      })()`);
+      const failed = result.find((entry) => !entry.ok);
+      if (failed) throw new Error(`group drag failed: ${failed.reason} ${JSON.stringify(failed.spec)}`);
+      return result;
+    },
+    async dragGroup(spec) {
+      return ui.dragGroupMany([spec]);
+    },
+    async openGroupMenu(gid) {
+      await ui.click(`${GROUP_MENU}[data-group-id="${gid}"]`);
+      await ui.waitFor(`!!document.querySelector(${JSON.stringify(MENU)})`, `group menu ${gid} open`, 5000);
+      await sleep(120);
+    },
+    async menuControl(testid) {
+      return await evaluate(`(() => {
+        const el = document.querySelector('[data-testid="' + ${JSON.stringify(testid)} + '"]');
+        if (!el) return { found: false };
+        return {
+          found: true,
+          dataDisabled: el.getAttribute('data-disabled'),
+          disabledAttr: el.hasAttribute('disabled'),
+          groupId: el.getAttribute('data-group-id'),
+          text: (el.textContent ?? '').trim(),
+        };
+      })()`);
+    },
+    async clickMenuControl(testid) {
+      const clicked = await evaluate(`(() => {
+        const el = document.querySelector('[data-testid="' + ${JSON.stringify(testid)} + '"]');
+        if (!el) return false;
+        el.click();
+        return true;
+      })()`);
+      if (!clicked) throw new Error(`menu control not found: ${testid}`);
+      await sleep(300);
+    },
+    async closeMenu() {
+      await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+      await sleep(150);
+      if (await ui.exists(MENU)) throw new Error('group menu did not close on Escape');
+    },
+    /**
+     * Per-group body audit: direct slot count, direct child-group count and
+     * whether any slot renders after a session row (slot placement contract).
+     */
+    async groupSlotAudit() {
+      return await evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(GROUP)}), (row) => {
+        const gid = row.getAttribute('data-group-id');
+        const wrap = row.closest('.dsg-group');
+        const line = wrap ? wrap.querySelector(':scope > .dsg-group-body > .dsg-group-line') : null;
+        if (!line) return { gid, expanded: false, slots: 0, children: 0, slotAfterSession: false };
+        let seenSession = false;
+        let slotAfterSession = false;
+        let slots = 0;
+        let children = 0;
+        for (const el of Array.from(line.children)) {
+          if (el.matches(${JSON.stringify(GROUP_DROP)})) {
+            slots += 1;
+            if (seenSession) slotAfterSession = true;
+          } else if (el.matches(${JSON.stringify(SESSION)})) {
+            seenSession = true;
+          } else if (el.classList.contains('dsg-group')) {
+            children += 1;
+          }
+        }
+        return { gid, expanded: true, slots, children, slotAfterSession };
+      })`);
     },
     async filterState() {
       return await evaluate(`document.querySelector(${JSON.stringify(FILTER)})?.getAttribute('data-filter') ?? null`);
@@ -1216,6 +1388,175 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         };
       },
     },
+    {
+      id: 14,
+      name: 'drag-groups-reorder-and-reparent',
+      async run() {
+        // Step 13 leaves the official workspace view active; step 15 expects the
+        // groups view, so step 14 owns the toggle back in.
+        await ui.toggleMode();
+        await ui.waitGroupsView();
+        await sleep(500);
+
+        const { a, b, c } = state.groups;
+        if (!a || !b || !c) throw new Error('step 14 needs groups a/b/c from step 3');
+        const bSessionsBefore = await ui.sessionIdsInGroup(b);
+        if (bSessionsBefore.length === 0) throw new Error('group b must have sessions before the group-drag step');
+        const bChildrenBefore = await ui.groupChildren(b);
+        if (bChildrenBefore.length !== 0) throw new Error(`group b must have zero child groups before step 14, got ${JSON.stringify(bChildrenBefore)}`);
+
+        const e = await ui.createGroup('空组E');
+        const f = await ui.createGroup('空组F');
+        if (!e || !f) throw new Error('could not create groups e/f');
+        const initialOrder = await ui.waitRootGroups([a, b, c, e, f], 10000);
+
+        const recordRevision = () => {
+          try {
+            const record = JSON.parse(readFileSync(join(QA_HOME, 'storages', 'dsh-session-groups.json'), 'utf8'));
+            return Number(record.revision);
+          } catch {
+            return -1;
+          }
+        };
+
+        // (1) B6: c into the body slot of b (b has sessions but zero child groups).
+        await ui.dragGroup({ kind: 'child', dragged: c, parentId: b, beforeGroupId: null });
+        await ui.waitGroupChildren(b, [c]);
+        const cDepthInB = await ui.groupDepth(c);
+        if (cDepthInB !== (await ui.groupDepth(b)) + 1) {
+          throw new Error(`c should render one level below b after the body-slot drop (b=${await ui.groupDepth(b)}, c=${cDepthInB})`);
+        }
+
+        // (2) drag c back out before reusing it in the rapid child-slot drag.
+        await ui.dragGroup({ kind: 'before', dragged: c, target: b });
+        await ui.waitGroupChildren(b, []);
+        await ui.waitRootGroups([a, c, b, e, f]);
+
+        // (3) B6 empty group: a (with its own child subtree) into empty group e.
+        await ui.dragGroup({ kind: 'child', dragged: a, parentId: e, beforeGroupId: null });
+        await ui.waitGroupChildren(e, [a]);
+        await ui.waitRootGroups([c, b, e, f]);
+        const aDepthInE = await ui.groupDepth(a);
+        if (aDepthInE !== (await ui.groupDepth(e)) + 1) throw new Error('a should become a child of empty group e');
+        if (state.groups.child && (await ui.groupDepth(state.groups.child)) !== aDepthInE + 1) {
+          throw new Error('a subtree depth did not follow a into e');
+        }
+
+        // (4) Root-end via the ungrouped header: c is the first root, so this is
+        // a real move (a generic `index >= count` no-op shortcut would wrongly
+        // skip it) and c must end up parentId=null at the root end.
+        await ui.dragGroup({ kind: 'root-end', dragged: c });
+        await ui.waitRootGroups([b, e, f, c]);
+
+        // (5) Drag a root group (a) to b's top edge: extract it from e and change
+        // the root order.
+        await ui.dragGroup({ kind: 'before', dragged: a, target: b });
+        await ui.waitRootGroups([a, b, e, f, c]);
+        await ui.waitGroupChildren(e, []);
+
+        // (6) B5 rapid double drag: after/before targets are resolved inside the
+        // serialized commit queue, so the second drop must use the latest doc.
+        // A stale precomputed index would end at [b,c,a,e,f], not [c,b,a,e,f].
+        await ui.dragGroupMany([
+          { kind: 'after', dragged: a, target: b },
+          { kind: 'before', dragged: c, target: b },
+        ]);
+        const afterRapid = await ui.waitRootGroups([c, b, a, e, f]);
+
+        // (7) B5 rapid double drag into the same child slot anchor. The slot is
+        // captured as {parentId:b, beforeGroupId:null}; after f lands, the second
+        // drag must re-resolve to index 1 (f before c), not reuse index 0.
+        await ui.dragGroupMany([
+          { kind: 'child', dragged: f, parentId: b, beforeGroupId: null },
+          { kind: 'child', dragged: c, parentId: b, beforeGroupId: null },
+        ]);
+        await ui.waitRootGroups([b, a, e]);
+        const rapidChildren = await ui.waitGroupChildren(b, [f, c], 10000);
+
+        // (8) Drag a to b's top edge: root order changes again.
+        await ui.dragGroup({ kind: 'before', dragged: a, target: b });
+        await ui.waitRootGroups([a, b, e]);
+
+        // (9) Self drop: b onto its own top edge is invalid and must not commit.
+        const revisionBeforeNoop = recordRevision();
+        await ui.dragGroup({ kind: 'before', dragged: b, target: b });
+        await sleep(700);
+        await ui.waitRootGroups([a, b, e]);
+        const revisionAfterSelf = recordRevision();
+        if (revisionAfterSelf !== revisionBeforeNoop) {
+          throw new Error(`self group drop committed a no-op revision (${revisionBeforeNoop} -> ${revisionAfterSelf})`);
+        }
+
+        // (9b) root-end when e is already the last root: special-cased no-op.
+        await ui.dragGroup({ kind: 'root-end', dragged: e });
+        await sleep(700);
+        await ui.waitRootGroups([a, b, e]);
+        const revisionAfterRootEnd = recordRevision();
+        if (revisionAfterRootEnd !== revisionAfterSelf) {
+          throw new Error(`root-end for the last root committed a no-op revision (${revisionAfterSelf} -> ${revisionAfterRootEnd})`);
+        }
+
+        // (10) Group menu move-up/move-down with first/last disabled states.
+        await ui.openGroupMenu(a);
+        const firstUp = await ui.menuControl(GROUP_MOVE_UP);
+        if (!firstUp.found) throw new Error('group menu has no move-up item');
+        if (firstUp.dataDisabled !== 'true' || !firstUp.disabledAttr) {
+          throw new Error(`move-up must be disabled for the first root group (state=${JSON.stringify(firstUp)})`);
+        }
+        if (firstUp.groupId !== a) throw new Error(`move-up data-group-id expected ${a}, got ${firstUp.groupId}`);
+        await ui.closeMenu();
+
+        // Reopen (the disabled click closed nothing) and move a down one slot.
+        await ui.openGroupMenu(a);
+        await ui.clickMenuControl(GROUP_MOVE_DOWN);
+        const afterMoveDown = await ui.waitRootGroups([b, a, e]);
+        if (await ui.exists(MENU)) throw new Error('group menu must close after move-down');
+        if (JSON.stringify(afterMoveDown) !== JSON.stringify([b, a, e])) throw new Error('move-down did not reorder root groups');
+
+        // Last root group: move-down disabled, move-up enabled.
+        await ui.openGroupMenu(e);
+        const lastDown = await ui.menuControl(GROUP_MOVE_DOWN);
+        const lastUp = await ui.menuControl(GROUP_MOVE_UP);
+        if (!lastDown.found) throw new Error('group menu has no move-down item');
+        if (lastDown.dataDisabled !== 'true' || !lastDown.disabledAttr) {
+          throw new Error(`move-down must be disabled for the last root group (state=${JSON.stringify(lastDown)})`);
+        }
+        if (lastDown.groupId !== e) throw new Error(`move-down data-group-id expected ${e}, got ${lastDown.groupId}`);
+        if (lastUp.dataDisabled === 'true') throw new Error('move-up must stay enabled for the last (non-first) root group');
+        await ui.closeMenu();
+
+        // (10) Body slot contract across the whole tree: n child groups => n+1
+        // direct slots, and no slot is ever rendered after a session row.
+        const slotAudit = await ui.groupSlotAudit();
+        for (const entry of slotAudit) {
+          if (!entry.expanded) continue;
+          if (entry.slots !== entry.children + 1) {
+            throw new Error(`group ${entry.gid} renders ${entry.slots} body slots for ${entry.children} child groups (expected ${entry.children + 1})`);
+          }
+          if (entry.slotAfterSession) throw new Error(`group ${entry.gid} renders a child slot after a session row`);
+        }
+        const childGroupsAudit = await ui.groupChildren(a);
+        if (state.groups.child && !childGroupsAudit.includes(state.groups.child)) {
+          throw new Error('original child group did not follow a through reparenting');
+        }
+        const bSessionsAfter = await ui.sessionIdsInGroup(b);
+        if (bSessionsAfter.length !== bSessionsBefore.length) {
+          throw new Error(`group moves changed b's sessions (${bSessionsBefore.length} -> ${bSessionsAfter.length})`);
+        }
+        // Step 15 continues in the groups view.
+        if (!(await ui.exists(VIEW))) throw new Error('step 14 must end in the groups view');
+
+        return {
+          initialOrder,
+          afterRapid,
+          rapidChildren,
+          rootOrder: await ui.rootGroupIds(),
+          bSessions: bSessionsAfter.length,
+          slotAudit,
+          revision: { beforeNoop: revisionBeforeNoop, afterSelf: revisionAfterSelf, afterRootEnd: revisionAfterRootEnd },
+        };
+      },
+    },
   ];
 }
 
@@ -1275,7 +1616,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 13-step acceptance (isolated .spike-homes/qa, CDP)');
+  console.log(' V1 E2E - 14-step acceptance (isolated .spike-homes/qa, CDP)');
   console.log('============================================================');
 
   let driver = null;

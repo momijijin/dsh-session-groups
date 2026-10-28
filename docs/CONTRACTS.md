@@ -207,9 +207,12 @@ V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 
 | `session-groups-group` | 组行 | `data-group-id`, `data-depth`, `data-expanded` |
 | `session-groups-group-add` | 组头 `+` | `data-group-id` |
 | `session-groups-group-menu` | 组 `…` | `data-group-id` |
+| `session-groups-group-move-up` / `session-groups-group-move-down` | 组菜单上移/下移 | `data-group-id`, `data-disabled` |
+| `session-groups-menu` | 组/会话操作菜单根 | — |
 | `session-groups-session` | 会话行 | `data-session-id`, `data-group-id` 或 `data-ungrouped="true"` |
 | `session-groups-workspace-badge` | 悬浮工作区标签 | `data-session-id` |
 | `session-groups-drop-indicator` | 吸附插入线/高亮 | `data-drop-kind`, `data-drop-target` |
+| `session-groups-group-drop` | 组体子组缝隙槽（n 个子组 = n+1 个槽） | `data-parent-id`, `data-before-group-id`（末尾/空组为空串） |
 | `session-groups-empty` | 空组/空筛选 | `data-group-id` |
 | `session-groups-flat-fallback` | 加载失败扁平回退 | — |
 | `session-groups-error` | 错误 banner | — |
