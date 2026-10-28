@@ -1,11 +1,45 @@
-# V1 Test Results（QA 验证线）
+# V1/V1.1 Test Results（QA 验证线）
 
-> Owner：QA（task-6）。上游：`docs/TEST-PLAN.md`、`docs/CONTRACTS.md`（frozen）、`docs/V1-PLAN.md`。
+> Owner：QA（task-6/7）。上游：`docs/TEST-PLAN.md`、`docs/CONTRACTS.md`（frozen）、`docs/V1-PLAN.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`。
 > 环境：隔离 `DSH_HOME=<repo>\.spike-homes\qa` + profile `groups-spike` + 端口 **4402**；直调 Desktop runtime；
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
-## 0. 最终结论（2026-10-19 02:51）
+## 0. V1.1 最终结论（2026-10-28 18:07）
+
+**V1.1 QA 验证线全绿 PASS（0.2.0，隔离 home `.spike-homes/qa` + 4402）：**
+
+| 层 | 结果 | 证据 |
+|---|---|---|
+| `npm test`（仓库全量） | **181/181 PASS**（0 fail / 0 skip，~3.8s） | 控制台输出 |
+| E2E 15 步（`e2e/groups.spec.mjs`，零依赖 CDP） | **15/15 PASS**（~58s）；`consoleErrors=[]`、`pageErrors=[]` | `scripts/qa/evidence/e2e-20261028-180738.json` + 15 张截图 |
+| step 10 重启 hydration | **PASS**（19.0s；等待组数/行数/已知会话就绪；`blankLifecycle.drift=false`） | 同上 step 10 detail |
+| 数据审计 commit probe | **PASS 11/11**：revision **29→30**；仅 `dsh-session-groups.json` 变化；`workspace.json` + 3 sample session + desktop/web profile 指纹不变 | `scripts/qa/evidence/audit-exercise-20261028-180915-commit.json` |
+| setup（隔离 home 重建） | **PASS 18/18**；真实 home 前后 fingerprint 一致；client build sha256 匹配 | `scripts/qa/evidence/setup-20261028-175133.json` |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.0.tgz`（100,054 bytes；32 files；sha256 `D1B9AD0F98997BF6F7BE7E3045718E1ECB378D01960E54CE486124307B036160`） | 本文件 §0.3 |
+| 隔离状态 | `.spike-homes/qa` **保留**待最终清理；4402 已释放；真实 home 零写入 | setup/audit evidence |
+
+### 0.1 V1.1 新增三步明细
+
+- **step 13 宽度**：官方宽度 280 → 1024px 挂载 clamp 544 → 1440px 恢复 620 → 拖到 760/620 → reload 620 → 700px rail 不覆盖（无把手，官方 280）→ 1440px 恢复 620 → 双击 420 → 拖到 264 且 header `scrollWidth 252 ≤ clientWidth 252` → 折叠/展开保持 264 → 官方宽度 280、官方把手恢复。
+- **step 14 组拖**：c→b 组体槽（b 有会话 0 子组，index 0）→ c 拖回根 → a（带子组）→ 空组 e（子树跟随）→ c→未归组头（根末尾）→ a→b 上缘；快速双拖根/child 锚点均按最新 doc 重算；自身/末位 no-op 不涨 revision；菜单上移/下移首尾禁用；全树 `n+1` 槽（3/1/1/2…）且无槽渲染在会话行后；b 的会话数始终 3。
+- **step 15 搜索**：分组 a 折叠后搜唯一标题 `E2E-搜索-aoc5` → ArrowDown/Enter → 组展开、行 `dsg-search-hit`、树滚动 `0→595`；归档会话 `session-14168603…` 结果 `data-archived=true`/`aria-disabled=true`，Enter 不切当前会话；无结果空态、Esc/点外关闭；`groups`/`ungrouped` 前后一致（rev 29，记录不变）。
+
+### 0.2 冷启动观察（harness 时序，不阻断）
+
+- 本次最终验证前有两次冷启动尝试：`e2e-20261028-175738.json`、`e2e-20261028-180003.json` 均在 **step 2** 报 `groups view rendered zero session rows`（宿主 session 快照尚未 hydrate，官方视图仅 3 个 workspace 标题）。
+- 预热一次页面（等待 24 条未归组行出现）后，同一隔离 home/服务上官方全量 **15/15 PASS**。该现象与 Task 6 记录一致（fresh server 的 session snapshot 首载慢）；`scripts/qa/run-v1.ps1` 的 smoke 阶段即承担此 warm-up，不是产品缺陷，也不改 E2E 步骤。
+- 因此本次 V1.1 结论以 `e2e-20261028-180738.json` 为准；前两次失败证据保留可追溯。
+
+### 0.3 0.2.0 打包记录
+
+- 命令：`npm pack`（工作树 = commit `a3705cd` + 本文档改动；`files` 只含发布文件）。
+- 产物：`dsh-session-groups-0.2.0.tgz`；**100,054 bytes**（97.7 KiB）；unpacked 394,816 bytes；**32 files**。
+- sha256：`D1B9AD0F98997BF6F7BE7E3045718E1ECB378D01960E54CE486124307B036160`；npm shasum `fd14934eed0eb4c2228225a0680bb84cb20c4d8b`；integrity `sha512-oZr3Zx3M3hNo2A3WoEhpmylWdbhgeVTulxdoYdJBkYwO+g4v4lIWwG8NzuPr8pWIcD40O854I9a7bTYaKpvJTA==`。
+- 内容：`src/**`（25）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`。
+- **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`spike/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
+
+## 0. V1 最终结论（2026-10-19 02:51）
 
 **V1 QA 验证线全绿 PASS：**
 
@@ -20,7 +54,7 @@
 | setup / teardown（隔离 home） | **PASS 18/18** / **PASS 6/6**；真实 home fingerprint 前后一致；`.git` 与仓库根未被触碰 | `evidence/setup-20261019-025017.json`、`evidence/teardown-20261019-025300.json` |
 | 真实 home 安全 | 全程零写入（四处 fingerprint 一致）；`.spike-homes/qa` 已整删；4402 已释放 | 同上 |
 
-## 1. E2E 12 步明细（最终 run，`e2e-20261019-025116.json`）
+## 1. E2E 12 步明细（V1 终验，`e2e-20261019-025116.json`；V1.1 新增 13-15 见 §0.1）
 
 | # | 步骤 | 结果 | 关键观察 |
 |---|---|---|---|
@@ -77,7 +111,7 @@
 | QA-V1-003 | 测试工具 | E2E step10 重启曾因 `spawnSync` 继承 stdio 等 EOF 卡 300s；已改 `spawnPwshQuiet`（stdio ignore） | QA | FIXED |
 | QA-V1-004 | 已知限制（BLOCKED-ENV） | 运行中归档确认框（`archive-running` / stopActivity）未 live 跑：隔离 home 无 running 会话；建议真实 profile 按 TEST-PLAN §6 手工补验 | client-engineer / 用户 | OPEN（不阻塞 12 步） |
 | QA-V1-005 | 环境性 warning | 隔离 home 首启有宿主 `[session-controller] control stream failed` 日志 / preview overlay；非插件错误，smoke 插件 console error = 0 | 宿主环境 | KNOWN |
-| P2 记录 | 范围 | 拖组改父级 / 撤销 / 标题搜索 / 置顶徽标 / 折叠组聚合计数 = P1 未实现；颜色等 P2 | Client | 记录 |
+| P2 记录 | 范围 | V1.1 已交付：拖组改父级、标题/工作区/组路径搜索、组菜单上移/下移；仍 P1：撤销/置顶徽标/折叠组聚合计数；颜色等 P2 | Client | V1.1 部分关闭 |
 | P2 记录 | 宿主 | `--from-default-profile` 在 Windows 偶发 staging 目录 EPERM/ENOTEMPTY（残留目录，不影响功能；teardown 整删 home） | 宿主 | 记录 |
 
 ## 6. 复现命令
@@ -88,7 +122,7 @@ cd C:\Users\Momiji\Projects\dsh-session-groups
 # 仓库全量测试（含 QA 独立线）
 npm test
 
-# 一键 V1 QA（setup → integration → build → start 4402 → smoke → E2E 12 步 → audit → teardown）
+# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 15 步 → audit → teardown）
 pwsh -NoProfile -File scripts/qa/run-v1.ps1
 
 # 分步
@@ -103,5 +137,6 @@ E2E 期间 4402 为 QA 独占；client 用复制 home + 4403，互不干扰。
 
 ## 7. 更新记录
 
+- 2026-10-28 18:07：V1.1 QA 全绿（0.2.0）—— `npm test` 181/181、E2E 15/15 PASS（step 10 含 hydration wait）、audit commit 11/11 PASS（rev 29→30）、setup 18/18 PASS；`.spike-homes/qa` 按任务要求保留待最终清理；冷启动两次 step 2 失败证据见 §0.2。
 - 2026-10-19 02:51：V1 QA 终验全绿 —— `npm test` 151/151、E2E 12/12 PASS、audit load 10/10 + commit 11/11 PASS、setup 18/18 + teardown 6/6 PASS；真实 home 与 `.git` 零写入；`.spike-homes/qa` 已清理、4402 已释放。
 - 2026-10-18 23:2x：初版（Host 集成 16/16、client-logic 18+1、E2E BLOCKED 等 client build）。
