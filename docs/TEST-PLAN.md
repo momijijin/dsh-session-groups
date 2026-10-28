@@ -106,13 +106,15 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 13. **V1.1 宽度**：记录官方宽度 → 分组视图在 1024px 挂载（存储 620 → clamp 544）→ 1440px 恢复 620 → 拖到 760/620 → reload 保持 → 700px rail 不覆盖且无把手 → 双击复位 420 → 拖到 264 头部无水平溢出 → 折叠/展开保持 → **快速释放（move 后立即 up）断言 applied=stored** → **800px 双击复位持久化 420、applied=320；回 1440px 恢复 420** → 切回官方宽度恢复、官方把手回来。
 14. **V1.1 组拖**：组 c → 有会话但 0 子组的组 b 体槽（index 0）；组 a（带子树）→ 空组 e；组 c → 未归组头（根末尾）；a → b 上缘；快速双拖 before/child 锚点按最新 doc 重算；自身/末位 no-op 不涨 revision；**同位置 after no-op**；**组头中间 50% 无效（toast、不提交）**；组菜单上移/下移首尾禁用 + **启用 move-up 实际生效**；全树 n+1 槽审计；**真实 CDP 指针从组 `+` 按钮拖向另一组：dragstart 被 preventDefault，根顺序/parent/revision 不变**。
 15. **V1.1 搜索**：折叠组 a → 输入唯一标题 → ArrowDown/Enter → 组展开、行高亮、树滚动；**目标移入嵌套子组并折叠子组+祖先 a、筛选切 `only` 后选中：only→all、两级同时展开**；归档结果 `aria-disabled=true`、Enter 不改当前会话；**宽查询结果 >12，连按 ArrowDown 后 active option 保持在 320px listbox 可视 rect 内（listbox scrollTop>0）**；无结果空态；Esc/点击外部关闭；搜索前后 `groups`/`ungrouped` 字节一致。
-16. **V1.1 排版对齐（0.2.1）**：step 15 结束时分组视图仍激活；只用 `getComputedStyle`/`getBoundingClientRect`（不截图）断言：
+16. **V1.1 排版+间距对齐（0.2.1）**：step 15 结束时分组视图仍激活；用 `getComputedStyle`/`getBoundingClientRect` 断言（不依赖截图）：
     - `.dsg-root` 的 `font-size` 等于宿主侧栏祖先的 computed `font-size`（无祖先时按 14px 契约）且 font-family 继承；
     - `.dsg-group-row` 高 34px、`.dsg-session-row` 高 32px（±1）；
     - `.dsg-group-name`/`.dsg-session-title` 14px/20px、`.dsg-workspace-badge` 12px、`.dsg-search-input` 13px（高 30px）、header 标题 14px、文本按钮 13px/28px；
     - `.dsg-group-icon svg`、group caret、group action glyph 均 16×16，组操作按钮 16×16，根内所有 `.dsg-glyph`/`.dsg-icon` 均 16px；
+    - **间距**：组行/会话行 computed `padding-left/right` 8px、column-gap 6px；`.dsg-tree` row-gap 2px；组体/组线 row-gap 2px、组缩进 margin/padding 10px；header `padding: 4px 6px 8px 2px`、row-gap 8px、标题行 28px/搜索行 30px、总高 78px；未归组头 column-gap 6px；搜索结果 padding ≥6px/10px、结果 column-gap 8px、下拉 row-gap 2px（全部 ±1px 容差）；
+    - **264px 最小宽度**：临时拖到 264px 断言 header/tree `scrollWidth ≤ clientWidth+1` 后恢复原宽度（记录到证据）；
     - `--dsg-font-14` 解析为 14px（官方 token 生效）。
-    - 反例约束：不存在插件专属 font-size 设置/配置；宿主继承值变化时根字号随动。
+    - 反例约束：不存在插件专属 font-size 设置/配置；宿主继承值变化时根字号随动；字号/行高/图标尺寸/行高不变。
 
 V1.1 新增/相关 stable testids（详见 `docs/CONTRACTS.md §4.1`）：
 
@@ -131,7 +133,7 @@ V1.1 回归注意：
 - **step 13**：官方宽度在进入分组视图前实测记录，切回后按记录值 ±2px 比较，不写死 420。
 - **step 14**：step 13 结束时停在官方视图，step 14 自己切回分组视图；step 15 依赖分组视图。
 - **step 15**：会通过宿主归档一条会话（宿主侧副作用，记录文件不变），证据中记录该 sid/title。
-- **step 16**：依赖 step 15 结束时仍在分组视图；只读 DOM（computed style/rect），不写记录文件、不改视图状态；失败信息必须列出「期望值 vs 实测值」。
+- **step 16**：依赖 step 15 结束时仍在分组视图；字号/间距为只读 DOM 断言；264px 探针会临时改宽度并恢复原宽度（不写记录文件）。失败信息必须列出「期望值 vs 实测值」。
 
 ## 6. 人工验收（desktop profile）
 

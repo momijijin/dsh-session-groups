@@ -2197,10 +2197,13 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
       id: 16,
       name: 'typography-matches-official-sidebar',
       async run() {
-        // Step 15 leaves the groups view active. This step is pure measurement
-        // (no screenshots required): computed styles + row rects must match the
-        // official DSH 2.0.18 workspace sidebar metrics while `.dsg-root` keeps
-        // inheriting the host sidebar font.
+        // Step 15 leaves the groups view active. This step measures the official
+        // DSH 2.0.18 typography *and* spacing chrome (computed styles + rects):
+        // rows keep their 34/32 heights but now carry the official 8px row
+        // padding / 6px gap, the tree breathes at a 2px vertical gap, the section
+        // header keeps the 36px-equivalent rhythm around 28px controls, search
+        // results/menus/dialogs use the larger padding, and 264px stays
+        // overflow-free. Font sizes/row heights/icon sizes stay unchanged.
         if (!(await ui.exists(VIEW))) throw new Error('step 16 must start in the groups view');
         await sleep(200); // let the last step's layout settle before measuring
         const metrics = await driver.evaluate(`(() => {
@@ -2228,6 +2231,24 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             fontSize: px(styleOf(el)?.fontSize),
             lineHeight: px(styleOf(el)?.lineHeight),
           });
+          // Computed spacing for one element. rowGap/columnGap stay null when
+          // the computed value is 'normal' (no gap), which the assertions treat
+          // as a failure only where a gap is required.
+          const spaceOf = (el) => {
+            const style = styleOf(el);
+            return style
+              ? {
+                  paddingTop: px(style.paddingTop),
+                  paddingRight: px(style.paddingRight),
+                  paddingBottom: px(style.paddingBottom),
+                  paddingLeft: px(style.paddingLeft),
+                  rowGap: px(style.rowGap),
+                  columnGap: px(style.columnGap),
+                  marginLeft: px(style.marginLeft),
+                  marginRight: px(style.marginRight),
+                }
+              : null;
+          };
 
           const groupRow = document.querySelector('.dsg-group-row');
           const sessionRow = document.querySelector('.dsg-session-row');
@@ -2240,6 +2261,13 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           const groupActionGlyph = document.querySelector('.dsg-group-actions .dsg-glyph');
           const headerTitle = document.querySelector('.dsg-header-title');
           const textButton = document.querySelector('.dsg-text-button');
+          const header = document.querySelector('.dsg-header');
+          const headerRow = document.querySelector('.dsg-header-row');
+          const searchRow = document.querySelector('.dsg-header-search-row');
+          const tree = document.querySelector('.dsg-tree');
+          const groupBody = document.querySelector('.dsg-group-body');
+          const groupLine = document.querySelector('.dsg-group-line');
+          const ungroupedHeader = document.querySelector('.dsg-ungrouped-header');
           const rootStyle = getComputedStyle(root);
 
           return {
@@ -2271,6 +2299,22 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             buttons: {
               textButton: { ...fontOf(textButton), height: rectOf(textButton)?.height ?? null },
             },
+            spacing: {
+              header: {
+                ...spaceOf(header),
+                height: rectOf(header)?.height ?? null,
+                titleRowHeight: rectOf(headerRow)?.height ?? null,
+                searchRowHeight: rectOf(searchRow)?.height ?? null,
+              },
+              groupRow: spaceOf(groupRow),
+              sessionRow: spaceOf(sessionRow),
+              tree: spaceOf(tree),
+              groupBody: spaceOf(groupBody),
+              groupLine: spaceOf(groupLine),
+              ungroupedHeader: spaceOf(ungroupedHeader),
+              searchInputHeight: rectOf(searchInput)?.height ?? null,
+              textButtonHeight: rectOf(textButton)?.height ?? null,
+            },
             icons: {
               groupIcon: sizeOf(groupIcon),
               groupCaret: sizeOf(groupCaret),
@@ -2292,6 +2336,18 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           if (typeof actual !== 'number' || Math.abs(actual - expected) > tolerance) {
             throw new Error(`${label}: expected ${expected}${tolerance ? ` ±${tolerance}` : ''}, got ${actual}`);
           }
+        };
+        // Poll the real sidebar width for the 264px overflow probe (the drag is
+        // rAF-throttled, so an immediate read can lag one frame).
+        const waitWidth = async (expected, label, tolerance = 2, waitMs = 8000) => {
+          const end = Date.now() + waitMs;
+          let last = -1;
+          while (Date.now() < end) {
+            last = await ui.sidebarWidth();
+            if (Number.isFinite(last) && Math.abs(last - expected) <= tolerance) return last;
+            await sleep(120);
+          }
+          throw new Error(`${label}: expected ${expected} ±${tolerance}px, got ${last}`);
         };
 
         // (1) `.dsg-root` consumes the host's inherited font-size: it must equal
@@ -2340,6 +2396,120 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (metrics.root.font14Token !== '14px') {
           throw new Error(`official font token --dsg-font-14 should resolve to 14px, got ${JSON.stringify(metrics.root.font14Token)}`);
         }
+        // (5) Official spacing chrome (DSH 2.0.18): rows keep their 34/32 heights
+        // but use the official `padding: 0 8px` + 6px row gap; the list/tree uses
+        // a 2px vertical gap; group guides indent 10/10; the section header keeps
+        // the 36px-equivalent rhythm (28px control row + 4px/8px vertical padding)
+        // and an 8px row gap; search results/menus use the roomier padding.
+        const space = metrics.spacing;
+        for (const [label, box] of [
+          ['dsg-group-row', space.groupRow],
+          ['dsg-session-row', space.sessionRow],
+        ]) {
+          if (!box) throw new Error(`${label} spacing probe is missing`);
+          near(box.paddingLeft, 8, `${label} padding-left`, 1);
+          near(box.paddingRight, 8, `${label} padding-right`, 1);
+          near(box.paddingTop, 0, `${label} padding-top`, 1);
+          near(box.paddingBottom, 0, `${label} padding-bottom`, 1);
+          near(box.columnGap, 6, `${label} column-gap`, 1);
+        }
+        if (!space.tree) throw new Error('dsg-tree spacing probe is missing');
+        near(space.tree.rowGap, 2, 'dsg-tree row-gap', 1);
+        if (!space.groupBody) throw new Error('dsg-group-body spacing probe is missing');
+        near(space.groupBody.rowGap, 2, 'dsg-group-body row-gap', 1);
+        if (!space.groupLine) throw new Error('dsg-group-line spacing probe is missing');
+        near(space.groupLine.rowGap, 2, 'dsg-group-line row-gap', 1);
+        near(space.groupLine.marginLeft, 10, 'dsg-group-line margin-left', 1);
+        near(space.groupLine.paddingLeft, 10, 'dsg-group-line padding-left', 1);
+        if (space.ungroupedHeader) {
+          near(space.ungroupedHeader.columnGap, 6, 'dsg-ungrouped-header column-gap', 1);
+        }
+        if (!space.header) throw new Error('dsg-header spacing probe is missing');
+        near(space.header.paddingTop, 4, 'dsg-header padding-top', 1);
+        near(space.header.paddingRight, 6, 'dsg-header padding-right', 1);
+        near(space.header.paddingBottom, 8, 'dsg-header padding-bottom', 1);
+        near(space.header.paddingLeft, 2, 'dsg-header padding-left', 1);
+        near(space.header.rowGap, 8, 'dsg-header row-gap', 1);
+        near(space.header.titleRowHeight, 28, 'header title row height', 1);
+        near(space.header.searchRowHeight, 30, 'header search row height', 1);
+        near(space.header.height, 78, 'header total height (4+28+8+30+8)', 1);
+        near(space.searchInputHeight, 30, 'search input height', 1);
+        near(space.textButtonHeight, 28, 'text button height', 1);
+        // Official sectionHeader is 36px tall; our 28px control row plus 4px/8px
+        // vertical padding keeps an equivalent 36-40px vertical rhythm.
+        near(space.header.paddingTop + space.header.titleRowHeight + space.header.paddingBottom, 40, 'header section rhythm', 1);
+
+        // (6) Search results (dropdown opened only for measurement, then cleared):
+        // result padding >= 6px/10px, 8px title/meta gap, 2px list row gap.
+        await ui.fillSearch(state.searchTitle);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'step 16 search dropdown open');
+        await ui.waitFor(`document.querySelectorAll(${JSON.stringify(SEARCH_RESULT)}).length > 0`, 'step 16 search results rendered');
+        await sleep(120);
+        const searchSpacing = await driver.evaluate(`(() => {
+          const px = (value) => {
+            const n = Number.parseFloat(value);
+            return Number.isFinite(n) ? n : null;
+          };
+          const list = document.querySelector(${JSON.stringify(SEARCH_RESULTS)});
+          const result = document.querySelector(${JSON.stringify(SEARCH_RESULT)});
+          if (!list || !result) return { error: 'search results missing' };
+          const listStyle = getComputedStyle(list);
+          const resultStyle = getComputedStyle(result);
+          return {
+            list: {
+              paddingTop: px(listStyle.paddingTop),
+              paddingLeft: px(listStyle.paddingLeft),
+              rowGap: px(listStyle.rowGap),
+            },
+            result: {
+              paddingTop: px(resultStyle.paddingTop),
+              paddingRight: px(resultStyle.paddingRight),
+              paddingBottom: px(resultStyle.paddingBottom),
+              paddingLeft: px(resultStyle.paddingLeft),
+              columnGap: px(resultStyle.columnGap),
+            },
+          };
+        })()`);
+        if (searchSpacing.error) throw new Error(searchSpacing.error);
+        near(searchSpacing.list.paddingTop, 6, 'search results padding-top', 1);
+        near(searchSpacing.list.paddingLeft, 10, 'search results padding-left', 1);
+        near(searchSpacing.list.rowGap, 2, 'search results row-gap', 1);
+        for (const [side, value, expected] of [
+          ['top', searchSpacing.result.paddingTop, 6],
+          ['right', searchSpacing.result.paddingRight, 10],
+          ['bottom', searchSpacing.result.paddingBottom, 6],
+          ['left', searchSpacing.result.paddingLeft, 10],
+        ]) {
+          if (typeof value !== 'number' || value < expected - 1) {
+            throw new Error(`search result padding-${side}: expected at least ${expected}px (±1), got ${value}`);
+          }
+        }
+        near(searchSpacing.result.columnGap, 8, 'search result column-gap', 1);
+        await ui.fillSearch('');
+        await sleep(120);
+
+        // (7) 264px minimum width: header and tree must not overflow horizontally.
+        const widthBefore = await ui.sidebarWidth();
+        if (!(widthBefore > 0)) throw new Error(`could not measure the sidebar width before the 264px probe (got ${widthBefore})`);
+        await ui.dragResizeHandle(264);
+        const minimumWidth = await waitWidth(264, 'sidebar width for the 264px overflow probe');
+        await sleep(150);
+        const narrowProbe = await driver.evaluate(`(() => {
+          const box = (el) => (el ? { clientWidth: el.clientWidth, scrollWidth: el.scrollWidth } : null);
+          return {
+            header: box(document.querySelector(${JSON.stringify(HEADER)})),
+            tree: box(document.querySelector('.dsg-tree')),
+          };
+        })()`);
+        if (!narrowProbe.header || !narrowProbe.tree) throw new Error('264px probe could not measure the groups header/tree');
+        if (narrowProbe.header.scrollWidth > narrowProbe.header.clientWidth + 1) {
+          throw new Error(`groups header overflows at 264px: scrollWidth ${narrowProbe.header.scrollWidth} > clientWidth ${narrowProbe.header.clientWidth}`);
+        }
+        if (narrowProbe.tree.scrollWidth > narrowProbe.tree.clientWidth + 1) {
+          throw new Error(`groups tree overflows at 264px: scrollWidth ${narrowProbe.tree.scrollWidth} > clientWidth ${narrowProbe.tree.clientWidth}`);
+        }
+        await ui.dragResizeHandle(widthBefore);
+        const widthRestored = await waitWidth(widthBefore, 'sidebar width restored after the 264px probe');
 
         return {
           official: {
@@ -2349,6 +2519,24 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             titles: { fontSize: 14, lineHeight: 20 },
             meta: { workspaceBadge: 12, searchInput: 13 },
             icons: 16,
+            spacing: {
+              rowPadding: '0 8px',
+              rowGap: 6,
+              treeRowGap: 2,
+              headerPadding: '4px 6px 8px 2px',
+              headerRowGap: 8,
+              groupGuide: { marginLeft: 10, paddingLeft: 10 },
+            },
+          },
+          spacing: {
+            header: space.header,
+            rows: { group: space.groupRow, session: space.sessionRow },
+            tree: space.tree,
+            groupBody: space.groupBody,
+            groupLine: space.groupLine,
+            ungroupedHeader: space.ungroupedHeader,
+            search: searchSpacing,
+            minWidth: { width: minimumWidth, restored: widthRestored, ...narrowProbe },
           },
           measured: metrics,
         };

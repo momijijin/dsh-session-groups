@@ -5,9 +5,42 @@
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
-## 0. V1.1 patch 0.2.1 最终结论（2026-10-28 21:24，排版对齐）
+## 0. V1.1 patch 0.2.1 最终结论（2026-10-28 21:50，排版 + 间距对齐）
 
-**V1.1 patch 0.2.1 QA 验证线全绿 PASS（隔离 home `.spike-homes/qa-0.2.1-final` + 4402）：**
+**V1.1 patch 0.2.1 spacing QA 验证线全绿 PASS（隔离 home `.spike-homes/qa-0.2.1-spacing` + 4402）：**
+
+| 层 | 结果 | 证据 |
+|---|---|---|
+| `npm test`（仓库全量） | **183/183 PASS**（0 fail / 0 skip，~3.8s；无新增单测） | 控制台输出 |
+| E2E 16 步（`e2e/groups.spec.mjs`，零依赖 CDP） | **16/16 PASS**（~81s）；`consoleErrors=[]`、`pageErrors=[]` | `scripts/qa/evidence/e2e-20261028-215034.json` + 16 张截图 |
+| step 10 重启 hydration | **PASS**（19.1s；groups=4、filter=hidden、`blankLifecycle.drift=false`） | 同上 step 10 detail |
+| **step 16 排版+间距** | **PASS**（2082ms）：host/root 14/14 + font-family 继承；组行 34/会话行 32；组名/标题 14/20；icon/caret/action 16×16；**行 padding 8/8、行 column-gap 6、tree/组体/组线 row-gap 2、组缩进 10/10、header padding 4/6/8/2 + row-gap 8、header 78px（标题行 28 + 搜索行 30）、搜索列表 padding 6/10 + 结果 column-gap 8 + list row-gap 2、264px header/tree 252/252 无溢出** | 同上 step 16 detail |
+| setup（隔离 home 重建） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client build 159,541 bytes / sha256 `cef4fb475e6d6ecfbe2456fd16c13225e41151eb702f628095a011428ff0a464` | `scripts/qa/evidence/setup-20261028-214318.json` |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.1.tgz`（**103,874 bytes**；unpacked **407,846**；32 files；sha256 `4ED5DE48F91366A389F80DC67522EDE2846091ED0B911AF1FC95FE634839E2E4`） | 本文件 §0.2 |
+| 隔离状态 | `.spike-homes/qa-0.2.1-spacing` 保留；4402 已释放；真实 home 零写入 | setup evidence |
+
+### 0.1 0.2.1 间距修复明细（本次 patch）
+
+- **行**：组行/会话行保持 34/32 高度、`padding: 0 8px`，行内 column-gap 4→**6px**（对齐官方 `projectRow/sessionRow`）；操作按钮 gap 1→2。
+- **树/组**：`.dsg-tree` / `.dsg-flat` / `.dsg-ungrouped` / `.dsg-group-body` / `.dsg-group-line` 纵向 gap 统一 1→**2px**；组缩进 margin/padding **9/8 → 10/10**；264px 最小宽度 header/tree 仍无横向溢出（252/252）。
+- **header**：padding 2/4/6/2 → **4px 6px 8px 2px**，叠层/行 gap 4/6 → **8px**；28px 文本按钮上保持官方 36px section-header 等效纵节奏（28px 控制行 + 12px 纵向 padding = 40px）；header 总高 78px（28+8+30+4+8）。
+- **搜索**：结果 padding 5/8 → **6px 10px**，结果内 gap 6→8；下拉 padding 4→**6px 10px**，结果间 gap 1→2；搜索框仍 30px/13。
+- **菜单**：item 28→**30px**、padding 0 8→**0 10px**、gap 6→8；menu padding 4→6、gap 1→2；section padding 4/8/2→**6px 10px 2px**。
+- **对话框**：padding 14→**16px**、gap 10→12；input padding 0 8→**0 10px**；actions gap 8→10；confirm/cancel 横 padding 12→**14px**。
+- **未归组/横幅/空组**：未归组头 gap 4→6；banner padding 6/8→**8px 10px**、margin 4/2/6→**6px 2px 8px**；组空态 padding 3/6→**4px 8px**。
+- **不变**：字体/字号/行高/图标尺寸均未改；无插件字号设置、无新增配置/依赖、无数据/路由/契约变化。
+
+### 0.2 0.2.1 打包记录（spacing patch）
+
+- 命令：`npm pack`（工作树 = 0.2.1 发布文件；README 已定稿；`files` 只含发布文件；旧 0.2.1 tarball 被同名替换）。
+- 产物：`dsh-session-groups-0.2.1.tgz`；**103,874 bytes**；unpacked **407,846 bytes**；**32 files**。
+- sha256：`4ED5DE48F91366A389F80DC67522EDE2846091ED0B911AF1FC95FE634839E2E4`；npm shasum `32404ed0e57942c30de9d81a07a1f1851e58728f`；integrity `sha512-XRnkwYJ5cxqj0y3FaVeu4sUiZniFitGOvyPrhzs/M3N93amyIDO+vi7yFqE88ozMMdVfCDA6LoR91LfzGeh39w==`。
+- 内容：`src/**`（25）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 32）。
+- **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`spike/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
+
+## 0A. V1.1 patch 0.2.1 typography-only（2026-10-28 21:24，历史）
+
+**V1.1 patch 0.2.1 typography-only QA 验证线（历史；已被 §0 spacing patch 取代，隔离 home `.spike-homes/qa-0.2.1-final` + 4402）：**
 
 | 层 | 结果 | 证据 |
 |---|---|---|
@@ -16,10 +49,10 @@
 | step 10 重启 hydration | **PASS**（17.2s；groups=4、filter=hidden、`blankLifecycle.drift=false`） | 同上 step 10 detail |
 | **step 16 排版（新增）** | **PASS**（256ms）：host/root font-size **14/14**、font-family 继承；组行 **34**、会话行 **32**；组名/会话标题 **14/20**；workspace 徽标 **12**；搜索框 **13/30**；group icon **16×16**、caret **16×16**、action glyph/button **16×16**；根内 **48** 个 `.dsg-glyph`/`.dsg-icon` 全 16px；`--dsg-font-14` 解析 **14px** | `e2e-20261028-212407.json` step 16 detail |
 | setup（隔离 home 重建） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client build sha256 `711f57be…b36d9d5a` | `scripts/qa/evidence/setup-20261028-212010.json` |
-| 打包 | `npm pack` → `dsh-session-groups-0.2.1.tgz`（**103,391 bytes**；32 files；sha256 `88DF099F449636F80CC0C7748BFFAE7EC382DA189EA997DE93E6EB3705952D8B`） | 本文件 §0.2 |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.1.tgz`（**103,391 bytes**；32 files；sha256 `88DF099F449636F80CC0C7748BFFAE7EC382DA189EA997DE93E6EB3705952D8B`） | 本文件 §0A.2 |
 | 隔离状态 | `.spike-homes/qa-0.2.1-final` 保留待最终清理；4402 已释放；真实 home 零写入 | setup evidence |
 
-### 0.1 0.2.1 排版修复明细
+### 0A.1 0.2.1 排版修复明细
 
 - **无插件字号设置**：`.dsg-root` 使用 `font-size: inherit; font-family: inherit; line-height: 1.4`；宿主侧栏基线（DSH Desktop 2.0.18 = 14px）为准，没有字号 config/setting、没有新增依赖。
 - **官方 token**：固定字号统一经 `--dsg-font-14/13/12/11` → 官方 `--dsw-font-s-14-font-size` / `--dsw-font-xs-13-font-size` / `--dsw-font-xxs-12-font-size` / `--dsw-font-xxxs-11-font-size`（px fallback；10px 徽标无官方 token，固定 10px）。注：任务书写的 `--dsw-font-sm-14` 在 2.0.18 不存在，实测官方 token 为 `--dsw-font-s-14-font-size`（theme `lib/client.js`），按实际宿主 token 实现。
@@ -27,7 +60,7 @@
 - **图标**：`renderGlyph` 默认 16；组 caret / 组图标 / IconButton / 组与会话操作按钮均 16px（操作按钮 16×16）；rail 保持 18px。
 - **E2E**：step 16 在 step 15 后（分组视图仍激活）纯读 DOM 断言；无插件状态写入，不依赖截图（runner 仍按惯例保留截图）。
 
-### 0.2 0.2.1 打包记录
+### 0A.2 0.2.1 打包记录
 
 - 命令：`npm pack`（工作树 = 0.2.1 发布文件；README 已定稿；`files` 只含发布文件）。
 - 产物：`dsh-session-groups-0.2.1.tgz`；**103,391 bytes**；unpacked **406,821 bytes**；**32 files**。
@@ -167,6 +200,7 @@ E2E 期间 4402 为 QA 独占；client 用复制 home + 4403，互不干扰。
 
 ## 7. 更新记录
 
+- 2026-10-28 21:50：**0.2.1 间距对齐 patch** —— `npm test` 183/183；E2E **16/16 PASS**（step 16 扩充间距断言：行 padding 8/8 + gap 6、tree/组体/组线 row-gap 2、组缩进 10/10、header 4/6/8/2 + row-gap 8 + 78px、搜索 6/10 + gap 8/2、264px header/tree 252/252 无溢出；`console/pageErrors=[]`；step 10 PASS 19.1s）；setup 18/18（`removed=0`、client sha `cef4fb47…`）；`npm pack` 32 files / 103,874 bytes / sha256 `4ED5DE48…`；`.spike-homes/qa-0.2.1-spacing` 保留。
 - 2026-10-28 21:24：**0.2.1 排版对齐 patch** —— `npm test` 183/183；E2E **16/16 PASS**（新增 step 16：root 继承宿主 14px、组行 34/会话行 32、标题 14/20、workspace 徽标 12、搜索框 13/30、48 个图标全 16px；`console/pageErrors=[]`；step 10 PASS 17.2s）；setup 18/18（`removed=0`）；`npm pack` 32 files / 103,391 bytes；`.spike-homes/qa-0.2.1-final` 保留待最终清理。
 - 2026-10-28 19:24：**final review fix wave** —— `npm test` 183/183、E2E 15/15 PASS（console/pageErrors 空；step 2 加 hydration wait；step 13 快速释放/800→1440 复位；step 14 真实 `+` 指针拖拽守卫、中间 50%、同位置 no-op、启用 move-up；step 15 嵌套祖先 reveal、only→all、键盘滚动 listbox）、audit commit 11/11 PASS（rev 31→32）、setup 18/18 PASS、`npm pack` 32 files；`.spike-homes/qa` 保留待最终清理。
 - 2026-10-28 18:07：V1.1 QA 全绿（0.2.0）—— `npm test` 181/181、E2E 15/15 PASS（step 10 含 hydration wait）、audit commit 11/11 PASS（rev 29→30）、setup 18/18 PASS；`.spike-homes/qa` 按任务要求保留待最终清理；冷启动两次 step 2 失败证据见 §0B.2。
