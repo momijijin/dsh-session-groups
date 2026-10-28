@@ -161,3 +161,37 @@ export const canDropGroupInto = (doc, groupId, parentId) => {
 
 /** Read-only clone helper used by components to preview optimistic drops. */
 export const previewDrop = (doc) => cloneDoc(doc)
+
+/** Stable drop-target fields. Geometry/indices are never part of a view target. */
+const TARGET_FIELDS = Object.freeze(['kind', 'sessionId', 'groupId', 'targetId', 'parentId', 'beforeGroupId'])
+
+/**
+ * Stable equality for view drop targets.
+ *
+ * A dragover fires continuously while the pointer rests on one row, and the
+ * handler rebuilds a fresh target object every time. Comparing the stable
+ * vocabulary (kind + row/group identity + insertion anchor) lets the view skip
+ * the React update when the resolved target did not actually move. `undefined`
+ * and `null` are equivalent for every field, because targets are built with
+ * `?? null` in some paths and omitted in others.
+ *
+ * This is deliberately pure so it is unit-tested without React.
+ *
+ * @param {object|null|undefined} left
+ * @param {object|null|undefined} right
+ * @returns {boolean}
+ */
+export const sameDropTarget = (left, right) => {
+  if (left === right) return true
+  // An absent target is the same "no line" state whether it was null or
+  // undefined (the initial ref is null; handlers clear with null).
+  if (left === null || left === undefined) return right === null || right === undefined
+  if (right === null || right === undefined) return false
+  if (typeof left !== 'object' || typeof right !== 'object') return false
+  for (const field of TARGET_FIELDS) {
+    const a = left[field] ?? null
+    const b = right[field] ?? null
+    if (a !== b) return false
+  }
+  return true
+}

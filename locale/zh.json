@@ -3,11 +3,13 @@
   "view.returnWorkspace": "返回工作区",
   "view.newGroup": "新建分组",
   "view.more": "更多",
+  "view.options": "视图选项",
   "footer.toGroups": "分组视图",
   "footer.toWorkspace": "工作区视图",
+  "footer.switchLabel": "视图切换",
   "archive.hidden": "隐藏已归档",
-  "archive.all": "全部",
-  "archive.only": "仅已归档",
+  "archive.all": "全部对话（显示已归档）",
+  "archive.only": "仅显示已归档",
   "archive.label": "归档筛选",
   "group.empty": "空分组，拖入会话",
   "group.addSession": "在分组内新建会话",
@@ -95,5 +97,6 @@
   "search.placeholder": "搜索会话…",
   "search.results": "搜索结果",
   "search.empty": "没有匹配的会话",
+  "search.close": "关闭搜索",
   "search.archivedDisabled": "已归档会话不可打开"
 }

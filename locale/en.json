@@ -3,10 +3,12 @@
   "view.returnWorkspace": "Back to workspaces",
   "view.newGroup": "New group",
   "view.more": "More",
+  "view.options": "View options",
   "footer.toGroups": "Group view",
   "footer.toWorkspace": "Workspace view",
+  "footer.switchLabel": "Switch view",
   "archive.hidden": "Hide archived",
-  "archive.all": "All",
+  "archive.all": "All conversations (archived shown)",
   "archive.only": "Archived only",
   "archive.label": "Archive filter",
   "group.empty": "Empty group — drop sessions here",
@@ -95,5 +97,6 @@
   "search.placeholder": "Search sessions…",
   "search.results": "Search results",
   "search.empty": "No matching sessions",
+  "search.close": "Close search",
   "search.archivedDisabled": "Archived sessions cannot be opened"
 }

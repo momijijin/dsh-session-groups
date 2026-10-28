@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyDrop, canDropGroupInto, hitTest, sessionLocation } from '../../src/client/drag.js'
+import { applyDrop, canDropGroupInto, hitTest, sameDropTarget, sessionLocation } from '../../src/client/drag.js'
 import { assignSession, createGroup, emptyDoc, findGroup } from '../../src/shared/model.js'
 
 const docWithTwoGroups = () => {
@@ -98,4 +98,40 @@ test('canDropGroupInto rejects cycles', () => {
   assert.equal(canDropGroupInto(withGrand, a, child.id), false)
   assert.equal(canDropGroupInto(withGrand, child.id, child.id), false)
   assert.equal(canDropGroupInto(withGrand, child.id, a), true)
+})
+
+test('sameDropTarget treats equivalent dragover targets as equal (0.2.2 hover dedupe)', () => {
+  // The same row/zone rebuilt as a new object must be a no-op, otherwise every
+  // resting dragover re-renders the whole tree.
+  assert.equal(sameDropTarget(null, null), true)
+  assert.equal(sameDropTarget(undefined, null), true)
+  assert.equal(sameDropTarget({ kind: 'group-append', groupId: 'g1' }, { kind: 'group-append', groupId: 'g1' }), true)
+  assert.equal(sameDropTarget({ kind: 'ungrouped' }, { kind: 'ungrouped' }), true)
+  assert.equal(
+    sameDropTarget({ kind: 'session-before', groupId: 'g1', sessionId: 's2' }, { kind: 'session-before', groupId: 'g1', sessionId: 's2' }),
+    true
+  )
+  // undefined/null anchors are equivalent for child slots.
+  assert.equal(
+    sameDropTarget({ kind: 'group-child', parentId: 'g1', beforeGroupId: null }, { kind: 'group-child', parentId: 'g1' }),
+    true
+  )
+  assert.equal(sameDropTarget({ kind: 'group-before', targetId: 'g1' }, { kind: 'group-before', targetId: 'g2' }), false)
+})
+
+test('sameDropTarget distinguishes every semantic target change', () => {
+  assert.equal(sameDropTarget({ kind: 'group-append', groupId: 'g1' }, { kind: 'group-append', groupId: 'g2' }), false)
+  // Crossing a row's midline must move the insertion line.
+  assert.equal(
+    sameDropTarget({ kind: 'session-before', groupId: 'g1', sessionId: 's2' }, { kind: 'session-after', groupId: 'g1', sessionId: 's2' }),
+    false
+  )
+  assert.equal(
+    sameDropTarget({ kind: 'group-child', parentId: 'g1', beforeGroupId: null }, { kind: 'group-child', parentId: 'g1', beforeGroupId: 'g2' }),
+    false
+  )
+  assert.equal(sameDropTarget({ kind: 'group-before', targetId: 'g1' }, { kind: 'group-forbidden', targetId: 'g1' }), false)
+  assert.equal(sameDropTarget({ kind: 'group-append', groupId: 'g1' }, null), false)
+  // No target -> a target is always a change; the ref starts at null.
+  assert.equal(sameDropTarget(null, { kind: 'ungrouped' }), false)
 })

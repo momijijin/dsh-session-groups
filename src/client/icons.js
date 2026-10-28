@@ -64,6 +64,10 @@ export const UI_GLYPHS = Object.freeze({
   more: 'M3.4 8h.01M8 8h.01M12.6 8h.01',
   folderAdjust: 'M2.5 5.1h4l1.5 1.7h5.5v6.1h-11z',
   close: 'M4 4l8 8M12 4l-8 8',
+  search: 'M7 2.6a4.4 4.4 0 1 0 0 8.8 4.4 4.4 0 0 0 0-8.8zM10.4 10.4l3 3',
+  sliders: 'M2.6 4.6h2.5M7.1 4.6h6.3M2.6 11.4h6.3M10.9 11.4h2.5M2.6 8h10.8M6 3.2a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8zM10 10a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z',
+  check: 'M3.2 8.4l3.1 3.1 6.5-7.1',
+  grid: 'M2.6 2.6h4.4v4.4H2.6zM9 2.6h4.4v4.4H9zM2.6 9h4.4v4.4H2.6zM9 9h4.4v4.4H9z',
 })
 
 /** Render a small stroke UI glyph. Default 16px to match official sidebar icons. */

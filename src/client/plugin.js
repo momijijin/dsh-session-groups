@@ -12,6 +12,7 @@ import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
 import { dictionaries, createTranslator, LOCALE_NS } from './locale.js'
 import { installStyles } from './css.js'
+import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
 import { FooterAction, GroupsViewBoundary, setRuntime } from './components.js'
 
 /** Single sidebar slot taken over while the groups view is active. */
@@ -88,6 +89,7 @@ export const createPlugin = () => {
   const setFloatingLabel = (text) => {
     const label = ensureFloatingLabel()
     if (!label) return
+    const started = perfEnabled() ? perfNow() : 0
     if (typeof text === 'string' && text !== '') {
       label.textContent = text
       label.style.display = 'block'
@@ -96,12 +98,17 @@ export const createPlugin = () => {
     } else {
       label.style.display = 'none'
     }
+    if (started !== 0) perfSample('floatingLabelMs', perfNow() - started)
   }
 
   // --- document commit queue -------------------------------------------------
   const commitDoc = (nextDocOrUpdater) => {
     const run = commitTail.then(async () => {
-      store.dispatch('saving', { saving: true })
+      perfMark('commitDoc:start')
+      // `saving` has no consumer in the view (0.2.2 probe confirmed it only
+      // burned a full tree render before the HTTP write), so the commit queue
+      // no longer publishes it. The store action/state stay for contract
+      // compatibility with earlier builds.
       try {
         const snapshot = store.getSnapshot()
         // A drop can arrive while a previous commit is still in flight. Resolve
@@ -111,9 +118,15 @@ export const createPlugin = () => {
           ? nextDocOrUpdater(snapshot.doc)
           : nextDocOrUpdater
         const baseRevision = snapshot.revision
+        perfMark('api:commit:start')
         const result = await api.commit(nextDoc, baseRevision)
+        perfMark('api:commit:end', { ok: result.ok === true, code: result.code ?? null })
         if (result.ok === true) {
           store.dispatch('doc', { doc: result.doc, revision: result.revision })
+          perfMark('store:doc')
+          if (typeof globalThis.requestAnimationFrame === 'function') {
+            globalThis.requestAnimationFrame(() => perfMark('frame:after-doc'))
+          }
           return result.doc
         }
         if (result.code === 'conflict' && result.doc) {
@@ -126,7 +139,7 @@ export const createPlugin = () => {
         error.code = result.code
         throw error
       } finally {
-        store.dispatch('saving', { saving: false })
+        perfMark('commitDoc:end')
       }
     })
     commitTail = run.catch(() => {})
@@ -351,6 +364,7 @@ export const createPlugin = () => {
     mounted = true
     ctxRef = ctx
     store = createStore({ storage: safeStorage() })
+    if (perfEnabled()) store.subscribe(() => perfCount('store:publish'))
     api = createApi({ documentRef: globalThis.document })
     localeService = safeGet(ctx, 'locale')
     const getLocaleSnapshot = () => {

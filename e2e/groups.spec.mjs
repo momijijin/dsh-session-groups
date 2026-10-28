@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // e2e/groups.spec.mjs
 //
-// V1 E2E acceptance (docs/TEST-PLAN.md §5, 16 steps) - zero-dependency.
+// V1 E2E acceptance (docs/TEST-PLAN.md §5, 17 steps) - zero-dependency.
 //
 // Drives the real isolated DSH web UI (`.spike-homes/qa`, port 4402) through the
 // Chrome DevTools Protocol using the Chromium already present on this machine.
@@ -13,7 +13,7 @@
 // When the client UI is not present yet the runner exits 3 (BLOCKED) with a
 // diagnostic, so the pipeline can distinguish "not implemented" from "broken".
 //
-// Exit codes: 0 = all 16 steps PASS, 1 = a step FAILED, 2 = harness error,
+// Exit codes: 0 = all 17 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -31,6 +31,8 @@ let QA_HOME = join(REPO_ROOT, '.spike-homes', 'qa');
 const SCRIPTS_QA = join(REPO_ROOT, 'scripts', 'qa');
 const DEFAULT_EVIDENCE = join(SCRIPTS_QA, 'evidence');
 const TOGGLE = '[data-testid="session-groups-toggle"]';
+const TOGGLE_GROUPS = '[data-testid="session-groups-toggle-groups"]';
+const TOGGLE_WORKSPACE = '[data-testid="session-groups-toggle-workspace"]';
 const VIEW = '[data-testid="session-groups-view"]';
 const GROUP = '[data-testid="session-groups-group"]';
 const GROUP_ADD = '[data-testid="session-groups-group-add"]';
@@ -44,7 +46,10 @@ const UNGROUPED = '[data-testid="session-groups-ungrouped"]';
 const DIALOG = '[data-testid="session-groups-dialog"]';
 const DIALOG_INPUT = '[data-testid="session-groups-dialog-input"]';
 const DIALOG_CONFIRM = '[data-testid="session-groups-dialog-confirm"]';
-const FILTER = '[data-testid="session-groups-archive-filter"]';
+const FILTER_STATE = '[data-testid="session-groups-view-options"]';
+const VIEW_OPTIONS = '[data-testid="session-groups-view-options"]';
+const VIEW_OPTIONS_POPOVER = '[data-testid="session-groups-view-options-popover"]';
+const ARCHIVE_OPTION = '[data-testid="session-groups-archive-filter"]';
 const FLAT_FALLBACK = '[data-testid="session-groups-flat-fallback"]';
 const RAIL = '[data-testid="session-groups-rail"]';
 const RAIL_EXPAND = '[data-testid="session-groups-rail-expand"]';
@@ -54,6 +59,7 @@ const HEADER = '[data-testid="session-groups-header"]';
 const SIDEBAR_FRAME_MARKER = '[data-dsg-sidebar-frame]';
 const SIDEBAR_WIDTH_KEY = 'dsh-session-groups.width.v1';
 const SEARCH = '[data-testid="session-groups-search"]';
+const SEARCH_TOGGLE = '[data-testid="session-groups-search-toggle"]';
 const SEARCH_RESULTS = '[data-testid="session-groups-search-results"]';
 const SEARCH_RESULT = '[data-testid="session-groups-search-result"]';
 const SEARCH_EMPTY = '[data-testid="session-groups-search-empty"]';
@@ -336,7 +342,11 @@ function makeUi(driver, helpers) {
       return ui.groupIdByName(name);
     },
     async toggleMode() {
-      await ui.click(TOGGLE);
+      // The footer is a two-segment switch: click the target segment explicitly.
+      const mode = (await ui.attrs(TOGGLE, 'data-mode'))[0] ?? 'workspace';
+      const target = mode === 'groups' ? TOGGLE_WORKSPACE : TOGGLE_GROUPS;
+      if (await ui.exists(target)) await ui.click(target);
+      else await ui.click(TOGGLE);
       await sleep(300);
     },
     async waitGroupsView() {
@@ -733,14 +743,39 @@ function makeUi(driver, helpers) {
       })`);
     },
     async filterState() {
-      return await evaluate(`document.querySelector(${JSON.stringify(FILTER)})?.getAttribute('data-filter') ?? null`);
+      return await evaluate(`document.querySelector(${JSON.stringify(FILTER_STATE)})?.getAttribute('data-filter') ?? null`);
+    },
+    async openViewOptions() {
+      if (await ui.exists(VIEW_OPTIONS_POPOVER)) return true;
+      await ui.click(VIEW_OPTIONS);
+      await ui.waitFor(`!!document.querySelector(${JSON.stringify(VIEW_OPTIONS_POPOVER)})`, 'view options popover open', 5000);
+      await sleep(120);
+      return true;
+    },
+    async closeViewOptions() {
+      if (!(await ui.exists(VIEW_OPTIONS_POPOVER))) return true;
+      await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+      await ui.waitFor(`!document.querySelector(${JSON.stringify(VIEW_OPTIONS_POPOVER)})`, 'view options popover closed', 5000);
+      return true;
     },
     async setFilter(target) {
-      // The V1 archive filter control cycles hidden -> all -> only on click.
+      // Archive tri-state now lives in the view-options popover; each row has a
+      // stable data-filter and closes the popover after dispatching.
       for (let attempt = 0; attempt < 4; attempt++) {
         if ((await ui.filterState()) === target) return true;
-        await ui.click(FILTER);
-        await sleep(300);
+        await ui.openViewOptions();
+        const clicked = await evaluate(`(() => {
+          const option = document.querySelector(${JSON.stringify(ARCHIVE_OPTION)} + '[data-filter="' + ${JSON.stringify(target)} + '"]');
+          if (!option) return false;
+          option.click();
+          return true;
+        })()`);
+        if (!clicked) {
+          await ui.closeViewOptions();
+          throw new Error(`archive option '${target}' not found in the view-options popover`);
+        }
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(VIEW_OPTIONS_POPOVER)})`, 'view options closed after archive pick', 5000);
+        await sleep(250);
       }
       if ((await ui.filterState()) === target) return true;
       throw new Error(`could not reach archive filter '${target}' (current: ${await ui.filterState()})`);
@@ -806,8 +841,21 @@ function makeUi(driver, helpers) {
       return await evaluate(`document.querySelector(${JSON.stringify(SESSION)} + '[data-current="true"]')?.getAttribute('data-session-id') ?? null`);
     },
     async fillSearch(value) {
+      if (!(await ui.exists(SEARCH))) {
+        await ui.click(SEARCH_TOGGLE);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH)})`, 'search field expanded', 5000);
+        await sleep(120);
+      }
       await ui.setNativeValue(SEARCH, value);
       await sleep(180);
+    },
+    /** Collapse the header search field again (search is a toggle, not always visible). */
+    async closeSearch() {
+      if (!(await ui.exists(SEARCH))) return true;
+      await ui.click(SEARCH_TOGGLE);
+      await ui.waitFor(`!document.querySelector(${JSON.stringify(SEARCH)})`, 'search field collapsed', 5000);
+      await sleep(150);
+      return true;
     },
     async searchExpanded() {
       return await evaluate(`document.querySelector(${JSON.stringify(SEARCH)})?.getAttribute('aria-expanded') ?? null`);
@@ -1015,6 +1063,54 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (mode[0] !== 'workspace') throw new Error(`expected default data-mode="workspace", got ${mode[0]}`);
         if (await ui.exists(VIEW)) throw new Error('groups view must not be active on first load');
         if (await ui.exists(FLAT_FALLBACK)) throw new Error('flat fallback rendered on first load');
+        if (await ui.exists('[data-testid="session-groups-return"]')) {
+          throw new Error('the normal header must not render a 返回工作区 button (error fallback only)');
+        }
+        // Two-segment footer switch: both labels visible, active segment accent,
+        // 16px icons and 13px text inside a 28px control (feedback item 1).
+        const segments = await driver.evaluate(`Array.from(document.querySelectorAll('[data-testid^="session-groups-toggle-"]'), (el) => {
+          const style = getComputedStyle(el);
+          const svg = el.querySelector('svg');
+          const rect = svg ? svg.getBoundingClientRect() : null;
+          return {
+            id: el.getAttribute('data-testid'),
+            text: (el.textContent ?? '').trim(),
+            pressed: el.getAttribute('aria-pressed'),
+            height: el.getBoundingClientRect().height,
+            fontSize: Number.parseFloat(style.fontSize),
+            iconWidth: rect ? rect.width : null,
+            iconHeight: rect ? rect.height : null,
+            color: style.color,
+          };
+        })`);
+        const groupsSegment = segments.find((segment) => segment.id === 'session-groups-toggle-groups');
+        const workspaceSegment = segments.find((segment) => segment.id === 'session-groups-toggle-workspace');
+        if (!groupsSegment || !workspaceSegment) {
+          throw new Error(`footer switch must expose both segments, got ${JSON.stringify(segments)}`);
+        }
+        if (!/分组视图|Group view/.test(groupsSegment.text)) throw new Error(`groups segment label missing: ${JSON.stringify(groupsSegment.text)}`);
+        if (!/工作区视图|Workspace view/.test(workspaceSegment.text)) throw new Error(`workspace segment label missing: ${JSON.stringify(workspaceSegment.text)}`);
+        if (groupsSegment.pressed !== 'false' || workspaceSegment.pressed !== 'true') {
+          throw new Error(`active segment must be workspace (groups=${groupsSegment.pressed}, workspace=${workspaceSegment.pressed})`);
+        }
+        for (const segment of [groupsSegment, workspaceSegment]) {
+          if (Math.abs(segment.height - 28) > 1) throw new Error(`${segment.id} height expected 28 ±1, got ${segment.height}`);
+          if (Math.abs(segment.fontSize - 13) > 0.6) throw new Error(`${segment.id} font-size expected 13px, got ${segment.fontSize}`);
+          if (Math.abs(segment.iconWidth - 16) > 0.6 || Math.abs(segment.iconHeight - 16) > 0.6) {
+            throw new Error(`${segment.id} icon expected 16x16, got ${segment.iconWidth}x${segment.iconHeight}`);
+          }
+        }
+        // Each segment targets its own mode (no blind toggle): groups -> groups,
+        // workspace -> official workspace. Return to the default workspace view
+        // so the rest of step 1 still asserts first-load behaviour.
+        await ui.click(TOGGLE_GROUPS);
+        await ui.waitGroupsView();
+        if ((await ui.attrs(TOGGLE, 'data-mode'))[0] !== 'groups') throw new Error('clicking the groups segment did not call setMode("groups")');
+        if ((await ui.attrs(TOGGLE_GROUPS, 'aria-pressed'))[0] !== 'true') throw new Error('groups segment must become active after the click');
+        await ui.click(TOGGLE_WORKSPACE);
+        await ui.waitWorkspaceView();
+        if ((await ui.attrs(TOGGLE, 'data-mode'))[0] !== 'workspace') throw new Error('clicking the workspace segment did not call setMode("workspace")');
+        if ((await ui.attrs(TOGGLE_WORKSPACE, 'aria-pressed'))[0] !== 'true') throw new Error('workspace segment must become active after the click');
         const titles = workspaceTitles();
         // The official workspace browser hydrates asynchronously after boot.
         await driver.waitFor(
@@ -1025,7 +1121,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (titles.length && !titles.some((title) => body.includes(title))) {
           throw new Error(`official workspace browser did not render any fixture workspace title (${titles.join(', ')})`);
         }
-        return { mode: mode[0], workspaceTitles: titles };
+        return { mode: mode[0], workspaceTitles: titles, segments };
       },
     },
     {
@@ -1048,7 +1144,78 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (sessions.length === 0) throw new Error('groups view rendered zero session rows');
         const groups = await ui.groups();
         if (groups.length > 0) throw new Error('fresh isolated home should start with zero groups');
-        return { sessions: sessions.length, groups: groups.length };
+        // Header right side: plus, search, view-options (in this order, 28x28,
+        // 16px glyphs); search fields stay collapsed until the search icon opens
+        // them, and the old 返回工作区 button is gone from the normal header.
+        const header = await driver.evaluate(`(() => {
+          const root = document.querySelector(${JSON.stringify(HEADER)});
+          const buttons = Array.from(root?.querySelectorAll('button') ?? [], (el) => ({
+            id: el.getAttribute('data-testid'),
+            width: el.getBoundingClientRect().width,
+            height: el.getBoundingClientRect().height,
+            glyph: (() => { const svg = el.querySelector('svg'); const rect = svg?.getBoundingClientRect(); return rect ? { width: rect.width, height: rect.height } : null; })(),
+          }));
+          return {
+            buttons,
+            title: (root?.querySelector('.dsg-header-title')?.textContent ?? '').trim(),
+            searchVisible: !!document.querySelector(${JSON.stringify(SEARCH)}),
+            returnVisible: !!root?.querySelector('[data-testid="session-groups-return"]'),
+          };
+        })()`);
+        const expectedOrder = ['session-groups-new-group', 'session-groups-search-toggle', 'session-groups-view-options'];
+        const actualOrder = header.buttons.map((button) => button.id);
+        if (JSON.stringify(actualOrder) !== JSON.stringify(expectedOrder)) {
+          throw new Error(`groups header actions expected ${JSON.stringify(expectedOrder)}, got ${JSON.stringify(actualOrder)}`);
+        }
+        for (const button of header.buttons) {
+          if (Math.abs(button.width - 28) > 1 || Math.abs(button.height - 28) > 1) {
+            throw new Error(`${button.id} expected 28x28, got ${button.width}x${button.height}`);
+          }
+          if (!button.glyph || Math.abs(button.glyph.width - 16) > 0.6 || Math.abs(button.glyph.height - 16) > 0.6) {
+            throw new Error(`${button.id} glyph expected 16x16, got ${JSON.stringify(button.glyph)}`);
+          }
+        }
+        if (!/分组|Groups/.test(header.title)) throw new Error(`header title expected 分组/Groups, got ${JSON.stringify(header.title)}`);
+        if (header.searchVisible) throw new Error('search field must stay collapsed until the search icon is clicked');
+        if (header.returnVisible) throw new Error('normal header must not render the 返回工作区 button');
+        // View-options popover: three 30px archive rows, active check, Escape and
+        // outside pointerdown both close it (feedback item 3).
+        await ui.openViewOptions();
+        const options = await driver.evaluate(`(() => {
+          const popover = document.querySelector(${JSON.stringify(VIEW_OPTIONS_POPOVER)});
+          const rows = Array.from(document.querySelectorAll(${JSON.stringify(ARCHIVE_OPTION)}), (row) => ({
+            filter: row.getAttribute('data-filter'),
+            active: row.getAttribute('data-active'),
+            height: row.getBoundingClientRect().height,
+            text: (row.textContent ?? '').trim(),
+            check: !!row.querySelector('svg'),
+          }));
+          return {
+            popover: !!popover,
+            buttonExpanded: document.querySelector(${JSON.stringify(VIEW_OPTIONS)})?.getAttribute('aria-expanded'),
+            rows,
+          };
+        })()`);
+        if (!options.popover || options.buttonExpanded !== 'true') {
+          throw new Error(`view-options popover did not open (${JSON.stringify(options)})`);
+        }
+        if (options.rows.length !== 3) throw new Error(`view-options popover must expose 3 archive rows, got ${options.rows.length}`);
+        const expectedFilters = ['hidden', 'all', 'only'];
+        if (JSON.stringify(options.rows.map((row) => row.filter)) !== JSON.stringify(expectedFilters)) {
+          throw new Error(`archive row order expected ${JSON.stringify(expectedFilters)}, got ${JSON.stringify(options.rows.map((row) => row.filter))}`);
+        }
+        const labelPatterns = [/隐藏已归档|Hide archived/, /全部对话（显示已归档）|All conversations \(archived shown\)/, /仅显示已归档|Archived only/];
+        options.rows.forEach((row, index) => {
+          if (!labelPatterns[index].test(row.text)) throw new Error(`archive row ${row.filter} label mismatch: ${JSON.stringify(row.text)}`);
+          if (Math.abs(row.height - 30) > 1) throw new Error(`archive row ${row.filter} height expected 30 ±1, got ${row.height}`);
+          if ((row.filter === 'hidden') !== row.check) throw new Error(`archive row ${row.filter} check visibility mismatch (${row.check})`);
+        });
+        await ui.closeViewOptions();
+        await ui.openViewOptions();
+        await driver.evaluate(`document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(VIEW_OPTIONS_POPOVER)})`, 'view-options closed on an outside pointerdown', 5000);
+        if ((await ui.attrs(VIEW_OPTIONS, 'aria-expanded'))[0] !== 'false') throw new Error('view-options button must report aria-expanded=false after closing');
+        return { sessions: sessions.length, groups: groups.length, header, options };
       },
     },
     {
@@ -1536,11 +1703,29 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const minimum = await waitWidth(264, 'width after dragging to the minimum');
         const header = await driver.evaluate(`(() => {
           const el = document.querySelector(${JSON.stringify(HEADER)});
-          return el ? { clientWidth: el.clientWidth, scrollWidth: el.scrollWidth } : null;
+          if (!el) return null;
+          const switchEl = document.querySelector(${JSON.stringify(TOGGLE)});
+          const segments = Array.from(document.querySelectorAll('[data-testid^="session-groups-toggle-"]'), (node) => {
+            const rect = node.getBoundingClientRect();
+            return { id: node.getAttribute('data-testid'), width: rect.width, height: rect.height, text: (node.textContent ?? '').trim() };
+          });
+          return {
+            clientWidth: el.clientWidth,
+            scrollWidth: el.scrollWidth,
+            height: el.getBoundingClientRect().height,
+            searchOpen: el.getAttribute('data-search-open'),
+            switchWidth: switchEl ? switchEl.getBoundingClientRect().width : null,
+            segments,
+          };
         })()`);
         if (!header) throw new Error('groups header is missing at 264px');
         if (header.scrollWidth > header.clientWidth + 1) {
           throw new Error(`groups header overflows horizontally at 264px: scrollWidth ${header.scrollWidth} > clientWidth ${header.clientWidth}`);
+        }
+        if (Math.abs(header.height - 36) > 1) throw new Error(`groups header height expected 36 ±1 at 264px, got ${header.height}`);
+        if (header.searchOpen !== 'false') throw new Error(`search must start collapsed at 264px, got data-search-open=${header.searchOpen}`);
+        if (header.segments.length !== 2 || header.segments.some((segment) => !(segment.width > 0) || !segment.text)) {
+          throw new Error(`two labelled footer segments must stay visible at 264px, got ${JSON.stringify(header.segments)}`);
         }
 
         // Rail round-trip with the existing official collapse control: the override
@@ -1911,7 +2096,13 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (!a) throw new Error('step 15 needs group a from step 3');
         if (!child) throw new Error('step 15 needs the nested child group from step 3');
         if (!(await ui.exists(VIEW))) throw new Error('step 15 must start in the groups view');
-        if (!(await ui.exists(SEARCH))) throw new Error(`search input ${SEARCH} is missing (search UI not implemented)`);
+        if (!(await ui.exists(SEARCH_TOGGLE))) throw new Error(`search toggle ${SEARCH_TOGGLE} is missing (search UI not implemented)`);
+        if (await ui.exists(SEARCH)) throw new Error('search field must start collapsed before the search icon is clicked');
+        await ui.click(SEARCH_TOGGLE);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH)})`, 'search field expanded from the header icon', 5000);
+        if ((await driver.evaluate(`document.activeElement?.getAttribute('data-testid') ?? null`)) !== 'session-groups-search') {
+          throw new Error('opening the search field must focus the search input');
+        }
 
         // -- settled record snapshots (search must never write the group doc) --
         const recordPath = join(QA_HOME, 'storages', 'dsh-session-groups.json');
@@ -2048,7 +2239,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
 
         // only -> all visibility correction (spec §3.3 step 2).
         await ui.waitFor(
-          `document.querySelector(${JSON.stringify(FILTER)})?.getAttribute('data-filter') === 'all'`,
+          `document.querySelector(${JSON.stringify(FILTER_STATE)})?.getAttribute('data-filter') === 'all'`,
           'archive filter switched only -> all for the hidden search result',
           5000,
         );
@@ -2205,6 +2396,10 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         // results/menus/dialogs use the larger padding, and 264px stays
         // overflow-free. Font sizes/row heights/icon sizes stay unchanged.
         if (!(await ui.exists(VIEW))) throw new Error('step 16 must start in the groups view');
+        // Step 15 leaves the search field expanded; collapse it first so the
+        // collapsed header metrics (36px) and 264px probe are measured without
+        // the optional search row.
+        await ui.closeSearch();
         await sleep(200); // let the last step's layout settle before measuring
         const metrics = await driver.evaluate(`(() => {
           const px = (value) => {
@@ -2260,10 +2455,49 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           const groupCaret = document.querySelector('.dsg-group-caret svg');
           const groupActionGlyph = document.querySelector('.dsg-group-actions .dsg-glyph');
           const headerTitle = document.querySelector('.dsg-header-title');
-          const textButton = document.querySelector('.dsg-text-button');
+          const headerTitleLabel = document.querySelector('.dsg-header-label');
+          const headerAccent = document.querySelector('.dsg-header-accent svg');
           const header = document.querySelector('.dsg-header');
           const headerRow = document.querySelector('.dsg-header-row');
           const searchRow = document.querySelector('.dsg-header-search-row');
+          const headerButtons = Array.from(document.querySelectorAll('[data-testid="session-groups-header"] button'), (button) => {
+            const rect = button.getBoundingClientRect();
+            const svg = button.querySelector('svg');
+            const svgRect = svg ? svg.getBoundingClientRect() : null;
+            return {
+              id: button.getAttribute('data-testid'),
+              width: rect.width,
+              height: rect.height,
+              glyph: svgRect ? { width: svgRect.width, height: svgRect.height } : null,
+            };
+          });
+          const footerSwitch = document.querySelector('.dsg-footer-switch');
+          const footerSegments = Array.from(document.querySelectorAll('[data-testid^="session-groups-toggle-"]'), (segment) => {
+            const style = getComputedStyle(segment);
+            const rect = segment.getBoundingClientRect();
+            const svg = segment.querySelector('svg');
+            const svgRect = svg ? svg.getBoundingClientRect() : null;
+            return {
+              id: segment.getAttribute('data-testid'),
+              text: (segment.textContent ?? '').trim(),
+              pressed: segment.getAttribute('aria-pressed'),
+              height: rect.height,
+              fontSize: px(style.fontSize),
+              lineHeight: px(style.lineHeight),
+              color: style.color,
+              icon: svgRect ? { width: svgRect.width, height: svgRect.height } : null,
+            };
+          });
+          // Resolve official theme tokens through a throw-away probe so the
+          // assertions compare the real host values instead of hard-coded hex.
+          const tokenColor = (name) => {
+            const probe = document.createElement('span');
+            probe.style.color = 'var(' + name + ')';
+            document.body.appendChild(probe);
+            const value = getComputedStyle(probe).color;
+            probe.remove();
+            return value;
+          };
           const tree = document.querySelector('.dsg-tree');
           const groupBody = document.querySelector('.dsg-group-body');
           const groupLine = document.querySelector('.dsg-group-line');
@@ -2293,11 +2527,22 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
               groupName: fontOf(groupName),
               sessionTitle: fontOf(sessionTitle),
               workspaceBadge: fontOf(workspaceBadge),
-              searchInput: { ...fontOf(searchInput), height: rectOf(searchInput)?.height ?? null },
-              headerTitle: fontOf(headerTitle),
+              headerTitle: { ...fontOf(headerTitle), color: styleOf(headerTitle)?.color },
+              headerTitleLabel: fontOf(headerTitleLabel),
+              headerAccentColor: styleOf(headerAccent)?.color,
             },
             buttons: {
-              textButton: { ...fontOf(textButton), height: rectOf(textButton)?.height ?? null },
+              header: headerButtons,
+            },
+            footer: {
+              width: rectOf(footerSwitch)?.width ?? null,
+              height: rectOf(footerSwitch)?.height ?? null,
+              mode: footerSwitch?.getAttribute('data-mode') ?? null,
+              segments: footerSegments,
+            },
+            tokens: {
+              primary: tokenColor('--dsw-alias-label-primary'),
+              accent: tokenColor('--dsw-alias-state-business-primary'),
             },
             spacing: {
               header: {
@@ -2312,13 +2557,12 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
               groupBody: spaceOf(groupBody),
               groupLine: spaceOf(groupLine),
               ungroupedHeader: spaceOf(ungroupedHeader),
-              searchInputHeight: rectOf(searchInput)?.height ?? null,
-              textButtonHeight: rectOf(textButton)?.height ?? null,
             },
             icons: {
               groupIcon: sizeOf(groupIcon),
               groupCaret: sizeOf(groupCaret),
               groupActionGlyph: sizeOf(groupActionGlyph),
+              headerAccent: sizeOf(headerAccent),
               groupActionButton: {
                 width: rectOf(groupActionGlyph?.parentElement)?.width ?? null,
                 height: rectOf(groupActionGlyph?.parentElement)?.height ?? null,
@@ -2372,17 +2616,62 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         near(metrics.text.sessionTitle.fontSize, 14, 'dsg-session-title font-size');
         near(metrics.text.sessionTitle.lineHeight, 20, 'dsg-session-title line-height');
         near(metrics.text.workspaceBadge.fontSize, 12, 'dsg-workspace-badge font-size');
-        near(metrics.text.searchInput.fontSize, 13, 'dsg-search-input font-size');
-        near(metrics.text.searchInput.height, 30, 'dsg-search-input height', 1);
         near(metrics.text.headerTitle.fontSize, 14, 'dsg-header-title font-size');
-        near(metrics.buttons.textButton.fontSize, 13, 'dsg-text-button font-size');
-        near(metrics.buttons.textButton.height, 28, 'dsg-text-button height', 1);
+        near(metrics.text.headerTitle.lineHeight, 20, 'dsg-header-title line-height');
+        near(metrics.text.headerTitleLabel.fontSize, 14, 'dsg-header-label font-size');
+        if (metrics.text.headerTitle.color !== metrics.tokens.primary) {
+          throw new Error(`dsg-header-title must use primary text (${metrics.tokens.primary}), got ${metrics.text.headerTitle.color}`);
+        }
+        if (metrics.text.headerAccentColor !== metrics.tokens.accent) {
+          throw new Error(`header accent icon must use the primary accent (${metrics.tokens.accent}), got ${metrics.text.headerAccentColor}`);
+        }
+        // (3b) Header actions: plus, search, view-options — each 28x28 with a
+        // 16px glyph, in that order.
+        const expectedHeaderOrder = ['session-groups-new-group', 'session-groups-search-toggle', 'session-groups-view-options'];
+        const actualHeaderOrder = metrics.buttons.header.map((button) => button.id);
+        if (JSON.stringify(actualHeaderOrder) !== JSON.stringify(expectedHeaderOrder)) {
+          throw new Error(`header action order expected ${JSON.stringify(expectedHeaderOrder)}, got ${JSON.stringify(actualHeaderOrder)}`);
+        }
+        for (const button of metrics.buttons.header) {
+          near(button.width, 28, `${button.id} width`, 1);
+          near(button.height, 28, `${button.id} height`, 1);
+          if (!button.glyph) throw new Error(`${button.id} has no glyph`);
+          near(button.glyph.width, 16, `${button.id} glyph width`);
+          near(button.glyph.height, 16, `${button.id} glyph height`);
+        }
+        // (3c) Footer two-segment switch: both labels visible, 28px segment,
+        // 13px text, 16px icons, active segment accent, explicit group mode.
+        if (metrics.footer.mode !== 'groups') throw new Error(`footer data-mode expected groups, got ${metrics.footer.mode}`);
+        near(metrics.footer.height, 28, 'footer switch height', 1);
+        if (metrics.footer.segments.length !== 2) {
+          throw new Error(`footer switch must expose two segments, got ${JSON.stringify(metrics.footer.segments)}`);
+        }
+        const groupsSegment = metrics.footer.segments.find((segment) => segment.id === 'session-groups-toggle-groups');
+        const workspaceSegment = metrics.footer.segments.find((segment) => segment.id === 'session-groups-toggle-workspace');
+        if (!groupsSegment || !workspaceSegment) throw new Error('footer switch segments are incomplete');
+        if (!/分组视图|Group view/.test(groupsSegment.text) || !/工作区视图|Workspace view/.test(workspaceSegment.text)) {
+          throw new Error(`footer labels missing (${JSON.stringify(groupsSegment.text)}, ${JSON.stringify(workspaceSegment.text)})`);
+        }
+        if (groupsSegment.pressed !== 'true' || workspaceSegment.pressed !== 'false') {
+          throw new Error(`active footer segment expected groups (groups=${groupsSegment.pressed}, workspace=${workspaceSegment.pressed})`);
+        }
+        for (const segment of metrics.footer.segments) {
+          near(segment.height, 28, `${segment.id} height`, 1);
+          near(segment.fontSize, 13, `${segment.id} font-size`);
+          if (!segment.icon) throw new Error(`${segment.id} has no icon`);
+          near(segment.icon.width, 16, `${segment.id} icon width`);
+          near(segment.icon.height, 16, `${segment.id} icon height`);
+        }
+        if (groupsSegment.color !== metrics.tokens.accent) {
+          throw new Error(`active footer segment must use the accent color (${metrics.tokens.accent}), got ${groupsSegment.color}`);
+        }
         // (4) Official 16px glyphs (group icon, caret, group action glyph, and
         // every icon rendered inside the groups root).
         for (const [label, size] of [
           ['dsg-group-icon svg', metrics.icons.groupIcon],
           ['dsg-group-caret svg', metrics.icons.groupCaret],
           ['group action glyph', metrics.icons.groupActionGlyph],
+          ['header accent glyph', metrics.icons.headerAccent],
         ]) {
           near(size.width, 16, `${label} width`);
           near(size.height, 16, `${label} height`);
@@ -2426,18 +2715,15 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         }
         if (!space.header) throw new Error('dsg-header spacing probe is missing');
         near(space.header.paddingTop, 4, 'dsg-header padding-top', 1);
-        near(space.header.paddingRight, 6, 'dsg-header padding-right', 1);
-        near(space.header.paddingBottom, 8, 'dsg-header padding-bottom', 1);
+        near(space.header.paddingRight, 4, 'dsg-header padding-right', 1);
+        near(space.header.paddingBottom, 4, 'dsg-header padding-bottom', 1);
         near(space.header.paddingLeft, 2, 'dsg-header padding-left', 1);
         near(space.header.rowGap, 8, 'dsg-header row-gap', 1);
         near(space.header.titleRowHeight, 28, 'header title row height', 1);
-        near(space.header.searchRowHeight, 30, 'header search row height', 1);
-        near(space.header.height, 78, 'header total height (4+28+8+30+8)', 1);
-        near(space.searchInputHeight, 30, 'search input height', 1);
-        near(space.textButtonHeight, 28, 'text button height', 1);
-        // Official sectionHeader is 36px tall; our 28px control row plus 4px/8px
-        // vertical padding keeps an equivalent 36-40px vertical rhythm.
-        near(space.header.paddingTop + space.header.titleRowHeight + space.header.paddingBottom, 40, 'header section rhythm', 1);
+        near(space.header.height, 36, 'collapsed header height (4+28+4)', 1);
+        // Official sectionHeader is 36px tall; the controls row plus 4px/4px
+        // vertical padding keeps the same 36px rhythm.
+        near(space.header.paddingTop + space.header.titleRowHeight + space.header.paddingBottom, 36, 'header section rhythm', 1);
 
         // (6) Search results (dropdown opened only for measurement, then cleared):
         // result padding >= 6px/10px, 8px title/meta gap, 2px list row gap.
@@ -2452,14 +2738,20 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           };
           const list = document.querySelector(${JSON.stringify(SEARCH_RESULTS)});
           const result = document.querySelector(${JSON.stringify(SEARCH_RESULT)});
-          if (!list || !result) return { error: 'search results missing' };
+          const input = document.querySelector(${JSON.stringify(SEARCH)});
+          const header = document.querySelector(${JSON.stringify(HEADER)});
+          const searchRow = document.querySelector('.dsg-header-search-row');
+          if (!list || !result || !input || !header) return { error: 'search results/input missing' };
           const listStyle = getComputedStyle(list);
           const resultStyle = getComputedStyle(result);
+          const inputStyle = getComputedStyle(input);
           return {
             list: {
               paddingTop: px(listStyle.paddingTop),
               paddingLeft: px(listStyle.paddingLeft),
               rowGap: px(listStyle.rowGap),
+              background: listStyle.backgroundColor,
+              color: listStyle.color,
             },
             result: {
               paddingTop: px(resultStyle.paddingTop),
@@ -2467,10 +2759,29 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
               paddingBottom: px(resultStyle.paddingBottom),
               paddingLeft: px(resultStyle.paddingLeft),
               columnGap: px(resultStyle.columnGap),
+              color: resultStyle.color,
+            },
+            input: {
+              fontSize: px(inputStyle.fontSize),
+              height: input.getBoundingClientRect().height,
+              background: inputStyle.backgroundColor,
+              color: inputStyle.color,
+            },
+            header: {
+              height: header.getBoundingClientRect().height,
+              searchOpen: header.getAttribute('data-search-open'),
+              searchRowHeight: searchRow ? searchRow.getBoundingClientRect().height : null,
+              searchToggleExpanded: document.querySelector(${JSON.stringify(SEARCH_TOGGLE)})?.getAttribute('aria-expanded') ?? null,
             },
           };
         })()`);
         if (searchSpacing.error) throw new Error(searchSpacing.error);
+        near(searchSpacing.input.fontSize, 13, 'dsg-search-input font-size');
+        near(searchSpacing.input.height, 30, 'dsg-search-input height', 1);
+        near(searchSpacing.header.height, 74, 'expanded header height (36 + 8 + 30)', 1);
+        near(searchSpacing.header.searchRowHeight, 30, 'header search row height', 1);
+        if (searchSpacing.header.searchOpen !== 'true') throw new Error('header data-search-open must be true while the field is visible');
+        if (searchSpacing.header.searchToggleExpanded !== 'true') throw new Error('search toggle must report aria-expanded=true while open');
         near(searchSpacing.list.paddingTop, 6, 'search results padding-top', 1);
         near(searchSpacing.list.paddingLeft, 10, 'search results padding-left', 1);
         near(searchSpacing.list.rowGap, 2, 'search results row-gap', 1);
@@ -2487,6 +2798,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         near(searchSpacing.result.columnGap, 8, 'search result column-gap', 1);
         await ui.fillSearch('');
         await sleep(120);
+        await ui.closeSearch();
 
         // (7) 264px minimum width: header and tree must not overflow horizontally.
         const widthBefore = await ui.sidebarWidth();
@@ -2508,6 +2820,27 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (narrowProbe.tree.scrollWidth > narrowProbe.tree.clientWidth + 1) {
           throw new Error(`groups tree overflows at 264px: scrollWidth ${narrowProbe.tree.scrollWidth} > clientWidth ${narrowProbe.tree.clientWidth}`);
         }
+        // Expanded search at 264px: the 30px search row must also stay inside.
+        await ui.click(SEARCH_TOGGLE);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH)})`, 'search row expanded at 264px', 5000);
+        await sleep(150);
+        const narrowSearch = await driver.evaluate(`(() => {
+          const box = (el) => (el ? { clientWidth: el.clientWidth, scrollWidth: el.scrollWidth } : null);
+          return {
+            header: box(document.querySelector(${JSON.stringify(HEADER)})),
+            searchRow: box(document.querySelector('.dsg-header-search-row')),
+            input: box(document.querySelector(${JSON.stringify(SEARCH)})),
+          };
+        })()`);
+        if (!narrowSearch.header || !narrowSearch.searchRow || !narrowSearch.input) {
+          throw new Error(`264px expanded-search probe missing nodes: ${JSON.stringify(narrowSearch)}`);
+        }
+        for (const [label, box] of [['header', narrowSearch.header], ['search row', narrowSearch.searchRow], ['search input', narrowSearch.input]]) {
+          if (box.scrollWidth > box.clientWidth + 1) {
+            throw new Error(`groups ${label} overflows at 264px with search open: ${box.scrollWidth} > ${box.clientWidth}`);
+          }
+        }
+        await ui.closeSearch();
         await ui.dragResizeHandle(widthBefore);
         const widthRestored = await waitWidth(widthBefore, 'sidebar width restored after the 264px probe');
 
@@ -2519,11 +2852,13 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             titles: { fontSize: 14, lineHeight: 20 },
             meta: { workspaceBadge: 12, searchInput: 13 },
             icons: 16,
+            header: { height: 36, expandedHeight: 74, actions: expectedHeaderOrder },
+            footer: { height: 28, segments: metrics.footer.segments.map((segment) => ({ id: segment.id, text: segment.text, pressed: segment.pressed })) },
             spacing: {
               rowPadding: '0 8px',
               rowGap: 6,
               treeRowGap: 2,
-              headerPadding: '4px 6px 8px 2px',
+              headerPadding: '4px 4px 4px 2px',
               headerRowGap: 8,
               groupGuide: { marginLeft: 10, paddingLeft: 10 },
             },
@@ -2539,6 +2874,161 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             minWidth: { width: minimumWidth, restored: widthRestored, ...narrowProbe },
           },
           measured: metrics,
+        };
+      },
+    },
+    {
+      id: 17,
+      name: 'dark-theme-surfaces',
+      async run() {
+        // Step 16 restores the groups view and the persisted width. This step
+        // forces the official dark theme attribute on <body> and asserts the
+        // computed surfaces/text of the search dropdown, menu, dialog and dialog
+        // input are theme-aware (no white cards) with readable contrast.
+        if (!(await ui.exists(VIEW))) throw new Error('step 17 must start in the groups view');
+        await ui.closeViewOptions();
+        if (await ui.dialogOpen()) {
+          await driver.evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+          await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'leftover dialog closed', 5000);
+        }
+        if (await ui.exists(MENU)) {
+          await driver.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+          await ui.waitFor(`!document.querySelector(${JSON.stringify(MENU)})`, 'leftover menu closed', 5000);
+        }
+        await ui.closeSearch();
+
+        const hadDark = Boolean(await driver.evaluate(`document.body.hasAttribute('data-ds-dark-theme')`));
+        await driver.evaluate(`document.body.setAttribute('data-ds-dark-theme', '')`);
+        await sleep(200);
+
+        const readSurfaces = async () => driver.evaluate(`(() => {
+          const parse = (value) => {
+            const match = String(value).match(/rgba?\\(([^)]+)\\)/);
+            if (!match) return null;
+            const parts = match[1].split(',').map((part) => Number.parseFloat(part.trim()));
+            if (parts.length < 3 || parts.some((part) => !Number.isFinite(part))) return null;
+            return { r: parts[0], g: parts[1], b: parts[2], a: parts.length > 3 ? parts[3] : 1 };
+          };
+          const channel = (value) => {
+            const c = value / 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+          };
+          const luminance = (color) => 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
+          const ratio = (a, b) => {
+            const l1 = luminance(a);
+            const l2 = luminance(b);
+            return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+          };
+          // Composite a translucent token over the page base so the reported
+          // background is the pixel color the user actually sees.
+          const base = parse(getComputedStyle(document.body).backgroundColor) ?? { r: 21, g: 21, b: 23, a: 1 };
+          const solid = (color) => {
+            if (!color) return null;
+            if (color.a >= 0.999) return color;
+            return {
+              r: color.r * color.a + base.r * (1 - color.a),
+              g: color.g * color.a + base.g * (1 - color.a),
+              b: color.b * color.a + base.b * (1 - color.a),
+              a: 1,
+            };
+          };
+          const sample = (selector, textSelector, backgroundSelector) => {
+            const el = document.querySelector(selector);
+            if (!el) return { missing: selector };
+            const bgEl = backgroundSelector ? document.querySelector(backgroundSelector) : el;
+            if (!bgEl) return { missing: backgroundSelector };
+            const background = solid(parse(getComputedStyle(bgEl).backgroundColor));
+            const textEl = textSelector ? document.querySelector(textSelector) : el;
+            if (!textEl) return { missing: textSelector };
+            const text = parse(getComputedStyle(textEl).color);
+            if (!background || !text) return { missing: 'unparsable-color:' + selector };
+            return {
+              background: [Math.round(background.r), Math.round(background.g), Math.round(background.b)],
+              text: [Math.round(text.r), Math.round(text.g), Math.round(text.b)],
+              alpha: parse(getComputedStyle(bgEl).backgroundColor)?.a ?? 1,
+              contrast: Math.round(ratio(text, background) * 100) / 100,
+            };
+          };
+          return {
+            dark: document.body.hasAttribute('data-ds-dark-theme'),
+            body: {
+              background: getComputedStyle(document.body).backgroundColor,
+              color: getComputedStyle(document.body).color,
+            },
+            searchInput: sample('.dsg-search-input'),
+            searchResults: sample('.dsg-search-results', '.dsg-search-results'),
+            searchResultRow: sample('.dsg-search-result', '.dsg-search-result-title', '.dsg-search-results'),
+            menu: sample('.dsg-menu', '.dsg-menu-item'),
+            dialog: sample('.dsg-dialog', '.dsg-dialog-title'),
+            dialogInput: sample('.dsg-dialog-input'),
+            viewOptions: sample('.dsg-view-options-popover', '.dsg-view-option', '.dsg-view-options-popover'),
+          };
+        })()`);
+
+        const assertSurface = (label, surface) => {
+          if (!surface || surface.missing) throw new Error(`${label} surface missing: ${JSON.stringify(surface)}`);
+          const [r, g, b] = surface.background;
+          if (r >= 250 && g >= 250 && b >= 250) {
+            throw new Error(`${label} background must not be white in dark theme (got rgb(${r},${g},${b}))`);
+          }
+          if (!(surface.contrast >= 4.5)) {
+            throw new Error(`${label} text contrast too low in dark theme: ${surface.contrast}:1 (bg=${surface.background}, text=${surface.text})`);
+          }
+        };
+
+        await ui.fillSearch(state.searchTitle ?? 'Projects');
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'dark-theme search dropdown open', 8000);
+        await ui.waitFor(`document.querySelectorAll(${JSON.stringify(SEARCH_RESULT)}).length > 0`, 'dark-theme search results rendered', 8000);
+        await sleep(120);
+        const searchSurfaces = await readSurfaces();
+        if (!searchSurfaces.dark) throw new Error('body[data-ds-dark-theme] was not applied');
+        assertSurface('search input', searchSurfaces.searchInput);
+        assertSurface('search dropdown', searchSurfaces.searchResults);
+        assertSurface('search result row', searchSurfaces.searchResultRow);
+
+        await ui.fillSearch('');
+        await ui.closeSearch();
+
+        const menuRow = (await ui.sessions()).find((row) => row.archived !== true);
+        if (!menuRow) throw new Error('no non-archived session row available to open the dark-theme menu');
+        await ui.openSessionMenu(menuRow.sid);
+        await sleep(120);
+        const menuSurfaces = await readSurfaces();
+        assertSurface('session menu', menuSurfaces.menu);
+        await driver.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(MENU)})`, 'dark-theme menu closed', 5000);
+
+        await ui.click('[data-testid="session-groups-new-group"]');
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(DIALOG_INPUT)})`, 'dark-theme dialog open', 5000);
+        await sleep(120);
+        const dialogSurfaces = await readSurfaces();
+        assertSurface('dialog card', dialogSurfaces.dialog);
+        assertSurface('dialog input', dialogSurfaces.dialogInput);
+        await driver.evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'dark-theme dialog closed', 5000);
+
+        await ui.openViewOptions();
+        await sleep(120);
+        const optionsSurfaces = await readSurfaces();
+        assertSurface('view-options popover', optionsSurfaces.viewOptions);
+        await ui.closeViewOptions();
+
+        if (!hadDark) await driver.evaluate(`document.body.removeAttribute('data-ds-dark-theme')`);
+        await sleep(150);
+
+        return {
+          hadDark,
+          search: {
+            input: searchSurfaces.searchInput,
+            dropdown: searchSurfaces.searchResults,
+            result: searchSurfaces.searchResultRow,
+          },
+          menu: menuSurfaces.menu,
+          dialog: dialogSurfaces.dialog,
+          dialogInput: dialogSurfaces.dialogInput,
+          viewOptions: optionsSurfaces.viewOptions,
+          body: searchSurfaces.body,
+          restoredDarkAttribute: hadDark,
         };
       },
     },
@@ -2602,7 +3092,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 16-step acceptance (isolated DSH home, CDP)');
+  console.log(' V1 E2E - 17-step acceptance (isolated DSH home, CDP)');
   console.log('============================================================');
 
   let driver = null;

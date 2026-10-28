@@ -1,0 +1,1071 @@
+{
+  "kind": "drag-perf-probe",
+  "label": "after-standard",
+  "createdAt": "2026-10-28T15:40:50.986Z",
+  "qaHome": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-perf-after-2",
+  "port": 4405,
+  "url": "http://127.0.0.1:4405/",
+  "clientBuild": {
+    "bytes": 175561
+  },
+  "phases": {
+    "hoverBurst": {
+      "events": 120,
+      "eventMs": {
+        "count": 120,
+        "min": 0,
+        "avg": 0.06,
+        "p50": 0,
+        "p95": 0.1,
+        "max": 2
+      },
+      "eventLabels": {
+        "group-append": 36,
+        "session-before": 36,
+        "session-after": 36,
+        "ungrouped": 12
+      },
+      "frames": {
+        "frames": 32,
+        "intervalMs": {
+          "count": 31,
+          "min": 16.5,
+          "avg": 16.67,
+          "p50": 16.7,
+          "p95": 16.8,
+          "max": 16.8
+        }
+      },
+      "renders": {
+        "GroupsView": 2
+      },
+      "dragOver": {
+        "events": 120,
+        "totalMs": 5.299999922513962,
+        "maxMs": 2,
+        "invalid": 0,
+        "byHandler": {
+          "DragOverGroup": 36,
+          "DragOverSession": 72,
+          "DragOverUngrouped": 12
+        },
+        "avgMs": 0.04
+      },
+      "dropTarget": {
+        "calls": 121,
+        "changes": 31
+      },
+      "samples": {
+        "dragOverMs": {
+          "count": 120,
+          "min": 0,
+          "avg": 0.04,
+          "p50": 0,
+          "p95": 0.1,
+          "max": 2
+        },
+        "dropTargetUpdateMs": {
+          "count": 121,
+          "min": 0,
+          "avg": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0
+        },
+        "floatingLabelMs": {
+          "count": 121,
+          "min": 0,
+          "avg": 0.01,
+          "p50": 0,
+          "p95": 0.1,
+          "max": 0.1
+        },
+        "dropHandlerMs": {
+          "count": 0,
+          "min": 0,
+          "avg": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0
+        }
+      },
+      "storePublishes": 0
+    },
+    "hoverPaced": {
+      "events": 30,
+      "eventMs": {
+        "count": 30,
+        "min": 0.1,
+        "avg": 0.27,
+        "p50": 0.3,
+        "p95": 0.4,
+        "max": 0.4
+      },
+      "eventLabels": {
+        "paced": 30
+      },
+      "frames": {
+        "frames": 148,
+        "intervalMs": {
+          "count": 147,
+          "min": 0,
+          "avg": 8.28,
+          "p50": 0,
+          "p95": 16.7,
+          "max": 16.8
+        }
+      },
+      "renders": {
+        "GroupsView": 10,
+        "Header": 10,
+        "SessionRow": 250,
+        "GroupNode": 30
+      },
+      "dragOver": {
+        "events": 30,
+        "totalMs": 3.499999910593033,
+        "maxMs": 0.20000001788139343,
+        "invalid": 0,
+        "byHandler": {
+          "DragOverGroup": 16,
+          "DragOverSession": 14
+        },
+        "avgMs": 0.12
+      },
+      "dropTarget": {
+        "calls": 31,
+        "changes": 9
+      },
+      "samples": {
+        "dragOverMs": {
+          "count": 30,
+          "min": 0,
+          "avg": 0.12,
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.2
+        },
+        "dropTargetUpdateMs": {
+          "count": 31,
+          "min": 0,
+          "avg": 0.03,
+          "p50": 0,
+          "p95": 0.1,
+          "max": 0.2
+        },
+        "floatingLabelMs": {
+          "count": 31,
+          "min": 0,
+          "avg": 0.07,
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.2
+        },
+        "dropHandlerMs": {
+          "count": 0,
+          "min": 0,
+          "avg": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0
+        }
+      },
+      "storePublishes": 0
+    },
+    "hoverHold": {
+      "events": 45,
+      "eventMs": {
+        "count": 45,
+        "min": 0.2,
+        "avg": 0.31,
+        "p50": 0.3,
+        "p95": 0.4,
+        "max": 0.5
+      },
+      "eventLabels": {
+        "hold": 45
+      },
+      "frames": {
+        "frames": 303,
+        "intervalMs": {
+          "count": 302,
+          "min": 0,
+          "avg": 5.52,
+          "p50": 0,
+          "p95": 16.7,
+          "max": 16.8
+        }
+      },
+      "renders": {
+        "GroupsView": 4,
+        "Header": 4,
+        "SessionRow": 100,
+        "GroupNode": 12
+      },
+      "dragOver": {
+        "events": 45,
+        "totalMs": 4.999999940395355,
+        "maxMs": 0.20000001788139343,
+        "invalid": 0,
+        "byHandler": {
+          "DragOverGroup": 45
+        },
+        "avgMs": 0.11
+      },
+      "dropTarget": {
+        "calls": 46,
+        "changes": 2
+      },
+      "samples": {
+        "dragOverMs": {
+          "count": 45,
+          "min": 0,
+          "avg": 0.11,
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.2
+        },
+        "dropTargetUpdateMs": {
+          "count": 46,
+          "min": 0,
+          "avg": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0.1
+        },
+        "floatingLabelMs": {
+          "count": 46,
+          "min": 0,
+          "avg": 0.07,
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.2
+        },
+        "dropHandlerMs": {
+          "count": 0,
+          "min": 0,
+          "avg": 0,
+          "p50": 0,
+          "p95": 0,
+          "max": 0
+        }
+      },
+      "storePublishes": 1
+    },
+    "drops": {
+      "count": 9,
+      "commitMs": {
+        "count": 9,
+        "min": 14,
+        "avg": 22.28,
+        "p50": 21.5,
+        "p95": 29.6,
+        "max": 29.6
+      },
+      "results": [
+        {
+          "sid": "session-e1ad22be-cc2b-45af-930d-d996ae19feb7",
+          "gid": "g-fa46a37c9224",
+          "commitMs": 16.6
+        },
+        {
+          "sid": "session-b24fc4ec-8b5c-4e1d-bba6-43873f0f3206",
+          "gid": "g-bfa0589ce40b",
+          "commitMs": 14
+        },
+        {
+          "sid": "session-d1addb61-0926-4169-8205-b9e92c1bf7d9",
+          "gid": "g-2fa41982fbd7",
+          "commitMs": 29.6
+        },
+        {
+          "sid": "session-6edf5992-28c8-4962-af23-810a7ca8133d",
+          "gid": "g-fa46a37c9224",
+          "commitMs": 24.5
+        },
+        {
+          "sid": "session-9c7c1bf4-6551-4805-a3c0-8236ef52d59e",
+          "gid": "g-bfa0589ce40b",
+          "commitMs": 21.5
+        },
+        {
+          "sid": "session-0de68353-ae45-4f2c-b477-e16766c5ff37",
+          "gid": "g-2fa41982fbd7",
+          "commitMs": 18
+        },
+        {
+          "sid": "session-50a242e1-8238-4278-9013-db15b4e1b7bd",
+          "gid": "g-fa46a37c9224",
+          "commitMs": 28
+        },
+        {
+          "sid": "session-0e239746-7084-42b7-8deb-b27fcf9bbdd0",
+          "gid": "g-bfa0589ce40b",
+          "commitMs": 27.1
+        },
+        {
+          "sid": "session-39fc6701-b59d-4996-bbb9-008de5b91761",
+          "gid": "g-2fa41982fbd7",
+          "commitMs": 21.2
+        }
+      ],
+      "renderCounts": {
+        "GroupsView": 27,
+        "Header": 9,
+        "SessionRow": 225,
+        "GroupNode": 27
+      },
+      "storePublishes": 9,
+      "timeline": {
+        "dropAt": 8414.4,
+        "commitStartAfterMs": 0.7,
+        "apiStartAfterMs": 0.7,
+        "httpStartAfterMs": 0.7,
+        "httpEndAfterMs": 9.8,
+        "httpMs": 9.1,
+        "storeDocAfterMs": 9.9,
+        "nextFrameAfterMs": 11.5,
+        "savingTrueAfterMs": null,
+        "savingFalseAfterMs": null,
+        "marksAfterDrop": [
+          {
+            "t": 0,
+            "name": "commitDrop:start",
+            "detail": {
+              "kind": "group-append"
+            }
+          },
+          {
+            "t": 0,
+            "name": "drop:event",
+            "detail": {
+              "handler": "onDropGroup",
+              "ms": 0
+            }
+          },
+          {
+            "t": 0.7,
+            "name": "commitDoc:start",
+            "detail": null
+          },
+          {
+            "t": 0.7,
+            "name": "api:commit:start",
+            "detail": null
+          },
+          {
+            "t": 0.7,
+            "name": "http:start",
+            "detail": {
+              "path": "dsh-session-groups/commit"
+            }
+          },
+          {
+            "t": 9.8,
+            "name": "http:end",
+            "detail": {
+              "path": "dsh-session-groups/commit",
+              "status": 200
+            }
+          },
+          {
+            "t": 9.8,
+            "name": "api:commit:end",
+            "detail": {
+              "ok": true,
+              "code": null
+            }
+          },
+          {
+            "t": 9.9,
+            "name": "store:doc",
+            "detail": null
+          },
+          {
+            "t": 9.9,
+            "name": "commitDoc:end",
+            "detail": null
+          },
+          {
+            "t": 11.4,
+            "name": "commit:groups-view",
+            "detail": 1.5
+          },
+          {
+            "t": 11.5,
+            "name": "frame:after-doc",
+            "detail": null
+          },
+          {
+            "t": 11.5,
+            "name": "frame:groups-view",
+            "detail": null
+          }
+        ]
+      },
+      "marks": [
+        {
+          "t": 7186.9,
+          "name": "commitDrop:start",
+          "detail": {
+            "kind": "group-append"
+          }
+        },
+        {
+          "t": 7186.9,
+          "name": "drop:event",
+          "detail": {
+            "handler": "onDropGroup",
+            "ms": 0.1
+          }
+        },
+        {
+          "t": 7187.8,
+          "name": "commitDoc:start",
+          "detail": null
+        },
+        {
+          "t": 7188,
+          "name": "api:commit:start",
+          "detail": null
+        },
+        {
+          "t": 7188.1,
+          "name": "http:start",
+          "detail": {
+            "path": "dsh-session-groups/commit"
+          }
+        },
+        {
+          "t": 7198.3,
+          "name": "http:end",
+          "detail": {
+            "path": "dsh-session-groups/commit",
+            "status": 200
+          }
+        },
+        {
+          "t": 7198.3,
+          "name": "api:commit:end",
+          "detail": {
+            "ok": true,
+            "code": null
+          }
+        },
+        {
+          "t": 7198.3,
+          "name": "store:doc",
+          "detail": null
+        },
+        {
+          "t": 7198.3,
+          "name": "commitDoc:end",
+          "detail": null
+        },
+        {
+          "t": 7200.2,
+          "name": "commit:groups-view",
+          "detail": 1.8
+        },
+        {
+          "t": 7203.3,
+          "name": "frame:after-doc",
+          "detail": null
+        },
+        {
+          "t": 7203.3,
+          "name": "frame:groups-view",
+          "detail": null
+        },
+        {
+          "t": 7338.4,
+          "name": "commitDrop:start",
+          "detail": {
+            "kind": "group-append"
+          }
+        },
+        {
+          "t": 7338.4,
+          "name": "drop:event",
+          "detail": {
+            "handler": "onDropGroup",
+            "ms": 0
+          }
+        },
+        {
+          "t": 7339.1,
+          "name": "commitDoc:start",
+          "detail": null
+        },
+        {
+          "t": 7339.2,
+          "name": "api:commit:start",
+          "detail": null
+        },
+        {
+          "t": 7339.2,
+          "name": "http:start",
+          "detail": {
+            "path": "dsh-session-groups/commit"
+          }
+        },
+        {
+          "t": 7347.9,
+          "name": "http:end",
+          "detail": {
+            "path": "dsh-session-groups/commit",
+            "status": 200
+          }
+        },
+        {
+          "t": 7347.9,
+          "name": "api:commit:end",
+          "detail": {
+            "ok": true,
+            "code": null
+          }
+        },
+        {
+          "t": 7347.9,
+          "name": "store:doc",
+          "detail": null
+        },
+        {
+          "t": 7347.9,
+          "name": "commitDoc:end",
+          "detail": null
+        },
+        {
+          "t": 7349.4,
+          "name": "commit:groups-view",
+          "detail": 1.4
+        },
+        {
+          "t": 7352.4,
+          "name": "frame:after-doc",
+          "detail": null
+        },
+        {
+          "t": 7352.4,
+          "name": "frame:groups-view",
+          "detail": null
+        },
+        {
+          "t": 7489.6,
+          "name": "commitDrop:start",
+          "detail": {
+            "kind": "group-append"
+          }
+        },
+        {
+          "t": 7489.7,
+          "name": "drop:event",
+          "detail": {
+            "handler": "onDropGroup",
+            "ms": 0.1
+          }
+        },
+        {
+          "t": 7490.4,
+          "name": "commitDoc:start",
+          "detail": null
+        },
+        {
+          "t": 7490.5,
+          "name": "api:commit:start",
+          "detail": null
+        },
+        {
+          "t": 7490.5,
+          "name": "http:start",
+          "detail": {
+            "path": "dsh-session-groups/commit"
+          }
+        },
+        {
+          "t": 7500.5,
+          "name": "http:end",
+          "detail": {
+            "path": "dsh-session-groups/commit",
+            "status": 200
+          }
+        },
+        {
+          "t": 7500.5,
+          "name": "api:commit:end",
+          "detail": {
+            "ok": true,
+            "code": null
+          }
+        },
+        {
+          "t": 7500.6,
+          "name": "store:doc",
+          "detail": null
+        },
+        {
+          "t": 7500.7,
+          "name": "commitDoc:end",
+          "detail": null
+        },
+        {
+          "t": 7502.8,
+          "name": "commit:groups-view",
+          "detail": 2.1
+        },
+        {
+          "t": 7503,
+          "name": "frame:after-doc",
+          "detail": null
+        },
+        {
+          "t": 7503,
+          "name": "frame:groups-view",
+          "detail": null
+        },
+        {
+          "t": 7644.5,
+          "name": "commitDrop:start",
+          "detail": {
+            "kind": "group-append"
+          }
+        },
+        {
+          "t": 7644.5,
+          "name": "drop:event",
+          "detail": {
+            "handler": "onDropGroup",
+            "ms": 0
+          }
+        },
+        {
+          "t": 7645.3,
+          "name": "commitDoc:start",
+          "detail": null
+        },
+        {
+          "t": 7645.3,
+          "name": "api:commit:start",
+          "detail": null
+        },
+        {
+          "t": 7645.4,
+          "name": "http:start",
+          "detail": {
+            "path": "dsh-session-groups/commit"
+          }
+        },
+        {
+          "t": 7656.3,
+          "name": "http:end",
+          "detail": {
+            "path": "dsh-session-groups/commit",
+            "status": 200
+          }
+        },
+        {
+          "t": 7656.3,
+          "name": "api:commit:end",
+          "detail": {
+            "ok": true,
+            "code": null
+          }
+        },
+        {
+          "t": 7656.4,
+          "name": "store:doc",
+          "detail": null
+        },
+        {
+          "t": 7656.4,
+          "name": "commitDoc:end",
+          "detail": null
+        },
+        {
+          "t": 7658.3,
+          "name": "commit:groups-view",
+          "detail": 1.9
+        },
+        {
+          "t": 7658.3,
+          "name": "frame:after-doc",
+          "detail": null
+        },
+        {
+          "t": 7658.3,
+          "name": "frame:groups-view",
+          "detail": null
+        },
+        {
+          "t": 7798.1,
+          "name": "commitDrop:start",
+          "detail": {
+            "kind": "group-append"
+          }
+        },
+        {
+          "t": 7798.1,
+          "name": "drop:event",
+          "detail": {
+            "handler": "onDropGroup",
+            "ms": 0
+          }
+        },
+        {
+          "t": 7798.8,
+          "name": "commitDoc:start",
+          "detail": null
+        },
+        {
+          "t": 7798.9,
+          "name": "api:commit:start",
+          "detail": null
+        },
+        {
+          "t": 7798.9,
+          "name": "http:start",
+          "detail": {
+            "path": "dsh-session-groups/commit"
+          }
+        },
+        {
+          "t": 7807.3,
+          "name": "http:end",
+          "detail": {
+            "path": "dsh-session-groups/commit",
+            "status": 200
+          }
+        },
+        {
+          "t": 7807.3,
+          "name": "api:commit:end",
+          "detail": {
+            "ok": true,
+            "code": null
+          }
+        },
+        {
+          "t": 7807.4,
+          "name": "store:doc",
+          "detail": null
+        },
+        {
+          "t": 7807.4,
+          "name": "commitDoc:end",
+          "detail": null
+        },
+        {
+          "t": 7808.7,
+          "name": "commit:groups-view",
+          "detail": 1.3
+        },
+        {
+          "t": 7808.7,
+          "name": "frame:after-doc",
+          "detail": null
+        },
+        {
+          "t": 7808.7,
+          "name": "frame:groups-view",
+          "detail": null
+        },
+        {
+          "t": 7952.6,
+          "name": "commitDrop:start",
+          "detail": {
+            "kind": "group-append"
+          }
+        },
+        {
+          "t": 7952.6,
+          "name": "drop:event",
+          "detail": {
+            "handler": "onDropGroup",
+            "ms": 0
+          }
+        },
+        {
+          "t": 7953.3,
+          "name": "commitDoc:start",
+          "detail": null
+        },
+        {
+          "t": 7953.3,
+          "name": "api:commit:start",
+          "detail": null
+        },
+        {
+          "t": 7953.3,
+          "name": "http:start",
+          "detail": {
+            "path": "dsh-session-groups/commit"
+          }
+        },
+        {
+          "t": 7962.6,
+          "name": "http:end",
+          "detail": {
+            "path": "dsh-session-groups/commit",
+            "status": 200
+          }
+        },
+        {
+          "t": 7962.7,
+          "name": "api:commit:end",
+          "detail": {
+            "ok": true,
+            "code": null
+          }
+        },
+        {
+          "t": 7962.7,
+          "name": "store:doc",
+          "detail": null
+        },
+        {
+          "t": 7962.7,
+          "name": "commitDoc:end",
+          "detail": null
+        },
+        {
+          "t": 7964.1,
+          "name": "commit:groups-view",
+          "detail": 1.3
+        },
+        {
+          "t": 7970.6,
+          "name": "frame:after-doc",
+          "detail": null
+        },
+        {
+          "t": 7970.6,
+          "name": "frame:groups-view",
+          "detail": null
+        },
+        {
+          "t": 8108,
+          "name": "commitDrop:start",
+          "detail": {
+            "kind": "group-append"
+          }
+        },
+        {
+          "t": 8108,
+          "name": "drop:event",
+          "detail": {
+            "handler": "onDropGroup",
+            "ms": 0.1
+          }
+        },
+        {
+          "t": 8108.8,
+          "name": "commitDoc:start",
+          "detail": null
+        },
+        {
+          "t": 8108.8,
+          "name": "api:commit:start",
+          "detail": null
+        },
+        {
+          "t": 8108.8,
+          "name": "http:start",
+          "detail": {
+            "path": "dsh-session-groups/commit"
+          }
+        },
+        {
+          "t": 8117.6,
+          "name": "http:end",
+          "detail": {
+            "path": "dsh-session-groups/commit",
+            "status": 200
+          }
+        },
+        {
+          "t": 8117.6,
+          "name": "api:commit:end",
+          "detail": {
+            "ok": true,
+            "code": null
+          }
+        },
+        {
+          "t": 8117.6,
+          "name": "store:doc",
+          "detail": null
+        },
+        {
+          "t": 8117.6,
+          "name": "commitDoc:end",
+          "detail": null
+        },
+        {
+          "t": 8119.1,
+          "name": "commit:groups-view",
+          "detail": 1.5
+        },
+        {
+          "t": 8120.9,
+          "name": "frame:after-doc",
+          "detail": null
+        },
+        {
+          "t": 8120.9,
+          "name": "frame:groups-view",
+          "detail": null
+        },
+        {
+          "t": 8259.5,
+          "name": "commitDrop:start",
+          "detail": {
+            "kind": "group-append"
+          }
+        },
+        {
+          "t": 8259.5,
+          "name": "drop:event",
+          "detail": {
+            "handler": "onDropGroup",
+            "ms": 0
+          }
+        },
+        {
+          "t": 8260.2,
+          "name": "commitDoc:start",
+          "detail": null
+        },
+        {
+          "t": 8260.2,
+          "name": "api:commit:start",
+          "detail": null
+        },
+        {
+          "t": 8260.2,
+          "name": "http:start",
+          "detail": {
+            "path": "dsh-session-groups/commit"
+          }
+        },
+        {
+          "t": 8268.7,
+          "name": "http:end",
+          "detail": {
+            "path": "dsh-session-groups/commit",
+            "status": 200
+          }
+        },
+        {
+          "t": 8268.7,
+          "name": "api:commit:end",
+          "detail": {
+            "ok": true,
+            "code": null
+          }
+        },
+        {
+          "t": 8268.8,
+          "name": "store:doc",
+          "detail": null
+        },
+        {
+          "t": 8268.8,
+          "name": "commitDoc:end",
+          "detail": null
+        },
+        {
+          "t": 8270.2,
+          "name": "commit:groups-view",
+          "detail": 1.4
+        },
+        {
+          "t": 8270.4,
+          "name": "frame:after-doc",
+          "detail": null
+        },
+        {
+          "t": 8270.4,
+          "name": "frame:groups-view",
+          "detail": null
+        },
+        {
+          "t": 8414.4,
+          "name": "commitDrop:start",
+          "detail": {
+            "kind": "group-append"
+          }
+        },
+        {
+          "t": 8414.4,
+          "name": "drop:event",
+          "detail": {
+            "handler": "onDropGroup",
+            "ms": 0
+          }
+        },
+        {
+          "t": 8415.1,
+          "name": "commitDoc:start",
+          "detail": null
+        },
+        {
+          "t": 8415.1,
+          "name": "api:commit:start",
+          "detail": null
+        },
+        {
+          "t": 8415.1,
+          "name": "http:start",
+          "detail": {
+            "path": "dsh-session-groups/commit"
+          }
+        },
+        {
+          "t": 8424.2,
+          "name": "http:end",
+          "detail": {
+            "path": "dsh-session-groups/commit",
+            "status": 200
+          }
+        },
+        {
+          "t": 8424.2,
+          "name": "api:commit:end",
+          "detail": {
+            "ok": true,
+            "code": null
+          }
+        },
+        {
+          "t": 8424.3,
+          "name": "store:doc",
+          "detail": null
+        },
+        {
+          "t": 8424.3,
+          "name": "commitDoc:end",
+          "detail": null
+        },
+        {
+          "t": 8425.8,
+          "name": "commit:groups-view",
+          "detail": 1.5
+        },
+        {
+          "t": 8425.9,
+          "name": "frame:after-doc",
+          "detail": null
+        },
+        {
+          "t": 8425.9,
+          "name": "frame:groups-view",
+          "detail": null
+        }
+      ]
+    },
+    "stress": null
+  },
+  "result": "PASS",
+  "consoleErrors": [],
+  "pageErrors": []
+}

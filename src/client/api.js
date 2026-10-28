@@ -6,6 +6,8 @@
  * enough to unit-test by injecting `fetchImpl` / `baseURI`.
  */
 
+import { perfMark } from './perf.js'
+
 /** Relative load route (host mounts it at the origin root). */
 export const LOAD_PATH = 'dsh-session-groups/load'
 /** Relative commit route. */
@@ -55,6 +57,7 @@ export const createApi = ({ fetchImpl = globalThis.fetch, baseURI, documentRef =
 
   const request = async (path, init) => {
     if (typeof fetchImpl !== 'function') return { networkError: 'fetch-unavailable' }
+    perfMark('http:start', { path })
     try {
       const response = await fetchImpl(url(path), init)
       const contentType = typeof response.headers?.get === 'function' ? response.headers.get('content-type') : null
@@ -66,8 +69,10 @@ export const createApi = ({ fetchImpl = globalThis.fetch, baseURI, documentRef =
           body = null
         }
       }
+      perfMark('http:end', { path, status: response.status })
       return { status: response.status, ok: response.ok === true, contentType, body }
     } catch (error) {
+      perfMark('http:error', { path })
       return { networkError: String(error?.message ?? error) }
     }
   }

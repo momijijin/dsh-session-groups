@@ -1,11 +1,44 @@
 # V1/V1.1 Test Results（QA 验证线）
 
 > Owner：QA（task-6/7）。上游：`docs/TEST-PLAN.md`、`docs/CONTRACTS.md`（frozen）、`docs/V1-PLAN.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`。
-> 环境：隔离 `DSH_HOME=<repo>\.spike-homes\qa` + profile `groups-spike` + 端口 **4402**；直调 Desktop runtime；
+> 环境：隔离 `DSH_HOME=<repo>\.spike-homes\qa` + profile `groups-spike` + 端口 **4402**（0.2.2 UI patch 用独立 home `.spike-homes/qa-0.2.2-ui-2` + 4406 与并行 QA 隔离）；直调 Desktop runtime；
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
-## 0. V1.1 patch 0.2.1 最终结论（2026-10-28 21:50，排版 + 间距对齐）
+## 0. V1.1 patch 0.2.2 最终结论（2026-10-29 00:05，UI layout + 主题感知 + drag perf）
+
+**V1.1 patch 0.2.2 UI layout + 拖拽性能 QA 验证线全绿 PASS（最终复跑隔离 home `.spike-homes/qa-0.2.2-e2e-2` + 4405）：**
+
+| 层 | 结果 | 证据 |
+|---|---|---|
+| `npm test`（仓库全量） | **190/190 PASS**（0 fail / 0 skip，~3.9s；本 patch 新增 5 条 UI layout + 3 条 `sameDropTarget` 单测） | 控制台输出 |
+| E2E 17 步（`e2e/groups.spec.mjs`，零依赖 CDP） | **17/17 PASS**（step 时间和 75,889 ms，~76s）；`consoleErrors=[]`、`pageErrors=[]` | `scripts/qa/evidence-perf/e2e-20261029-000515.json` + 17 张截图（`screenshots/e2e/`） |
+| step 10 重启 hydration | **PASS**（18.1s；groups=4、filter=hidden、`blankLifecycle.drift=false`） | 同上 step 10 detail |
+| **step 16 排版+布局** | **PASS**（2.8s）：host/root 14/14 + family 继承；组行 34/会话行 32；组名/标题 14/20；footer 高 28、两段标签 13px/16px、active accent；header action `+`/搜索/视图选项各 28×28、glyph 16、顺序正确；header 收起 36px / 展开搜索 74px + 搜索行 30px；行 padding 8/8、column-gap 6、tree/组体/组线 row-gap 2、组缩进 10/10；搜索列表 6/10 + gap 8/2；**264px header/tree 252/252 无溢出，展开搜索时 header/search row/input 也无溢出** | 同上 step 16 detail |
+| **step 17 深色主题 surfaces** | **PASS**（1.8s）：`body[data-ds-dark-theme]` 下搜索结果 bg `rgb(42,43,46)` / text `rgb(249,250,251)`（13.61:1）、菜单 13.61:1、对话框 bg `rgb(44,44,46)`（13.34:1）、dialog input 15.03:1、search input 15.03:1、view-options popover 同菜单材质；全部非白；恢复原 theme 属性 | 同上 step 17 detail |
+| 拖拽性能探针（803 行压测） | **PASS**：hold 45 事件 `GroupsView` 47→3、`SessionRow` 1,175→75、`GroupNode` 37,741→2,409；paced 32→10 / 800→250；frame avg 24.07→17.15ms；drop→next frame 17.2→16.2ms；`saving` 标记消失 | `scripts/qa/evidence-perf/perf-before-800.json` / `perf-after-800.json`；`.superpowers/sdd/2026-10-28-session-groups-v1.1/ui-perf-report.md` |
+| setup（隔离 home 重建） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client build **176,007 bytes** / sha256 `59f45afa9a1df79a1d9d9fcbd41ef40e40ffb577ee338bbb6b6aff4c27842b90`；package version `0.2.2` | `scripts/qa/evidence-perf/setup-20261029-000227.json` |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.2.tgz`（**113,452 bytes**；unpacked **447,642**；**33 files**；sha256 `3625A5F23968EDB83A79859B442FD1A54A39E220F8153BF60A9E816CA4865DC7`） | 本文件 §0.2 |
+| 隔离状态 | `.spike-homes/qa-0.2.2-e2e-2`（+ 0.2.2 UI/perf lanes）保留；4405/4406 已释放；真实 home 零写入 | setup evidence |
+
+### 0.1 0.2.2 UI layout 修复明细（本次 patch）
+
+- **footer**：旧单按钮改为两段 `分组视图 / 工作区视图`（容器 28px、段 28px、13px/20 文本、16px 图标、6px gap，active 段 accent 文本 + 14% accent 底）；点击分别 `setMode('groups')` / `setMode('workspace')`，非盲 toggle；rail 下两段堆叠为 36px 图标按钮（标签由 CSS 隐藏）。
+- **header**：标题 `分组` 改为 14/20 primary 文本 + 16px accent folder 图标；右侧固定 `+` → 搜索 → 视图选项（各 28×28 / 16px glyph）；搜索字段默认不渲染，点搜索图标展开 30px 搜索行（打开即聚焦）；正常 header 移除「返回工作区」按钮（仅 FlatFallback 保留）。
+- **归档三态**：移入 view-options popover（3 行 × 30px，active 行 check）；点击复用既有 `archive-filter` dispatch 并关闭；Escape/点外关闭；按钮 `data-filter` 保留筛选状态。
+- **主题 surfaces**：搜索下拉/菜单/view-options 用 `--dsw-specific-menu`（fallback layer-2/Canvas），对话框 `--dsw-alias-bg-layer-2`，搜索/对话框输入 `--dsw-alias-bg-layer-1`，边框 `--dsw-alias-border-l2/l3`，文本 `--dsw-alias-label-primary/secondary`；移除 `--dsw-elevation-surface` 与所有 `#fff` surface；`Canvas`/`CanvasText` 仅作最后 fallback。
+- **拖拽性能（本次同批修复）**：`sameDropTarget` 稳定目标比较 + `setDropTargetTracked` 去重，dragover 目标未变时不再触发 React 全树渲染；`commitDoc` 移除无人消费的 `saving:true/false` 两次全树渲染（state/action 保留兼容）。基准/复测见 `scripts/qa/evidence-perf/`，根因与逐项数字见 `.superpowers/sdd/2026-10-28-session-groups-v1.1/ui-perf-report.md`。
+- **不变**：数据模型/Host 路由/存储/宽度/组拖/搜索逻辑未改；无插件字号设置、无新增依赖/配置。
+
+### 0.2 0.2.2 打包记录（UI layout patch）
+
+- 命令：`npm pack`（工作树 = 0.2.2 发布文件；最终 `npm run build` 后重新打包，`lib/client.js` 176,007 bytes；`files` 只含发布文件）。
+- 产物：`dsh-session-groups-0.2.2.tgz`；**113,452 bytes**；unpacked **447,642 bytes**；**33 files**。
+- sha256：`3625A5F23968EDB83A79859B442FD1A54A39E220F8153BF60A9E816CA4865DC7`。
+- 内容：`src/**`（26）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 33）。
+- **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`spike/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
+
+## 0A. V1.1 patch 0.2.1 最终结论（2026-10-28 21:50，排版 + 间距对齐）
 
 **V1.1 patch 0.2.1 spacing QA 验证线全绿 PASS（隔离 home `.spike-homes/qa-0.2.1-spacing` + 4402）：**
 
@@ -38,9 +71,9 @@
 - 内容：`src/**`（25）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 32）。
 - **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`spike/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
 
-## 0A. V1.1 patch 0.2.1 typography-only（2026-10-28 21:24，历史）
+## 0B. V1.1 patch 0.2.1 typography-only（2026-10-28 21:24，历史）
 
-**V1.1 patch 0.2.1 typography-only QA 验证线（历史；已被 §0 spacing patch 取代，隔离 home `.spike-homes/qa-0.2.1-final` + 4402）：**
+**V1.1 patch 0.2.1 typography-only QA 验证线（历史；已被 §0A spacing patch 取代，隔离 home `.spike-homes/qa-0.2.1-final` + 4402）：**
 
 | 层 | 结果 | 证据 |
 |---|---|---|
@@ -68,7 +101,7 @@
 - 内容：`src/**`（25）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 32）。
 - **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`spike/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
 
-## 0B. V1.1（0.2.0）最终结论（2026-10-28 19:24，历史）
+## 0C. V1.1（0.2.0）最终结论（2026-10-28 19:24，历史）
 
 **V1.1 QA 验证线全绿 PASS（0.2.0，隔离 home `.spike-homes/qa` + 4402）：**
 
@@ -102,7 +135,7 @@
 - 内容：`src/**`（25）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`。
 - **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`spike/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
 
-## 0C. V1 最终结论（2026-10-19 02:51，历史）
+## 0D. V1 最终结论（2026-10-19 02:51，历史）
 
 **V1 QA 验证线全绿 PASS：**
 
@@ -117,7 +150,7 @@
 | setup / teardown（隔离 home） | **PASS 18/18** / **PASS 6/6**；真实 home fingerprint 前后一致；`.git` 与仓库根未被触碰 | `evidence/setup-20261019-025017.json`、`evidence/teardown-20261019-025300.json` |
 | 真实 home 安全 | 全程零写入（四处 fingerprint 一致）；`.spike-homes/qa` 已整删；4402 已释放 | 同上 |
 
-## 1. E2E 12 步明细（V1 终验，`e2e-20261019-025116.json`；V1.1 新增 13-16 见 §0/§0B.1）
+## 1. E2E 12 步明细（V1 终验，`e2e-20261019-025116.json`；V1.1 新增 13-17 见 §0/§0C.1）
 
 | # | 步骤 | 结果 | 关键观察 |
 |---|---|---|---|
@@ -185,7 +218,7 @@ cd C:\Users\Momiji\Projects\dsh-session-groups
 # 仓库全量测试（含 QA 独立线）
 npm test
 
-# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 16 步 → audit → teardown）
+# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 17 步 → audit → teardown）
 pwsh -NoProfile -File scripts/qa/run-v1.ps1
 
 # 分步
@@ -200,9 +233,10 @@ E2E 期间 4402 为 QA 独占；client 用复制 home + 4403，互不干扰。
 
 ## 7. 更新记录
 
+- 2026-10-29 00:05：**0.2.2 UI layout + 主题感知 + drag perf patch（最终复跑）** —— `npm test` 190/190；E2E **17/17 PASS**（step 时间和 75,889ms；step 1 footer 两段标签/active/显式 setMode 往返；step 2 header 顺序/搜索收起/view-options 三行 30px + Escape/点外关闭；step 13/16 header 36px + 264px 展开搜索无溢出；step 16 footer/header 度量；step 17 深色 surfaces 对比度 13.3–17.4；`console/pageErrors=[]`；step 10 PASS 18.1s）；setup 18/18（`removed=0`、client build 176,007 bytes / sha `59f45afa…`）；`npm pack` 33 files / 113,452 bytes / sha256 `3625A5F2…`；`.spike-homes/qa-0.2.2-e2e-2` 保留，真实 home 零写入。
 - 2026-10-28 21:50：**0.2.1 间距对齐 patch** —— `npm test` 183/183；E2E **16/16 PASS**（step 16 扩充间距断言：行 padding 8/8 + gap 6、tree/组体/组线 row-gap 2、组缩进 10/10、header 4/6/8/2 + row-gap 8 + 78px、搜索 6/10 + gap 8/2、264px header/tree 252/252 无溢出；`console/pageErrors=[]`；step 10 PASS 19.1s）；setup 18/18（`removed=0`、client sha `cef4fb47…`）；`npm pack` 32 files / 103,874 bytes / sha256 `4ED5DE48…`；`.spike-homes/qa-0.2.1-spacing` 保留。
 - 2026-10-28 21:24：**0.2.1 排版对齐 patch** —— `npm test` 183/183；E2E **16/16 PASS**（新增 step 16：root 继承宿主 14px、组行 34/会话行 32、标题 14/20、workspace 徽标 12、搜索框 13/30、48 个图标全 16px；`console/pageErrors=[]`；step 10 PASS 17.2s）；setup 18/18（`removed=0`）；`npm pack` 32 files / 103,391 bytes；`.spike-homes/qa-0.2.1-final` 保留待最终清理。
 - 2026-10-28 19:24：**final review fix wave** —— `npm test` 183/183、E2E 15/15 PASS（console/pageErrors 空；step 2 加 hydration wait；step 13 快速释放/800→1440 复位；step 14 真实 `+` 指针拖拽守卫、中间 50%、同位置 no-op、启用 move-up；step 15 嵌套祖先 reveal、only→all、键盘滚动 listbox）、audit commit 11/11 PASS（rev 31→32）、setup 18/18 PASS、`npm pack` 32 files；`.spike-homes/qa` 保留待最终清理。
-- 2026-10-28 18:07：V1.1 QA 全绿（0.2.0）—— `npm test` 181/181、E2E 15/15 PASS（step 10 含 hydration wait）、audit commit 11/11 PASS（rev 29→30）、setup 18/18 PASS；`.spike-homes/qa` 按任务要求保留待最终清理；冷启动两次 step 2 失败证据见 §0B.2。
+- 2026-10-28 18:07：V1.1 QA 全绿（0.2.0）—— `npm test` 181/181、E2E 15/15 PASS（step 10 含 hydration wait）、audit commit 11/11 PASS（rev 29→30）、setup 18/18 PASS；`.spike-homes/qa` 按任务要求保留待最终清理；冷启动两次 step 2 失败证据见 §0C.2。
 - 2026-10-19 02:51：V1 QA 终验全绿 —— `npm test` 151/151、E2E 12/12 PASS、audit load 10/10 + commit 11/11 PASS、setup 18/18 + teardown 6/6 PASS；真实 home 与 `.git` 零写入；`.spike-homes/qa` 已清理、4402 已释放。
 - 2026-10-18 23:2x：初版（Host 集成 16/16、client-logic 18+1、E2E BLOCKED 等 client build）。

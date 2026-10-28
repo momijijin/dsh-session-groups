@@ -1,0 +1,364 @@
+{
+  "kind": "host-write-audit-verify",
+  "createdAt": "2026-10-28T16:04:35.6866892Z",
+  "mode": "verify",
+  "baselinePath": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\scripts\\qa\\evidence-perf\\audit-baseline-20261029-000353.json",
+  "baseline": {
+    "kind": "host-write-audit-snapshot",
+    "label": "baseline",
+    "createdAt": "2026-10-28T16:03:56.6596648Z",
+    "spikeHome": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2",
+    "realDshHome": "C:\\Users\\Momiji\\.dsh",
+    "workspaceJson": {
+      "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\storages\\workspace.json",
+      "exists": true,
+      "sha256": "3fff64a86db55a1342292995c6feed15fff89995524ad1e86a1e3d343fc342c3",
+      "length": 9886,
+      "mtimeUtc": "2026-10-28T16:03:03.7345048Z"
+    },
+    "groupFile": {
+      "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\storages\\dsh-session-groups.json",
+      "exists": false,
+      "sha256": null,
+      "length": null,
+      "mtimeUtc": null,
+      "revision": null,
+      "valid": false,
+      "warning": null
+    },
+    "sampleSessions": [
+      {
+        "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\sessions\\--C-Users-Momiji-CosineVoiceProjects--\\4a3761cf-bfca-430e-b67f-6c2bf1252a19",
+        "sessionId": "4a3761cf-bfca-430e-b67f-6c2bf1252a19",
+        "workspaceDir": "--C-Users-Momiji-CosineVoiceProjects--",
+        "fileCount": 1,
+        "totalBytes": 756272,
+        "manifestHash": "1f6893ed7d0d0709b9a0bf8c921e32277b9bbe57eb5632fa7916c9967802b7ea",
+        "files": [
+          {
+            "path": "session.v4.jsonl.zstd",
+            "sha256": "1029ef8929ac8553863868084f6b0125de558d5071b6adebb0e480eb3baa1d2d",
+            "length": 756272,
+            "mtimeUtc": "2026-10-28T15:03:12.1606984Z"
+          }
+        ]
+      },
+      {
+        "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\sessions\\--C-Users-Momiji-Projects--\\e49be948-5243-45d2-8765-4f5e6f19b18d",
+        "sessionId": "e49be948-5243-45d2-8765-4f5e6f19b18d",
+        "workspaceDir": "--C-Users-Momiji-Projects--",
+        "fileCount": 1,
+        "totalBytes": 666734,
+        "manifestHash": "7d58d5b04479e4ba6f401f1fb784ff50a193432cf51df7b78bbe6d089ca39317",
+        "files": [
+          {
+            "path": "session.v4.jsonl.zstd",
+            "sha256": "9b69b057224ee7a8b1dbb9a57929d20a693474190ad6ae2e8cebc236f8b7bbbd",
+            "length": 666734,
+            "mtimeUtc": "2026-10-28T14:44:29.006656Z"
+          }
+        ]
+      },
+      {
+        "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\sessions\\--C-Users-Momiji-CosineVoiceProjects--\\2d222b2f-f37f-4e99-8bdd-9aded707926e",
+        "sessionId": "2d222b2f-f37f-4e99-8bdd-9aded707926e",
+        "workspaceDir": "--C-Users-Momiji-CosineVoiceProjects--",
+        "fileCount": 1,
+        "totalBytes": 465178,
+        "manifestHash": "8acd337001893e9c35c913fc03bb5b57e82b26b1495f71a20a6a3688da4e5819",
+        "files": [
+          {
+            "path": "session.v4.jsonl.zstd",
+            "sha256": "a1eb5bc27c6858ac6eccd09794f8390ad410404aefc9a5b091e80cc745b42df4",
+            "length": 465178,
+            "mtimeUtc": "2026-10-28T14:47:29.9902464Z"
+          }
+        ]
+      }
+    ],
+    "storagesTopLevel": [
+      {
+        "name": "session_projcache",
+        "kind": "dir",
+        "sha256": null,
+        "length": null
+      },
+      {
+        "name": "workspace.json",
+        "kind": "file",
+        "sha256": "3fff64a86db55a1342292995c6feed15fff89995524ad1e86a1e3d343fc342c3",
+        "length": 9886
+      }
+    ],
+    "profiles": {
+      "desktop": {
+        "profile": "desktop",
+        "dir": "C:\\Users\\Momiji\\.dsh\\profiles\\desktop",
+        "exists": true,
+        "topLevel": [
+          ".dsh-market",
+          ".plugin-manager",
+          "cordis.patch.yml",
+          "cordis.yml",
+          "node_modules",
+          "package.json",
+          "pnpm-lock.yaml",
+          "pnpm-workspace.yaml"
+        ],
+        "files": {
+          "package.json": "28d552d9a06ca836d04ce5b94f2b0d03837941f34f7a340cc8c36430a4bac827",
+          "cordis.patch.yml": "a981394c400c9798a208a19cd9f4eddd9ff765edebf4b74655bd1e403f0ea16b",
+          "pnpm-lock.yaml": "11374cf5679ad4ab51992e612b4ef226e80230ffbbcf10e3a1010d316c9dd23d",
+          "cordis.yml": "c300dcf2ebc5f02062d6591268d29d3db6fe45e0cb138f5467276fe2ba06076e",
+          "pnpm-workspace.yaml": "ae7c5b68e2f157528e62885804e69e88583897b775e03c86fcbe52feaf498aba"
+        },
+        "canonicalHash": "0aa18a841975aa5b02d3710758cf52a4f650574ff8cd9eb37bb2098d3edbf42c"
+      },
+      "web": {
+        "profile": "web",
+        "dir": "C:\\Users\\Momiji\\.dsh\\profiles\\web",
+        "exists": true,
+        "topLevel": [
+          "cordis.patch.yml",
+          "cordis.yml",
+          "node_modules",
+          "package.json",
+          "pnpm-workspace.yaml"
+        ],
+        "files": {
+          "package.json": "b07f71cba5c341f6bd6ebf1316573588817e3a15629a86f11d34d4a01a82c94b",
+          "cordis.patch.yml": "ef189a8c27db6d63930aa3046a3040482e952eafcb7487c644d508e8d461f027",
+          "pnpm-lock.yaml": null,
+          "cordis.yml": "c300dcf2ebc5f02062d6591268d29d3db6fe45e0cb138f5467276fe2ba06076e",
+          "pnpm-workspace.yaml": "ae7c5b68e2f157528e62885804e69e88583897b775e03c86fcbe52feaf498aba"
+        },
+        "canonicalHash": "2038ffbd8df7b7b2746ec0fbd4787e02c55400c0902ddcce6e9280ccc3c6e899"
+      }
+    }
+  },
+  "after": {
+    "kind": "host-write-audit-snapshot",
+    "label": "after",
+    "createdAt": "2026-10-28T16:04:35.6179783Z",
+    "spikeHome": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2",
+    "realDshHome": "C:\\Users\\Momiji\\.dsh",
+    "workspaceJson": {
+      "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\storages\\workspace.json",
+      "exists": true,
+      "sha256": "0fe0869502229d7b6cc671e3cf00cf26604d5f1d51245ffbb28d30688025e0da",
+      "length": 9945,
+      "mtimeUtc": "2026-10-28T16:04:08.1398600Z"
+    },
+    "groupFile": {
+      "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\storages\\dsh-session-groups.json",
+      "exists": true,
+      "sha256": "fd038faa6ee4f02e5783a443546485f6e844961595cee535b1054fd3330a13be",
+      "length": 1285,
+      "mtimeUtc": "2026-10-28T16:04:05.2131947Z",
+      "revision": 16,
+      "valid": true,
+      "warning": null
+    },
+    "sampleSessions": [
+      {
+        "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\sessions\\--C-Users-Momiji-CosineVoiceProjects--\\4a3761cf-bfca-430e-b67f-6c2bf1252a19",
+        "sessionId": "4a3761cf-bfca-430e-b67f-6c2bf1252a19",
+        "workspaceDir": "--C-Users-Momiji-CosineVoiceProjects--",
+        "fileCount": 1,
+        "totalBytes": 756272,
+        "manifestHash": "1f6893ed7d0d0709b9a0bf8c921e32277b9bbe57eb5632fa7916c9967802b7ea",
+        "files": [
+          {
+            "path": "session.v4.jsonl.zstd",
+            "sha256": "1029ef8929ac8553863868084f6b0125de558d5071b6adebb0e480eb3baa1d2d",
+            "length": 756272,
+            "mtimeUtc": "2026-10-28T15:03:12.1606984Z"
+          }
+        ]
+      },
+      {
+        "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\sessions\\--C-Users-Momiji-Projects--\\e49be948-5243-45d2-8765-4f5e6f19b18d",
+        "sessionId": "e49be948-5243-45d2-8765-4f5e6f19b18d",
+        "workspaceDir": "--C-Users-Momiji-Projects--",
+        "fileCount": 1,
+        "totalBytes": 666734,
+        "manifestHash": "7d58d5b04479e4ba6f401f1fb784ff50a193432cf51df7b78bbe6d089ca39317",
+        "files": [
+          {
+            "path": "session.v4.jsonl.zstd",
+            "sha256": "9b69b057224ee7a8b1dbb9a57929d20a693474190ad6ae2e8cebc236f8b7bbbd",
+            "length": 666734,
+            "mtimeUtc": "2026-10-28T14:44:29.0066560Z"
+          }
+        ]
+      },
+      {
+        "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\sessions\\--C-Users-Momiji-CosineVoiceProjects--\\2d222b2f-f37f-4e99-8bdd-9aded707926e",
+        "sessionId": "2d222b2f-f37f-4e99-8bdd-9aded707926e",
+        "workspaceDir": "--C-Users-Momiji-CosineVoiceProjects--",
+        "fileCount": 1,
+        "totalBytes": 465178,
+        "manifestHash": "8acd337001893e9c35c913fc03bb5b57e82b26b1495f71a20a6a3688da4e5819",
+        "files": [
+          {
+            "path": "session.v4.jsonl.zstd",
+            "sha256": "a1eb5bc27c6858ac6eccd09794f8390ad410404aefc9a5b091e80cc745b42df4",
+            "length": 465178,
+            "mtimeUtc": "2026-10-28T14:47:29.9902464Z"
+          }
+        ]
+      }
+    ],
+    "storagesTopLevel": [
+      {
+        "name": "dsh-session-groups.json",
+        "kind": "file",
+        "sha256": "fd038faa6ee4f02e5783a443546485f6e844961595cee535b1054fd3330a13be",
+        "length": 1285
+      },
+      {
+        "name": "dsh-session-groups.json.bak",
+        "kind": "file",
+        "sha256": "257f3f30f2aeb7521e217df09b89d8c3a1518d646e11d0a0a8530faade3697c0",
+        "length": 1229
+      },
+      {
+        "name": "session_projcache",
+        "kind": "dir",
+        "sha256": null,
+        "length": null
+      },
+      {
+        "name": "workspace.json",
+        "kind": "file",
+        "sha256": "0fe0869502229d7b6cc671e3cf00cf26604d5f1d51245ffbb28d30688025e0da",
+        "length": 9945
+      }
+    ],
+    "profiles": {
+      "desktop": {
+        "profile": "desktop",
+        "dir": "C:\\Users\\Momiji\\.dsh\\profiles\\desktop",
+        "exists": true,
+        "topLevel": [
+          ".dsh-market",
+          ".plugin-manager",
+          "cordis.patch.yml",
+          "cordis.yml",
+          "node_modules",
+          "package.json",
+          "pnpm-lock.yaml",
+          "pnpm-workspace.yaml"
+        ],
+        "files": {
+          "pnpm-workspace.yaml": "ae7c5b68e2f157528e62885804e69e88583897b775e03c86fcbe52feaf498aba",
+          "cordis.yml": "c300dcf2ebc5f02062d6591268d29d3db6fe45e0cb138f5467276fe2ba06076e",
+          "pnpm-lock.yaml": "11374cf5679ad4ab51992e612b4ef226e80230ffbbcf10e3a1010d316c9dd23d",
+          "cordis.patch.yml": "a981394c400c9798a208a19cd9f4eddd9ff765edebf4b74655bd1e403f0ea16b",
+          "package.json": "28d552d9a06ca836d04ce5b94f2b0d03837941f34f7a340cc8c36430a4bac827"
+        },
+        "canonicalHash": "0aa18a841975aa5b02d3710758cf52a4f650574ff8cd9eb37bb2098d3edbf42c"
+      },
+      "web": {
+        "profile": "web",
+        "dir": "C:\\Users\\Momiji\\.dsh\\profiles\\web",
+        "exists": true,
+        "topLevel": [
+          "cordis.patch.yml",
+          "cordis.yml",
+          "node_modules",
+          "package.json",
+          "pnpm-workspace.yaml"
+        ],
+        "files": {
+          "pnpm-workspace.yaml": "ae7c5b68e2f157528e62885804e69e88583897b775e03c86fcbe52feaf498aba",
+          "cordis.yml": "c300dcf2ebc5f02062d6591268d29d3db6fe45e0cb138f5467276fe2ba06076e",
+          "pnpm-lock.yaml": null,
+          "cordis.patch.yml": "ef189a8c27db6d63930aa3046a3040482e952eafcb7487c644d508e8d461f027",
+          "package.json": "b07f71cba5c341f6bd6ebf1316573588817e3a15629a86f11d34d4a01a82c94b"
+        },
+        "canonicalHash": "2038ffbd8df7b7b2746ec0fbd4787e02c55400c0902ddcce6e9280ccc3c6e899"
+      }
+    }
+  },
+  "expectedGroupChange": "change",
+  "comparison": {
+    "workspaceUnchanged": false,
+    "groupFileChanged": true,
+    "groupExpectationMet": true,
+    "sampleSessions": [
+      {
+        "sessionId": "4a3761cf-bfca-430e-b67f-6c2bf1252a19",
+        "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\sessions\\--C-Users-Momiji-CosineVoiceProjects--\\4a3761cf-bfca-430e-b67f-6c2bf1252a19",
+        "manifestHash": "1f6893ed7d0d0709b9a0bf8c921e32277b9bbe57eb5632fa7916c9967802b7ea",
+        "fileCount": 1,
+        "totalBytes": 756272
+      },
+      {
+        "sessionId": "e49be948-5243-45d2-8765-4f5e6f19b18d",
+        "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\sessions\\--C-Users-Momiji-Projects--\\e49be948-5243-45d2-8765-4f5e6f19b18d",
+        "manifestHash": "7d58d5b04479e4ba6f401f1fb784ff50a193432cf51df7b78bbe6d089ca39317",
+        "fileCount": 1,
+        "totalBytes": 666734
+      },
+      {
+        "sessionId": "2d222b2f-f37f-4e99-8bdd-9aded707926e",
+        "path": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2\\sessions\\--C-Users-Momiji-CosineVoiceProjects--\\2d222b2f-f37f-4e99-8bdd-9aded707926e",
+        "manifestHash": "8acd337001893e9c35c913fc03bb5b57e82b26b1495f71a20a6a3688da4e5819",
+        "fileCount": 1,
+        "totalBytes": 465178
+      }
+    ],
+    "unexpectedStorages": [
+      "workspace.json"
+    ],
+    "warnings": [
+      "host-side session action changed workspace.json (allowed by -AllowHostSessionChanges)",
+      "non-audited storages files changed (host-side activity; not counted as a plugin write): workspace.json"
+    ]
+  },
+  "checks": [
+    {
+      "id": "AUD-1",
+      "description": "workspace.json content unchanged",
+      "pass": true,
+      "detail": "before=3fff64a86db55a1342292995c6feed15fff89995524ad1e86a1e3d343fc342c3 after=0fe0869502229d7b6cc671e3cf00cf26604d5f1d51245ffbb28d30688025e0da (host-side, allowed)"
+    },
+    {
+      "id": "AUD-S1",
+      "description": "sample session unchanged: 4a3761cf-bfca-430e-b67f-6c2bf1252a19",
+      "pass": true,
+      "detail": "files=1; bytes=756272; hash=1f6893ed7d0d0709b9a0bf8c921e32277b9bbe57eb5632fa7916c9967802b7ea"
+    },
+    {
+      "id": "AUD-S2",
+      "description": "sample session unchanged: e49be948-5243-45d2-8765-4f5e6f19b18d",
+      "pass": true,
+      "detail": "files=1; bytes=666734; hash=7d58d5b04479e4ba6f401f1fb784ff50a193432cf51df7b78bbe6d089ca39317"
+    },
+    {
+      "id": "AUD-S3",
+      "description": "sample session unchanged: 2d222b2f-f37f-4e99-8bdd-9aded707926e",
+      "pass": true,
+      "detail": "files=1; bytes=465178; hash=8acd337001893e9c35c913fc03bb5b57e82b26b1495f71a20a6a3688da4e5819"
+    },
+    {
+      "id": "AUD-3",
+      "description": "dsh-session-groups.json expected to change",
+      "pass": true,
+      "detail": "exists(before=False, after=True); revision(before=, after=16); sha(before=, after=fd038faa6ee4f02e5783a443546485f6e844961595cee535b1054fd3330a13be)"
+    },
+    {
+      "id": "AUD-P-desktop",
+      "description": "desktop profile fingerprint unchanged",
+      "pass": true,
+      "detail": "canonical=0aa18a841975aa5b02d3710758cf52a4f650574ff8cd9eb37bb2098d3edbf42c"
+    },
+    {
+      "id": "AUD-P-web",
+      "description": "web profile fingerprint unchanged",
+      "pass": true,
+      "detail": "canonical=2038ffbd8df7b7b2746ec0fbd4787e02c55400c0902ddcce6e9280ccc3c6e899"
+    }
+  ]
+}

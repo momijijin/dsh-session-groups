@@ -1,0 +1,46 @@
+{
+  "kind": "gate0-web",
+  "createdAt": "2026-10-28T16:04:19.4105539Z",
+  "spikeHome": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2",
+  "realDshHome": "C:\\Users\\Momiji\\.dsh",
+  "profile": "groups-spike",
+  "port": 4405,
+  "pid": 128876,
+  "runtime": "C:\\Users\\Momiji\\AppData\\Local\\Programs\\DSH Desktop\\DSH Desktop.exe",
+  "commandLine": "\"C:\\Users\\Momiji\\AppData\\Local\\Programs\\DSH Desktop\\DSH Desktop.exe\" --expose-internals \"C:\\Users\\Momiji\\AppData\\Local\\Programs\\DSH Desktop\\resources\\app\\lib\\desktop-cli.js\" --profile groups-spike --port 4405 --no-open",
+  "url": "http://127.0.0.1:4405/?token=nEv-owIWXzoLFXiacDA861BNDZlQGRKTuRFh_d31zbk",
+  "baseUrl": "http://127.0.0.1:4405/",
+  "authority": "127.0.0.1:4405",
+  "token": "nEv-owIWXzoLFXiacDA861BNDZlQGRKTuRFh_d31zbk",
+  "outLog": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\scripts\\qa\\evidence-perf\\logs\\web-20261029-000419.out.log",
+  "errLog": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\scripts\\qa\\evidence-perf\\logs\\web-20261029-000419.err.log",
+  "rootStatus": 200,
+  "startedAt": "2026-10-28T16:04:20.9800585Z",
+  "checks": [
+    {
+      "id": "WEB-1",
+      "description": "isolated dsh web printed its token URL",
+      "pass": true,
+      "detail": "http://127.0.0.1:4405/?token=***"
+    },
+    {
+      "id": "WEB-2",
+      "description": "token URL returns 200 HTML for the web app",
+      "pass": true,
+      "detail": "status=200; root-div=True; html-bytes=37795"
+    },
+    {
+      "id": "WEB-3",
+      "description": "web app boot payload is present in HTML",
+      "pass": true,
+      "detail": "__DSH_BOOT__=True"
+    },
+    {
+      "id": "WEB-4",
+      "description": "unauthenticated GET / is rejected (auth fence active)",
+      "pass": true,
+      "detail": "status=401 (expected 401)"
+    }
+  ],
+  "result": "PASS"
+}

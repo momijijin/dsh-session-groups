@@ -18,11 +18,19 @@ import {
   sessionTitle,
   ARCHIVE_FILTERS,
   ARCHIVE_FILTER_LABEL_KEYS,
-  nextArchiveFilter,
 } from './filter.js'
-import { hitTest, applyDrop } from './drag.js'
+import { applyDrop, hitTest, sameDropTarget } from './drag.js'
 import { GROUP_DRAG_MIME, resolveGroupDrop } from './group-drag.js'
 import { renderGlyph, renderIcon } from './icons.js'
+import {
+  perfDragOver,
+  perfDropTarget,
+  perfEnabled,
+  perfMark,
+  perfNow,
+  perfRender,
+  perfSample,
+} from './perf.js'
 import { buildSearchIndex, matchSessions, revealSession } from './search.js'
 import {
   applyWidthOverride,
@@ -69,6 +77,21 @@ const useViewStore = () => {
 
 const classNames = (...values) => values.filter(Boolean).join(' ')
 
+/**
+ * Record one GroupsView commit + the next animation frame. Used by the opt-in
+ * perf probe to separate React commit cost from frame pacing; disabled probes
+ * only pay a cached boolean check per render.
+ */
+const usePerfCommit = (name, renderStartedAt) => {
+  useEffect(() => {
+    if (!perfEnabled()) return undefined
+    perfMark(`commit:${name}`, Math.round((perfNow() - renderStartedAt) * 100) / 100)
+    if (typeof globalThis.requestAnimationFrame !== 'function') return undefined
+    const frame = globalThis.requestAnimationFrame(() => perfMark(`frame:${name}`))
+    return () => globalThis.cancelAnimationFrame?.(frame)
+  })
+}
+
 /** Dispatch helper bound to the live store. */
 const dispatch = (action, payload) => rt()?.store.dispatch(action, payload)
 
@@ -112,15 +135,17 @@ const isCurrentGroupPosition = (doc, draggedId, resolved, target) => {
 // ---------------------------------------------------------------------------
 // Small primitives
 // ---------------------------------------------------------------------------
-const IconButton = ({ label, glyph, onClick, testId, data }) =>
+const IconButton = ({ label, glyph, onClick, testId, data, expanded, haspopup, className }) =>
   h(
     'button',
     {
       type: 'button',
-      class: 'dsg-icon-button',
+      class: classNames('dsg-icon-button', className),
       title: label,
       'aria-label': label,
       'data-testid': testId,
+      ...(expanded === undefined ? {} : { 'aria-expanded': expanded ? 'true' : 'false' }),
+      ...(haspopup ? { 'aria-haspopup': haspopup } : {}),
       onClick: (event) => {
         event.stopPropagation()
         onClick?.(event)
@@ -161,6 +186,7 @@ const SessionRow = ({
   handlers,
   store,
 }) => {
+  perfRender('SessionRow')
   const row = sessionNode.session
   const sessionId = row.id
   const archived = sessionNode.archived === true
@@ -258,6 +284,7 @@ const GroupDropSlot = ({ parentId, beforeGroupId, store, handlers }) => {
 }
 
 const GroupNode = ({ node, depth, props, handlers, store }) => {
+  perfRender('GroupNode')
   const group = node.group
   const expanded = isExpanded(store.collapsed, group.id)
   const dropTarget = store.dropTarget
@@ -617,7 +644,8 @@ const SEARCH_LISTBOX_ID = 'dsg-session-search-listbox'
  * to `handlers.searchSelect` — opening, revealing, scrolling and highlighting
  * live in GroupsView because they need the tree ref and the live store.
  */
-const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionIds }) => {
+const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionIds, autoFocus = false, onDismiss = null }) => {
+  perfRender('SearchBox')
   const t = rt()?.t ?? ((key) => key)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -644,16 +672,18 @@ const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionI
     return () => doc?.removeEventListener?.('pointerdown', onPointerDown, true)
   }, [visible])
 
-  // Escape closes even after focus has left the input.
+  // Escape closes the dropdown first; with no dropdown open it collapses the
+  // whole search row (feedback item 3: Escape/clear closes).
   useEffect(() => {
-    if (!visible) return undefined
     const doc = globalThis.document
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key !== 'Escape') return
+      if (visible) setOpen(false)
+      else onDismiss?.()
     }
     doc?.addEventListener?.('keydown', onKeyDown, true)
     return () => doc?.removeEventListener?.('keydown', onKeyDown, true)
-  }, [visible])
+  }, [visible, onDismiss])
 
   // Keep the keyboard-active option visible inside the 320px scrolling listbox
   // (spec §3.3): ArrowDown past the fold must never leave the active row clipped.
@@ -727,6 +757,8 @@ const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionI
       if (visible) {
         event.preventDefault()
         setOpen(false)
+      } else {
+        onDismiss?.()
       }
       return
     }
@@ -752,6 +784,7 @@ const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionI
       placeholder: t('search.placeholder'),
       autoComplete: 'off',
       spellCheck: false,
+      autoFocus: autoFocus === true,
       value: query,
       onChange: (event) => openFor(event.target.value),
       onFocus: () => {
@@ -807,39 +840,157 @@ const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionI
 // ---------------------------------------------------------------------------
 // Header / banner / toast / dialogs / menus / rail / footer / flat fallback
 // ---------------------------------------------------------------------------
+/**
+ * Three-row view-options popover (feedback item 3): the archive tri-state moves
+ * out of the always-visible header into the official-style view menu. Each row
+ * is 30px, carries the current check and dispatches the existing
+ * `archive-filter` action before closing.
+ */
+const ArchiveFilterPopover = ({ filter, t, onPick }) =>
+  h(
+    'div',
+    {
+      class: 'dsg-view-options-popover',
+      role: 'menu',
+      'data-testid': 'session-groups-view-options-popover',
+      'aria-label': t('archive.label'),
+      onClick: (event) => event.stopPropagation(),
+    },
+    ...ARCHIVE_FILTERS.map((value) => {
+      const active = value === filter
+      return h(
+        'button',
+        {
+          key: value,
+          type: 'button',
+          role: 'menuitemradio',
+          'aria-checked': active ? 'true' : 'false',
+          class: 'dsg-menu-item dsg-view-option',
+          'data-testid': 'session-groups-archive-filter',
+          'data-filter': value,
+          'data-active': active ? 'true' : 'false',
+          onClick: (event) => {
+            event.stopPropagation()
+            onPick(value)
+          },
+        },
+        h('span', { class: 'dsg-view-option-label' }, t(ARCHIVE_FILTER_LABEL_KEYS[value])),
+        h('span', { class: 'dsg-view-option-check', 'aria-hidden': 'true' }, active ? renderGlyph(h, 'check', 16) : null)
+      )
+    })
+  )
+
 const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds }) => {
-  const t = rt()?.t
+  perfRender('Header')
+  const t = rt()?.t ?? ((key) => key)
   const filter = store.archiveFilter
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [optionsOpen, setOptionsOpen] = useState(false)
+  const optionsRef = useRef(null)
+
+  // View-options popover: Escape or an outside pointerdown closes it.
+  useEffect(() => {
+    if (!optionsOpen) return undefined
+    const doc = globalThis.document
+    const onPointerDown = (event) => {
+      if (optionsRef.current?.contains?.(event?.target)) return
+      setOptionsOpen(false)
+    }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOptionsOpen(false)
+    }
+    doc?.addEventListener?.('pointerdown', onPointerDown, true)
+    doc?.addEventListener?.('keydown', onKeyDown, true)
+    return () => {
+      doc?.removeEventListener?.('pointerdown', onPointerDown, true)
+      doc?.removeEventListener?.('keydown', onKeyDown, true)
+    }
+  }, [optionsOpen])
+
   return h(
     'div',
-    { class: 'dsg-header dsg-header-stacked', 'data-testid': 'session-groups-header' },
+    {
+      class: 'dsg-header dsg-header-stacked',
+      'data-testid': 'session-groups-header',
+      'data-search-open': searchOpen ? 'true' : 'false',
+      'data-options-open': optionsOpen ? 'true' : 'false',
+    },
     h(
       'div',
       { class: 'dsg-header-row', 'data-testid': 'session-groups-header-row' },
-      h('span', { class: 'dsg-header-title', title: t('view.title') }, t('view.title')),
       h(
-        'button',
-        {
-          type: 'button',
-          class: 'dsg-text-button dsg-filter',
-          'data-testid': 'session-groups-archive-filter',
-          'data-filter': filter,
-          title: `${t('archive.label')}：${t(ARCHIVE_FILTER_LABEL_KEYS[filter])}`,
-          onClick: (event) => {
-            event.stopPropagation()
-            handlers.setArchiveFilter(nextArchiveFilter(filter))
-          },
-        },
-        t(ARCHIVE_FILTER_LABEL_KEYS[filter])
+        'span',
+        { class: 'dsg-header-title', title: t('view.title') },
+        h('span', { class: 'dsg-header-accent', 'aria-hidden': 'true' }, renderGlyph(h, 'folderAdjust', 16)),
+        h('span', { class: 'dsg-header-label' }, t('view.title'))
       ),
-      TextButton({ label: t('view.newGroup'), onClick: (event) => handlers.openNewGroup(event, null), testId: 'session-groups-new-group' }),
-      TextButton({ label: t('view.returnWorkspace'), onClick: () => handlers.returnToWorkspace(), testId: 'session-groups-return' })
+      h(
+        'div',
+        { class: 'dsg-header-actions' },
+        IconButton({
+          label: t('view.newGroup'),
+          glyph: 'plus',
+          testId: 'session-groups-new-group',
+          onClick: (event) => handlers.openNewGroup(event, null),
+        }),
+        IconButton({
+          label: t('search.label'),
+          glyph: 'search',
+          testId: 'session-groups-search-toggle',
+          expanded: searchOpen,
+          onClick: () => {
+            setOptionsOpen(false)
+            setSearchOpen((open) => !open)
+          },
+        }),
+        h(
+          'div',
+          { ref: optionsRef, class: 'dsg-view-options' },
+          IconButton({
+            label: t('view.options'),
+            glyph: 'sliders',
+            testId: 'session-groups-view-options',
+            expanded: optionsOpen,
+            haspopup: 'menu',
+            data: { 'data-filter': filter },
+            onClick: () => {
+              setOptionsOpen((open) => !open)
+            },
+          }),
+          optionsOpen
+            ? h(ArchiveFilterPopover, {
+                filter,
+                t,
+                onPick: (value) => {
+                  handlers.setArchiveFilter(value)
+                  setOptionsOpen(false)
+                },
+              })
+            : null
+        )
+      )
     ),
-    h(
-      'div',
-      { class: 'dsg-header-row dsg-header-search-row' },
-      h(SearchBox, { store, handlers, sessionsById, workspaces, archivedSessionIds })
-    )
+    searchOpen
+      ? h(
+          'div',
+          { class: 'dsg-header-row dsg-header-search-row', 'data-testid': 'session-groups-header-search-row' },
+          h(SearchBox, {
+            store,
+            handlers,
+            sessionsById,
+            workspaces,
+            archivedSessionIds,
+            autoFocus: true,
+            onDismiss: () => setSearchOpen(false),
+          }),
+          IconButton({
+            label: t('search.close'),
+            glyph: 'close',
+            testId: 'session-groups-search-close',
+            onClick: () => setSearchOpen(false),
+          })
+        )
+      : null
   )
 }
 
@@ -1081,45 +1232,52 @@ const Rail = ({ props }) => {
   )
 }
 
-/** Footer action: always registered; renders its own label/icon per slot contract. */
+/**
+ * Footer action: always registered. The wide sidebar shows the two-segment
+ * switch with both labels; the rail fallback keeps both icon segments stacked
+ * (labels hidden by CSS). Each segment targets its own mode explicitly — this
+ * is not a blind toggle, so repeated clicks on the active segment are no-ops.
+ */
 export const FooterAction = (props) => {
   const store = useViewStore()
   const wide = props?.wide !== false
   const mode = store?.viewMode ?? 'workspace'
-  const t = rt()?.t
-  const label = mode === 'groups' ? t('footer.toWorkspace') : t('footer.toGroups')
+  const t = rt()?.t ?? ((key) => key)
+  const segment = (value, glyph, labelKey, testId) => {
+    const label = t(labelKey)
+    const active = mode === value
+    return h(
+      'button',
+      {
+        type: 'button',
+        class: 'dsg-footer-segment',
+        'data-testid': testId,
+        'data-segment': value,
+        'data-active': active ? 'true' : 'false',
+        'aria-pressed': active ? 'true' : 'false',
+        title: label,
+        'aria-label': label,
+        onClick: (event) => {
+          event.stopPropagation()
+          rt()?.setMode(value)
+        },
+      },
+      renderGlyph(h, glyph, 16),
+      h('span', { class: 'dsg-footer-segment-label' }, label)
+    )
+  }
   return h(
-    'button',
+    'div',
     {
-      type: 'button',
+      class: 'dsg-footer-switch',
       'data-testid': 'session-groups-toggle',
       'data-mode': mode,
-      title: label,
-      'aria-label': label,
-      'aria-pressed': mode === 'groups' ? 'true' : 'false',
-      class: 'dsg-footer-toggle',
-      onClick: () => rt()?.toggleMode(),
-      style: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        height: '28px',
-        width: wide ? '100%' : '28px',
-        padding: wide ? '0 8px' : '0',
-        margin: '0 auto',
-        borderRadius: 'var(--dsw-radius-sm, 6px)',
-        border: '1px solid var(--dsw-alias-border-secondary, rgba(128,128,128,.35))',
-        background: 'transparent',
-        color: 'var(--dsw-alias-label-secondary, #57606a)',
-        fontSize: 'var(--dsw-font-xxxs-11-font-size, 11px)',
-        fontFamily: 'inherit',
-        cursor: 'pointer',
-        boxSizing: 'border-box',
-      },
+      'data-wide': wide ? 'true' : 'false',
+      role: 'group',
+      'aria-label': t('footer.switchLabel'),
     },
-    renderGlyph(h, 'folderAdjust', 16),
-    wide ? h('span', null, label) : null
+    segment('groups', 'folderAdjust', 'footer.toGroups', 'session-groups-toggle-groups'),
+    segment('workspace', 'grid', 'footer.toWorkspace', 'session-groups-toggle-workspace')
   )
 }
 
@@ -1196,6 +1354,8 @@ class ErrorBoundary extends Component {
 export const GroupsView = (props) => {
   const store = useViewStore()
   const wide = props?.wide !== false
+  const perfRenderStart = perfEnabled() ? perfNow() : 0
+  perfRender('GroupsView')
 
   // Framework standard hooks: always called (rules of hooks), feature-detected.
   const sessions = typeof props?.useSessions === 'function' ? props.useSessions((snapshot) => snapshot) : null
@@ -1212,6 +1372,32 @@ export const GroupsView = (props) => {
 
   const [dragState, setDragState] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
+  // Latest committed target, compared with stable equality before every React
+  // update. Dragover fires continuously while the pointer rests on one row and
+  // rebuilds an equivalent object each time; updating state unconditionally
+  // re-rendered the whole tree on every event (0.2.2 perf probe: 48 renders for
+  // 45 stationary dragovers, 800 SessionRow renders for 30 paced dragovers).
+  const dropTargetRef = useRef(null)
+
+  /**
+   * Drop-target setter used by every drag handler: skips React when the stable
+   * target descriptor is unchanged. The opt-in probe records set attempts and
+   * the ones that actually changed the rendered target.
+   */
+  const setDropTargetTracked = (next) => {
+    if (sameDropTarget(dropTargetRef.current, next)) {
+      if (perfEnabled()) perfDropTarget(false)
+      return
+    }
+    dropTargetRef.current = next
+    if (!perfEnabled()) {
+      setDropTarget(next)
+      return
+    }
+    const started = perfNow()
+    setDropTarget(next)
+    perfDropTarget(true, perfNow() - started)
+  }
   // Search highlight is a transient DOM class (1.5 s) on the revealed row: the
   // rows are plain React nodes and the class must survive the host-triggered
   // re-render right after openSession without adding new view-store state.
@@ -1363,6 +1549,8 @@ export const GroupsView = (props) => {
     []
   )
 
+  usePerfCommit('groups-view', perfRenderStart)
+
   if (!wide) return h(Rail, { props })
 
   if (store === null) return h('div', { class: 'dsg-root', 'data-testid': 'session-groups-view' }, t('flat.title'))
@@ -1386,7 +1574,8 @@ export const GroupsView = (props) => {
   }
 
   const commitDrop = async (source, target) => {
-    setDropTarget(null)
+    perfMark('commitDrop:start', { kind: target?.kind ?? null })
+    setDropTargetTracked(null)
     setDragState(null)
     if (!source || !target || target.kind === 'invalid') return
     const visibleUngrouped = tree.ungrouped.map((node) => node.session.id)
@@ -1407,7 +1596,8 @@ export const GroupsView = (props) => {
    * no-op sentinel before the queue sends any request, so no revision is bumped.
    */
   const commitGroupDrop = async (draggedId, target) => {
-    setDropTarget(null)
+    perfMark('commitGroupDrop:start', { kind: target?.kind ?? null })
+    setDropTargetTracked(null)
     setDragState(null)
     dragRef.current = null
     rt()?.setFloatingLabel?.(null)
@@ -1484,7 +1674,7 @@ export const GroupsView = (props) => {
     event.preventDefault()
     event.stopPropagation()
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
-    setDropTarget(target)
+    setDropTargetTracked(target)
   }
 
   const groupOwnedIds = (groupId) => {
@@ -1519,7 +1709,7 @@ export const GroupsView = (props) => {
     if (!draggedId) return
     const resolved = resolveGroupDrop({ doc: store.doc, draggedId, target: resolveTargetFor(viewTarget) })
     if (resolved.invalid) {
-      setDropTarget({ ...viewTarget, kind: 'group-forbidden' })
+      setDropTargetTracked({ ...viewTarget, kind: 'group-forbidden' })
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
       rt()?.setFloatingLabel?.(t('drag.groupInvalid'))
       return
@@ -1621,7 +1811,6 @@ export const GroupsView = (props) => {
       dispatch('toggle-group', { id })
     },
     moveGroupStep,
-    returnToWorkspace: () => rt()?.setMode('workspace'),
     retryLoad: () => rt()?.retryLoad(),
     openSession: (id) => rt()?.actions.openSession(id),
     setArchiveFilter: (filter) => dispatch('archive-filter', { filter }),
@@ -1727,7 +1916,7 @@ export const GroupsView = (props) => {
       dragRef.current = drag
       suppressedClickRef.current = { groupId: group.id, at: Date.now() }
       setDragState(drag)
-      setDropTarget(null)
+      setDropTargetTracked(null)
       rt()?.startDragLabel?.(group.name)
     },
     onDragEnd: () => {
@@ -1735,7 +1924,7 @@ export const GroupsView = (props) => {
       clearAutoExpand()
       dragRef.current = null
       setDragState(null)
-      setDropTarget(null)
+      setDropTargetTracked(null)
       rt()?.setFloatingLabel?.(null)
     },
     onDragOverSession: (event, sessionId, groupId, ungrouped) => {
@@ -1752,7 +1941,7 @@ export const GroupsView = (props) => {
         targetSessionId: sessionId,
       })
       if (target.kind === 'invalid') {
-        setDropTarget(null)
+        setDropTargetTracked(null)
         return
       }
       rowDragOver(event, target)
@@ -1789,7 +1978,7 @@ export const GroupsView = (props) => {
         const name = findGroup(store.doc, groupId)?.name ?? ''
         const zone = groupHeaderZone(event.currentTarget, event.clientY)
         if (zone === null) {
-          setDropTarget({ kind: 'group-forbidden', targetId: groupId })
+          setDropTargetTracked({ kind: 'group-forbidden', targetId: groupId })
           if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
           rt()?.setFloatingLabel?.(t('drag.groupInvalid'))
           return
@@ -1807,7 +1996,7 @@ export const GroupsView = (props) => {
         event.preventDefault()
         event.stopPropagation()
         clearAutoExpand()
-        setDropTarget(null)
+        setDropTargetTracked(null)
         rt()?.setFloatingLabel?.(null)
         const zone = groupHeaderZone(event.currentTarget, event.clientY)
         if (zone === null) {
@@ -1877,6 +2066,29 @@ export const GroupsView = (props) => {
       rt()?.setFloatingLabel?.(null)
       commitDrop(drag, { kind: 'ungrouped' })
     },
+  }
+
+  // Opt-in probe: time every drag handler. The wrapper keeps the hot path
+  // untouched when the probe is disabled (handlers stay unwrapped).
+  if (perfEnabled()) {
+    for (const name of Object.keys(handlers)) {
+      if (!name.startsWith('onDragOver') && !name.startsWith('onDrop')) continue
+      const original = handlers[name]
+      handlers[name] = (event, ...args) => {
+        const started = perfNow()
+        try {
+          return original(event, ...args)
+        } finally {
+          const elapsed = perfNow() - started
+          if (name.startsWith('onDragOver')) {
+            perfDragOver(name.slice(2), elapsed)
+          } else {
+            perfSample('dropHandlerMs', elapsed)
+            perfMark('drop:event', { handler: name, ms: Math.round(elapsed * 100) / 100 })
+          }
+        }
+      }
+    }
   }
 
   return h(
