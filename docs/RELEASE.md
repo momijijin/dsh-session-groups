@@ -72,4 +72,4 @@ $cli = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\resources\app\lib\des
 ## 6. 验证证据
 
 - `docs/TEST-RESULTS.md`：V1.1 0.2.2（npm test 190/190、E2E 17/17、E2E step 12 数据审计、打包 sha256）
-- `scripts/qa/evidence-perf/`：`e2e-20261029-000515.json` + 17 步截图、`setup-20261029-000227.json`、`perf-before-800.json` / `perf-after-800.json`（本地，不随包发布）
+- `scripts/qa/evidence-perf/`：`e2e-20261029-002840.json` + 17 步截图、`setup-20261029-002652.json`、`perf-before-800.json` / `perf-after-800.json`、`ui-perf-report.md`（本地，不随包发布）

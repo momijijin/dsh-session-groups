@@ -3,7 +3,7 @@
 - 状态：**Frozen（Gate 0 PASS，2026-10-18）**；后续变更需 Gate 1 评审
 - V1.1（0.2.0，2026-10-28）：**additive** 扩展——左栏宽度覆盖、分组拖拽排序/改父级、会话搜索下拉；数据模型、Host 路由、存储路径均不变
 - V1.1（0.2.1，2026-10-28）：**typography/spacing-only patch**——分组视图排版/间距/图标对齐官方侧栏，消费宿主继承字体；无契约/数据/路由变化
-- V1.1（0.2.2，2026-10-28）：**UI-layout-only patch**——footer 两段视图切换、header 加号/搜索/视图选项、归档三态移入 view-options popover、菜单/对话框/输入主题感知；无数据模型/Host 路由/存储变化。UI testid additive，旧的 `session-groups-toggle`/`session-groups-archive-filter`/`session-groups-search` 保留。
+- V1.1（0.2.2，2026-10-28）：**UI-layout + drag-perf patch**——footer 两段视图切换、header 加号/搜索/视图选项（搜索行可折叠 + 关闭）、归档三态移入 view-options popover、菜单/对话框/输入主题感知、dragover 目标去重 + 移除未消费的 `saving` 重渲染；无数据模型/Host 路由/存储变化。UI testid additive，旧的 `session-groups-toggle`/`session-groups-archive-filter`/`session-groups-search` 保留。
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
@@ -201,7 +201,7 @@ V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 
 
 V1.1（0.2.0）additive 追加：`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up` / `session-groups-group-move-down`；`session-groups-menu` 为既有菜单根，本批补登记。旧 testid 一律保留。
 
-V1.1（0.2.2）additive 追加：`session-groups-toggle-groups` / `session-groups-toggle-workspace`（footer 两段）、`session-groups-search-toggle`（header 搜索开关）、`session-groups-view-options`（header 视图选项按钮）、`session-groups-view-options-popover`（归档三态 popover）。`session-groups-archive-filter` 从旧的循环按钮改为 popover 内三行（`data-filter=hidden|all|only` + `data-active`）；`session-groups-return` 只在错误/扁平回退里保留。
+V1.1（0.2.2）additive 追加：`session-groups-toggle-groups` / `session-groups-toggle-workspace`（footer 两段）、`session-groups-search-toggle`（header 搜索开关）、`session-groups-search-close`（搜索行关闭/收起）、`session-groups-view-options`（header 视图选项按钮）、`session-groups-view-options-popover`（归档三态 popover）。搜索行默认不渲染；搜索图标开合，Escape（无下拉时）与关闭按钮收起整行。`session-groups-archive-filter` 从旧的循环按钮改为 popover 内三行（`data-filter=hidden|all|only` + `data-active`）；`session-groups-return` 只在错误/扁平回退里保留。
 
 | testid | 位置 | 附加属性 |
 |---|---|---|
@@ -211,6 +211,7 @@ V1.1（0.2.2）additive 追加：`session-groups-toggle-groups` / `session-group
 | `session-groups-header` | 视图头（36px 单行 + 可选 30px 搜索行） | `data-search-open`, `data-options-open` |
 | `session-groups-header-row` | 视图头标题/操作行（0.2.2 起单行 28px 控件） | — |
 | `session-groups-search-toggle` | header 搜索图标按钮 | `aria-expanded` |
+| `session-groups-search-close` | 搜索行关闭按钮（清空并收起整行） | — |
 | `session-groups-view-options` | header 视图选项图标按钮 | `data-filter`, `aria-expanded`, `aria-haspopup` |
 | `session-groups-view-options-popover` | 视图选项 popover（归档三态） | `role="menu"` |
 | `session-groups-return` | 返回工作区（仅 FlatFallback 错误回退） | — |

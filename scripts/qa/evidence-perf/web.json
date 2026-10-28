@@ -1,46 +1,41 @@
 {
   "kind": "gate0-web",
-  "createdAt": "2026-10-28T16:04:19.4105539Z",
-  "spikeHome": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-2",
+  "createdAt": "2026-10-28T16:27:47.0422142Z",
+  "spikeHome": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\.spike-homes\\qa-0.2.2-e2e-4",
   "realDshHome": "C:\\Users\\Momiji\\.dsh",
   "profile": "groups-spike",
   "port": 4405,
-  "pid": 128876,
+  "pid": 107696,
   "runtime": "C:\\Users\\Momiji\\AppData\\Local\\Programs\\DSH Desktop\\DSH Desktop.exe",
   "commandLine": "\"C:\\Users\\Momiji\\AppData\\Local\\Programs\\DSH Desktop\\DSH Desktop.exe\" --expose-internals \"C:\\Users\\Momiji\\AppData\\Local\\Programs\\DSH Desktop\\resources\\app\\lib\\desktop-cli.js\" --profile groups-spike --port 4405 --no-open",
-  "url": "http://127.0.0.1:4405/?token=nEv-owIWXzoLFXiacDA861BNDZlQGRKTuRFh_d31zbk",
+  "url": "http://127.0.0.1:4405/?token=m8Jf1xnVkqj_bCnt_R4f6pQp2lr7mbJRPKL1F4SbVpY",
   "baseUrl": "http://127.0.0.1:4405/",
   "authority": "127.0.0.1:4405",
-  "token": "nEv-owIWXzoLFXiacDA861BNDZlQGRKTuRFh_d31zbk",
-  "outLog": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\scripts\\qa\\evidence-perf\\logs\\web-20261029-000419.out.log",
-  "errLog": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\scripts\\qa\\evidence-perf\\logs\\web-20261029-000419.err.log",
+  "token": "m8Jf1xnVkqj_bCnt_R4f6pQp2lr7mbJRPKL1F4SbVpY",
+  "outLog": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\scripts\\qa\\evidence-perf\\logs\\web-20261029-002747.out.log",
+  "errLog": "C:\\Users\\Momiji\\Projects\\dsh-session-groups\\scripts\\qa\\evidence-perf\\logs\\web-20261029-002747.err.log",
   "rootStatus": 200,
-  "startedAt": "2026-10-28T16:04:20.9800585Z",
+  "startedAt": "2026-10-28T16:27:48.5463448Z",
+  "stoppedAt": "2026-10-28T16:44:20.8219516Z",
+  "result": "STOPPED",
   "checks": [
     {
-      "id": "WEB-1",
-      "description": "isolated dsh web printed its token URL",
+      "id": "STOP-1",
+      "description": "recorded launcher process is alive",
       "pass": true,
-      "detail": "http://127.0.0.1:4405/?token=***"
+      "detail": "pid=107696"
     },
     {
-      "id": "WEB-2",
-      "description": "token URL returns 200 HTML for the web app",
+      "id": "STOP-2",
+      "description": "server process tree stopped",
       "pass": true,
-      "detail": "status=200; root-div=True; html-bytes=37795"
+      "detail": "pid=107696"
     },
     {
-      "id": "WEB-3",
-      "description": "web app boot payload is present in HTML",
+      "id": "STOP-3",
+      "description": "port 4405 is released",
       "pass": true,
-      "detail": "__DSH_BOOT__=True"
-    },
-    {
-      "id": "WEB-4",
-      "description": "unauthenticated GET / is rejected (auth fence active)",
-      "pass": true,
-      "detail": "status=401 (expected 401)"
+      "detail": ""
     }
-  ],
-  "result": "PASS"
+  ]
 }

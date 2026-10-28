@@ -60,6 +60,7 @@ const SIDEBAR_FRAME_MARKER = '[data-dsg-sidebar-frame]';
 const SIDEBAR_WIDTH_KEY = 'dsh-session-groups.width.v1';
 const SEARCH = '[data-testid="session-groups-search"]';
 const SEARCH_TOGGLE = '[data-testid="session-groups-search-toggle"]';
+const SEARCH_CLOSE = '[data-testid="session-groups-search-close"]';
 const SEARCH_RESULTS = '[data-testid="session-groups-search-results"]';
 const SEARCH_RESULT = '[data-testid="session-groups-search-result"]';
 const SEARCH_EMPTY = '[data-testid="session-groups-search-empty"]';
@@ -1968,16 +1969,20 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         // (10b) Middle 50% of a group header is an invalid drop for a group drag
         // (it must not fall through to a session-append or commit anything).
         const revisionBeforeMiddle = recordRevision();
-        const toastBeforeMiddle = await ui.text(TOAST);
+        // A previous invalid drop can leave the same "cannot drop" toast on
+        // screen for up to 2.6s. Wait for it to expire so this assertion
+        // observes THIS drop's toast instead of a stale copy of the same text.
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(TOAST)})`, 'previous toast cleared before the middle-zone drop', 4000).catch(() => undefined);
         await ui.dragGroup({ kind: 'middle', dragged: b, target: a });
-        await sleep(700);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(TOAST)})`, 'middle-zone invalid-drop toast rendered', 3000);
+        await sleep(200);
         await ui.waitRootGroups([b, e, a]);
         const revisionAfterMiddle = recordRevision();
         if (revisionAfterMiddle !== revisionBeforeMiddle) {
           throw new Error(`middle-zone group drop committed a revision (${revisionBeforeMiddle} -> ${revisionAfterMiddle})`);
         }
         const toastAfterMiddle = await ui.text(TOAST);
-        if (!/不能放入|Cannot drop/i.test(toastAfterMiddle) || toastAfterMiddle === toastBeforeMiddle) {
+        if (!/不能放入|Cannot drop/i.test(toastAfterMiddle)) {
           throw new Error(`middle-zone group drop should surface the invalid-drop toast, got ${JSON.stringify(toastAfterMiddle)}`);
         }
 
@@ -2358,6 +2363,19 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         await ui.fillSearch('');
         await ui.waitFor(`!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'broad search dropdown closed after clearing');
 
+        // (5c) The search field is a toggled row, not always-visible chrome:
+        // Escape with no dropdown collapses it, and the header close button does
+        // too (feedback item 3: search icon toggles, Escape/clear closes).
+        await ui.pressSearchKey('Escape');
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(SEARCH)})`, 'search row collapsed on Escape with no dropdown', 3000);
+        await ui.click(SEARCH_TOGGLE);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH)})`, 'search row reopened by the search icon');
+        await ui.fillSearch(state.searchTitle);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(SEARCH_RESULTS)})`, 'search dropdown reopened before the close-button check');
+        await ui.click(SEARCH_CLOSE);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(SEARCH)})`, 'search row collapsed by the header close button', 3000);
+        if (await ui.exists(SEARCH_RESULTS)) throw new Error('search dropdown survived the close button');
+
         // (6) The whole search flow left groups + ungrouped byte-identical.
         const after = await settledRecord();
         assertSettled(after, 'record after search');
@@ -2379,6 +2397,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           archivedEnterBlocked: true,
           emptyState: true,
           clickOutside: true,
+          searchToggle: { escapeCollapsedRow: true, closeButtonCollapsedRow: true },
           record: { unchanged: true, revision: before.first.revision, groups: (before.first.groups ?? []).length },
           sideEffect: `session ${victim.sid} left archived by step 15 (host-side archive; the group record file is unchanged)`,
         };

@@ -223,8 +223,9 @@ Not bundled (evidence did not support them):
   0.2.2 UI-layout tests).
 - `node --check` on every changed client module: clean.
 - Full E2E: **17/17 PASS** on a fresh isolated home
-  (`scripts/qa/evidence-perf/e2e-20261029-000515.json`), console/page errors
-  empty; includes step 16 typography/spacing and step 17 dark-theme surfaces.
+  (`scripts/qa/evidence-perf/e2e-20261029-002840.json`), console/page errors
+  empty; includes step 15 search-row Escape/close, step 16 typography/spacing and
+  step 17 dark-theme surfaces.
 - No desktop profile install, no push, no deletion. Probe homes and evidence are
   retained.
 
@@ -238,7 +239,7 @@ Not bundled (evidence did not support them):
 | `scripts/qa/evidence-perf/perf-after-800.json` | after, 803-row scaled hold phase |
 | `scripts/qa/evidence-perf/perf-before-800.log` / `perf-after-800.log` | console phase logs |
 | `scripts/qa/evidence-perf/store-bench.log` | host store commit/load microbench |
-| `scripts/qa/evidence-perf/e2e-20261029-000515.json` | final 17-step E2E result (17/17 PASS, console/pageErrors empty) + screenshots under `screenshots/e2e/` |
+| `scripts/qa/evidence-perf/e2e-20261029-002840.json` | final 17-step E2E result (17/17 PASS, console/pageErrors empty) + screenshots under `screenshots/e2e/` |
 | `scripts/qa/probe-drag-perf.mjs` | reproducible probe runner |
 | `src/client/perf.js` | opt-in client instrumentation |
 

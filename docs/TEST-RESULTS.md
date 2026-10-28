@@ -5,21 +5,22 @@
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
-## 0. V1.1 patch 0.2.2 最终结论（2026-10-29 00:05，UI layout + 主题感知 + drag perf）
+## 0. V1.1 patch 0.2.2 最终结论（2026-10-29 00:28，UI layout + 主题感知 + drag perf）
 
-**V1.1 patch 0.2.2 UI layout + 拖拽性能 QA 验证线全绿 PASS（最终复跑隔离 home `.spike-homes/qa-0.2.2-e2e-2` + 4405）：**
+**V1.1 patch 0.2.2 UI layout + 拖拽性能 QA 验证线全绿 PASS（最终复跑隔离 home `.spike-homes/qa-0.2.2-e2e-4` + 4405）：**
 
 | 层 | 结果 | 证据 |
 |---|---|---|
 | `npm test`（仓库全量） | **190/190 PASS**（0 fail / 0 skip，~3.9s；本 patch 新增 5 条 UI layout + 3 条 `sameDropTarget` 单测） | 控制台输出 |
-| E2E 17 步（`e2e/groups.spec.mjs`，零依赖 CDP） | **17/17 PASS**（step 时间和 75,889 ms，~76s）；`consoleErrors=[]`、`pageErrors=[]` | `scripts/qa/evidence-perf/e2e-20261029-000515.json` + 17 张截图（`screenshots/e2e/`） |
-| step 10 重启 hydration | **PASS**（18.1s；groups=4、filter=hidden、`blankLifecycle.drift=false`） | 同上 step 10 detail |
+| E2E 17 步（`e2e/groups.spec.mjs`，零依赖 CDP） | **17/17 PASS**（step 时间和 72,511 ms，~73s）；`consoleErrors=[]`、`pageErrors=[]` | `scripts/qa/evidence-perf/e2e-20261029-002840.json` + 17 张截图（`screenshots/e2e/`） |
+| step 10 重启 hydration | **PASS**（15.6s；groups=4、filter=hidden、`blankLifecycle.drift=false`） | 同上 step 10 detail |
+| step 15 搜索开关/关闭 | **PASS**（9.0s）：搜索行默认不渲染 → 搜索图标展开并聚焦；无下拉时 Escape 收起整行、header 关闭按钮收起整行；`searchToggle={escapeCollapsedRow:true, closeButtonCollapsedRow:true}`；嵌套 reveal / only→all / 键盘 listbox 滚动断言保持 | 同上 step 15 detail |
 | **step 16 排版+布局** | **PASS**（2.8s）：host/root 14/14 + family 继承；组行 34/会话行 32；组名/标题 14/20；footer 高 28、两段标签 13px/16px、active accent；header action `+`/搜索/视图选项各 28×28、glyph 16、顺序正确；header 收起 36px / 展开搜索 74px + 搜索行 30px；行 padding 8/8、column-gap 6、tree/组体/组线 row-gap 2、组缩进 10/10；搜索列表 6/10 + gap 8/2；**264px header/tree 252/252 无溢出，展开搜索时 header/search row/input 也无溢出** | 同上 step 16 detail |
 | **step 17 深色主题 surfaces** | **PASS**（1.8s）：`body[data-ds-dark-theme]` 下搜索结果 bg `rgb(42,43,46)` / text `rgb(249,250,251)`（13.61:1）、菜单 13.61:1、对话框 bg `rgb(44,44,46)`（13.34:1）、dialog input 15.03:1、search input 15.03:1、view-options popover 同菜单材质；全部非白；恢复原 theme 属性 | 同上 step 17 detail |
 | 拖拽性能探针（803 行压测） | **PASS**：hold 45 事件 `GroupsView` 47→3、`SessionRow` 1,175→75、`GroupNode` 37,741→2,409；paced 32→10 / 800→250；frame avg 24.07→17.15ms；drop→next frame 17.2→16.2ms；`saving` 标记消失 | `scripts/qa/evidence-perf/perf-before-800.json` / `perf-after-800.json`；`.superpowers/sdd/2026-10-28-session-groups-v1.1/ui-perf-report.md` |
-| setup（隔离 home 重建） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client build **176,007 bytes** / sha256 `59f45afa9a1df79a1d9d9fcbd41ef40e40ffb577ee338bbb6b6aff4c27842b90`；package version `0.2.2` | `scripts/qa/evidence-perf/setup-20261029-000227.json` |
+| setup（隔离 home 重建） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client build **176,007 bytes** / sha256 `59f45afa9a1df79a1d9d9fcbd41ef40e40ffb577ee338bbb6b6aff4c27842b90`；package version `0.2.2` | `scripts/qa/evidence-perf/setup-20261029-002652.json` |
 | 打包 | `npm pack` → `dsh-session-groups-0.2.2.tgz`（**113,452 bytes**；unpacked **447,642**；**33 files**；sha256 `3625A5F23968EDB83A79859B442FD1A54A39E220F8153BF60A9E816CA4865DC7`） | 本文件 §0.2 |
-| 隔离状态 | `.spike-homes/qa-0.2.2-e2e-2`（+ 0.2.2 UI/perf lanes）保留；4405/4406 已释放；真实 home 零写入 | setup evidence |
+| 隔离状态 | `.spike-homes/qa-0.2.2-e2e-4`（+ 0.2.2 UI/perf lanes）保留；4405/4406 已释放；真实 home 零写入 | setup evidence |
 
 ### 0.1 0.2.2 UI layout 修复明细（本次 patch）
 
@@ -233,7 +234,7 @@ E2E 期间 4402 为 QA 独占；client 用复制 home + 4403，互不干扰。
 
 ## 7. 更新记录
 
-- 2026-10-29 00:05：**0.2.2 UI layout + 主题感知 + drag perf patch（最终复跑）** —— `npm test` 190/190；E2E **17/17 PASS**（step 时间和 75,889ms；step 1 footer 两段标签/active/显式 setMode 往返；step 2 header 顺序/搜索收起/view-options 三行 30px + Escape/点外关闭；step 13/16 header 36px + 264px 展开搜索无溢出；step 16 footer/header 度量；step 17 深色 surfaces 对比度 13.3–17.4；`console/pageErrors=[]`；step 10 PASS 18.1s）；setup 18/18（`removed=0`、client build 176,007 bytes / sha `59f45afa…`）；`npm pack` 33 files / 113,452 bytes / sha256 `3625A5F2…`；`.spike-homes/qa-0.2.2-e2e-2` 保留，真实 home 零写入。
+- 2026-10-29 00:28：**0.2.2 UI layout + 主题感知 + drag perf patch（最终复跑）** —— `npm test` 190/190；E2E **17/17 PASS**（step 时间和 72,511ms；step 1 footer 两段标签/active/显式 setMode 往返；step 2 header 顺序/搜索收起/view-options 三行 30px + Escape/点外关闭；step 13/16 header 36px + 264px 展开搜索无溢出；step 14 中间 50% 无效 toast 改为等待旧 toast 过期后再断言（去 flake）；step 15 无下拉 Escape/关闭按钮收起搜索行；step 16 footer/header 度量；step 17 深色 surfaces 对比度 13.3–17.4；`console/pageErrors=[]`；step 10 PASS 15.6s）；setup 18/18（`removed=0`、client build 176,007 bytes / sha `59f45afa…`）；`npm pack` 33 files / 113,452 bytes / sha256 `3625A5F2…`；`.spike-homes/qa-0.2.2-e2e-4` 保留，真实 home 零写入。
 - 2026-10-28 21:50：**0.2.1 间距对齐 patch** —— `npm test` 183/183；E2E **16/16 PASS**（step 16 扩充间距断言：行 padding 8/8 + gap 6、tree/组体/组线 row-gap 2、组缩进 10/10、header 4/6/8/2 + row-gap 8 + 78px、搜索 6/10 + gap 8/2、264px header/tree 252/252 无溢出；`console/pageErrors=[]`；step 10 PASS 19.1s）；setup 18/18（`removed=0`、client sha `cef4fb47…`）；`npm pack` 32 files / 103,874 bytes / sha256 `4ED5DE48…`；`.spike-homes/qa-0.2.1-spacing` 保留。
 - 2026-10-28 21:24：**0.2.1 排版对齐 patch** —— `npm test` 183/183；E2E **16/16 PASS**（新增 step 16：root 继承宿主 14px、组行 34/会话行 32、标题 14/20、workspace 徽标 12、搜索框 13/30、48 个图标全 16px；`console/pageErrors=[]`；step 10 PASS 17.2s）；setup 18/18（`removed=0`）；`npm pack` 32 files / 103,391 bytes；`.spike-homes/qa-0.2.1-final` 保留待最终清理。
 - 2026-10-28 19:24：**final review fix wave** —— `npm test` 183/183、E2E 15/15 PASS（console/pageErrors 空；step 2 加 hydration wait；step 13 快速释放/800→1440 复位；step 14 真实 `+` 指针拖拽守卫、中间 50%、同位置 no-op、启用 move-up；step 15 嵌套祖先 reveal、only→all、键盘滚动 listbox）、audit commit 11/11 PASS（rev 31→32）、setup 18/18 PASS、`npm pack` 32 files；`.spike-homes/qa` 保留待最终清理。

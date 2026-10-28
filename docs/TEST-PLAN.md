@@ -105,7 +105,7 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 12. 数据审计：`workspace.json` 与一个 sample session 目录 hash 不变；只新增/修改 `dsh-session-groups.json`。
 13. **V1.1 宽度**：记录官方宽度 → 分组视图在 1024px 挂载（存储 620 → clamp 544）→ 1440px 恢复 620 → 拖到 760/620 → reload 保持 → 700px rail 不覆盖且无把手 → 双击复位 420 → 拖到 264 头部无水平溢出且 header 高 36px、footer 两段标签仍可见 → 折叠/展开保持 → **快速释放（move 后立即 up）断言 applied=stored** → **800px 双击复位持久化 420、applied=320；回 1440px 恢复 420** → 切回官方宽度恢复、官方把手回来。
 14. **V1.1 组拖**：组 c → 有会话但 0 子组的组 b 体槽（index 0）；组 a（带子树）→ 空组 e；组 c → 未归组头（根末尾）；a → b 上缘；快速双拖 before/child 锚点按最新 doc 重算；自身/末位 no-op 不涨 revision；**同位置 after no-op**；**组头中间 50% 无效（toast、不提交）**；组菜单上移/下移首尾禁用 + **启用 move-up 实际生效**；全树 n+1 槽审计；**真实 CDP 指针从组 `+` 按钮拖向另一组：dragstart 被 preventDefault，根顺序/parent/revision 不变**。
-15. **V1.1 搜索**：先断言搜索字段未渲染 → 点 header 搜索图标展开并聚焦 → 折叠组 a → 输入唯一标题 → ArrowDown/Enter → 组展开、行高亮、树滚动；**目标移入嵌套子组并折叠子组+祖先 a、筛选切 `only` 后选中：only→all、两级同时展开**；归档结果 `aria-disabled=true`、Enter 不改当前会话；**宽查询结果 >12，连按 ArrowDown 后 active option 保持在 320px listbox 可视 rect 内（listbox scrollTop>0）**；无结果空态；Esc/点击外部关闭；搜索前后 `groups`/`ungrouped` 字节一致。
+15. **V1.1 搜索**：先断言搜索字段未渲染 → 点 header 搜索图标展开并聚焦 → 折叠组 a → 输入唯一标题 → ArrowDown/Enter → 组展开、行高亮、树滚动；**目标移入嵌套子组并折叠子组+祖先 a、筛选切 `only` 后选中：only→all、两级同时展开**；归档结果 `aria-disabled=true`、Enter 不改当前会话；**宽查询结果 >12，连按 ArrowDown 后 active option 保持在 320px listbox 可视 rect 内（listbox scrollTop>0）**；无结果空态；Esc/点击外部关闭；**无下拉时 Escape 收起搜索整行、header 关闭按钮收起整行**；搜索前后 `groups`/`ungrouped` 字节一致。
 16. **V1.1 排版+间距对齐（0.2.1/0.2.2）**：step 15 结束时分组视图仍激活；先收起搜索字段，再用 `getComputedStyle`/`getBoundingClientRect` 断言（不依赖截图）：
     - `.dsg-root` 的 `font-size` 等于宿主侧栏祖先的 computed `font-size`（无祖先时按 14px 契约）且 font-family 继承；
     - `.dsg-group-row` 高 34px、`.dsg-session-row` 高 32px（±1）；
@@ -120,7 +120,7 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 
 V1.1 新增/相关 stable testids（详见 `docs/CONTRACTS.md §4.1`）：
 
-`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle-groups`、`session-groups-toggle-workspace`、`session-groups-search-toggle`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`。
+`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle-groups`、`session-groups-toggle-workspace`、`session-groups-search-toggle`、`session-groups-search-close`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`。
 
 Playwright 拖拽注意：
 
