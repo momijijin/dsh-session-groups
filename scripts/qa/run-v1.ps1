@@ -71,7 +71,7 @@ try {
     # recreates the profile/home under it.
     if (Get-QaPortOwnerPid -Port $Port) {
         Write-QaLogLine -Message "stale harness server on port $Port detected before setup; stopping it"
-        & (Join-Path $PSScriptRoot 'stop-web.ps1') -Port $Port -SpikeHome (Get-QaHome) -EvidenceDir $evidence *>&1 | Out-Host
+        & (Join-Path $PSScriptRoot 'stop-web.ps1') -Port $Port -QaHome (Get-QaHome) -EvidenceDir $evidence *>&1 | Out-Host
     }
 
     # -- 1. setup -----------------------------------------------------------
@@ -177,7 +177,7 @@ try {
             } else {
                 Push-Location $repoRoot
                 try {
-                    & $node $e2eScript --evidence-dir $evidence --port $Port 2>&1 | Tee-Object -FilePath $e2eLog | Out-Host
+                    & $node $e2eScript --evidence-dir $evidence --port $Port --qa-home (Get-QaHome) 2>&1 | Tee-Object -FilePath $e2eLog | Out-Host
                     $code = $LASTEXITCODE
                 } finally { Pop-Location }
                 Add-Step -Name 'e2e' -ExitCode $code -Seconds ([int]((Get-Date) - $started).TotalSeconds) -Detail '' -Log $e2eLog

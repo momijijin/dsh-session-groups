@@ -341,7 +341,14 @@ function Compare-AuditSnapshots {
     }
 
     # 5. other storages files: must not change either (strict mode) / warn otherwise.
-    $allowed = @($script:QaGroupFileName, "$($script:QaGroupFileName).bak", "$($script:QaGroupFileName).tmp")
+    # The 0.2.5 diagnostics trace is plugin-owned append-only evidence, not
+    # product data: it is allowed to appear/grow and is reported separately.
+    $allowed = @(
+        $script:QaGroupFileName,
+        "$($script:QaGroupFileName).bak",
+        "$($script:QaGroupFileName).tmp",
+        $script:QaDiagnosticsFileName
+    )
     $beforeStorage = @{}
     foreach ($item in @(Get-AuditProp -Object $Baseline -Name 'storagesTopLevel')) {
         if ($item.kind -eq 'file') { $beforeStorage[$item.name] = $item.sha256 }
@@ -357,6 +364,15 @@ function Compare-AuditSnapshots {
         $beforeHash = if ($beforeStorage.ContainsKey($name)) { $beforeStorage[$name] } else { $null }
         $afterHash = if ($afterStorage.ContainsKey($name)) { $afterStorage[$name] } else { $null }
         if ($beforeHash -ne $afterHash) { $unexpected += $name }
+    }
+    $diagnosticsBefore = @(Get-AuditProp -Object $Baseline -Name 'storagesTopLevel' | Where-Object { $_.name -eq $script:QaDiagnosticsFileName -and $_.kind -eq 'file' })
+    $diagnosticsAfter = @(Get-AuditProp -Object $After -Name 'storagesTopLevel' | Where-Object { $_.name -eq $script:QaDiagnosticsFileName -and $_.kind -eq 'file' })
+    $diagnosticsLengthBefore = if ($diagnosticsBefore.Count -gt 0) { $diagnosticsBefore[0].length } else { 0 }
+    $diagnosticsLengthAfter = if ($diagnosticsAfter.Count -gt 0) { $diagnosticsAfter[0].length } else { 0 }
+    $diagnosticsAppendOnly = $diagnosticsLengthAfter -ge $diagnosticsLengthBefore
+    if (-not $diagnosticsAppendOnly) {
+        Add-QaCheck -Id 'AUD-5' -Description 'diagnostics trace is append-only (never truncated)' -Pass $false `
+            -Detail ("before={0} after={1}" -f $diagnosticsLengthBefore, $diagnosticsLengthAfter)
     }
     if ($StrictStorages) {
         Add-QaCheck -Id 'AUD-4' -Description 'no unexpected writes in ~/.dsh/storages top level' -Pass ($unexpected.Count -eq 0) `

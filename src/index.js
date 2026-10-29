@@ -14,9 +14,11 @@
  * @module dsh-session-groups
  */
 
+import { dirname, join } from 'node:path'
 import { probeConnection } from './host/fence.js'
 import { resolveRecordPath } from './host/home.js'
 import { logInfo } from './host/log.js'
+import { DIAGNOSTICS_FILE_NAME } from './host/constants.js'
 import { registerRoutes } from './host/routes.js'
 import { createStore } from './host/store.js'
 
@@ -34,14 +36,21 @@ export const inject = ['webServer']
 export const apply = (ctx, config = {}) => {
   const record = resolveRecordPath(ctx, config)
   const store = createStore({ filePath: record.filePath })
-  const mounted = registerRoutes(ctx, store)
+  const diagnosticsFilePath =
+    typeof config.diagnosticsFilePath === 'string' && config.diagnosticsFilePath.length > 0
+      ? config.diagnosticsFilePath
+      : // Co-located with the record file: in production that is
+        // `dshHomePath('storages')`, and a test seam that overrides `filePath`
+        // can never point diagnostics at the real home.
+        join(dirname(record.filePath), DIAGNOSTICS_FILE_NAME)
+  const mounted = registerRoutes(ctx, store, { diagnosticsFilePath })
   const probe = probeConnection(ctx)
 
   logInfo(
     ctx,
     `[dsh-session-groups] host ready: file=${record.filePath} storageSource=${
       record.storageSource
-    } routes=${mounted.routes.join(',')} connectionAtApply=${
+    } diagnostics=${diagnosticsFilePath} routes=${mounted.routes.join(',')} connectionAtApply=${
       probe.connection === undefined ? 'deferred' : 'present'
     } webServerPort=${String(ctx?.webServer?.port)}`,
   )
@@ -53,6 +62,7 @@ export const apply = (ctx, config = {}) => {
       filePath: record.filePath,
       storageDir: record.storageDir,
       storageSource: record.storageSource,
+      diagnosticsFilePath,
       mounted,
     })
   }

@@ -42,6 +42,8 @@ $script:QaAllowedProfile = 'groups-spike'
 $script:QaReservedProfiles = @('desktop', 'web')
 $script:QaReservedPorts = @(43120)
 $script:QaGroupFileName = 'dsh-session-groups.json'
+# 0.2.5 drag diagnostics append-only NDJSON (plugin-owned, expected to grow).
+$script:QaDiagnosticsFileName = 'dsh-session-groups.diagnostics.ndjson'
 $script:QaWorkspaceFileName = 'workspace.json'
 
 # ---------------------------------------------------------------------------

@@ -20,8 +20,19 @@ import {
   ARCHIVE_FILTER_LABEL_KEYS,
 } from './filter.js'
 import { applyDrop, hitTest, sameDropTarget } from './drag.js'
+import {
+  diagContext,
+  diagDragEnd,
+  diagDragStart,
+  diagDropState,
+  diagEnabled,
+  diagHandler,
+  diagRender,
+  diagTargetChange,
+  diagTrace,
+} from './diagnostics.js'
 import { GROUP_DRAG_MIME, resolveGroupDrop } from './group-drag.js'
-import { renderGlyph, renderIcon } from './icons.js'
+import { renderGlyph, renderHeaderIcon, renderIcon } from './icons.js'
 import {
   perfDragOver,
   perfDropTarget,
@@ -142,7 +153,7 @@ const isCurrentGroupPosition = (doc, draggedId, resolved, target) => {
 // ---------------------------------------------------------------------------
 // Small primitives
 // ---------------------------------------------------------------------------
-const IconButton = ({ label, glyph, onClick, testId, data, expanded, haspopup, className }) =>
+const IconButton = ({ label, glyph, icon, onClick, testId, data, expanded, haspopup, className }) =>
   h(
     'button',
     {
@@ -159,7 +170,9 @@ const IconButton = ({ label, glyph, onClick, testId, data, expanded, haspopup, c
       },
       ...(data ?? {}),
     },
-    renderGlyph(h, glyph)
+    // 0.2.5: header actions use the exact DSH workspace icon artwork; every
+    // other IconButton keeps the small stroke glyph vocabulary.
+    icon ? renderHeaderIcon(h, icon, 16) : renderGlyph(h, glyph)
   )
 
 const TextButton = ({ label, onClick, testId, data }) =>
@@ -273,6 +286,7 @@ const SessionRow = ({
   store,
 }) => {
   perfRender('SessionRow')
+  diagRender('SessionRow')
   const row = sessionNode.session
   const sessionId = row.id
   const archived = sessionNode.archived === true
@@ -373,6 +387,7 @@ const GroupDropSlot = ({ parentId, beforeGroupId, store, handlers }) => {
 
 const GroupNode = ({ node, depth, props, handlers, store }) => {
   perfRender('GroupNode')
+  diagRender('GroupNode')
   const group = node.group
   const expanded = isExpanded(store.collapsed, group.id)
   const dropTarget = store.dropTarget
@@ -1141,6 +1156,7 @@ const ArchiveFilterPopover = ({ filter, t, onPick }) =>
 
 const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds }) => {
   perfRender('Header')
+  diagRender('Header')
   const t = rt()?.t ?? ((key) => key)
   const filter = store.archiveFilter
   const [searchOpen, setSearchOpen] = useState(false)
@@ -1189,7 +1205,7 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds 
         // Official workspace-section order: search → view options → new group.
         IconButton({
           label: t('search.label'),
-          glyph: 'search',
+          icon: 'search',
           testId: 'session-groups-search-toggle',
           expanded: searchOpen,
           onClick: () => {
@@ -1202,7 +1218,7 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds 
           { ref: optionsRef, class: 'dsg-view-options' },
           IconButton({
             label: t('view.options'),
-            glyph: 'sliders',
+            icon: 'view-options',
             testId: 'session-groups-view-options',
             expanded: optionsOpen,
             haspopup: 'menu',
@@ -1224,7 +1240,7 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds 
         ),
         IconButton({
           label: t('view.newGroup'),
-          glyph: 'plus',
+          icon: 'project-add',
           testId: 'session-groups-new-group',
           onClick: (event) => handlers.openNewGroup(event, null),
         })
@@ -1603,6 +1619,7 @@ export const GroupsView = (props) => {
   const wide = props?.wide !== false
   const perfRenderStart = perfEnabled() ? perfNow() : 0
   perfRender('GroupsView')
+  diagRender('GroupsView')
 
   // Framework standard hooks: always called (rules of hooks), feature-detected.
   const sessions = typeof props?.useSessions === 'function' ? props.useSessions((snapshot) => snapshot) : null
@@ -1636,6 +1653,9 @@ export const GroupsView = (props) => {
       if (perfEnabled()) perfDropTarget(false)
       return
     }
+    // Diagnostics: record the stable target transition before React updates; the
+    // helper also emits placeholder insert/remove for the placeholder kinds.
+    if (diagEnabled()) diagTargetChange(dropTargetRef.current, next)
     dropTargetRef.current = next
     if (!perfEnabled()) {
       setDropTarget(next)
@@ -1814,6 +1834,21 @@ export const GroupsView = (props) => {
     statuses: statuses instanceof Map ? statuses : null,
   })
   const ungroupedCount = tree.ungrouped.length
+  // Diagnostics run context: every traced event carries the current revision,
+  // optimistic flag, tree counts, viewport and applied sidebar width. Building
+  // the patch object is skipped entirely when diagnostics are off.
+  if (diagEnabled()) {
+    diagContext({
+      mode: store.viewMode,
+      revision: store.revision,
+      optimistic: store.optimistic === true,
+      groups: store.doc.groups.length,
+      ungrouped: ungroupedCount,
+      visibleSessions: countTreeSessions(tree),
+      viewport: globalThis.innerWidth || viewportWidth,
+      sidebarWidth: appliedWidth,
+    })
+  }
   // Row components read current/drop state; merge it into the snapshot handed down.
   const viewState = {
     ...store,
@@ -1824,6 +1859,17 @@ export const GroupsView = (props) => {
 
   const commitDrop = async (source, target) => {
     perfMark('commitDrop:start', { kind: target?.kind ?? null })
+    if (diagEnabled()) {
+      const accepted = Boolean(source && target && target.kind !== 'invalid')
+      diagTrace(accepted ? 'drop.accept' : 'drop.reject', {
+        dragKind: source?.kind ?? null,
+        kind: target?.kind ?? null,
+        sessionId: source?.sessionId ?? null,
+        targetSessionId: target?.sessionId ?? null,
+        groupId: target?.groupId ?? null,
+      })
+      diagDropState(accepted ? 'accepted' : 'invalid', { kind: target?.kind ?? null })
+    }
     setDropTargetTracked(null)
     setDragState(null)
     if (!source || !target || target.kind === 'invalid') return
@@ -1847,6 +1893,17 @@ export const GroupsView = (props) => {
    */
   const commitGroupDrop = async (draggedId, target) => {
     perfMark('commitGroupDrop:start', { kind: target?.kind ?? null })
+    if (diagEnabled()) {
+      diagTrace('drop.accept', {
+        dragKind: 'group',
+        kind: target?.kind ?? null,
+        groupId: draggedId,
+        targetId: target?.targetId ?? null,
+        parentId: target?.parentId ?? null,
+        beforeGroupId: target?.beforeGroupId ?? null,
+      })
+      diagDropState('accepted', { kind: target?.kind ?? null })
+    }
     setDropTargetTracked(null)
     setDragState(null)
     dragRef.current = null
@@ -1903,6 +1960,7 @@ export const GroupsView = (props) => {
   const clearAutoExpand = () => {
     const current = autoExpandRef.current
     if (current.timer !== null) clearTimeout(current.timer)
+    if (current.timer !== null && diagEnabled()) diagTrace('autoexpand.cancel', { groupId: current.groupId })
     autoExpandRef.current = { groupId: null, timer: null }
   }
 
@@ -1912,7 +1970,9 @@ export const GroupsView = (props) => {
     const current = autoExpandRef.current
     if (current.groupId === groupId && current.timer !== null) return
     clearAutoExpand()
+    if (diagEnabled()) diagTrace('autoexpand.schedule', { groupId, delayMs: 500 })
     const timer = setTimeout(() => {
+      if (diagEnabled()) diagTrace('autoexpand.fire', { groupId })
       dispatch('expand-group', { id: groupId })
       autoExpandRef.current = { groupId: null, timer: null }
     }, 500)
@@ -2130,6 +2190,9 @@ export const GroupsView = (props) => {
         sessionId,
         label: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
       }
+      // Never trace the session title: the id is the only session identity in
+      // the diagnostics file (privacy rule in diagnostics.js).
+      if (diagEnabled()) diagDragStart('session', { sessionId })
       suppressedClickRef.current = null
       setDragState(dragRef.current)
       rt()?.startDragLabel?.(dragRef.current.label)
@@ -2174,12 +2237,14 @@ export const GroupsView = (props) => {
       }
       const drag = { kind: 'group', groupId: group.id, label: group.name }
       dragRef.current = drag
+      if (diagEnabled()) diagDragStart('group', { groupId: group.id, name: group.name })
       suppressedClickRef.current = { groupId: group.id, at: Date.now() }
       setDragState(drag)
       setDropTargetTracked(null)
       rt()?.startDragLabel?.(group.name)
     },
     onDragEnd: () => {
+      if (diagEnabled()) diagDragEnd()
       buttonPointerRef.current = null
       clearAutoExpand()
       dragRef.current = null
@@ -2365,21 +2430,31 @@ export const GroupsView = (props) => {
     },
   }
 
-  // Opt-in probe: time every drag handler. The wrapper keeps the hot path
-  // untouched when the probe is disabled (handlers stay unwrapped).
-  if (perfEnabled()) {
+  // Time every drag handler for the opt-in perf probe and for diagnostics
+  // (0.2.5, default on). Handlers stay unwrapped when both are off.
+  if (perfEnabled() || diagEnabled()) {
+    const isDragHandler = (name) =>
+      name.startsWith('onDrag') ||
+      name.startsWith('onDrop') ||
+      name.startsWith('onGroupDrag') ||
+      name.startsWith('onPlaceholderDrag') ||
+      name.startsWith('onPlaceholderDrop')
     for (const name of Object.keys(handlers)) {
-      if (!name.startsWith('onDragOver') && !name.startsWith('onDrop')) continue
+      if (!isDragHandler(name)) continue
       const original = handlers[name]
       handlers[name] = (event, ...args) => {
-        const started = perfNow()
+        const timed = perfEnabled() || diagEnabled()
+        const started = timed ? perfNow() : 0
         try {
           return original(event, ...args)
         } finally {
+          if (!timed) return
           const elapsed = perfNow() - started
+          if (diagEnabled()) diagHandler(name, elapsed, event)
+          if (!perfEnabled()) return
           if (name.startsWith('onDragOver')) {
             perfDragOver(name.slice(2), elapsed)
-          } else {
+          } else if (name.startsWith('onDrop')) {
             perfSample('dropHandlerMs', elapsed)
             perfMark('drop:event', { handler: name, ms: Math.round(elapsed * 100) / 100 })
           }

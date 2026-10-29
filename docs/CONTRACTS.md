@@ -6,6 +6,7 @@
 - V1.1（0.2.2，2026-10-28）：**UI-layout + drag-perf patch**——footer 两段视图切换、header 加号/搜索/视图选项（搜索行可折叠 + 关闭）、归档三态移入 view-options popover、菜单/对话框/输入主题感知、dragover 目标去重 + 移除未消费的 `saving` 重渲染；无数据模型/Host 路由/存储变化。UI testid additive，旧的 `session-groups-toggle`/`session-groups-archive-filter`/`session-groups-search` 保留。
 - V1.1（0.2.3，2026-10-29）：**virtualization + UI 回退 patch**——footer 恢复为单个切换按钮（图标/文案随目标视图变化，`data-mode`/`title`/`aria-pressed` 反映当前态）；header 右侧顺序改为官方工作区段头 **search → view-options → plus**；未归组列表按 `.dsg-tree` 视口 + overscan 窗口化（顶部/底部 spacer 精确保高，组树保持完整），搜索选中窗口外未归组行会先强制滚入窗口；纯 helper `computeVirtualWindow` + `virtualScrollOffset`。数据模型/Host 路由/存储不变；0.2.2 的 `session-groups-toggle-groups`/`session-groups-toggle-workspace` 删除，新增 `session-groups-virtual-spacer`。
 - V1.1（0.2.4，2026-10-29）：**optimistic drop commits + insertion placeholders + official chrome patch**——会话/分组拖拽（含菜单上移/下移）改为乐观提交：drop 当帧按当前乐观 doc dispatch，`revision` 保持服务端确认值，写入进入单写者合并队列（快速移动合并、成功 reconcile、失败/冲突回滚 + 既有 toast）；非乐观提交（建组/重命名/删除/图标/移动对话框）先 flush 乐观队列再在最新 doc 上执行。拖拽落点改为真实行高占位（32px 会话 / 34px 分组，主题 accent 背景 + 虚线边框 + 目标名/「放到这里」），覆盖 session-before/after、group-before/after、子组缝隙、group-append、ungrouped/root-end；`session-groups-drop-indicator` testid 保留并新增 `data-drop-height`。`.dsg-header-title` 权重 600→400（官方 section label，14/20）；footer 文案精确为「切换到自由分组视图」/「返回默认工作区视图」。数据模型/Host 路由/存储不变。
+- V1.1（0.2.5，2026-10-29）：**official header icons + drag diagnostics patch**——header 三按钮改用 DSH 2.0.18 primitives 原始 artwork（`IconSearchOutlineRegular` / `IconSlidersTwoOutlineRegular` / `IconProjectAddOutlineRegular`，16px、1px stroke）；新增**只增不改**的 `POST /dsh-session-groups/diagnostics`（fence 后 append-only NDJSON 到 storages 下的诊断文件）、客户端诊断环/flush/HUD（默认开启，`localStorage['dsh-session-groups.diagnostics']='0'` 关闭）与分析器脚本。数据模型、`load`/`commit`、记录文件路径与官方数据写入不变。
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
@@ -123,6 +124,27 @@ Rules:
 - `@deepseek-ai/dsh-home-paths` 必须写进 package.json `peerDependencies`（linked 插件 import 安装侧包的解析前提）。
 - Only this file is written by group operations; `.tmp` 用唯一名，避免跨进程重名。
 
+### POST `/dsh-session-groups/diagnostics`（0.2.5，additive）
+
+请求：
+
+```json
+{ "runId": "dsg-...", "schemaVersion": 1, "events": [ { "v": 1, "runId": "dsg-...", "seq": 1, "t": 123.4, "ts": 1760000000000, "type": "native.dragover", "ctx": {}, "phase": "capture" } ] }
+```
+
+响应：
+
+- 200 `{ "ok": true, "appended": 20 }`
+- 405 + `Allow: POST`（方法不符）
+- 413 body too large；415 non-JSON；422 `events` 非数组/为空/超过 500 条/含非对象；503 `fence-unavailable` / `io`。
+
+Rules:
+
+- **append-only**：逐 batch 追加到 `path.join(dshHomePath('storages'), 'dsh-session-groups.diagnostics.ndjson')`；每行 envelope `{receivedAt, runId, schemaVersion, event}`，不重写、不 fsync、不写 `.bak`。
+- 与 `load`/`commit` 相同 fence 与 `cache-control: no-store`；**不读取也不修改** `dsh-session-groups.json`、`workspace.json`、session 数据。目录不存在时递归创建。
+- body 上限 256 KiB、单批 ≤500 事件（客户端 20 事件/500ms 或 120 事件/批；dragend/visibility hidden 用 `sendBeacon`）。诊断关闭时不发请求。
+- 隐私：事件只含 ID/testid/分组名/翻译后的拖拽 label，不含会话标题或 transcript；文件仅留在本机 storages。
+
 ## 3. Shared model API
 
 Path `src/shared/model.js`; pure functions.
@@ -216,6 +238,8 @@ V1.1（0.2.0）additive 追加：`session-groups-resize-handle`、`session-group
 
 V1.1（0.2.2）additive 追加：`session-groups-search-toggle`（header 搜索开关）、`session-groups-search-close`（搜索行关闭/收起）、`session-groups-view-options`（header 视图选项按钮）、`session-groups-view-options-popover`（归档三态 popover）。搜索行默认不渲染；搜索图标开合，Escape（无下拉时）与关闭按钮收起整行。`session-groups-archive-filter` 从旧的循环按钮改为 popover 内三行（`data-filter=hidden|all|only` + `data-active`）；`session-groups-return` 只在错误/扁平回退里保留。**0.2.3 删除 footer 两段 testid** `session-groups-toggle-groups` / `session-groups-toggle-workspace`；`session-groups-toggle` 恢复为单个按钮（`data-mode`/`data-target`/`data-wide`/`aria-pressed`/`title`），并新增 `session-groups-virtual-spacer`（`data-position=top|bottom`）。未归组头增加 `data-count`（逻辑行数），虚拟列表行容器增加 `data-virtual-start|end|count|total`。
 
+V1.1（0.2.5）additive 追加：`session-groups-diagnostics-hud`（诊断 HUD 根，`pointer-events:none`，纯 DOM 文本；`data-run-id`/`data-schema-version`）。HUD 只在诊断开启（默认）时挂载；`localStorage['dsh-session-groups.diagnostics']='0'` 时不渲染 HUD、不发 diagnostics 请求。header 三个按钮的 testid 不变，仅内部 SVG 换成官方 artwork。
+
 | testid | 位置 | 附加属性 |
 |---|---|---|
 | `session-groups-toggle` | footer 单个视图切换按钮（28px） | `data-mode="workspace|groups"`, `data-target`, `data-wide`, `aria-pressed`, `title`/`aria-label` |
@@ -254,6 +278,7 @@ V1.1（0.2.2）additive 追加：`session-groups-search-toggle`（header 搜索�
 | `session-groups-search-empty` | 搜索无结果空态 | — |
 | `session-groups-banner` | 加载/冲突/错误 banner | `data-kind` |
 | `session-groups-toast` | 操作提示 toast | — |
+| `session-groups-diagnostics-hud` | 固定右下诊断 HUD（0.2.5，默认开启；pointer-events:none，≤4Hz 纯 DOM 更新） | `data-run-id`, `data-schema-version="1"`, `aria-hidden` |
 | `session-groups-dialog-workspace` | 组内新建的工作区选择 | — |
 
 ## 5. Host action mapping

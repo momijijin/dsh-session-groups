@@ -1,8 +1,20 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir, writeFile } from 'node:fs/promises'
-import { COMMIT_PATH, LOAD_PATH, MAX_BODY_BYTES } from '../../src/host/constants.js'
-import { commitResponse, loadResponse, parseCommitBody } from '../../src/host/routes.js'
+import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import {
+  COMMIT_PATH,
+  DIAGNOSTICS_PATH,
+  LOAD_PATH,
+  MAX_BODY_BYTES,
+  MAX_DIAGNOSTICS_BODY_BYTES,
+  MAX_DIAGNOSTICS_EVENTS,
+} from '../../src/host/constants.js'
+import {
+  commitResponse,
+  loadResponse,
+  parseCommitBody,
+  parseDiagnosticsBody,
+} from '../../src/host/routes.js'
 import { createStore } from '../../src/host/store.js'
 import { makeRequest, makeResponse, makeTempStore, mountRoutes, sampleDoc } from './helpers.js'
 
@@ -28,14 +40,14 @@ const allowedHeaders = { cookie: 'token=ok', 'content-type': 'application/json',
 
 const commitBody = (baseRevision, doc) => JSON.stringify({ baseRevision, doc })
 
-test('route registration mounts exactly the two frozen paths', async (t) => {
+test('route registration mounts the two frozen paths plus the diagnostics route', async (t) => {
   const mounted = await mountRoutes()
   t.after(() => mounted.cleanup())
   assert.deepEqual(
     mounted.routes.map((route) => `${route.kind}:${route.path}`).sort(),
-    [`exact:${COMMIT_PATH}`, `exact:${LOAD_PATH}`].sort(),
+    [`exact:${COMMIT_PATH}`, `exact:${DIAGNOSTICS_PATH}`, `exact:${LOAD_PATH}`].sort(),
   )
-  assert.deepEqual(mounted.mounted.routes, [LOAD_PATH, COMMIT_PATH])
+  assert.deepEqual(mounted.mounted.routes, [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH])
 })
 
 test('the fence runs first: no connection -> 503 fence-unavailable on both routes', async (t) => {
@@ -267,4 +279,143 @@ test('loadResponse/commitResponse map store results to the frozen wire shapes', 
 
   assert.equal(commitResponse({ kind: 'invalid', errors: ['duplicate-session:s1'] }).status, 422)
   assert.equal(commitResponse({ kind: 'unsupported-version', version: 2 }).status, 409)
+})
+
+// ---------------------------------------------------------------------------
+// Diagnostics route (0.2.5)
+// ---------------------------------------------------------------------------
+
+const diagnosticsBatch = (events = [{ type: 'handler', handler: 'onDragOverSession', ms: 0.4 }], extra = {}) =>
+  JSON.stringify({ runId: 'run-test', schemaVersion: 1, events, ...extra })
+
+test('POST diagnostics appends NDJSON under storages and never touches the record file', async (t) => {
+  const mounted = await mountRoutes({ connection: cookieConnection() })
+  t.after(() => mounted.cleanup())
+
+  const first = await mounted.call(
+    DIAGNOSTICS_PATH,
+    makeRequest({
+      method: 'POST',
+      headers: { cookie: 'token=ok', 'content-type': 'application/json' },
+      body: diagnosticsBatch([
+        { type: 'native.dragover', phase: 'capture', x: 10, y: 20 },
+        { type: 'dropTarget.change', from: null, to: { kind: 'session-before' } },
+      ]),
+    }),
+  )
+  assert.equal(first.res.statusCode, 200)
+  assert.deepEqual(first.json, { ok: true, appended: 2 })
+
+  const second = await mounted.call(
+    DIAGNOSTICS_PATH,
+    makeRequest({
+      method: 'POST',
+      headers: { cookie: 'token=ok', 'content-type': 'application/json' },
+      body: diagnosticsBatch([{ type: 'run.start' }], { runId: 'run-second' }),
+    }),
+  )
+  assert.equal(second.res.statusCode, 200)
+
+  const text = await readFile(mounted.diagnosticsFilePath, 'utf8')
+  const lines = text.trimEnd().split('\n')
+  assert.equal(lines.length, 3, 'append-only: the second batch keeps the first lines')
+  const records = lines.map((line) => JSON.parse(line))
+  assert.equal(records[0].runId, 'run-test')
+  assert.equal(records[0].schemaVersion, 1)
+  assert.match(records[0].receivedAt, /^\d{4}-\d{2}-\d{2}T/)
+  assert.equal(records[0].event.type, 'native.dragover')
+  assert.equal(records[2].runId, 'run-second')
+
+  // The official record file must not exist: diagnostics only writes its file.
+  await assert.rejects(access(mounted.filePath), /ENOENT/)
+  assert.deepEqual((await readdir(mounted.storages)).sort(), ['dsh-session-groups.diagnostics.ndjson'])
+})
+
+test('POST diagnostics status matrix: methods, content type, JSON shape, size', async (t) => {
+  const mounted = await mountRoutes({ connection: cookieConnection() })
+  t.after(() => mounted.cleanup())
+
+  const get = await mounted.call(DIAGNOSTICS_PATH, makeRequest({ headers: { cookie: 'token=ok' } }))
+  assert.equal(get.res.statusCode, 405)
+  assert.equal(get.res.headers.allow, 'POST')
+
+  const fenceMissing = await mountRoutes()
+  t.after(() => fenceMissing.cleanup())
+  const fenced = await fenceMissing.call(
+    DIAGNOSTICS_PATH,
+    makeRequest({ method: 'POST', headers: { 'content-type': 'application/json' }, body: diagnosticsBatch() }),
+  )
+  assert.equal(fenced.res.statusCode, 503)
+  assert.equal(fenced.json.code, 'fence-unavailable')
+
+  const wrongType = await mounted.call(
+    DIAGNOSTICS_PATH,
+    makeRequest({ method: 'POST', headers: { cookie: 'token=ok', 'content-type': 'text/plain' }, body: '{}' }),
+  )
+  assert.equal(wrongType.res.statusCode, 415)
+
+  const malformed = await mounted.call(
+    DIAGNOSTICS_PATH,
+    makeRequest({
+      method: 'POST',
+      headers: { cookie: 'token=ok', 'content-type': 'application/json' },
+      body: '{',
+    }),
+  )
+  assert.equal(malformed.res.statusCode, 422)
+  assert.equal(malformed.json.code, 'invalid')
+
+  for (const body of [
+    JSON.stringify({ runId: 'x', schemaVersion: 1 }),
+    JSON.stringify({ runId: 'x', schemaVersion: 1, events: [] }),
+    JSON.stringify({ runId: 'x', schemaVersion: 1, events: ['nope'] }),
+    JSON.stringify({
+      runId: 'x',
+      schemaVersion: 1,
+      events: Array.from({ length: MAX_DIAGNOSTICS_EVENTS + 1 }, () => ({ type: 'x' })),
+    }),
+  ]) {
+    const invalid = await mounted.call(
+      DIAGNOSTICS_PATH,
+      makeRequest({ method: 'POST', headers: { cookie: 'token=ok', 'content-type': 'application/json' }, body }),
+    )
+    assert.equal(invalid.res.statusCode, 422, body.slice(0, 80))
+    assert.equal(invalid.json.code, 'invalid')
+  }
+
+  const tooLarge = await mounted.call(
+    DIAGNOSTICS_PATH,
+    makeRequest({
+      method: 'POST',
+      headers: { cookie: 'token=ok', 'content-type': 'application/json' },
+      body: 'x'.repeat(MAX_DIAGNOSTICS_BODY_BYTES + 2),
+    }),
+  )
+  assert.equal(tooLarge.res.statusCode, 413)
+})
+
+test('parseDiagnosticsBody keeps the client runId/schemaVersion and bounds the batch', () => {
+  assert.equal(parseDiagnosticsBody(null).ok, false)
+  assert.equal(parseDiagnosticsBody({ events: 'nope' }).ok, false)
+  assert.equal(parseDiagnosticsBody({ events: [] }).ok, false)
+  assert.equal(parseDiagnosticsBody({ events: [null] }).ok, false)
+
+  const parsed = parseDiagnosticsBody({
+    runId: 'dsg-abc',
+    schemaVersion: 1,
+    events: [{ type: 'run.start', t: 0 }],
+  })
+  assert.equal(parsed.ok, true)
+  assert.equal(parsed.runId, 'dsg-abc')
+  assert.equal(parsed.schemaVersion, 1)
+  assert.equal(parsed.events.length, 1)
+
+  const unbounded = parseDiagnosticsBody({
+    runId: 'x'.repeat(400),
+    schemaVersion: 'nope',
+    events: [{ type: 'x' }],
+  })
+  assert.equal(unbounded.ok, true)
+  assert.equal(unbounded.runId.length, 128)
+  assert.equal(unbounded.schemaVersion, null)
 })

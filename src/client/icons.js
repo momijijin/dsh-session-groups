@@ -56,6 +56,120 @@ export const renderIcon = (h, name, size = 16) => {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Official DSH workspace header artwork (0.2.5)
+// ---------------------------------------------------------------------------
+/**
+ * Exact artwork copied from DSH Desktop 2.0.18
+ * `@deepseek-ai/dsh-client-ui-primitives`:
+ *
+ * - `IconSearchOutlineRegular` (viewBox 0 0 16 16, 1px stroke, circle + handle)
+ * - `IconSlidersTwoOutlineRegular` (1px stroke, two rails + two knobs)
+ * - `IconProjectAddOutlineRegular` (1px stroke, project contour + plus)
+ *
+ * The plugin ships its own copy (no host icon dependency, CONTRACTS §0) but the
+ * geometry is byte-for-byte the official one, so the three header buttons match
+ * the official workspace section instead of custom approximations.
+ */
+export const HEADER_ICON_ARTWORK = Object.freeze({
+  search: Object.freeze({
+    viewBox: '0 0 16 16',
+    strokeWidth: '1',
+    stroke: 'currentColor',
+    strokeLinecap: null,
+    strokeLinejoin: null,
+    filled: Object.freeze([]),
+    stroked: Object.freeze([
+      'M6.58727 11.8586C9.55061 11.8586 11.9529 9.45637 11.9529 6.49304C11.9529 3.5297 9.55061 1.12744 6.58727 1.12744C3.62394 1.12744 1.22168 3.5297 1.22168 6.49304C1.22168 9.45637 3.62394 11.8586 6.58727 11.8586Z',
+      'M10.2991 10.3933L14.7783 14.8725',
+    ]),
+    circles: Object.freeze([]),
+  }),
+  'view-options': Object.freeze({
+    viewBox: '0 0 16 16',
+    strokeWidth: '1',
+    stroke: 'currentColor',
+    strokeLinecap: 'round',
+    strokeLinejoin: null,
+    filled: Object.freeze([]),
+    stroked: Object.freeze(['M2.3 5h5.85M12.05 5h1.65', 'M2.3 11h1.65M7.85 11h5.85']),
+    circles: Object.freeze([
+      Object.freeze({ cx: '9.95', cy: '5', r: '1.45' }),
+      Object.freeze({ cx: '5.75', cy: '11', r: '1.45' }),
+    ]),
+  }),
+  'project-add': Object.freeze({
+    viewBox: '0 0 16 16',
+    strokeWidth: '1',
+    stroke: 'currentColor',
+    strokeLinecap: null,
+    strokeLinejoin: null,
+    filled: Object.freeze([
+      'M5.54492 2.06738C5.91034 2.06754 6.26318 2.20149 6.53711 2.44336L7.94043 3.68164V4.7998C7.71462 4.74105 7.50367 4.63139 7.32617 4.47461L5.87598 3.19238C5.78477 3.11185 5.66658 3.06754 5.54492 3.06738H2.94922C2.67322 3.06738 2.44946 3.29145 2.44922 3.56738V12.4326C2.44927 12.7087 2.67311 12.9326 2.94922 12.9326H12.9326C13.2086 12.9325 13.4326 12.7086 13.4326 12.4326V8.53613H14.4326V12.4326C14.4326 13.2609 13.7609 13.9325 12.9326 13.9326H2.94922C2.12083 13.9326 1.44927 13.261 1.44922 12.4326V3.56738C1.44946 2.73916 2.12094 2.06738 2.94922 2.06738H5.54492Z',
+    ]),
+    stroked: Object.freeze(['M9.75977 4.50208H14.5509', 'M12.1492 6.89758L12.1492 2.10642']),
+    circles: Object.freeze([]),
+  }),
+})
+
+/** Header action names mapped to the official artwork above. */
+export const HEADER_ICON_NAMES = Object.freeze(['search', 'view-options', 'project-add'])
+
+/**
+ * Render one official header artwork at `size` (default 16, matching the
+ * official workspace header). Fill/stroke are separated exactly like the
+ * primitives package so the silhouette matches the official icon.
+ */
+export const renderHeaderIcon = (h, name, size = 16) => {
+  const artwork = HEADER_ICON_ARTWORK[name] ?? HEADER_ICON_ARTWORK.search
+  const children = []
+  for (const d of artwork.filled) {
+    children.push(h('path', { key: `f${children.length}`, d, fill: 'currentColor', stroke: 'none' }))
+  }
+  for (const d of artwork.stroked) {
+    children.push(
+      h('path', {
+        key: `s${children.length}`,
+        d,
+        fill: 'none',
+        stroke: artwork.stroke,
+        'stroke-width': artwork.strokeWidth,
+        ...(artwork.strokeLinecap ? { 'stroke-linecap': artwork.strokeLinecap } : {}),
+        ...(artwork.strokeLinejoin ? { 'stroke-linejoin': artwork.strokeLinejoin } : {}),
+      })
+    )
+  }
+  for (const circle of artwork.circles) {
+    children.push(
+      h('circle', {
+        key: `c${children.length}`,
+        cx: circle.cx,
+        cy: circle.cy,
+        r: circle.r,
+        fill: 'none',
+        stroke: artwork.stroke,
+        'stroke-width': artwork.strokeWidth,
+        ...(artwork.strokeLinecap ? { 'stroke-linecap': artwork.strokeLinecap } : {}),
+      })
+    )
+  }
+  return h(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: artwork.viewBox,
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+      'aria-hidden': 'true',
+      focusable: 'false',
+      class: 'dsg-glyph dsg-glyph-official',
+      'data-icon': name,
+    },
+    ...children
+  )
+}
+
 /** Small UI glyphs that are not part of the group icon set. */
 export const UI_GLYPHS = Object.freeze({
   chevronDown: 'M4 6.2l4 4 4-4',

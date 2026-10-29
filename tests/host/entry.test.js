@@ -24,7 +24,7 @@ test('the entry exports the Cordis row name and injects webServer', () => {
   assert.deepEqual(inject, ['webServer'])
 })
 
-test('apply() returns void synchronously and mounts both routes inside ctx.effect', async (t) => {
+test('apply() returns void synchronously and mounts the three routes inside ctx.effect', async (t) => {
   const temp = await makeTempStore()
   t.after(temp.cleanup)
   const { ctx, routes, logs } = makeContext()
@@ -38,12 +38,14 @@ test('apply() returns void synchronously and mounts both routes inside ctx.effec
 
   // Cordis 4.0.5 treats the return value as the plugin effect list.
   assert.equal(returned, undefined)
-  assert.equal(routes.length, 2)
+  assert.equal(routes.length, 3)
   assert.equal(ready.filePath, temp.filePath)
+  assert.equal(ready.diagnosticsFilePath, join(temp.storages, 'dsh-session-groups.diagnostics.ndjson'))
   assert.equal(ready.mounted.registered, true)
   assert.equal(typeof ready.store.load, 'function')
   assert.equal(typeof ready.storageSource, 'string')
   assert.equal(logs.info.some((line) => line.includes('host ready') && line.includes('storageSource=')), true)
+  assert.equal(logs.info.some((line) => line.includes('diagnostics=')), true)
 })
 
 test('apply() is fail-soft when the composition has no webServer', async (t) => {

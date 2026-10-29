@@ -1,20 +1,30 @@
 /**
- * The two host routes.
+ * The host routes.
  *
- * GET  /dsh-session-groups/load    -> current revision + document
- * POST /dsh-session-groups/commit  -> compare-and-set write
+ * GET  /dsh-session-groups/load         -> current revision + document
+ * POST /dsh-session-groups/commit       -> compare-and-set write
+ * POST /dsh-session-groups/diagnostics  -> append-only drag trace (0.2.5)
  *
  * Frozen contract: docs/CONTRACTS.md §2.
  * Status matrix: 200 / 400 (unreadable body) / 405+Allow / 409 conflict /
  * 409 unsupported-version / 413 / 415 / 422 / 503 fence-unavailable|io.
  * Responses are JSON, `cache-control: no-store`, and never set CORS headers.
- * The fence runs before method/body handling.
+ * The fence runs before method/body handling. Diagnostics writes only the
+ * dedicated `.ndjson` file under `storages/`, never the official host data.
  */
 
-import { basename } from 'node:path'
+import { appendFile, mkdir } from 'node:fs/promises'
+import { basename, dirname } from 'node:path'
 import { DOC_VERSION } from '../shared/constants.js'
 import { validateDoc } from '../shared/model.js'
-import { COMMIT_PATH, LOAD_PATH, MAX_BODY_BYTES } from './constants.js'
+import {
+  COMMIT_PATH,
+  DIAGNOSTICS_PATH,
+  LOAD_PATH,
+  MAX_BODY_BYTES,
+  MAX_DIAGNOSTICS_BODY_BYTES,
+  MAX_DIAGNOSTICS_EVENTS,
+} from './constants.js'
 import { fenceRequest, probeConnection } from './fence.js'
 import { logInfo, logWarn } from './log.js'
 
@@ -47,9 +57,9 @@ const contentTypeOf = (req) => {
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 
 /** Read a bounded request body; drains past the ceiling so the socket settles. */
-const readBoundedBody = async (req) => {
+const readBoundedBody = async (req, limit = MAX_BODY_BYTES) => {
   const declaredLength = Number(req?.headers?.['content-length'])
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+  if (Number.isFinite(declaredLength) && declaredLength > limit) {
     req.resume?.()
     return { tooLarge: true }
   }
@@ -57,7 +67,7 @@ const readBoundedBody = async (req) => {
   let size = 0
   for await (const chunk of req) {
     size += chunk.byteLength
-    if (size > MAX_BODY_BYTES) {
+    if (size > limit) {
       req.resume?.()
       return { tooLarge: true }
     }
@@ -148,16 +158,46 @@ export const parseCommitBody = (body) => {
 }
 
 /**
- * Register both routes on the composition's webServer. Each registration is
+ * Validate one diagnostics batch. The route is append-only and never validates
+ * event internals: the client owns the schema, the host only enforces a bounded
+ * batch so one request cannot grow the file without limit.
+ *
+ * @returns {{ ok: true, runId: string|null, schemaVersion: number|null, events: object[] } | { ok: false, message: string }}
+ */
+export const parseDiagnosticsBody = (body) => {
+  if (!isObject(body)) return { ok: false, message: 'body must be a JSON object' }
+  const { events } = body
+  if (!Array.isArray(events)) return { ok: false, message: 'events must be an array' }
+  if (events.length === 0) return { ok: false, message: 'events must not be empty' }
+  if (events.length > MAX_DIAGNOSTICS_EVENTS) {
+    return { ok: false, message: `events must contain at most ${String(MAX_DIAGNOSTICS_EVENTS)} entries` }
+  }
+  if (!events.every((event) => isObject(event))) return { ok: false, message: 'events must be JSON objects' }
+  const runId = typeof body.runId === 'string' && body.runId.length > 0 ? body.runId.slice(0, 128) : null
+  const schemaVersion = Number.isInteger(body.schemaVersion) && body.schemaVersion > 0 ? body.schemaVersion : null
+  return { ok: true, runId, schemaVersion, events }
+}
+
+/**
+ * Register the routes on the composition's webServer. Each registration is
  * wrapped in `ctx.effect` so it disappears when the plugin is disposed.
  * Fail-soft: a composition without a webServer only logs a warning.
+ *
+ * @param {object} ctx Cordis context.
+ * @param {object} store group document store.
+ * @param {{ diagnosticsFilePath?: string | null }} [options] host-half options
+ *   (`diagnosticsFilePath` is resolved from `dshHomePath('storages')`).
  * @returns {{ registered: boolean, routes: string[] }}
  */
-export const registerRoutes = (ctx, store) => {
+export const registerRoutes = (ctx, store, options = {}) => {
   if (typeof ctx?.webServer?.register !== 'function') {
     logWarn(ctx, 'dsh-session-groups: webServer.register is unavailable; host routes are not mounted')
     return { registered: false, routes: [] }
   }
+  const diagnosticsFilePath =
+    typeof options.diagnosticsFilePath === 'string' && options.diagnosticsFilePath.length > 0
+      ? options.diagnosticsFilePath
+      : null
 
   // The composition's `connection` service may arrive through a sibling row
   // after this plugin activates, so the fence is resolved per request and the
@@ -291,5 +331,83 @@ export const registerRoutes = (ctx, store) => {
     `dsh-session-groups: POST ${COMMIT_PATH}`,
   )
 
-  return { registered: true, routes: [loadPath, commitPath] }
+  const diagnosticsPath = register(
+    DIAGNOSTICS_PATH,
+    async (req, res) => {
+      if (fenceDenied(req, res)) return
+      if (req.method !== 'POST') {
+        sendMethodNotAllowed(res, 'POST')
+        return
+      }
+      if (contentTypeOf(req) !== 'application/json') {
+        sendJson(res, 415, {
+          ok: false,
+          code: 'unsupported-media-type',
+          message: 'content-type must be application/json',
+        })
+        return
+      }
+      if (diagnosticsFilePath === null) {
+        sendJson(res, 503, { ok: false, code: 'io', message: 'diagnostics path is not configured' })
+        return
+      }
+
+      let text
+      try {
+        const read = await readBoundedBody(req, MAX_DIAGNOSTICS_BODY_BYTES)
+        if (read.tooLarge === true) {
+          sendJson(res, 413, { ok: false, code: 'payload-too-large', message: 'request body is too large' })
+          return
+        }
+        text = read.text
+      } catch (error) {
+        sendJson(res, 400, {
+          ok: false,
+          code: 'bad-request',
+          message: `request body unreadable: ${error instanceof Error ? error.message : String(error)}`,
+        })
+        return
+      }
+
+      let body
+      try {
+        body = JSON.parse(text)
+      } catch {
+        sendJson(res, 422, { ok: false, code: 'invalid', message: 'body is not valid JSON' })
+        return
+      }
+      const parsed = parseDiagnosticsBody(body)
+      if (!parsed.ok) {
+        sendJson(res, 422, { ok: false, code: 'invalid', message: parsed.message })
+        return
+      }
+
+      // Append-only NDJSON; one line per event so a truncated tail loses at
+      // most one record. create dir, no fsync, never touch the record file.
+      const lines = parsed.events
+        .map((event) =>
+          JSON.stringify({
+            receivedAt: new Date().toISOString(),
+            runId: parsed.runId,
+            schemaVersion: parsed.schemaVersion,
+            event,
+          })
+        )
+        .join('\n')
+      try {
+        await mkdir(dirname(diagnosticsFilePath), { recursive: true })
+        await appendFile(diagnosticsFilePath, `${lines}\n`, 'utf8')
+        sendJson(res, 200, { ok: true, appended: parsed.events.length })
+      } catch (error) {
+        logWarn(
+          ctx,
+          `dsh-session-groups: diagnostics append failed: ${error instanceof Error ? error.message : String(error)}`,
+        )
+        sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
+      }
+    },
+    `dsh-session-groups: POST ${DIAGNOSTICS_PATH}`,
+  )
+
+  return { registered: true, routes: [loadPath, commitPath, diagnosticsPath] }
 }

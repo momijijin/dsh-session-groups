@@ -5,7 +5,40 @@
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
-## 0. V1.1 patch 0.2.4 最终结论（2026-10-29，拖拽行高占位 + 乐观 drop 提交 + header/footer 精确化）
+## 0. V1.1 patch 0.2.5 最终结论（2026-10-29，官方 header 图标 + 拖拽诊断 trace/HUD + 分析器）
+
+**V1.1 patch 0.2.5 QA 验证线 PASS（隔离 home `.spike-homes/qa-0.2.5`；setup 端口 4402 / E2E 端口 4403；setup 18/18、真实 home 零写入）：**
+
+| 层 | 结果 | 证据 |
+|---|---|---|
+| `npm test`（仓库全量） | **234/234 PASS**（0 fail / 0 skip，~3.9s；新增 diagnostics 11 条、analyzer 4 条、icons 5 条、host diagnostics route 3 条，并更新 route/entry 计数） | 控制台输出 |
+| E2E 18 步（默认开启诊断） | **18/18 PASS**（step 合计 **83,956 ms**；`consoleErrors=[]`、`pageErrors=[]`）；step 18 HUD 断言 `pointer-events:none`、`n=28 / chg=54 / rend=5312`；step 18 乐观 DOM 位移会话 **304ms** / 分组 **12ms**，revision 在 HTTP 挂起期间未变（会话 29→30、分组 30→31） | `scripts/qa/evidence/e2e-20261029-134445.json` + 18 张截图（`scripts/qa/evidence/screenshots/e2e/`） |
+| 诊断持久化（E2E runner 非步骤校验） | **PASS**：页面 POST `e2e-probe` → 200 `{ok:true,appended:1}`；隔离 home NDJSON **3,091 行（E2E 记录时）/ 12 runs / 0 invalidLines**，`nativeSeen` / `handlerSeen` / `optimisticSeen` 全为 true（native/handler/optimistic/HTTP 相位齐全）；文件 `storages/dsh-session-groups.diagnostics.ndjson` 约 **1.8 MB** | 同上 `diagnostics` 字段 + `.spike-homes/qa-0.2.5/storages/dsh-session-groups.diagnostics.ndjson` |
+| 分析器真实 trace | **PASS**：`analyze-drag-trace.mjs` 解析 **12 runs / 0 parseErrors**；placeholder insert/remove、target/label 序列、autoexpand、optimistic/HTTP 相位齐全；慢 handler（≥50ms）**0**；longtask 仅应用启动/宿主渲染，拖拽内无 >2s freeze；burst 窗口 15 事件/1ms，未超阈值 | 同一 trace（`node scripts/qa/analyze-drag-trace.mjs <trace>`） |
+| setup（0.2.5 隔离 home） | **PASS 18/18**；`HOME-0 removed=2`（重置旧隔离 home 记录，无用户文件删除）；真实 home 前后 fingerprint 一致；client build **227,938 bytes** / sha256 `93614e9a96e693e376754c57bbd66bf0d11e0bb95a189d706df8f5aecc4d4492`；package version `0.2.5` | `scripts/qa/evidence/setup-20261029-133829.json` |
+| 数据审计 | **PASS**（verify 7/7）：只 `dsh-session-groups.json` 变更（revision 16）；`workspace.json` 由宿主会话操作改动（`-AllowHostSessionChanges` 放行）；3 sample sessions / desktop/web profile 指纹不变；诊断文件按 append-only 放行（AUD-5） | `scripts/qa/evidence/audit-baseline-20261029-134315.json` / `audit-verify-20261029-134354.json` |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.5.tgz`（**148,971 bytes**；unpacked **580,470**；**36 files**；sha256 `2D564CDBAD7CE24B17C1DF43561759834FC213F4387F1F6EC13A9C1694C08D91`） | 本文件 §0.2 |
+
+> 证据文件位于 `scripts/qa/evidence/`（`scripts/qa/.gitignore` 排除，本地保留；不入包/不入库）；真实 trace 位于 `.spike-homes/qa-0.2.5/storages/`（gitignore）。E2E 截图同目录 `screenshots/e2e/`。
+
+### 0.1 0.2.5 变更明细（本次 patch）
+
+- **官方 header 图标**：`src/client/icons.js` 新增 `HEADER_ICON_ARTWORK` / `renderHeaderIcon`，逐字节复制 DSH Desktop 2.0.18 `@deepseek-ai/dsh-client-ui-primitives` 的 `IconSearchOutlineRegular`（圆+柄）、`IconSlidersTwoOutlineRegular`（两横线+两圆）、`IconProjectAddOutlineRegular`（填充项目轮廓+plus）；`components.js` 的 `IconButton` 支持 `icon`，header search/view-options/new-group 使用 16px 官方 artwork，顺序不变。
+- **客户端诊断**：新增 `src/client/diagnostics.js`（环 4000、队列 800、20 事件/500ms、120/批、beacon 48KB 分片、rAF frame gap、longtask、render counts、HUD 250ms 纯 DOM）；`components.js` 记录 native 文档事件（capture+bubble）、每个拖拽 handler ms、dropTarget change/placeholder、drop accept/reject、auto-expand、drag start/end；`optimistic.js` 记录 enqueue/coalesce/dispatch/send/reconcile/rollback/strict；`api.js` 记录 http start/end；`plugin.js` 初始化诊断、label change、mode change、卸载清理。
+- **Host 路由**：`POST /dsh-session-groups/diagnostics`（fence + JSON + 256 KiB + ≤500 事件）追加 NDJSON 到记录文件同目录；`index.js` 以 `dirname(record.filePath)` 定位（生产即 `dshHomePath('storages')`），因此覆盖 `filePath` 的测试 seam 绝不会指向真实 home。
+- **HUD/开关**：`session-groups-diagnostics-hud` 固定右下、`pointer-events:none`、≤4Hz；默认开启，`localStorage['dsh-session-groups.diagnostics']='0'` 关闭；隐私：无会话标题/transcript。
+- **QA**：`scripts/qa/analyze-drag-trace.mjs` + `audit.ps1` 将诊断 NDJSON 列为允许的 append-only 文件（AUD-5），E2E runner 增加 HUD/NDJSON 校验（不计入 18 步）。
+- **不变**：数据模型、`load`/`commit`、记录文件、官方数据写入、宽度/搜索/虚拟化/占位/乐观语义与依赖集合。
+
+### 0.2 0.2.5 打包记录
+
+- 命令：`npm run build`（lib/client.js **227,938 bytes** / sha256 `93614e9a…`）→ `npm pack`。
+- 产物：`dsh-session-groups-0.2.5.tgz`；**148,971 bytes**；unpacked **580,470 bytes**；**36 files**。
+- sha256：`2D564CDBAD7CE24B17C1DF43561759834FC213F4387F1F6EC13A9C1694C08D91`；npm shasum `abb115943333270120d87a7be8429e79c916b2d9`；integrity `sha512-kRuTlW7Cizlp9KMPHI4Hw0e86kHYBmL58rosIx0mbH07wDMmzOuxfFq/8gHRuHmatfikNro4j/g94ABjxt0ePQ==`。
+- 内容：`src/**`（29，含新增 `src/client/diagnostics.js`）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 36）。
+- **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
+
+## 0-0.2.4. V1.1 patch 0.2.4 最终结论（2026-10-29，拖拽行高占位 + 乐观 drop 提交 + header/footer 精确化，历史）
 
 **V1.1 patch 0.2.4 QA 验证线 PASS（隔离 home `.spike-homes/qa-0.2.4-final4` + 4419；全新 setup，0 删除）：**
 

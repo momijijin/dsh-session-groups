@@ -6,7 +6,7 @@
  * enough to unit-test by injecting `fetchImpl` / `baseURI`.
  */
 
-import { perfMark } from './perf.js'
+import { perfMark, perfNow } from './perf.js'
 
 /** Relative load route (host mounts it at the origin root). */
 export const LOAD_PATH = 'dsh-session-groups/load'
@@ -51,12 +51,23 @@ const classifyStatus = (status) => {
  *   documentRef?: { baseURI?: string },
  * }} [options]
  */
-export const createApi = ({ fetchImpl = globalThis.fetch, baseURI, documentRef = globalThis.document } = {}) => {
+export const createApi = ({
+  fetchImpl = globalThis.fetch,
+  baseURI,
+  documentRef = globalThis.document,
+  trace = () => {},
+} = {}) => {
   const base = baseURI ?? documentRef?.baseURI ?? 'http://localhost/'
   const url = (path) => resolveUrl(path, base)
 
   const request = async (path, init) => {
-    if (typeof fetchImpl !== 'function') return { networkError: 'fetch-unavailable' }
+    const method = typeof init?.method === 'string' ? init.method : 'GET'
+    if (typeof fetchImpl !== 'function') {
+      trace('http.end', { path, method, ok: false, error: 'fetch-unavailable' })
+      return { networkError: 'fetch-unavailable' }
+    }
+    const started = perfNow()
+    trace('http.start', { path, method })
     perfMark('http:start', { path })
     try {
       const response = await fetchImpl(url(path), init)
@@ -70,9 +81,23 @@ export const createApi = ({ fetchImpl = globalThis.fetch, baseURI, documentRef =
         }
       }
       perfMark('http:end', { path, status: response.status })
+      trace('http.end', {
+        path,
+        method,
+        status: response.status,
+        ok: response.ok === true,
+        ms: Math.round((perfNow() - started) * 100) / 100,
+      })
       return { status: response.status, ok: response.ok === true, contentType, body }
     } catch (error) {
       perfMark('http:error', { path })
+      trace('http.end', {
+        path,
+        method,
+        ok: false,
+        error: String(error?.message ?? error),
+        ms: Math.round((perfNow() - started) * 100) / 100,
+      })
       return { networkError: String(error?.message ?? error) }
     }
   }

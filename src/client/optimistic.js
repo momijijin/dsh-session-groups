@@ -61,7 +61,7 @@ const deferred = () => {
  *   onError?: (error: Error) => void,
  * }} deps
  */
-export const createOptimisticQueue = ({ store, commit, notify = () => {}, t = (key) => key, onError = null }) => {
+export const createOptimisticQueue = ({ store, commit, notify = () => {}, t = (key) => key, onError = null, trace = () => {} }) => {
   /** Latest optimistic document that has not been sent yet (null = idle). */
   let pendingDoc = null
   /** Resolvers for `commitOptimistic` callers of the pending batch. */
@@ -84,6 +84,7 @@ export const createOptimisticQueue = ({ store, commit, notify = () => {}, t = (k
   const surfaceFailure = (error, result) => {
     const code = result?.code ?? error?.code ?? 'commit-failed'
     const failure = asReported(error, code)
+    trace('queue.rollback', { code, conflict: code === 'conflict' })
     // Restore the last confirmed doc/revision: optimistic dispatches never
     // changed the revision, so the confirmed revision is still in the store.
     store.dispatch('optimistic-rollback', { code })
@@ -101,6 +102,7 @@ export const createOptimisticQueue = ({ store, commit, notify = () => {}, t = (k
       pendingWaiters = []
       const baseRevision = snapshot().revision
       let result
+      trace('queue.send', { revision: baseRevision, events: waiters.length })
       try {
         result = await commit(sentDoc, baseRevision)
       } catch (error) {
@@ -115,6 +117,7 @@ export const createOptimisticQueue = ({ store, commit, notify = () => {}, t = (k
         // Keep a newer optimistic doc when the user dropped again while this
         // request was in flight; only the confirmed revision/doc are advanced.
         const newerPending = pendingDoc !== null
+        trace('queue.reconcile', { revision: result.revision, keepDoc: newerPending })
         store.dispatch('optimistic-confirmed', {
           confirmedDoc: result.doc,
           revision: result.revision,
@@ -154,22 +157,30 @@ export const createOptimisticQueue = ({ store, commit, notify = () => {}, t = (k
     if (disposed) return Promise.reject(new Error('optimistic-queue-disposed'))
     // A strict writer owns the doc: defer the optimistic mutation until it
     // settles, then resolve against the (fresh) confirmed+optimistic document.
-    if (strictGate !== null) return strictGate.then(() => commitOptimistic(updater))
+    if (strictGate !== null) {
+      trace('optimistic.defer', { reason: 'strict-writer' })
+      return strictGate.then(() => commitOptimistic(updater))
+    }
     return new Promise((resolve, reject) => {
       let nextDoc
       try {
         nextDoc = typeof updater === 'function' ? updater(snapshot().doc) : updater
       } catch (error) {
+        trace('optimistic.reject', { reason: String(error?.message ?? error) })
         reject(error)
         return
       }
       if (!nextDoc || typeof nextDoc !== 'object') {
+        trace('optimistic.reject', { reason: 'doc-required' })
         reject(new Error('doc-required'))
         return
       }
+      const coalesced = pendingDoc !== null || drainPromise !== null
+      trace('optimistic.enqueue', { coalesced, revision: snapshot().revision, waiters: pendingWaiters.length + 1 })
       store.dispatch('optimistic-doc', { doc: nextDoc })
       pendingDoc = nextDoc
       pendingWaiters.push({ resolve: () => resolve(nextDoc), reject })
+      trace('optimistic.dispatch', { revision: snapshot().revision, optimistic: true, coalesced })
       schedule()
     })
   }
@@ -207,16 +218,20 @@ export const createOptimisticQueue = ({ store, commit, notify = () => {}, t = (k
       const current = snapshot()
       const nextDoc = typeof updater === 'function' ? updater(current.doc) : updater
       const baseRevision = current.revision
+      trace('queue.strict.start', { revision: baseRevision })
       const result = await commit(nextDoc, baseRevision)
       if (result?.ok === true) {
+        trace('queue.strict.end', { ok: true, revision: result.revision })
         store.dispatch('doc', { doc: result.doc, revision: result.revision })
         return result.doc
       }
       if (result?.code === 'conflict' && result.doc) {
+        trace('queue.strict.end', { ok: false, code: 'conflict' })
         store.dispatch('commit-conflict', { doc: result.doc, revision: result.revision })
         notify({ kind: 'error', message: t('banner.conflict') })
         return result.doc
       }
+      trace('queue.strict.end', { ok: false, code: result?.code ?? null })
       store.dispatch('commit-error', { code: result?.code === 'fence-unavailable' ? 'route-unavailable' : result?.code })
       const error = new Error(result?.message ?? result?.code ?? 'commit-failed')
       error.code = result?.code

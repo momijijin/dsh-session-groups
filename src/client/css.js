@@ -400,6 +400,30 @@ export const CSS = `
 .dsg-flat { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 1; padding: 2px 4px 8px 2px; }
 .dsg-flat-workspace { padding: 6px 6px 2px; font-size: var(--dsg-font-13, 13px); font-weight: 600; color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-nowrap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Drag diagnostics HUD (0.2.5): fixed, pointer-events:none, plain DOM text
+ * updated at <=4 Hz. It never participates in layout or drag hit testing. */
+.dsg-diag-hud {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2147483000;
+  pointer-events: none;
+  user-select: none;
+  box-sizing: border-box;
+  max-width: 380px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  background: rgba(12, 14, 18, 0.74);
+  color: #f4f6fa;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
 `
 
 /**

@@ -3634,7 +3634,21 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const settledRoots = await ui.rootGroupIds();
         if (settledRoots[0] !== rootsBefore[1]) throw new Error('root order changed after the group commit reconciled');
 
+        // (11) 0.2.5 diagnostics HUD must be present, plain DOM and fed by the
+        // drags above (native dragover count > 0) without React renders.
+        const hud = await driver.evaluate(`(() => {
+          const el = document.querySelector('[data-testid="session-groups-diagnostics-hud"]');
+          return el ? { text: el.textContent, runId: el.getAttribute('data-run-id'), pointerEvents: getComputedStyle(el).pointerEvents } : null;
+        })()`);
+        if (!hud) throw new Error('0.2.5 diagnostics HUD is missing');
+        if (!/dsg 0\.2\.5/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
+        if (hud.pointerEvents !== 'none') throw new Error(`diagnostics HUD must be pointer-events:none, got ${hud.pointerEvents}`);
+        const hudNative = /n=(\d+)/.exec(hud.text);
+        if (!hudNative || Number(hudNative[1]) <= 0) throw new Error(`diagnostics HUD native dragover count missing/zero: ${JSON.stringify(hud.text)}`);
+        if (!/chg=\d+/.test(hud.text) || !/rend=\d+/.test(hud.text)) throw new Error(`diagnostics HUD counters missing: ${JSON.stringify(hud.text)}`);
+
         return {
+          diagnostics: { runId: hud.runId, text: hud.text },
           placeholders: {
             sessionBefore: { height: sessionBefore.height, label: sessionBefore.label, pushed: Math.round(firstAfterShift.top - firstBefore.top) },
             sessionAfter: { height: sessionAfter.height, label: sessionAfter.label },
@@ -3680,6 +3694,72 @@ async function captureScreenshot(driver, args, path) {
   } catch {
     return null;
   }
+}
+
+/**
+ * 0.2.5 diagnostics persistence check (outside the 18 acceptance steps):
+ * POST a probe batch through the real client/host route, then read the NDJSON
+ * file from the isolated home and assert the drag trace was appended there.
+ * This is the only place the E2E runner verifies the host route + file write.
+ */
+async function verifyDiagnostics(driver) {
+  const file = join(QA_HOME, 'storages', 'dsh-session-groups.diagnostics.ndjson');
+  const probe = await driver.evaluate(`(async () => {
+    try {
+      const response = await fetch('dsh-session-groups/diagnostics', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ runId: 'e2e-probe', schemaVersion: 1, events: [{ type: 'e2e.probe', t: 0 }] }),
+      });
+      return { ok: response.ok, status: response.status, body: await response.json() };
+    } catch (error) {
+      return { ok: false, status: 0, error: String(error?.message ?? error) };
+    }
+  })()`, { awaitPromise: true });
+  if (probe?.ok !== true) return { ok: false, stage: 'route', probe, file };
+  const end = Date.now() + 10000;
+  let text = null;
+  while (Date.now() < end) {
+    try {
+      text = readFileSync(file, 'utf8');
+      if (text.includes('e2e-probe') && text.includes('native.')) break;
+    } catch {
+      /* not flushed yet */
+    }
+    await sleep(200);
+  }
+  if (text === null) return { ok: false, stage: 'file-missing', probe, file };
+  const lines = text.trimEnd().split('\n').filter(Boolean);
+  const records = [];
+  const invalid = [];
+  for (const line of lines) {
+    try {
+      records.push(JSON.parse(line));
+    } catch {
+      invalid.push(line.slice(0, 80));
+    }
+  }
+  const runs = [...new Set(records.map((record) => record.runId).filter(Boolean))];
+  const clientRecords = records.filter((record) => record.runId !== 'e2e-probe');
+  const probeSeen = records.some((record) => record.runId === 'e2e-probe' && record.schemaVersion === 1);
+  const nativeSeen = clientRecords.some((record) => String(record.event?.type ?? '').startsWith('native.'));
+  const handlerSeen = clientRecords.some((record) => record.event?.type === 'handler');
+  const optimisticSeen = clientRecords.some((record) => String(record.event?.type ?? '').startsWith('optimistic.') || String(record.event?.type ?? '').startsWith('queue.'));
+  const result = {
+    ok: probeSeen && nativeSeen && handlerSeen && invalid.length === 0,
+    probe,
+    file,
+    lineCount: records.length,
+    invalidLines: invalid,
+    runIds: runs,
+    probeSeen,
+    nativeSeen,
+    handlerSeen,
+    optimisticSeen,
+    sampleTypes: [...new Set(clientRecords.map((record) => record.event?.type))].slice(0, 30),
+  };
+  return result;
 }
 // ---------------------------------------------------------------------------
 // main
@@ -3789,6 +3869,28 @@ async function main() {
       }
     }
 
+    if (!failed && !evidence.blockedReason) {
+      // 0.2.5: the diagnostics route + isolated-home NDJSON write must work with
+      // the real drag trace; this is not an acceptance step (still 18/18).
+      try {
+        const diagnostics = await verifyDiagnostics(driver);
+        evidence.diagnostics = diagnostics;
+        if (!diagnostics.ok) {
+          failed = true;
+          evidence.result = 'FAIL';
+          console.error(`  [FAIL] diagnostics persistence: ${JSON.stringify(diagnostics).slice(0, 800)}`);
+        } else {
+          console.log(
+            `  [PASS] diagnostics persistence: lines=${diagnostics.lineCount} runs=${diagnostics.runIds.length} native=${diagnostics.nativeSeen} handler=${diagnostics.handlerSeen} optimistic=${diagnostics.optimisticSeen}`
+          );
+        }
+      } catch (error) {
+        failed = true;
+        evidence.result = 'FAIL';
+        evidence.diagnostics = { ok: false, error: String(error?.message ?? error) };
+        console.error(`  [FAIL] diagnostics persistence check threw: ${error?.message ?? error}`);
+      }
+    }
     if (!failed && !evidence.blockedReason) evidence.result = 'PASS';
   } catch (error) {
     console.error(`E2E ERROR: ${error?.stack ?? error}`);

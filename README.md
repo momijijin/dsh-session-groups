@@ -4,8 +4,8 @@ DSH 左侧栏的全局会话分组视图：分组只服务显示层，跨工作�
 
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 - 工作名：`dsh-session-groups`（显示名：全局会话分组）
-- 版本：`0.2.4`（V1.1 optimistic drop commits + drag insertion placeholders + official header weight/footer copy）
-- 状态：**V1.1 QA 全绿（18/18 E2E、211/211 tests、audit PASS、large-list probe PASS）**，待用户验收；未安装到 desktop profile
+- 版本：`0.2.5`（V1.1 official header icons + drag diagnostics trace/HUD + analyzer）
+- 状态：**V1.1 QA 全绿（0.2.5：234/234 tests、E2E 18/18、diagnostics HUD/route PASS、audit PASS）**，待用户验收；未安装到 desktop profile
 
 ## V1.1 新增（0.2.0）
 
@@ -20,7 +20,16 @@ DSH 左侧栏的全局会话分组视图：分组只服务显示层，跨工作�
 - 间距按官方工作区 chrome 同步放大：行 `padding: 0 8px`、行 gap 6px，树/组体/组线纵向 gap 2px，组缩进 10/10，header `padding: 4px 4px 4px 2px`（0.2.2 单行 36px）+ row gap 8px，搜索/菜单/对话框改用更大 padding（菜单项 30px、对话框 16/12），264px 最小宽度仍无横向溢出。
 - E2E step 16 `typography-matches-official-sidebar` 直接断言 computed style、字号/行高/图标、间距与 264px 无溢出（不依赖截图）。
 
-### 0.2.4 拖拽落点占位 + 乐观提交 + 官方 header/footer（patch）
+### 0.2.5 官方 header 图标 + 拖拽诊断（patch，当前）
+
+- **官方图标**：header 三个按钮改用 DSH Desktop 2.0.18 `@deepseek-ai/dsh-client-ui-primitives` 的原始 artwork——搜索 `IconSearchOutlineRegular`、视图选项 `IconSlidersTwoOutlineRegular`、新建分组 `IconProjectAddOutlineRegular`（viewBox 0 0 16 16、1px stroke、16px 渲染，几何逐字节复制；顺序仍为 search → view-options → plus）。不再使用自定义 search/sliders/plus 近似图形。
+- **拖拽诊断（默认开启）**：新增事件环（上限 4000）与批量上报，覆盖 native `dragstart/dragenter/dragover/dragleave/drop/dragend`（capture+bubble、target tag/testid/sessionId/groupId、clientX/Y、defaultPrevented before/after、trusted）、插件 handler（会话/分组/slot/ungrouped、auto-expand schedule/fire/cancel、dropTarget change、placeholder insert/remove、label change、drop accept、optimistic enqueue/coalesce/send/HTTP/reconcile/rollback、dragend）与 timing（handler ms、rAF frame gap、longtask、React render counters、revision/optimistic、tree counts、viewport/sidebar、build/mode/theme）。
+- **落盘**：`POST /dsh-session-groups/diagnostics`（fence + JSON + bounded batch）把 NDJSON 追加到 `<dshHomePath('storages')>/dsh-session-groups.diagnostics.ndjson`；客户端 20 事件/500ms 批量 flush，dragend/visibility hidden 用 `sendBeacon`；只写该文件，绝不碰 `dsh-session-groups.json`/workspace/session 数据。
+- **HUD**：固定右下、`pointer-events:none`、纯 DOM 文本、≤4Hz 刷新（不经 React），显示 runId、native dragover 数、target changes、renders、last handler ms、last frame gap、last label、drop/optimistic 状态。默认启用；`localStorage['dsh-session-groups.diagnostics']='0'` 可无重建关闭。
+- **分析器**：`node scripts/qa/analyze-drag-trace.mjs <ndjson>` 输出每 run 的事件/handler 计数、target/label 时间线、>100ms gaps、native vs synthetic、auto-expand、placeholder、optimistic/HTTP 相位、最后指针移动后的 burst 与疑似 stall。
+- 隐私：日志只含 ID、testid、分组名与翻译后的拖拽提示，**不含会话标题或 transcript**；文件仅在本地 `storages`。
+
+### 0.2.4 拖拽落点占位 + 乐观提交 + 官方 header/footer（patch，历史）
 
 - **拖拽插入占位**：有效落点不再只画 2px 线，而是在插入点插入真实行高占位（会话 32px / 分组 34px）：主题感知 accent 背景 + 虚线边框 + 「放到这里」/目标分组名。覆盖 session-before/after、group-before/after、子组缝隙（6px 槽激活时展开为 34px）、group-append（展开时组体末尾 / 收起时组头之后）、ungrouped 与 root-end；占位真实参与布局，后续行整体下移；dragleave/drop/dragend 立即消失；264px 无横向溢出。testid 沿用 `session-groups-drop-indicator`，新增 `data-drop-height`。
 - **乐观 drop 提交**：会话移动、分组移动（拖拽与菜单上移/下移）在 drop 当帧按当前**乐观 doc** 计算并 dispatch，`revision` 始终保持服务端已确认值；HTTP 写入进入单写者合并队列（同 tick 快速移动合并为一个请求，飞行中只追加最新 doc 的下一次写入），成功后 reconcile 服务端 revision/doc，失败/冲突回滚到最近确认状态并沿用既有错误 toast。重命名/归档等非乐观提交先 flush 乐观队列、再在最新 doc 上执行，避免旧快照覆盖新状态。
@@ -50,7 +59,7 @@ V1 能力（建组/嵌套/跨工作区拖会话/归档三态/组内新建/重命
 
 ```powershell
 npm pack
-# 产物：dsh-session-groups-0.2.4.tgz
+# 产物：dsh-session-groups-0.2.5.tgz
 ```
 
 DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本地目录），启用后重启/刷新。
@@ -64,7 +73,7 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 - [契约](docs/CONTRACTS.md) — 数据模型、路由、API、testid、生命周期
 - [Gate 0 Spike](docs/SPIKE.md) / [Gate 0 结论](docs/GATE0-SUMMARY.md)
 - [测试计划](docs/TEST-PLAN.md) — 单测/宿主集成/18 步 E2E/数据审计
-- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 18/18 E2E、211/211、大列表 before/after、审计与打包证据
+- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 18/18 E2E、234/234、诊断 trace/HUD、大列表 before/after、审计与打包证据
 - [发布说明](docs/RELEASE.md) — 构建/打包/安装/卸载/已知限制
 - [ADR-001 左栏模式切换](docs/adr/0001-sidebar-mode-switch.md) / [ADR-002 分组存储](docs/adr/0002-group-storage.md) / [ADR-003 路由围栏](docs/adr/0003-route-fence.md)
 
@@ -78,7 +87,7 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 
 ## 当前阶段
 
-- V1 实现完成；V1.1（0.2.4）完成左栏宽度、分组拖拽排序/改父级、会话搜索、官方侧栏排版/间距对齐、单按钮视图切换/header 操作区/主题感知 surfaces、未归组列表虚拟化、拖拽行高占位与乐观提交。
-- 验证：`npm test` 211/211；官方 E2E 18/18（含 step 2/16 精确 footer 文案与 header title 400、step 16 排版/间距/264px/虚拟窗口、step 17 深色主题 computed surfaces、step 18 九类插入占位 + 延迟 commit 下的乐观 DOM 位移）；大列表 probe 1,510 → 20 DOM 行、hover/dragOver/search/drop 全部改善；数据审计只写记录文件；真实 `~/.dsh` 零写入。
+- V1 实现完成；V1.1（0.2.5）完成左栏宽度、分组拖拽排序/改父级、会话搜索、官方侧栏排版/间距/图标对齐、单按钮视图切换/header 操作区/主题感知 surfaces、未归组列表虚拟化、拖拽行高占位与乐观提交、**官方 header 三图标 + 拖拽诊断 trace/HUD/分析器**。
+- 验证：`npm test` 234/234；官方 E2E 18/18（默认诊断开启；含 step 2/16 footer 文案与 header title 400、step 16 排版/间距/264px/虚拟窗口、step 17 深色主题、step 18 九类占位 + 乐观 DOM 位移 + HUD）；E2E runner 另验证 `/dsh-session-groups/diagnostics` 在隔离 home 追加 3,091 行 NDJSON（native/handler/optimistic 齐全、0 parseErrors）；数据审计只写记录文件、诊断文件按 append-only 单独放行；真实 `~/.dsh` 零写入。
 - **尚未安装到用户 desktop profile**；等待用户验收后再安装。
-- 已知限制见 `docs/RELEASE.md` §5（运行中归档 BLOCKED-ENV、宽度 DOM 依赖、搜索范围、P1/P2 未实现项）。
+- 已知限制见 `docs/RELEASE.md` §5（运行中归档 BLOCKED-ENV、宽度 DOM 依赖、搜索范围、诊断文件增长、P1/P2 未实现项）。

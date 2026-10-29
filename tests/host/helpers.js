@@ -7,6 +7,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
+import { DIAGNOSTICS_FILE_NAME } from '../../src/host/constants.js'
 import { registerRoutes } from '../../src/host/routes.js'
 import { createStore } from '../../src/host/store.js'
 
@@ -43,6 +44,7 @@ export const makeTempStore = async (now) => {
     dir,
     storages,
     filePath,
+    diagnosticsFilePath: join(storages, DIAGNOSTICS_FILE_NAME),
     store,
     cleanup: () => rm(dir, { recursive: true, force: true }),
   }
@@ -144,7 +146,10 @@ export const mountRoutes = async (options = {}) => {
     temp = await makeTempStore()
   }
   const context = makeContext(options)
-  const mounted = registerRoutes(context.ctx, temp.store)
+  const diagnosticsFilePath =
+    options.diagnosticsFilePath ??
+    (temp.dir === undefined ? null : join(temp.dir, 'storages', DIAGNOSTICS_FILE_NAME))
+  const mounted = registerRoutes(context.ctx, temp.store, { diagnosticsFilePath })
   return {
     ...temp,
     ...context,

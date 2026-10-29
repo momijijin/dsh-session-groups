@@ -72,6 +72,13 @@ test('header is a 36px official section row: title 14/20 weight 400 + accent ico
   const options = components.indexOf("testId: 'session-groups-view-options'")
   const plus = components.indexOf("testId: 'session-groups-new-group'")
   assert.ok(search !== -1 && search < options && options < plus, 'header action order must be search, view-options, plus (official workspace section order)')
+  // 0.2.5: the three header actions consume the official DSH artwork, not the
+  // custom search/sliders/plus approximations.
+  assert.match(components, /icon: 'search'/)
+  assert.match(components, /icon: 'view-options'/)
+  assert.match(components, /icon: 'project-add'/)
+  assert.equal(components.includes("glyph: 'search'"), false)
+  assert.equal(components.includes("glyph: 'sliders'"), false)
 })
 
 test('footer is one 28px toggle button whose icon/label target the other view', () => {
@@ -113,7 +120,7 @@ test('archive tri-state lives in the view-options popover with 30px rows and a c
   assert.match(components, /'data-filter': value/)
   assert.match(components, /'aria-checked': active \? 'true' : 'false'/)
   assert.match(components, /renderGlyph\(h, 'check', 16\)/)
-  assert.match(components, /glyph: 'sliders'/)
+  assert.match(components, /icon: 'view-options'/)
   const option = block('.dsg-view-option {')
   assert.match(option, /height:\s*30px/)
   assert.match(block('.dsg-view-options-popover {'), /position:\s*absolute/)

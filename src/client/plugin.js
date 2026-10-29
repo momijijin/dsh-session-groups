@@ -13,6 +13,14 @@ import { createActions } from './actions.js'
 import { dictionaries, createTranslator, LOCALE_NS } from './locale.js'
 import { installStyles } from './css.js'
 import { createOptimisticQueue } from './optimistic.js'
+import {
+  diagContext,
+  diagEnabled,
+  diagLabel,
+  diagTrace,
+  getDiagnostics,
+  initDiagnostics,
+} from './diagnostics.js'
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
 import { FooterAction, GroupsViewBoundary, setRuntime } from './components.js'
 
@@ -100,6 +108,9 @@ export const createPlugin = () => {
     } else {
       label.style.display = 'none'
     }
+    // Diagnostics only record actual text changes; labels are translated drag
+    // prompts / group names, never session titles.
+    if (diagEnabled()) diagLabel(typeof text === 'string' && text !== '' ? text : null)
     if (started !== 0) perfSample('floatingLabelMs', perfNow() - started)
   }
 
@@ -202,6 +213,10 @@ export const createPlugin = () => {
     if (!store) return
     const next = mode === 'groups' ? 'groups' : 'workspace'
     store.dispatch('view-mode', { mode: next })
+    if (diagEnabled()) {
+      diagContext({ mode: next })
+      diagTrace('mode.change', { mode: next })
+    }
     if (next === 'groups') {
       registerOccupant()
       if (store.getSnapshot().docState === 'idle') load()
@@ -357,7 +372,11 @@ export const createPlugin = () => {
     ctxRef = ctx
     store = createStore({ storage: safeStorage() })
     if (perfEnabled()) store.subscribe(() => perfCount('store:publish'))
-    api = createApi({ documentRef: globalThis.document })
+    // Drag diagnostics are enabled by default in 0.2.5; localStorage
+    // `dsh-session-groups.diagnostics='0'` opts out without a rebuild.
+    initDiagnostics()
+    api = createApi({ documentRef: globalThis.document, trace: (type, detail) => diagTrace(type, detail) })
+    if (diagEnabled()) diagContext({ mode: store.getSnapshot().viewMode })
     localeService = safeGet(ctx, 'locale')
     const getLocaleSnapshot = () => {
       try {
@@ -372,6 +391,7 @@ export const createPlugin = () => {
       commit: (doc, revision) => api.commit(doc, revision),
       notify,
       t: (key, params) => t(key, params),
+      trace: (type, detail) => diagTrace(type, detail),
     })
 
     styleDisposer = installStyles(globalThis.document)
@@ -453,6 +473,7 @@ export const createPlugin = () => {
         floatingLabel = null
         queue?.dispose()
         queue = null
+        getDiagnostics()?.dispose()
         if (toastTimer !== null) clearTimeout(toastTimer)
         toastTimer = null
       }
