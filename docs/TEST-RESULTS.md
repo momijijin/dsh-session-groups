@@ -17,7 +17,7 @@
 | step 1/2/16 footer 文案 | **PASS**：初始精确「切换到自由分组视图」/“Switch to free grouping view”；groups 精确「返回默认工作区视图」/“Back to default workspace view”；28px/13px/16px 不变 | 同上 |
 | step 16 header 权重 | **PASS**：`.dsg-header-title` 14/20、`font-weight: 400`（官方 section label），primary + accent icon 16px | 同上 |
 | step 18 插入占位 | **PASS**：session-before/after 32px、group-before/after 34px、child slot 6→34px、group-append（展开/收起）、ungrouped 32px、root-end 34px；目标行实测下移 **36px**（32 + gap/margin）；dragleave 清除；264px 无溢出（tree 252/252，占位宽 225px） | 同上 step 18 detail |
-| step 18 乐观提交 | **PASS**：CDP `Network.emulateNetworkConditions` latency=1500ms；会话 drop 后 **296ms** 内 DOM 顺序先变、`data-optimistic=true`、记录 revision 仍 29；HTTP 完成后 revision 29→30、顺序保持；分组 drop 同理（14ms 内重排，revision 30→31） | 同上 step 18 detail |
+| step 18 乐观提交 | **PASS**：CDP `Fetch.enable` 在 Request 阶段挂起 commit（`Fetch.continueRequest` 放行）；会话 drop 后 **296ms** 内 DOM 顺序先变、`data-optimistic=true`、记录 revision 仍 29；放行后 revision 29→30、`data-optimistic=false`、顺序保持；分组 drop 同理（14ms 内重排，revision 30→31） | 同上 step 18 detail |
 | setup（0.2.4 全新隔离 home） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client build **195,772 bytes** / sha256 `1416bb40685164d0e2a8a359032c0656fff09c0620ac15457328d29d84a107d4`；package version `0.2.4` | `scripts/qa/evidence-perf/024-final2/setup-20261029-120032.json` |
 | 打包 | `npm pack` → `dsh-session-groups-0.2.4.tgz`（**128,218 bytes**；unpacked **500,532**；**35 files**；sha256 `F519BFBD6B9F180BBCBA4E46CCC3DC46BBD0A92B2FA9D800422D9B97EA358C45`） | 本文件 §0.2 |
 

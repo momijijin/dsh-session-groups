@@ -246,7 +246,7 @@ V1.1 加验（18 步 E2E，0.2.4）：
 13. 排版：`getComputedStyle`/rect 断言根字号继承宿主（14px 基线）、组行 34/会话行 32、标题 14/20、徽标 12、搜索框 13/30、图标 16；无插件字号设置。
 14. UI layout/主题：footer 单按钮图标/文案随模式变化、header **search → view-options → plus** 28×28 与顺序、view-options popover 3×30 行；深色主题下搜索/菜单/对话框/输入 computed 背景非白且对比度 ≥4.5。
 15. 虚拟化大列表 probe：1,500+ 逻辑未归组行下 DOM 行数 <80、滚动高度保持、窗口外搜索 reveal、可见行拖放；before/after 行数与耗时见 `docs/TEST-RESULTS.md`。
-16. 占位/乐观：九类插入点均渲染 32/34px accent 占位、后续行下移、dragleave 清除、264px 无溢出；CDP 网络延迟下 drop 后 DOM 已移动且记录 revision 未变，响应后 revision 前进、顺序保持。
+16. 占位/乐观：九类插入点均渲染 32/34px accent 占位、后续行下移、dragleave 清除、264px 无溢出；CDP Fetch 挂起 commit 时 drop 后 DOM 已移动且记录 revision 未变，放行后 revision 前进、顺序保持。
 
 通过标准：V1 9 步 + V1.1 3 组全过；20 次拖拽误放 ≤1；0 次丢会话/重复行；0 次标题被分组操作改写；坏文件/路由失败不白屏。
 

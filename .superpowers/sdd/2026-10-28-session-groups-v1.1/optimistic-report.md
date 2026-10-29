@@ -77,7 +77,7 @@
 
 ## 3. Optimistic E2E proof (no page fetch wrapper)
 
-E2E applies CDP `Network.emulateNetworkConditions({ latency: 1500 })` (browser-network latency, no page-level fetch wrapper) so the commit response is held while the DOM is read. For both a session reorder and a group move the step asserts:
+E2E applies CDP `Fetch.enable({ patterns: [{ urlPattern: '*dsh-session-groups/commit*', requestStage: 'Request' }] })` so the commit request is held at the browser network layer while the DOM is read (no page-level fetch wrapper). For both a session reorder and a group move the step asserts:
 
 1. DOM order already changed;
 2. `.dsg-root[data-optimistic="true"]`;
