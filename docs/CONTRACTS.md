@@ -5,6 +5,7 @@
 - V1.1（0.2.1，2026-10-28）：**typography/spacing-only patch**——分组视图排版/间距/图标对齐官方侧栏，消费宿主继承字体；无契约/数据/路由变化
 - V1.1（0.2.2，2026-10-28）：**UI-layout + drag-perf patch**——footer 两段视图切换、header 加号/搜索/视图选项（搜索行可折叠 + 关闭）、归档三态移入 view-options popover、菜单/对话框/输入主题感知、dragover 目标去重 + 移除未消费的 `saving` 重渲染；无数据模型/Host 路由/存储变化。UI testid additive，旧的 `session-groups-toggle`/`session-groups-archive-filter`/`session-groups-search` 保留。
 - V1.1（0.2.3，2026-10-29）：**virtualization + UI 回退 patch**——footer 恢复为单个切换按钮（图标/文案随目标视图变化，`data-mode`/`title`/`aria-pressed` 反映当前态）；header 右侧顺序改为官方工作区段头 **search → view-options → plus**；未归组列表按 `.dsg-tree` 视口 + overscan 窗口化（顶部/底部 spacer 精确保高，组树保持完整），搜索选中窗口外未归组行会先强制滚入窗口；纯 helper `computeVirtualWindow` + `virtualScrollOffset`。数据模型/Host 路由/存储不变；0.2.2 的 `session-groups-toggle-groups`/`session-groups-toggle-workspace` 删除，新增 `session-groups-virtual-spacer`。
+- V1.1（0.2.4，2026-10-29）：**optimistic drop commits + insertion placeholders + official chrome patch**——会话/分组拖拽（含菜单上移/下移）改为乐观提交：drop 当帧按当前乐观 doc dispatch，`revision` 保持服务端确认值，写入进入单写者合并队列（快速移动合并、成功 reconcile、失败/冲突回滚 + 既有 toast）；非乐观提交（建组/重命名/删除/图标/移动对话框）先 flush 乐观队列再在最新 doc 上执行。拖拽落点改为真实行高占位（32px 会话 / 34px 分组，主题 accent 背景 + 虚线边框 + 目标名/「放到这里」），覆盖 session-before/after、group-before/after、子组缝隙、group-append、ungrouped/root-end；`session-groups-drop-indicator` testid 保留并新增 `data-drop-height`。`.dsg-header-title` 权重 600→400（官方 section label，14/20）；footer 文案精确为「切换到自由分组视图」/「返回默认工作区视图」。数据模型/Host 路由/存储不变。
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
@@ -197,6 +198,16 @@ Visibility/status:
 - Title: `summary.title?.trim()`; blank -> “新会话”; missing -> “未命名”; workspace label 用 shared `workspaceLabel`（title/path basename/id）。
 - Archived rows are not openable; provide unarchive.
 
+### 4.0 Optimistic commit queue（0.2.4）
+
+`src/client/optimistic.js` 是客户端唯一 doc 写者。语义（单测 `tests/client/optimistic.test.js` 固定）：
+
+- **立即 dispatch**：`commitOptimistic(updater)` 以当前 store 的**乐观 doc**（含尚未持久化的 drop）为输入同步计算并 dispatch `optimistic-doc`；`revision` 不随乐观 dispatch 变化，始终是最近一次服务端确认值。
+- **合并**：同一 tick 的多次乐观提交只保留最后一个 `pendingDoc`；一次请求在飞行时到达的新 drop 只追加为下一次请求（最新 doc），绝不发送中间态。请求的 `baseRevision` = 发送时 store 的确认 revision。
+- **成功 reconcile**：服务端返回 `{ok:true, doc, revision}` 且无更新 pending 时，以服务端 doc/revision 替换视图；若有更新 pending，则只推进 `lastConfirmed`/`revision`，保留更新乐观 doc，下一次写入使用新 revision。
+- **失败/冲突回滚**：任何持久化失败/409 都回到 `lastConfirmed` doc 与确认 revision，清空 pending，沿用 `banner.conflict` / `toast.dropFailed` 提示；错误标记 `reported`，调用方不重复 toast。
+- **非乐观提交协调**：`commitStrict(updater)` 先 `flush()` 乐观队列，再持单写者锁；updater 在锁内对最新 doc 求值。严格写期间的乐观 drop 延迟到锁释放后，再对服务端确认 doc 求值，避免旧 doc 覆盖新状态。建组/重命名/删除/图标/移动会话/移动分组全部走此路径。
+
 ### 4.1 Stable UI test ids（E2E 契约）
 
 V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 `docs/TEST-PLAN.md`。
@@ -208,7 +219,7 @@ V1.1（0.2.2）additive 追加：`session-groups-search-toggle`（header 搜索�
 | testid | 位置 | 附加属性 |
 |---|---|---|
 | `session-groups-toggle` | footer 单个视图切换按钮（28px） | `data-mode="workspace|groups"`, `data-target`, `data-wide`, `aria-pressed`, `title`/`aria-label` |
-| `session-groups-view` | 分组视图根 | `data-mode="groups"` |
+| `session-groups-view` | 分组视图根 | `data-mode="groups"`, `data-optimistic="true|false"`（0.2.4 乐观写入未 reconcile） |
 | `session-groups-header` | 视图头（36px 单行 + 可选 30px 搜索行） | `data-search-open`, `data-options-open` |
 | `session-groups-header-row` | 视图头标题/操作行（0.2.2 起单行 28px 控件；0.2.3 右侧顺序 search → view-options → plus） | — |
 | `session-groups-search-toggle` | header 搜索图标按钮 | `aria-expanded` |
@@ -227,8 +238,8 @@ V1.1（0.2.2）additive 追加：`session-groups-search-toggle`（header 搜索�
 | `session-groups-menu` | 组/会话操作菜单根 | — |
 | `session-groups-session` | 会话行 | `data-session-id`, `data-group-id` 或 `data-ungrouped="true"` |
 | `session-groups-workspace-badge` | 悬浮工作区标签 | `data-session-id` |
-| `session-groups-drop-indicator` | 吸附插入线/高亮 | `data-drop-kind`, `data-drop-target` |
-| `session-groups-group-drop` | 组体子组缝隙槽（n 个子组 = n+1 个槽） | `data-parent-id`, `data-before-group-id`（末尾/空组为空串） |
+| `session-groups-drop-indicator` | 插入点行高占位（0.2.4 起；会话 32px / 分组 34px，取代旧 2px 线） | `data-drop-kind`, `data-drop-target`, `data-drop-height` |
+| `session-groups-group-drop` | 组体子组缝隙槽（n 个子组 = n+1 个槽；激活时 6px→34px 占位） | `data-parent-id`, `data-before-group-id`（末尾/空组为空串）, `data-drop-active` |
 | `session-groups-empty` | 空组/空筛选 | `data-group-id` |
 | `session-groups-flat-fallback` | 加载失败扁平回退 | — |
 | `session-groups-error` | 错误 banner | — |

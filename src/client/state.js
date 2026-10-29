@@ -76,6 +76,8 @@ const initialSnapshot = (storage) => ({
   warning: null,
   /** last host-confirmed doc; commit failures revert to this */
   lastConfirmed: null,
+  /** whether `doc` contains optimistic (not yet persisted) mutations */
+  optimistic: false,
   /** group ids expanded in the tree (missing = expanded) */
   collapsed: {},
   /** current popover/menu descriptor, at most one at a time */
@@ -161,6 +163,7 @@ export const createStore = ({ storage = safeStorage() } = {}) => {
           revision: payload.revision,
           lastConfirmed: payload.doc,
           warning: payload.warning ?? null,
+          optimistic: false,
           banner: payload.warning ? { kind: 'warning', code: payload.warning } : null,
         })
       case 'load-error':
@@ -168,8 +171,32 @@ export const createStore = ({ storage = safeStorage() } = {}) => {
       case 'doc': {
         const doc = payload.doc
         const revision = payload.revision ?? snapshot.revision
-        return publish({ ...snapshot, doc, revision, lastConfirmed: doc, banner: null })
+        return publish({ ...snapshot, doc, revision, lastConfirmed: doc, optimistic: false, banner: null })
       }
+      case 'optimistic-doc':
+        // Apply a drop to the view immediately. The revision is deliberately
+        // untouched: it stays the last server-confirmed base for the async write.
+        return publish({ ...snapshot, doc: payload.doc, optimistic: true })
+      case 'optimistic-confirmed': {
+        const keepDoc = payload.keepDoc === true
+        return publish({
+          ...snapshot,
+          doc: keepDoc ? snapshot.doc : payload.confirmedDoc ?? snapshot.doc,
+          revision: payload.revision ?? snapshot.revision,
+          lastConfirmed: payload.confirmedDoc ?? snapshot.lastConfirmed,
+          optimistic: keepDoc,
+          banner: null,
+        })
+      }
+      case 'optimistic-rollback':
+        return publish({
+          ...snapshot,
+          doc: snapshot.lastConfirmed ?? snapshot.doc,
+          optimistic: false,
+          banner: payload.code
+            ? { kind: payload.code === 'conflict' ? 'warning' : 'error', code: payload.code }
+            : snapshot.banner,
+        })
       case 'saving':
         return publish({ ...snapshot, saving: Boolean(payload.saving) })
       case 'commit-conflict':
@@ -178,6 +205,7 @@ export const createStore = ({ storage = safeStorage() } = {}) => {
           doc: payload.doc ?? snapshot.doc,
           revision: payload.revision ?? snapshot.revision,
           lastConfirmed: payload.doc ?? snapshot.lastConfirmed,
+          optimistic: false,
           banner: { kind: 'warning', code: 'conflict' },
         })
       case 'commit-error':

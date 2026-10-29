@@ -1,6 +1,6 @@
 # V1/V1.1 测试计划
 
-- 目标：证明“分组只改视图、不改宿主数据”，同时证明拖拽/嵌套/筛选/新建在真实 DSH 中可用；V1.1 追加证明左栏宽度、分组拖拽、会话搜索、官方侧栏排版对齐
+- 目标：证明“分组只改视图、不改宿主数据”，同时证明拖拽/嵌套/筛选/新建在真实 DSH 中可用；V1.1 追加证明左栏宽度、分组拖拽、会话搜索、官方侧栏排版对齐；0.2.4 追加证明拖拽行高插入占位与乐观 drop 提交（HTTP 未完成前 DOM 已移动）
 - 负责人：QA（计划、证据、验收结论）；Host/Client 各写自己模块的测试；Lead 做最终审计
 - 环境：先用独立 `DSH_HOME`（`.spike-homes/qa`）+ `groups-spike` profile，再 desktop profile 人工验收；profile 不隔离 `sessions/`/`storages/`，禁止用真实 `~/.dsh` 跑 E2E
 - 关联：`docs/V1-PLAN.md`、`docs/CONTRACTS.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
@@ -12,7 +12,7 @@
 | 单元 | Node `node --test` | `src/shared/model.js` 纯函数 | Host/Client 写，QA 审 | 每次提交 |
 | Host 集成 | Node `node --test` + 临时目录 | 存储、原子写、revision、路由围栏 | Host | 每次提交 |
 | Client 逻辑 | Node `node --test` | 可见性、筛选、工作区映射、拖拽 hit-test | Client | 每次提交 |
-| E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索/排版/深色主题（17 步） | QA | 每日/合并前 |
+| E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索/排版/深色主题 + 0.2.4 占位/乐观提交（18 步） | QA | 每日/合并前 |
 | 大列表 probe | Node CDP 脚本 | 1,500+ 未归组行：DOM 行数、初始/滚动/hover/dragOver/search/drop 耗时 | QA | 0.2.3 及后续性能改动 |
 | 人工验收 | 清单 + 截图 | desktop profile 9 步 | QA + 用户 | 发布前 |
 | 回归审计 | 脚本 + hash | 只写记录文件 | QA | 每次 E2E |
@@ -77,8 +77,10 @@
 | C12 | 分组拖拽（V1.1） | `resolveGroupDrop` 同父前/后、跨父 child、有会话但 0 子组/空组=0 号槽、根末尾；同父移除后下标 −1；自身/后代 invalid；最新 `childrenOf` 重算锚点；no-op 不提交；**组 `+` 的 pointerdown 起点守卫（真实指针拖拽不产生 drag/drop 提交）；中间 50% invalid；同位置 after no-op；组菜单 move-up 启用路径** |
 | C13 | 会话搜索（V1.1） | `buildSearchIndex` 排除 subagent、标题/工作区/组路径、归档标记；`matchSessions` 前缀优先/大小写/空查询/20 上限/稳定排序；`revealSession` 展开所在组+全部祖先、未归组 `__ungrouped__`、已展开同引用；**`buildSearchIndex(null)` 容忍；仅 `collapsed[id] === true` 视为折叠；blank/untitled 的英文别名匹配（显示仍本地化）** |
 | C14 | 未归组虚拟化（0.2.3） | `computeVirtualWindow` 空列表/顶部/中部/底部/小列表/overscan/自定义行高 gap/非法输入；**top+bottom spacer 精确等于 `total*34-2`**；1,500 行窗口 <80；`virtualScrollOffset` 居中且 clamp 到最大滚动；`isVirtualIndexVisible` 边界 |
+| C15 | 乐观提交队列（0.2.4） | `commitOptimistic` 同步 dispatch 且 revision 不变；同 tick 合并为 1 个请求且携带最新 doc；飞行中 drop 串行追加、baseRevision 用最新确认 revision；成功 reconcile；失败/409 回滚到 `lastConfirmed` + 既有 toast（错误 `reported`）；`commitStrict` 先 flush 乐观队列、锁内对最新 doc 求值；严格写期间的 drop 延迟并按新 doc 计算 |
+| C16 | 拖拽插入占位（0.2.4） | CSS/源码契约：`.dsg-drop-placeholder` 32/34px、accent 虚线边框/背景、label；九类落点（session-before/after、group-before/after、group child slot、group-append expanded/collapsed、ungrouped、root-end）均渲染占位；旧 `.dsg-drop-indicator`/`.dsg-insert-*` 2px 样式删除；testid `session-groups-drop-indicator` + `data-drop-height` 保留 |
 
-## 5. E2E（Playwright/CDP，17 步）
+## 5. E2E（Playwright/CDP，18 步）
 
 环境：
 
@@ -93,10 +95,10 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 
 用例：
 
-1. 打开 4402，侧栏默认官方工作区视图；用只读夹具复制真实 `sessions/` + `storages/workspace.json`，得到 3 工作区/约 30 会话/2 归档；footer 为**单个 28px 按钮**：初始 `data-mode=workspace`、`aria-pressed=false`、文案/图标指向「分组视图」、13px 文本/16px 图标；点击后 `data-mode=groups`、`aria-pressed=true`、文案/图标变为「工作区视图」；再次点击恢复；0.2.2 的两个段 testid 必须不存在。
+1. 打开 4402，侧栏默认官方工作区视图；用只读夹具复制真实 `sessions/` + `storages/workspace.json`，得到 3 工作区/约 30 会话/2 归档；footer 为**单个 28px 按钮**：初始 `data-mode=workspace`、`aria-pressed=false`、文案/标题精确为「切换到自由分组视图」、13px 文本/16px 图标；点击后 `data-mode=groups`、`aria-pressed=true`、文案/标题精确为「返回默认工作区视图」；再次点击恢复；0.2.2 的两个段 testid 必须不存在。
 2. 点底部单按钮进入分组视图；header 右侧顺序为 **搜索 → 视图选项 → `+`**（各 28×28、16px glyph），搜索字段初始收起，正常 header 无「返回工作区」。
 3. 新建 3 组（1 个二级嵌套），刷新后仍在。
-4. 从 3 个不同工作区拖 10 个会话进组；每次检查插入线/高亮/浮动标签。
+4. 从 3 个不同工作区拖 10 个会话进组；每次检查插入占位（32px、accent 面/虚线边框、目标名/「放到这里」）、高亮与浮动标签；drop 后行立即移动、记录文件最终一致。
 5. 组内/跨组拖拽排序；刷新后顺序保持。
 6. 组头 `+` 打开预创建工作区菜单：默认推断正确；切换工作区后 `connectWorkspace` 创建；落在组第一行且无孤儿 blank。
 7. 归档一个普通会话 → 隐藏；切「全部」可见；切「仅已归档」只显示它；取消归档回原组。再归档一个**运行中**会话 → 拒绝 → 确认框列出活动 → stopActivity 强制；取消路径不动。
@@ -111,23 +113,28 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 16. **V1.1 排版+间距对齐（0.2.1/0.2.2）**：step 15 结束时分组视图仍激活；先收起搜索字段，再用 `getComputedStyle`/`getBoundingClientRect` 断言（不依赖截图）：
     - `.dsg-root` 的 `font-size` 等于宿主侧栏祖先的 computed `font-size`（无祖先时按 14px 契约）且 font-family 继承；
     - `.dsg-group-row` 高 34px、`.dsg-session-row` 高 32px（±1）；
-    - `.dsg-group-name`/`.dsg-session-title` 14px/20px、`.dsg-workspace-badge` 12px、header 标题 14px/20px 且为 primary 文本 + accent 图标 16px；
+    - `.dsg-group-name`/`.dsg-session-title` 14px/20px、`.dsg-workspace-badge` 12px、header 标题 14px/20px **font-weight 400（官方 section label）** 且为 primary 文本 + accent 图标 16px；
     - `.dsg-group-icon svg`、group caret、group action glyph、header accent 均 16×16，组操作按钮 16×16，根内所有 `.dsg-glyph`/`.dsg-icon` 均 16px；
-    - **footer**：单个按钮，`BUTTON` 标签、28px 高、13px 文本、16px 图标，`data-mode=groups`/`aria-pressed=true`、文案/标题为「工作区视图」；header 三个 action 均 28×28、16px glyph、顺序 **搜索/视图选项/`+`**；
+    - **footer**：单个按钮，`BUTTON` 标签、28px 高、13px 文本、16px 图标，`data-mode=groups`/`aria-pressed=true`、文案/标题精确为「返回默认工作区视图」/“Back to default workspace view”；header 三个 action 均 28×28、16px glyph、顺序 **搜索/视图选项/`+`**；
     - **间距**：组行/会话行 computed `padding-left/right` 8px、column-gap 6px；`.dsg-tree` row-gap 2px；组体/组线 row-gap 2px、组缩进 margin/padding 10px；header `padding: 4px 4px 4px 2px`、row-gap 8px、单行标题 28px、收起总高 36px、展开搜索后总高 74px + 搜索行 30px；搜索输入 13px/30px；搜索结果 padding ≥6px/10px、结果 column-gap 8px、下拉 row-gap 2px（全部 ±1px 容差）；
     - **264px 最小宽度**：临时拖到 264px 断言 header/tree `scrollWidth ≤ clientWidth+1` 后恢复原宽度；再展开搜索断言 header/search row/input 仍无横向溢出并收起；
     - **虚拟窗口**：`.dsg-virtual-list` 的 `data-virtual-total` 等于未归组头 `data-count`；`end-start === renderedUngrouped`；rendered ≤80；rail footer 为 28×28 图标按钮（文本为空）；
     - `--dsg-font-14` 解析为 14px（官方 token 生效）。
     - 反例约束：不存在插件专属 font-size 设置/配置；宿主继承值变化时根字号随动；字号/行高/图标尺寸/行高不变。
 17. **0.2.2 深色主题 surfaces**：`document.body.setAttribute('data-ds-dark-theme','')` 后打开搜索输入/搜索结果、会话菜单、新建分组对话框，断言 computed 背景不是白色（含半透明 token 与 body base 合成后）、text/背景对比度 ≥4.5:1；结束后恢复原 theme 属性。覆盖 `--dsw-specific-menu`（菜单/搜索下拉）、`--dsw-alias-bg-layer-2`（对话框）、`--dsw-alias-bg-layer-1`（输入）。
-18. **0.2.3 大列表 probe（独立 QA home，不并入日常 17 步）**：
+18. **0.2.4 插入占位 + 乐观提交**：
+    - 用 `dragstart + dragenter/dragover` 悬停（不 drop）逐类断言 `session-groups-drop-indicator`：session-before/after（32px）、group-before/after（34px）、group child slot（6px→34px）、group-append（展开时组体末尾 / 折叠时组头之后）、ungrouped（header 下）、root-end（最后 root 之后）；占位 label 非空（「放到这里」/目标名），accent 虚线边框 + accent fade 背景；
+    - 占位真实参与布局：hover 前后目标/后继行 top 位移 ≥28–30px；`dragleave` 后占位立即消失；drop/dragend 后清理；
+    - 264px 下 hover 占位时 `.dsg-tree` / 占位 `scrollWidth ≤ clientWidth+1`，随后恢复宽度；
+    - **乐观证据**：用 CDP `Fetch.enable`（Request 阶段）挂起 commit 请求（不注入页面 fetch 包装）；拖会话/分组后断言 DOM 顺序已改变、`data-optimistic="true"`、**记录文件 revision 仍等于拖拽前的值**（HTTP 未落盘），`Fetch.continueRequest` 后记录 revision 前进、`data-optimistic="false"` 且 DOM 顺序保持。
+19. **0.2.3 大列表 probe（独立 QA home，不并入日常 18 步）**：
     - 环境：`scripts/qa/setup.ps1 -QaHome .spike-homes/qa-0.2.3-large` → `node scripts/qa/make-large-list-fixture.mjs --home ... --extra 1500` → `start-web.ps1 -Port 4407`；
     - 断言 1,500+ 逻辑未归组行下 `domUngroupedRows` 在 20–30（<80），`treeScrollHeight` 与全量渲染一致（spacers 精确）；
     - 记录初始渲染、滚动两帧、hover、dragover 指示、窗口外搜索 reveal/scroll、可见行拖入组耗时；before(0.2.2)/after(0.2.3) 同 fixture 对比，写入 `docs/TEST-RESULTS.md` 与 `.superpowers/sdd/.../virtualization-report.md`。
 
 V1.1 新增/相关 stable testids（详见 `docs/CONTRACTS.md §4.1`）：
 
-`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle`（0.2.3 单按钮）、`session-groups-search-toggle`、`session-groups-search-close`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`、`session-groups-virtual-spacer`（0.2.3）。
+`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle`（0.2.3 单按钮）、`session-groups-search-toggle`、`session-groups-search-close`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`、`session-groups-virtual-spacer`（0.2.3）、`session-groups-drop-indicator`（0.2.4 行高占位，`data-drop-height`）。
 
 Playwright 拖拽注意：
 
@@ -144,6 +151,7 @@ V1.1 回归注意：
 - **step 15**：会通过宿主归档一条会话（宿主侧副作用，记录文件不变），证据中记录该 sid/title。
 - **step 16**：依赖 step 15 结束时仍在分组视图；先收起搜索字段再测 36px header，测量搜索结果时再展开并关闭；字号/间距为只读 DOM 断言；264px 探针会临时改宽度并恢复原宽度（不写记录文件）。失败信息必须列出「期望值 vs 实测值」。
 - **step 17**：设置/移除 `body[data-ds-dark-theme]` 只影响本次浏览器文档；不写 profile、不写记录文件；结束后恢复原属性。
+- **step 18**：占位检查全部用 hover-only（不落盘）；乐观检查用 CDP Fetch 挂起 commit，断言 DOM 已移动且记录 revision 未变；随后 continue 并等待 revision 前进/data-optimistic=false；264px 探针临时改宽度后恢复。
 
 ## 6. 人工验收（desktop profile）
 
@@ -188,7 +196,7 @@ V1.1 回归注意：
 
 - 单测/集成输出（TAP/日志）
 - E2E trace/video（失败必存）
-- E2E 17 步 JSON（`scripts/qa/evidence/e2e-<ts>.json`）+ 截图（分组视图、拖拽插入线、组内新建、归档三态、rail、切回官方、宽度把手、组拖、搜索下拉、排版断言、深色主题 surfaces）
+- E2E 18 步 JSON（`scripts/qa/evidence/e2e-<ts>.json`）+ 截图（分组视图、拖拽插入占位、组内新建、归档三态、rail、切回官方、宽度把手、组拖、搜索下拉、排版断言、深色主题 surfaces、乐观 drop）
 - 数据审计输出（load-only + commit probe）
 - 手工验收签字
 - 已知问题清单（含 P2）

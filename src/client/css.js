@@ -78,7 +78,8 @@ export const CSS = `
   overflow: hidden;
   font-size: var(--dsg-font-14, 14px);
   line-height: 20px;
-  font-weight: 600;
+  /* Official section label inherits the base weight (no extra 600). */
+  font-weight: 400;
   /* Official section label: primary text, not the muted tertiary chrome. */
   color: var(--dsw-alias-label-primary, CanvasText);
   white-space: nowrap;
@@ -192,7 +193,7 @@ export const CSS = `
   flex: none;
 }
 .dsg-text-button:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
-.dsg-tree { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; padding: 2px 4px 8px 2px; }
+.dsg-tree { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; padding: 2px 4px 8px 2px; /* Inserting the placeholder must push the following rows down instead of scroll-anchoring them back into place. */ overflow-anchor: none; }
 .dsg-group-row, .dsg-session-row {
   display: flex;
   align-items: center;
@@ -215,23 +216,19 @@ export const CSS = `
   height: 6px;
   margin: 0 2px;
   border-radius: 3px;
-  transition: background .1s ease;
+  transition: background .1s ease, height .1s ease;
 }
 .dsg-group-drop-slot:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
-.dsg-group-drop-slot[data-drop-active="true"] { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.16)); }
-.dsg-group-drop-slot[data-drop-active="true"]::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 2px;
-  margin-top: -1px;
-  border-radius: 2px;
-  background: var(--dsw-alias-state-business-primary, #4d6bfe);
+/* Active child slot expands from the 6px hit area to a full 34px group-row
+ * placeholder so the surrounding child groups physically separate. */
+.dsg-group-drop-slot[data-drop-active="true"] {
+  height: 34px;
+  background: transparent;
+  padding: 0;
 }
 .dsg-group-drop-slot[data-drop-forbidden="true"] { background: var(--dsw-alias-state-danger-fade, rgba(248,81,73,.2)); cursor: no-drop; }
 .dsg-group-line[data-empty="true"] .dsg-group-drop-slot { height: 12px; }
+.dsg-group-line[data-empty="true"] .dsg-group-drop-slot[data-drop-active="true"] { height: 34px; }
 .dsg-group-caret { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; color: var(--dsw-alias-label-tertiary, CanvasText); flex: none; }
 .dsg-group-icon { color: var(--dsw-alias-label-secondary, CanvasText); display: inline-flex; flex: none; }
 .dsg-group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-14, 14px); line-height: 20px; }
@@ -267,12 +264,45 @@ export const CSS = `
 .dsg-workspace-badge { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-12, 12px); color: var(--dsw-alias-label-tertiary, CanvasText); opacity: 0; transition: opacity .12s ease; }
 .dsg-session-row:hover .dsg-workspace-badge, .dsg-session-row:focus-within .dsg-workspace-badge { opacity: 1; }
 .dsg-ungrouped { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; border-radius: var(--dsw-radius-sm, 6px); }
-.dsg-ungrouped-header { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 8px; color: var(--dsw-alias-label-secondary, CanvasText); font-size: var(--dsg-font-14, 14px); line-height: 20px; font-weight: 600; }
+.dsg-ungrouped-header { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 8px; color: var(--dsw-alias-label-secondary, CanvasText); font-size: var(--dsg-font-14, 14px); line-height: 20px; font-weight: 400; }
 .dsg-ungrouped-header[data-drop-active="true"] { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14)); }
 .dsg-ungrouped-count { font-size: var(--dsg-font-12, 12px); font-weight: 400; color: var(--dsw-alias-label-tertiary, CanvasText); }
-.dsg-drop-indicator { height: 2px; margin: -1px 4px; border-radius: 2px; background: var(--dsw-alias-state-business-primary, #4d6bfe); box-shadow: 0 0 0 1px var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.2)); }
-.dsg-insert-before { border-top: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); }
-.dsg-insert-after { border-bottom: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); }
+/* Drag insertion placeholder (0.2.4): a real row-height gap, not a 2px line.
+ * The height follows the target row (32 session / 34 group) via the inline
+ * --dsg-drop-height custom property; accent surface/border is theme-aware. */
+.dsg-drop-placeholder {
+  box-sizing: border-box;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: var(--dsg-drop-height, 32px);
+  margin: 1px 0;
+  border: 1px dashed var(--dsw-alias-state-business-primary, #4d6bfe);
+  border-radius: var(--dsw-radius-sm, 6px);
+  background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.16));
+  color: var(--dsw-alias-state-business-primary, #4d6bfe);
+  font-size: var(--dsg-font-12, 12px);
+  line-height: 16px;
+  font-weight: 500;
+  overflow: hidden;
+  pointer-events: auto;
+  animation: dsg-drop-placeholder-in .12s ease-out;
+}
+.dsg-drop-placeholder-label {
+  max-width: 100%;
+  padding: 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dsg-group-drop-slot .dsg-drop-placeholder { margin: 0; height: 34px; }
+@keyframes dsg-drop-placeholder-in {
+  from { opacity: 0; transform: scaleY(.65); }
+  to { opacity: 1; transform: none; }
+}
 .dsg-floating-label { position: fixed; z-index: 60; pointer-events: none; transform: translate(12px, 10px); padding: 2px 8px; border-radius: 999px; font-size: var(--dsg-font-12, 12px); color: var(--dsw-alias-label-inverse, Canvas); background: var(--dsw-alias-state-business-primary, #4d6bfe); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
 .dsg-drag-ghost { opacity: .65; }
 .dsg-empty { padding: 8px; font-size: var(--dsg-font-13, 13px); color: var(--dsw-alias-label-tertiary, CanvasText); text-align: center; }

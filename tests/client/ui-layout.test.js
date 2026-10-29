@@ -41,7 +41,7 @@ test('0.2.2 surfaces use official theme tokens and never hard-code white', () =>
   assert.match(block('.dsg-search-input {'), /border:[^;]*var\(--dsw-alias-border-l3/)
 })
 
-test('header is a 36px official section row: title 14/20 primary + accent icon, three 28px actions', () => {
+test('header is a 36px official section row: title 14/20 weight 400 + accent icon, three 28px actions', () => {
   const header = block('.dsg-header {')
   assert.match(header, /padding:\s*4px 4px 4px 2px/)
   const row = block('.dsg-header-row {')
@@ -50,6 +50,7 @@ test('header is a 36px official section row: title 14/20 primary + accent icon, 
   const title = block('.dsg-header-title {')
   assert.match(title, /font-size:\s*var\(--dsg-font-14,\s*14px\)/)
   assert.match(title, /line-height:\s*20px/)
+  assert.match(title, /font-weight:\s*400/)
   assert.match(title, /color:\s*var\(--dsw-alias-label-primary/)
 
   const accent = block('.dsg-header-accent {')
@@ -118,15 +119,50 @@ test('archive tri-state lives in the view-options popover with 30px rows and a c
   assert.match(block('.dsg-view-options-popover {'), /position:\s*absolute/)
 })
 
-test('archive labels and footer action labels match the 0.2.3 copy', () => {
+test('archive labels and footer action labels match the 0.2.4 copy', () => {
   assert.equal(zh['archive.hidden'], '隐藏已归档')
   assert.equal(zh['archive.all'], '全部对话（显示已归档）')
   assert.equal(zh['archive.only'], '仅显示已归档')
   assert.equal(en['archive.hidden'], 'Hide archived')
   assert.equal(en['archive.all'], 'All conversations (archived shown)')
   assert.equal(en['archive.only'], 'Archived only')
-  assert.equal(zh['footer.toGroups'], '分组视图')
-  assert.equal(zh['footer.toWorkspace'], '工作区视图')
+  // Exact footer copy requested for 0.2.4: workspace -> groups / groups -> workspace.
+  assert.equal(zh['footer.toGroups'], '切换到自由分组视图')
+  assert.equal(zh['footer.toWorkspace'], '返回默认工作区视图')
+  assert.equal(en['footer.toGroups'], 'Switch to free grouping view')
+  assert.equal(en['footer.toWorkspace'], 'Back to default workspace view')
   assert.equal(Object.hasOwn(zh, 'footer.switchLabel'), false, 'unused 0.2.2 switch label must be removed')
   assert.equal(Object.hasOwn(en, 'footer.switchLabel'), false, 'unused 0.2.2 switch label must be removed')
+})
+
+test('drag insertion uses a row-height theme-aware placeholder, not a 2px border', () => {
+  const placeholder = block('.dsg-drop-placeholder {')
+  assert.match(placeholder, /height:\s*var\(--dsg-drop-height,\s*32px\)/)
+  assert.match(placeholder, /border:\s*1px dashed var\(--dsw-alias-state-business-primary/)
+  assert.match(placeholder, /background:\s*var\(--dsw-alias-state-business-primary-fade/)
+  assert.match(placeholder, /color:\s*var\(--dsw-alias-state-business-primary/)
+  assert.match(placeholder, /pointer-events:\s*auto/)
+  assert.match(block('.dsg-tree {'), /overflow-anchor:\s*none/, 'scroll anchoring must not cancel the placeholder gap')
+  assert.equal(CSS.includes('.dsg-drop-indicator'), false, 'the old 2px indicator must be gone')
+  assert.equal(CSS.includes('.dsg-insert-before'), false, 'the old 2px before-border must be gone')
+  assert.equal(CSS.includes('.dsg-insert-after'), false, 'the old 2px after-border must be gone')
+
+  // 32px session / 34px group heights are wired from the component.
+  assert.match(components, /const SESSION_PLACEHOLDER_HEIGHT = 32/)
+  assert.match(components, /const GROUP_PLACEHOLDER_HEIGHT = 34/)
+  assert.match(components, /'data-testid': 'session-groups-drop-indicator'/)
+  assert.match(components, /'data-drop-height': String\(height\)/)
+  assert.match(components, /class: 'dsg-drop-placeholder-label'/)
+  // The active child slot expands from 6px to the group-row placeholder.
+  const slot = block('.dsg-group-drop-slot {')
+  assert.match(slot, /height:\s*6px/)
+  const activeSlot = block('.dsg-group-drop-slot[data-drop-active="true"] {')
+  assert.match(activeSlot, /height:\s*34px/)
+  // Every drop family gets a placeholder label key.
+  assert.equal(typeof zh['drag.dropHere'], 'string')
+  assert.equal(typeof en['drag.dropHere'], 'string')
+  assert.equal(typeof zh['drag.groupAppend'], 'string')
+  assert.equal(typeof en['drag.groupAppend'], 'string')
+  assert.equal(typeof zh['drag.toUngrouped'], 'string')
+  assert.equal(typeof en['drag.toUngrouped'], 'string')
 })

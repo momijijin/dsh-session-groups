@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // e2e/groups.spec.mjs
 //
-// V1 E2E acceptance (docs/TEST-PLAN.md §5, 17 steps) - zero-dependency.
+// V1 E2E acceptance (docs/TEST-PLAN.md §5, 18 steps) - zero-dependency.
 //
 // Drives the real isolated DSH web UI (`.spike-homes/qa`, port 4402) through the
 // Chrome DevTools Protocol using the Chromium already present on this machine.
@@ -13,7 +13,7 @@
 // When the client UI is not present yet the runner exits 3 (BLOCKED) with a
 // diagnostic, so the pipeline can distinguish "not implemented" from "broken".
 //
-// Exit codes: 0 = all 17 steps PASS, 1 = a step FAILED, 2 = harness error,
+// Exit codes: 0 = all 18 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -63,6 +63,7 @@ const SEARCH_RESULTS = '[data-testid="session-groups-search-results"]';
 const SEARCH_RESULT = '[data-testid="session-groups-search-result"]';
 const SEARCH_EMPTY = '[data-testid="session-groups-search-empty"]';
 const TOAST = '[data-testid="session-groups-toast"]';
+const DROP_INDICATOR = '[data-testid="session-groups-drop-indicator"]';
 const TREE = '.dsg-tree';
 
 // ---------------------------------------------------------------------------
@@ -176,6 +177,8 @@ function makeUi(driver, helpers) {
     if (!fallback) throw new Error(`resize handle not found: ${RESIZE_HANDLE}`);
     return fallback;
   };
+
+  let commitHold = null;
 
   const ui = {
     waitFor,
@@ -478,6 +481,7 @@ function makeUi(driver, helpers) {
       })()`);
       if (!result.ok) throw new Error(`drag ${sid} -> ${gid} failed: ${result.reason}`);
       await sleep(250);
+      await ui.waitFor(`document.querySelector(${JSON.stringify(VIEW)})?.getAttribute('data-optimistic') === 'false'`, `session drag ${sid} -> ${gid} persisted`, 10000);
     },
     async dragSessionBefore(sid, targetSid) {
       const result = await evaluate(`(() => {
@@ -496,6 +500,178 @@ function makeUi(driver, helpers) {
       })()`);
       if (!result.ok) throw new Error(`reorder ${sid} before ${targetSid} failed: ${result.reason}`);
       await sleep(250);
+      await ui.waitFor(`document.querySelector(${JSON.stringify(VIEW)})?.getAttribute('data-optimistic') === 'false'`, `session reorder ${sid} persisted`, 10000);
+    },
+    // --- stepwise drag + optimistic/placeholder helpers (0.2.4) -------------
+    /** Start a session drag and keep the DataTransfer plus source element. */
+    async beginSessionDrag(sid) {
+      const result = await evaluate(`(() => {
+        const source = document.querySelector(${JSON.stringify(SESSION)} + '[data-session-id="' + ${JSON.stringify(sid)} + '"]');
+        if (!source) return { ok: false, reason: 'session row missing' };
+        const dt = new DataTransfer();
+        window.__dsgDragTransfer = dt;
+        window.__dsgDragSource = source;
+        source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        return { ok: true };
+      })()`);
+      if (!result.ok) throw new Error(`begin session drag ${sid}: ${result.reason}`);
+      await sleep(120);
+    },
+    /** Start a group drag (synthetic dragstart on the header). */
+    async beginGroupDrag(gid) {
+      const result = await evaluate(`(() => {
+        const source = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+        if (!source) return { ok: false, reason: 'group row missing' };
+        const dt = new DataTransfer();
+        window.__dsgDragTransfer = dt;
+        window.__dsgDragSource = source;
+        source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        return { ok: true };
+      })()`);
+      if (!result.ok) throw new Error(`begin group drag ${gid}: ${result.reason}`);
+      await sleep(120);
+    },
+    /** Hover one element (dragenter + dragover) at a vertical ratio. */
+    async dragHover(selector, ratio = 0.5) {
+      const result = await evaluate(`(() => {
+        const target = document.querySelector(${JSON.stringify(selector)});
+        if (!target) return { ok: false, reason: 'hover target missing' };
+        const rect = target.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + Math.max(2, rect.height * ${Number(ratio)});
+        const dt = window.__dsgDragTransfer ?? new DataTransfer();
+        window.__dsgDragTransfer = dt;
+        for (const type of ['dragenter', 'dragover']) {
+          target.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt, clientX: x, clientY: y }));
+        }
+        return { ok: true, top: rect.top, bottom: rect.bottom, height: rect.height };
+      })()`);
+      if (!result.ok) throw new Error(`drag hover ${selector}: ${result.reason}`);
+      await sleep(150);
+      return result;
+    },
+    /** Drop on one element at a vertical ratio, then end the drag on the source. */
+    async dragDrop(selector, ratio = 0.5) {
+      const result = await evaluate(`(() => {
+        const target = document.querySelector(${JSON.stringify(selector)});
+        if (!target) return { ok: false, reason: 'drop target missing' };
+        const rect = target.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + Math.max(2, rect.height * ${Number(ratio)});
+        const dt = window.__dsgDragTransfer ?? new DataTransfer();
+        window.__dsgDragTransfer = dt;
+        target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: x, clientY: y }));
+        target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: x, clientY: y }));
+        const source = window.__dsgDragSource;
+        if (source) source.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
+        window.__dsgDragSource = null;
+        return { ok: true };
+      })()`);
+      if (!result.ok) throw new Error(`drag drop ${selector}: ${result.reason}`);
+    },
+    /** Dispatch dragleave (pointer left the row) to clear the placeholder. */
+    async dragLeave(selector) {
+      const result = await evaluate(`(() => {
+        const target = document.querySelector(${JSON.stringify(selector)});
+        if (!target) return { ok: false, reason: 'dragleave target missing' };
+        const dt = window.__dsgDragTransfer ?? new DataTransfer();
+        target.dispatchEvent(new DragEvent('dragleave', { bubbles: true, cancelable: true, dataTransfer: dt, relatedTarget: document.body }));
+        return { ok: true };
+      })()`);
+      if (!result.ok) throw new Error(`drag leave ${selector}: ${result.reason}`);
+      await sleep(120);
+    },
+    /** End the current drag without dropping. */
+    async endDrag() {
+      await evaluate(`(() => {
+        const source = window.__dsgDragSource;
+        if (source) source.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: window.__dsgDragTransfer ?? new DataTransfer() }));
+        window.__dsgDragSource = null;
+      })()`);
+      await sleep(120);
+    },
+    /** Current insertion placeholder, including its row height and theme colors. */
+    async placeholderInfo() {
+      return await evaluate(`(() => {
+        const el = document.querySelector(${JSON.stringify(DROP_INDICATOR)});
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return {
+          kind: el.getAttribute('data-drop-kind'),
+          target: el.getAttribute('data-drop-target'),
+          height: rect.height,
+          width: rect.width,
+          top: rect.top,
+          bottom: rect.bottom,
+          label: (el.textContent ?? '').trim(),
+          borderStyle: style.borderTopStyle,
+          borderColor: style.borderTopColor,
+          background: style.backgroundColor,
+          color: style.color,
+        };
+      })()`);
+    },
+    async waitNoPlaceholder(description = 'placeholder cleared') {
+      await ui.waitFor(`!document.querySelector(${JSON.stringify(DROP_INDICATOR)})`, description, 5000);
+    },
+    async rect(selector) {
+      return await evaluate(`(() => {
+        const el = document.querySelector(${JSON.stringify(selector)});
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        return { top: rect.top, bottom: rect.bottom, height: rect.height, left: rect.left, width: rect.width };
+      })()`);
+    },
+    /**
+     * Apply browser-network latency (CDP, not a page fetch wrapper). Used to hold
+     * the commit response while the test reads the already-updated DOM/file.
+     */
+    /**
+     * Hold commit requests at the CDP Fetch layer (Request stage). The drop still
+     * dispatches optimistically; the HTTP request stays paused until
+     * `releaseHeldCommits()`, which proves the DOM moved before persistence.
+     */
+    async beginCommitHold() {
+      if (commitHold) return
+      const held = []
+      const off = driver.cdp.onEvent((message) => {
+        if (message.sessionId !== driver.sessionId) return
+        if (message.method === 'Fetch.requestPaused') held.push(message.params)
+      })
+      await driver.cdp.send('Fetch.enable', {
+        patterns: [{ urlPattern: '*dsh-session-groups/commit*', requestStage: 'Request' }],
+      }, driver.sessionId)
+      commitHold = { held, off }
+    },
+    async waitHeldCommit(count = 1, waitMs = 8000) {
+      const end = Date.now() + waitMs
+      while (Date.now() < end) {
+        if (commitHold && commitHold.held.length >= count) return commitHold.held
+        await sleep(60)
+      }
+      throw new Error(`timed out waiting for ${count} held commit request(s)`)
+    },
+    async releaseHeldCommits() {
+      if (!commitHold) return 0
+      const { held, off } = commitHold
+      commitHold = null
+      let released = 0
+      for (const params of held) {
+        try {
+          await driver.cdp.send('Fetch.continueRequest', { requestId: params.requestId }, driver.sessionId)
+          released += 1
+        } catch {
+          /* request may already be gone */
+        }
+      }
+      try {
+        await driver.cdp.send('Fetch.disable', {}, driver.sessionId)
+      } catch {
+        /* disable is best effort */
+      }
+      off()
+      return released
     },
     // --- group drag / group menu helpers (step 14) --------------------------
     /**
@@ -507,6 +683,11 @@ function makeUi(driver, helpers) {
     async waitRootGroups(expected, waitMs = 8000) {
       const expr = `JSON.stringify(Array.from(document.querySelectorAll(${JSON.stringify(GROUP)} + '[data-depth="0"]'), (el) => el.getAttribute('data-group-id')))`;
       await ui.waitFor(`${expr} === ${JSON.stringify(JSON.stringify(expected))}`, `root group order ${expected.join(',')}`, waitMs);
+      // 0.2.4 optimistic drops render before the HTTP write. Revision-based
+      // assertions (self/no-op/middle-zone) need the single writer to settle so a
+      // previous drag's write cannot land inside the assertion window.
+      await ui.waitFor(`document.querySelector(${JSON.stringify(VIEW)})?.getAttribute('data-optimistic') === 'false'`, 'root group order persisted (optimistic queue settled)', waitMs);
+      await ui.waitFor(`${expr} === ${JSON.stringify(JSON.stringify(expected))}`, `root group order ${expected.join(',')} after reconcile`, waitMs);
       return ui.rootGroupIds();
     },
     /**
@@ -537,6 +718,8 @@ function makeUi(driver, helpers) {
         }).filter(Boolean);
       })()))`;
       await ui.waitFor(`${expr} === ${JSON.stringify(JSON.stringify(expected))}`, `child groups of ${gid} = ${expected.join(',')}`, waitMs);
+      await ui.waitFor(`document.querySelector(${JSON.stringify(VIEW)})?.getAttribute('data-optimistic') === 'false'`, `child groups of ${gid} persisted (optimistic queue settled)`, waitMs);
+      await ui.waitFor(`${expr} === ${JSON.stringify(JSON.stringify(expected))}`, `child groups of ${gid} = ${expected.join(',')} after reconcile`, waitMs);
       return ui.groupChildren(gid);
     },
     async groupDepth(gid) {
@@ -928,6 +1111,7 @@ function makeUi(driver, helpers) {
 // steps
 // ---------------------------------------------------------------------------
 function makeSteps({ driver, ui, evidenceDir, args, state }) {
+  const evaluate = (expression, options) => driver.evaluate(expression, options);
   const shot = async (index, name) => {
     if (!args.screenshot) return null;
     const path = join(evidenceDir, 'screenshots', 'e2e', `${String(index).padStart(2, '0')}-${name}.png`);
@@ -1097,8 +1281,8 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (toggle.mode !== 'workspace' || toggle.pressed !== 'false') {
           throw new Error(`footer initial state expected workspace/unpressed, got ${toggle.mode}/${toggle.pressed}`);
         }
-        if (!/分组视图|Group view/.test(toggle.text) || !/分组视图|Group view/.test(toggle.title ?? '')) {
-          throw new Error(`footer initial label/title must target the groups view: ${JSON.stringify(toggle)}`);
+        if (!/^(切换到自由分组视图|Switch to free grouping view)$/.test(toggle.text) || !/^(切换到自由分组视图|Switch to free grouping view)$/.test(toggle.title ?? '')) {
+          throw new Error(`footer initial label/title must be exactly 切换到自由分组视图 / Switch to free grouping view: ${JSON.stringify(toggle)}`);
         }
         if (Math.abs(toggle.height - 28) > 1) throw new Error(`footer toggle height expected 28 ±1, got ${toggle.height}`);
         if (Math.abs(toggle.fontSize - 13) > 0.6) throw new Error(`footer toggle font-size expected 13px, got ${toggle.fontSize}`);
@@ -1115,8 +1299,8 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (groupsToggle.mode !== 'groups' || groupsToggle.pressed !== 'true') {
           throw new Error(`footer after click expected groups/pressed, got ${groupsToggle.mode}/${groupsToggle.pressed}`);
         }
-        if (!/工作区视图|Workspace view/.test(groupsToggle.text) || !/工作区视图|Workspace view/.test(groupsToggle.title ?? '')) {
-          throw new Error(`footer label/title must target the workspace view after the click: ${JSON.stringify(groupsToggle)}`);
+        if (!/^(返回默认工作区视图|Back to default workspace view)$/.test(groupsToggle.text) || !/^(返回默认工作区视图|Back to default workspace view)$/.test(groupsToggle.title ?? '')) {
+          throw new Error(`footer label/title must be exactly 返回默认工作区视图 / Back to default workspace view after the click: ${JSON.stringify(groupsToggle)}`);
         }
         if (groupsToggle.glyphPath === toggle.glyphPath) throw new Error('footer glyph must change with the target view');
         // Click again -> official workspace, label/icon back to the groups target.
@@ -1428,10 +1612,18 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           && !archivedIds.has(row.sid)
           && row.sid !== state.archivedSession;
         const realFirst = (row) => usable(row) && !/^session-00000000-/.test(row.sid);
+        // Rename the LAST real candidate in group A (oldest in the rendered
+        // order), not the newest: the newest session can be the one the host is
+        // still projecting/resuming in the isolated home, and renaming it can
+        // block the renderer for a long time independently of this plugin
+        // (verified by renaming it through the official workspace menu only).
+        // Any real session exercises the same host rename + snapshot sync path.
+        const groupAReal = rows.filter((row) => realFirst(row) && row.groupId === state.groups.a);
+        const anyReal = rows.filter(realFirst);
         const candidates = [
-          rows.find((row) => realFirst(row) && row.groupId === state.groups.a),
-          rows.find((row) => realFirst(row) && row.groupId),
-          rows.find((row) => usable(row) && row.groupId === state.groups.a),
+          groupAReal[groupAReal.length - 1],
+          anyReal[anyReal.length - 1],
+          rows.filter((row) => usable(row) && row.groupId === state.groups.a).at(-1),
           rows.find((row) => row.sid === state.createdSession && hostIds.has(row.sid)),
         ].filter(Boolean);
         const target = candidates[0]?.sid;
@@ -1544,6 +1736,16 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const isBlankRow = (row) => /新会话/.test(row.text || '') || row.sid === state.createdSession;
         const beforeOrder = beforeRows.filter((row) => row.groupId === state.groups.a && !isBlankRow(row)).map((row) => row.sid);
         const beforeBlankActive = beforeRows.filter((row) => isBlankRow(row) && row.groupId === state.groups.a).map((row) => row.sid);
+        // Grouped rows are always rendered. The ungrouped section is virtualized
+        // (0.2.3+): only the viewport + overscan window exists in the DOM, so the
+        // number of *visible session rows* is not a stable logical count across a
+        // restart — a different scroll offset or placeholder geometry can shift the
+        // window by a row (0.2.4 QA saw 26 after vs 27 before on a fresh home).
+        // Assert the real invariants instead: every grouped row must come back,
+        // the known session must hydrate, and the ungrouped window must contain a
+        // reasonable floor of rows (never zero / never a half-hydrated tree).
+        const beforeGroupedIds = beforeRows.filter((row) => row.groupId !== null).map((row) => row.sid);
+        const sessionRowFloor = Math.max(1, Math.min(beforeRows.length, 20));
         // A row that must be visible again after hydration (any non-blank row).
         const knownSession = (beforeOrder[0] ?? beforeRows.find((row) => !isBlankRow(row))?.sid) ?? null;
         await restartServer();
@@ -1552,9 +1754,10 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         await ui.waitGroupsView();
         // The QA fixture has grown to ~1.3 GB / ~1476 files, so the restarted
         // server can take well over the old fixed 500 ms to deliver the session
-        // snapshot. Wait for the expected group rows, the same number of visible
-        // session rows and the known session before comparing names/order;
-        // otherwise the counts render as 0 against a half-hydrated tree.
+        // snapshot. Wait for the expected group rows, all grouped session rows,
+        // the known session and the ungrouped virtual window floor before
+        // comparing names/order; otherwise the counts render as 0 against a
+        // half-hydrated tree.
         const snapshotWaitMs = 30000;
         const snapshotDeadline = Date.now() + snapshotWaitMs;
         let snapshot = { groups: -1, rows: -1 };
@@ -1564,14 +1767,19 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           const idsNow = new Set(rowsNow.map((row) => row.sid));
           snapshot = { groups: groupsNow.length, rows: rowsNow.length };
           const groupsReady = groupsNow.length === beforeGroups.length;
-          const rowsReady = rowsNow.length === beforeRows.length;
+          const groupedReady = beforeGroupedIds.every((sid) => idsNow.has(sid));
+          // Virtualized ungrouped rows outside the window deliberately need not be
+          // in the DOM; the floor only proves the list hydrated past the initial
+          // paint, not that a particular window boundary survived the restart.
+          const rowsReady = rowsNow.length > 0 && rowsNow.length >= sessionRowFloor;
           const knownReady = knownSession === null || idsNow.has(knownSession);
-          if (groupsReady && rowsReady && knownReady) break;
+          if (groupsReady && groupedReady && rowsReady && knownReady) break;
           if (Date.now() >= snapshotDeadline) {
             throw new Error(
               `restarted server did not deliver the session snapshot within ${snapshotWaitMs}ms: ` +
                 `groups ${snapshot.groups}/${beforeGroups.length}, ` +
-                `visible session rows ${snapshot.rows}/${beforeRows.length}, ` +
+                `visible session rows ${snapshot.rows} (floor ${sessionRowFloor}, virtualized ungrouped window), ` +
+                `grouped rows missing ${JSON.stringify(beforeGroupedIds.filter((sid) => !idsNow.has(sid)))}, ` +
                 `known session ${JSON.stringify(knownSession)} present=${knownReady}`
             );
           }
@@ -1624,7 +1832,19 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           const body = await ui.bodyText();
           if (!body.includes(state.renamedTitle)) throw new Error('renamed title lost after restart');
         }
-        return { groups: afterGroups.length, filter: afterFilter, blankLifecycle };
+        const afterRowsNow = await ui.sessions();
+        return {
+          groups: afterGroups.length,
+          filter: afterFilter,
+          sessionRows: {
+            before: beforeRows.length,
+            after: afterRowsNow.length,
+            floor: sessionRowFloor,
+            grouped: beforeGroupedIds.length,
+            virtualized: true,
+          },
+          blankLifecycle,
+        };
       },
     },
     {
@@ -2096,7 +2316,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const guardProbe = await ui.dragGroupFromButton(b, e);
         await sleep(400);
         if (await ui.dialogOpen()) {
-          await evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+          await driver.evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
           await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'button-drag dialog dismissed', 5000);
         }
         if (await ui.exists(MENU)) await ui.closeMenu();
@@ -2510,6 +2730,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           const fontOf = (el) => ({
             fontSize: px(styleOf(el)?.fontSize),
             lineHeight: px(styleOf(el)?.lineHeight),
+            fontWeight: styleOf(el)?.fontWeight ?? null,
           });
           // Computed spacing for one element. rowGap/columnGap stay null when
           // the computed value is 'normal' (no gap), which the assertions treat
@@ -2711,6 +2932,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         near(metrics.text.workspaceBadge.fontSize, 12, 'dsg-workspace-badge font-size');
         near(metrics.text.headerTitle.fontSize, 14, 'dsg-header-title font-size');
         near(metrics.text.headerTitle.lineHeight, 20, 'dsg-header-title line-height');
+        if (metrics.text.headerTitle.fontWeight !== '400') {
+          throw new Error(`dsg-header-title must use the official section-label weight 400, got ${metrics.text.headerTitle.fontWeight}`);
+        }
         near(metrics.text.headerTitleLabel.fontSize, 14, 'dsg-header-label font-size');
         if (metrics.text.headerTitle.color !== metrics.tokens.primary) {
           throw new Error(`dsg-header-title must use primary text (${metrics.tokens.primary}), got ${metrics.text.headerTitle.color}`);
@@ -2744,10 +2968,10 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         near(metrics.footer.fontSize, 13, 'footer font-size');
         near(metrics.footer.icon.width, 16, 'footer icon width');
         near(metrics.footer.icon.height, 16, 'footer icon height');
-        if (!/工作区视图|Workspace view/.test(metrics.footer.text)) {
-          throw new Error(`footer label must target the workspace view while groups are active, got ${JSON.stringify(metrics.footer.text)}`);
+        if (!/^(返回默认工作区视图|Back to default workspace view)$/.test(metrics.footer.text)) {
+          throw new Error(`footer label must be exactly 返回默认工作区视图 / Back to default workspace view while groups are active, got ${JSON.stringify(metrics.footer.text)}`);
         }
-        if (!/工作区视图|Workspace view/.test(metrics.footer.title ?? '')) {
+        if (!/^(返回默认工作区视图|Back to default workspace view)$/.test(metrics.footer.title ?? '')) {
           throw new Error(`footer title must match the label, got ${JSON.stringify(metrics.footer.title)}`);
         }
         // (3d) Virtualized ungrouped list: the rendered rows stay within the
@@ -3135,6 +3359,316 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         };
       },
     },
+    {
+      id: 18,
+      name: 'optimistic-drop-commits-and-insertion-placeholders',
+      async run() {
+        // 0.2.4: every insertion point must render a real row-height placeholder
+        // (32px session / 34px group) instead of a 2px border, and drops must
+        // move the row in the DOM before the delayed commit HTTP completes.
+        if (!(await ui.exists(VIEW))) throw new Error('step 18 must start in the groups view');
+        await ui.closeViewOptions();
+        await ui.closeSearch();
+        await ui.dismissOverlay();
+        const sessionRow = (sid) => `${SESSION}[data-session-id="${sid}"]`;
+        const groupRow = (gid) => `${GROUP}[data-group-id="${gid}"]`;
+
+        const assertPlaceholder = (info, expected, label) => {
+          if (!info) throw new Error(`${label}: insertion placeholder missing`);
+          if (info.kind !== expected.kind) throw new Error(`${label}: kind expected ${expected.kind}, got ${info.kind}`);
+          if (expected.target !== undefined && info.target !== expected.target) {
+            throw new Error(`${label}: target expected ${expected.target}, got ${info.target}`);
+          }
+          if (Math.abs(info.height - expected.height) > 1.5) {
+            throw new Error(`${label}: height expected ${expected.height} ±1.5, got ${info.height}`);
+          }
+          if (!info.label) throw new Error(`${label}: placeholder label must not be empty`);
+          if (info.borderStyle !== 'dashed') throw new Error(`${label}: expected a dashed accent border, got ${info.borderStyle}`);
+          if (!info.background || info.background === 'rgba(0, 0, 0, 0)' || info.background === 'transparent') {
+            throw new Error(`${label}: placeholder needs a visible accent surface, got ${info.background}`);
+          }
+        };
+
+        // Pick live rows (step 14 reordered/reparented the tree).
+        const rootIds = await ui.rootGroupIds();
+        if (rootIds.length < 2) throw new Error(`need >=2 root groups for placeholder checks, got ${JSON.stringify(rootIds)}`);
+        let groupId = null;
+        let sessions = [];
+        for (const gid of rootIds) {
+          const ids = await ui.sessionIdsInGroup(gid);
+          if (ids.length >= 2) {
+            groupId = gid;
+            sessions = ids;
+            break;
+          }
+        }
+        if (!groupId) throw new Error('no root group holds >=2 sessions for the placeholder/optimistic checks');
+        const [firstSession, secondSession] = sessions;
+        const otherGroupId = rootIds.find((gid) => gid !== groupId);
+        const dragGroupId = rootIds.find((gid) => gid !== groupId && gid !== otherGroupId) ?? rootIds.find((gid) => gid !== groupId);
+
+        // (1) session-before: 32px placeholder, following row physically pushed down.
+        const firstBefore = await ui.rect(sessionRow(firstSession));
+        await ui.beginSessionDrag(secondSession);
+        await ui.dragHover(sessionRow(firstSession), 0.2);
+        const sessionBefore = await ui.placeholderInfo();
+        assertPlaceholder(sessionBefore, { kind: 'session-before', target: firstSession, height: 32 }, 'session-before');
+        const firstAfterShift = await ui.rect(sessionRow(firstSession));
+        if (!(firstAfterShift.top - firstBefore.top >= 28)) {
+          throw new Error(`session-before placeholder must push the target row down ~32px (before=${firstBefore.top}, after=${firstAfterShift.top})`);
+        }
+        await ui.dragLeave(sessionRow(firstSession));
+        await ui.waitNoPlaceholder('session-before cleared on dragleave');
+        // (2) session-after: 32px placeholder after the target row.
+        await ui.dragHover(sessionRow(firstSession), 0.8);
+        const sessionAfter = await ui.placeholderInfo();
+        assertPlaceholder(sessionAfter, { kind: 'session-after', target: firstSession, height: 32 }, 'session-after');
+        const firstRect = await ui.rect(sessionRow(firstSession));
+        if (!(sessionAfter.top >= firstRect.bottom - 1)) throw new Error('session-after placeholder must sit below the target row');
+        await ui.dragLeave(sessionRow(firstSession));
+        await ui.waitNoPlaceholder('session-after cleared on dragleave');
+        await ui.endDrag();
+
+        // (3) group-before / group-after: 34px group-row placeholders.
+        const targetBefore = await ui.rect(groupRow(groupId));
+        await ui.beginGroupDrag(dragGroupId);
+        await ui.dragHover(groupRow(groupId), 0.2);
+        const groupBefore = await ui.placeholderInfo();
+        assertPlaceholder(groupBefore, { kind: 'group-before', target: groupId, height: 34 }, 'group-before');
+        const targetAfterShift = await ui.rect(groupRow(groupId));
+        if (!(targetAfterShift.top - targetBefore.top >= 30)) {
+          throw new Error(`group-before placeholder must push the target row down ~34px (before=${targetBefore.top}, after=${targetAfterShift.top})`);
+        }
+        await ui.dragLeave(groupRow(groupId));
+        await ui.waitNoPlaceholder('group-before cleared on dragleave');
+        await ui.dragHover(groupRow(otherGroupId), 0.8);
+        const groupAfter = await ui.placeholderInfo();
+        assertPlaceholder(groupAfter, { kind: 'group-after', target: otherGroupId, height: 34 }, 'group-after');
+        const otherRect = await ui.rect(groupRow(otherGroupId));
+        if (!(groupAfter.top >= otherRect.bottom - 1)) throw new Error('group-after placeholder must sit below the target group row');
+        await ui.dragLeave(groupRow(otherGroupId));
+        await ui.waitNoPlaceholder('group-after cleared on dragleave');
+        await ui.endDrag();
+
+        // (4) group child slot: the 6px slot expands to a 34px placeholder.
+        const slotSelector = `${GROUP_DROP}[data-parent-id="${groupId}"][data-before-group-id=""]`;
+        await ui.beginGroupDrag(dragGroupId);
+        await ui.dragHover(slotSelector, 0.5);
+        const childPlaceholder = await ui.placeholderInfo();
+        assertPlaceholder(childPlaceholder, { kind: 'group-child', target: groupId, height: 34 }, 'group-child');
+        const activeSlot = await ui.rect(slotSelector);
+        if (!(activeSlot.height >= 33)) throw new Error(`active child slot expected >=33px, got ${activeSlot.height}`);
+        await ui.dragLeave(slotSelector);
+        await ui.waitNoPlaceholder('group-child cleared on dragleave');
+        await ui.endDrag();
+
+        // (5) group-append (expanded): placeholder at the end of the group body.
+        await ui.beginSessionDrag(firstSession);
+        await ui.dragHover(groupRow(groupId), 0.5);
+        const appendExpanded = await ui.placeholderInfo();
+        assertPlaceholder(appendExpanded, { kind: 'group-append', target: groupId, height: 34 }, 'group-append expanded');
+        const groupSessions = await ui.sessionIdsInGroup(groupId);
+        const lastSessionRect = await ui.rect(sessionRow(groupSessions[groupSessions.length - 1]));
+        if (!(appendExpanded.top >= lastSessionRect.bottom - 1)) {
+          throw new Error('expanded group-append placeholder must sit after the last session row');
+        }
+        await ui.dragLeave(groupRow(groupId));
+        await ui.waitNoPlaceholder('group-append cleared on dragleave');
+        await ui.endDrag();
+
+        // (6) group-append (collapsed): placeholder directly after the group row.
+        // Use a session outside the group as the drag source; collapsing hides
+        // the group's own rows.
+        const ungroupedIds = await ui.ungroupedSessionIds();
+        const otherGroupRows = (await ui.sessions()).filter((row) => row.groupId && row.groupId !== groupId);
+        const externalDragSession = ungroupedIds[0] ?? otherGroupRows[0]?.sid ?? null;
+        if (!externalDragSession) throw new Error('collapsed append check needs a session outside the collapsed group');
+        await sleep(450);
+        await ui.click(groupRow(groupId));
+        await ui.waitFor(`document.querySelector(${JSON.stringify(groupRow(groupId))})?.getAttribute('data-expanded') === 'false'`, 'group collapsed for append check', 5000);
+        await sleep(150);
+        await ui.beginSessionDrag(externalDragSession);
+        await ui.dragHover(groupRow(groupId), 0.5);
+        const appendCollapsed = await ui.placeholderInfo();
+        assertPlaceholder(appendCollapsed, { kind: 'group-append', target: groupId, height: 34 }, 'group-append collapsed');
+        const collapsedRect = await ui.rect(groupRow(groupId));
+        if (!(appendCollapsed.top >= collapsedRect.bottom - 1)) throw new Error('collapsed group-append placeholder must sit after the collapsed row');
+        await ui.dragLeave(groupRow(groupId));
+        await ui.waitNoPlaceholder('collapsed append cleared on dragleave');
+        await ui.endDrag();
+        await ui.click(groupRow(groupId));
+        await ui.waitFor(`document.querySelector(${JSON.stringify(groupRow(groupId))})?.getAttribute('data-expanded') === 'true'`, 'group re-expanded', 5000);
+        await sleep(150);
+
+        // (7) ungrouped / root-end.
+        await ui.beginSessionDrag(firstSession);
+        await ui.dragHover(UNGROUPED, 0.5);
+        const ungroupedPlaceholder = await ui.placeholderInfo();
+        assertPlaceholder(ungroupedPlaceholder, { kind: 'ungrouped', height: 32 }, 'ungrouped');
+        const ungroupedRect = await ui.rect(UNGROUPED);
+        if (!(ungroupedPlaceholder.top >= ungroupedRect.bottom - 1)) throw new Error('ungrouped placeholder must sit under the ungrouped header');
+        await ui.dragLeave(UNGROUPED);
+        await ui.waitNoPlaceholder('ungrouped cleared on dragleave');
+        await ui.endDrag();
+
+        await ui.beginGroupDrag(dragGroupId);
+        await ui.dragHover(UNGROUPED, 0.5);
+        const rootEndPlaceholder = await ui.placeholderInfo();
+        assertPlaceholder(rootEndPlaceholder, { kind: 'group-root-end', height: 34 }, 'group-root-end');
+        const lastRootRect = await ui.rect(groupRow(rootIds[rootIds.length - 1]));
+        if (!(rootEndPlaceholder.top >= lastRootRect.bottom - 1)) throw new Error('group-root-end placeholder must sit after the last root group');
+        await ui.dragLeave(UNGROUPED);
+        await ui.waitNoPlaceholder('root-end cleared on dragleave');
+        await ui.endDrag();
+
+        // (8) 264px: the placeholder never causes horizontal overflow.
+        const widthBefore = await ui.sidebarWidth();
+        const waitWidth = async (expected, label, waitMs = 8000) => {
+          const end = Date.now() + waitMs;
+          let last = -1;
+          while (Date.now() < end) {
+            last = await ui.sidebarWidth();
+            if (Number.isFinite(last) && Math.abs(last - expected) <= 2) return last;
+            await sleep(120);
+          }
+          throw new Error(`${label}: expected ${expected} ±2px, got ${last}`);
+        };
+        await ui.dragResizeHandle(264);
+        const probeWidth = await waitWidth(264, 'sidebar width for placeholder overflow probe');
+        await ui.beginSessionDrag(secondSession);
+        await ui.dragHover(sessionRow(firstSession), 0.2);
+        const narrowPlaceholder = await ui.placeholderInfo();
+        const treeBox = await driver.evaluate(`(() => { const tree = document.querySelector('.dsg-tree'); return tree ? { clientWidth: tree.clientWidth, scrollWidth: tree.scrollWidth } : null; })()`);
+        if (!narrowPlaceholder || !treeBox) throw new Error('264px placeholder probe lost its nodes');
+        if (treeBox.scrollWidth > treeBox.clientWidth + 1) {
+          throw new Error(`tree overflows at 264px with an active placeholder: ${treeBox.scrollWidth} > ${treeBox.clientWidth}`);
+        }
+        if (narrowPlaceholder.width > treeBox.clientWidth + 1) {
+          throw new Error(`placeholder overflows at 264px: ${narrowPlaceholder.width} > ${treeBox.clientWidth}`);
+        }
+        await ui.dragLeave(sessionRow(firstSession));
+        await ui.endDrag();
+        await ui.dragResizeHandle(widthBefore);
+        const widthRestored = await waitWidth(widthBefore, 'sidebar width restored after placeholder probe');
+
+        // (9) Optimistic session move: DOM reorders while the commit response is
+        // held by browser-network latency (CDP, no page fetch wrapper).
+        const readRecordRevision = () => {
+          try {
+            return Number(JSON.parse(readFileSync(join(QA_HOME, 'storages', 'dsh-session-groups.json'), 'utf8')).revision);
+          } catch {
+            return -1;
+          }
+        };
+        const waitRecordRevisionAbove = async (previous, description, waitMs = 12000) => {
+          const end = Date.now() + waitMs;
+          let last = -1;
+          while (Date.now() < end) {
+            last = readRecordRevision();
+            if (last > previous) return last;
+            await sleep(150);
+          }
+          throw new Error(`${description}: record revision stayed ${last} (expected > ${previous})`);
+        };
+        const orderBefore = await ui.sessionIdsInGroup(groupId);
+        if (orderBefore.length < 2) throw new Error('optimistic session check needs >=2 sessions');
+        const sessionRevisionBefore = readRecordRevision();
+        await ui.beginCommitHold();
+        const sessionDropAt = Date.now();
+        await ui.beginSessionDrag(orderBefore[1]);
+        await ui.dragHover(sessionRow(orderBefore[0]), 0.2);
+        await ui.dragDrop(sessionRow(orderBefore[0]), 0.2);
+        await ui.waitFor(
+          `document.querySelector(${JSON.stringify(`${SESSION}[data-group-id="${groupId}"]`)})?.getAttribute('data-session-id') === ${JSON.stringify(orderBefore[1])}`,
+          'optimistic session DOM order before HTTP',
+          5000,
+        );
+        const optimisticOrder = await ui.sessionIdsInGroup(groupId);
+        const optimisticSessionMs = Date.now() - sessionDropAt;
+        if (optimisticOrder[0] !== orderBefore[1]) {
+          throw new Error(`optimistic session move did not reorder the DOM before HTTP: ${JSON.stringify(orderBefore)} -> ${JSON.stringify(optimisticOrder)}`);
+        }
+        const optimisticFlag = await ui.attrs(VIEW, 'data-optimistic');
+        if (optimisticFlag[0] !== 'true') throw new Error(`optimistic view flag expected true while the write is pending, got ${optimisticFlag[0]}`);
+        await ui.waitHeldCommit(1);
+        const sessionRevisionDuring = readRecordRevision();
+        if (sessionRevisionDuring !== sessionRevisionBefore) {
+          throw new Error(`session move hit the record file before the HTTP assertion (revision ${sessionRevisionBefore} -> ${sessionRevisionDuring})`);
+        }
+        const releasedSession = await ui.releaseHeldCommits();
+        if (releasedSession < 1) throw new Error('session commit was not held by the CDP Fetch interceptor');
+        await ui.waitFor(`document.querySelector(${JSON.stringify(VIEW)})?.getAttribute('data-optimistic') === 'false'`, 'session optimistic reconcile settled', 8000);
+        const sessionRevisionAfter = await waitRecordRevisionAbove(sessionRevisionBefore, 'session optimistic commit persisted');
+        await sleep(250);
+        const settledSession = await ui.sessionIdsInGroup(groupId);
+        if (settledSession[0] !== orderBefore[1]) throw new Error('session order changed after the commit reconciled');
+
+        // (10) Optimistic group move: root order swaps while the commit is held.
+        const rootsBefore = await ui.rootGroupIds();
+        if (rootsBefore.length < 2) throw new Error('optimistic group check needs >=2 root groups');
+        const groupRevisionBefore = readRecordRevision();
+        await ui.beginCommitHold();
+        const groupDropAt = Date.now();
+        await ui.dragGroup({ kind: 'after', dragged: rootsBefore[0], target: rootsBefore[1] });
+        await ui.waitFor(
+          `document.querySelectorAll(${JSON.stringify(`${GROUP}[data-depth="0"]`)})[0]?.getAttribute('data-group-id') === ${JSON.stringify(rootsBefore[1])}`,
+          'optimistic root order before HTTP',
+          5000,
+        );
+        const optimisticRoots = await ui.rootGroupIds();
+        const optimisticGroupMs = Date.now() - groupDropAt;
+        if (optimisticRoots[0] !== rootsBefore[1] || optimisticRoots[1] !== rootsBefore[0]) {
+          throw new Error(`optimistic group move did not reorder roots before HTTP: ${JSON.stringify(rootsBefore)} -> ${JSON.stringify(optimisticRoots)}`);
+        }
+        if ((await ui.attrs(VIEW, 'data-optimistic'))[0] !== 'true') throw new Error('optimistic view flag expected true during the group write');
+        await ui.waitHeldCommit(1);
+        const groupRevisionDuring = readRecordRevision();
+        if (groupRevisionDuring !== groupRevisionBefore) {
+          throw new Error(`group move hit the record file before the HTTP assertion (revision ${groupRevisionBefore} -> ${groupRevisionDuring})`);
+        }
+        const releasedGroup = await ui.releaseHeldCommits();
+        if (releasedGroup < 1) throw new Error('group commit was not held by the CDP Fetch interceptor');
+        await ui.waitFor(`document.querySelector(${JSON.stringify(VIEW)})?.getAttribute('data-optimistic') === 'false'`, 'group optimistic reconcile settled', 8000);
+        const groupRevisionAfter = await waitRecordRevisionAbove(groupRevisionBefore, 'group optimistic commit persisted');
+        await sleep(250);
+        const settledRoots = await ui.rootGroupIds();
+        if (settledRoots[0] !== rootsBefore[1]) throw new Error('root order changed after the group commit reconciled');
+
+        return {
+          placeholders: {
+            sessionBefore: { height: sessionBefore.height, label: sessionBefore.label, pushed: Math.round(firstAfterShift.top - firstBefore.top) },
+            sessionAfter: { height: sessionAfter.height, label: sessionAfter.label },
+            groupBefore: { height: groupBefore.height, label: groupBefore.label, pushed: Math.round(targetAfterShift.top - targetBefore.top) },
+            groupAfter: { height: groupAfter.height, label: groupAfter.label },
+            groupChild: { height: childPlaceholder.height, slotHeight: activeSlot.height, label: childPlaceholder.label },
+            groupAppendExpanded: { height: appendExpanded.height, label: appendExpanded.label },
+            groupAppendCollapsed: { height: appendCollapsed.height, label: appendCollapsed.label },
+            ungrouped: { height: ungroupedPlaceholder.height, label: ungroupedPlaceholder.label },
+            rootEnd: { height: rootEndPlaceholder.height, label: rootEndPlaceholder.label },
+            narrow264: { width: probeWidth, tree: treeBox, placeholderWidth: narrowPlaceholder.width, restored: widthRestored },
+          },
+          optimistic: {
+            session: {
+              optimisticMs: optimisticSessionMs,
+              revisionBefore: sessionRevisionBefore,
+              revisionDuring: sessionRevisionDuring,
+              revisionAfter: sessionRevisionAfter,
+              before: orderBefore,
+              after: optimisticOrder,
+            },
+            group: {
+              optimisticMs: optimisticGroupMs,
+              revisionBefore: groupRevisionBefore,
+              revisionDuring: groupRevisionDuring,
+              revisionAfter: groupRevisionAfter,
+              before: rootsBefore,
+              after: optimisticRoots,
+              settled: settledRoots,
+            },
+          },
+        };
+      },
+    },
   ];
 }
 
@@ -3195,7 +3729,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 17-step acceptance (isolated DSH home, CDP)');
+  console.log(' V1 E2E - 18-step acceptance (isolated DSH home, CDP)');
   console.log('============================================================');
 
   let driver = null;

@@ -161,8 +161,7 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t }) => 
     }
     if (!sessionId) throw new Error('create-failed')
 
-    const nextDoc = assignSession(getDoc(), sessionId, groupId, 0)
-    await commitDoc(nextDoc)
+    const nextDoc = await commitDoc((latest) => assignSession(latest, sessionId, groupId, 0))
     openSession(sessionId)
     // Read back from the host snapshot so callers can verify the placement.
     const sessionsSnapshot = snapshot()
@@ -177,9 +176,7 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t }) => 
   const moveSession = async (sessionId, groupId, index) => {
     const doc = getDoc()
     if (groupId !== null && !findGroup(doc, groupId)) throw new Error('group-not-found')
-    const nextDoc = assignSession(doc, sessionId, groupId, index)
-    await commitDoc(nextDoc)
-    return nextDoc
+    return await commitDoc((latest) => assignSession(latest, sessionId, groupId, index))
   }
 
   /** Session's workspace ref (for badges/labels). */

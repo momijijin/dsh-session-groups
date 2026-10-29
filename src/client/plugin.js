@@ -12,6 +12,7 @@ import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
 import { dictionaries, createTranslator, LOCALE_NS } from './locale.js'
 import { installStyles } from './css.js'
+import { createOptimisticQueue } from './optimistic.js'
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
 import { FooterAction, GroupsViewBoundary, setRuntime } from './components.js'
 
@@ -52,6 +53,7 @@ export const createPlugin = () => {
   let localeDisposer = null
   let loadPromise = null
   let commitTail = Promise.resolve()
+  let queue = null
   let bridge = null
 
   const services = () => {
@@ -102,41 +104,27 @@ export const createPlugin = () => {
   }
 
   // --- document commit queue -------------------------------------------------
+  /**
+   * Non-optimistic commit (dialogs: create/rename/delete/icon/move-session/
+   * move-group). Serialized with the optimistic queue: pending drops flush
+   * first and the mutation resolves against the latest document, so a dialog
+   * action can never overwrite a newer optimistic drop with a stale snapshot.
+   * `saving` stays unpublished for the same reason as 0.2.2 (no view consumer).
+   */
   const commitDoc = (nextDocOrUpdater) => {
     const run = commitTail.then(async () => {
       perfMark('commitDoc:start')
-      // `saving` has no consumer in the view (0.2.2 probe confirmed it only
-      // burned a full tree render before the HTTP write), so the commit queue
-      // no longer publishes it. The store action/state stay for contract
-      // compatibility with earlier builds.
       try {
-        const snapshot = store.getSnapshot()
-        // A drop can arrive while a previous commit is still in flight. Resolve
-        // updater functions against the latest confirmed doc inside the queue so
-        // two rapid drops cannot overwrite each other with stale snapshots.
-        const nextDoc = typeof nextDocOrUpdater === 'function'
-          ? nextDocOrUpdater(snapshot.doc)
-          : nextDocOrUpdater
-        const baseRevision = snapshot.revision
         perfMark('api:commit:start')
-        const result = await api.commit(nextDoc, baseRevision)
-        perfMark('api:commit:end', { ok: result.ok === true, code: result.code ?? null })
-        if (result.ok === true) {
-          store.dispatch('doc', { doc: result.doc, revision: result.revision })
-          perfMark('store:doc')
-          if (typeof globalThis.requestAnimationFrame === 'function') {
-            globalThis.requestAnimationFrame(() => perfMark('frame:after-doc'))
-          }
-          return result.doc
+        const committed = await queue.commitStrict(nextDocOrUpdater)
+        perfMark('api:commit:end', { ok: true })
+        perfMark('store:doc')
+        if (typeof globalThis.requestAnimationFrame === 'function') {
+          globalThis.requestAnimationFrame(() => perfMark('frame:after-doc'))
         }
-        if (result.code === 'conflict' && result.doc) {
-          store.dispatch('commit-conflict', { doc: result.doc, revision: result.revision })
-          notify({ kind: 'error', message: t('banner.conflict') })
-          return result.doc
-        }
-        store.dispatch('commit-error', { code: result.code === 'fence-unavailable' ? 'route-unavailable' : result.code })
-        const error = new Error(result.message ?? result.code ?? 'commit-failed')
-        error.code = result.code
+        return committed
+      } catch (error) {
+        perfMark('api:commit:end', { ok: false, code: error?.code ?? null })
         throw error
       } finally {
         perfMark('commitDoc:end')
@@ -145,6 +133,13 @@ export const createPlugin = () => {
     commitTail = run.catch(() => {})
     return run
   }
+
+  /**
+   * Optimistic drop commit: the next document is dispatched immediately against
+   * the current optimistic doc; persistence runs through the coalescing queue.
+   * `revision` stays server-confirmed until the write settles.
+   */
+  const commitOptimistic = (nextDocOrUpdater) => queue.commitOptimistic(nextDocOrUpdater)
 
   // --- document load ---------------------------------------------------------
   const load = () => {
@@ -288,14 +283,14 @@ export const createPlugin = () => {
         case 'new-group': {
           const name = typeof payload.value === 'string' ? payload.value.trim() : ''
           if (name === '') return failDialog('name-required')
-          const next = createGroup(getDoc(), { name, parentId: dialog.parentId ?? null })
+          const next = (latest) => createGroup(latest, { name, parentId: dialog.parentId ?? null })
           await commitDocFromAction(next)
           return
         }
         case 'rename-group': {
           const name = typeof payload.value === 'string' ? payload.value.trim() : ''
           if (name === '') return failDialog('name-required')
-          await commitDocFromAction(renameGroup(getDoc(), dialog.groupId, name))
+          await commitDocFromAction((latest) => renameGroup(latest, dialog.groupId, name))
           return
         }
         case 'rename-session': {
@@ -307,14 +302,12 @@ export const createPlugin = () => {
           return
         }
         case 'delete-group': {
-          const next = deleteGroup(getDoc(), dialog.groupId)
-          await commitDocFromAction(next)
+          await commitDocFromAction((latest) => deleteGroup(latest, dialog.groupId))
           notify({ kind: 'success', message: t('toast.groupDeleted') })
           return
         }
         case 'icon': {
-          const next = setGroupIcon(getDoc(), dialog.groupId, payload.icon)
-          await commitDocFromAction(next)
+          await commitDocFromAction((latest) => setGroupIcon(latest, dialog.groupId, payload.icon))
           return
         }
         case 'move-session': {
@@ -324,8 +317,7 @@ export const createPlugin = () => {
           return
         }
         case 'move-group': {
-          const next = moveGroup(getDoc(), dialog.groupId, payload.groupId ?? null, undefined)
-          await commitDocFromAction(next)
+          await commitDocFromAction((latest) => moveGroup(latest, dialog.groupId, payload.groupId ?? null, undefined))
           return
         }
         case 'new-session': {
@@ -375,6 +367,12 @@ export const createPlugin = () => {
       }
     }
     t = createTranslator(getLocaleSnapshot)
+    queue = createOptimisticQueue({
+      store,
+      commit: (doc, revision) => api.commit(doc, revision),
+      notify,
+      t: (key, params) => t(key, params),
+    })
 
     styleDisposer = installStyles(globalThis.document)
     // Register our dictionaries with the host locale service when available.
@@ -395,6 +393,7 @@ export const createPlugin = () => {
       unarchiveSession,
       pinSession,
       commitDoc,
+      commitOptimistic,
       load,
       retryLoad,
       setMode,
@@ -452,6 +451,8 @@ export const createPlugin = () => {
         doc?.removeEventListener?.('keydown', onKeyDown, true)
         floatingLabel?.remove?.()
         floatingLabel = null
+        queue?.dispose()
+        queue = null
         if (toastTimer !== null) clearTimeout(toastTimer)
         toastTimer = null
       }

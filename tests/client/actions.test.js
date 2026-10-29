@@ -90,7 +90,8 @@ const makeActions = (overrides = {}) => {
   const actions = createActions({
     getServices: () => services,
     getDoc: () => doc,
-    commitDoc: async (nextDoc) => {
+    commitDoc: async (nextDocOrUpdater) => {
+      const nextDoc = typeof nextDocOrUpdater === 'function' ? nextDocOrUpdater(doc) : nextDocOrUpdater
       calls.commits.push(nextDoc)
       doc = nextDoc
       return nextDoc

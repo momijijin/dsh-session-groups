@@ -5,7 +5,38 @@
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
-## 0. V1.1 patch 0.2.3 最终结论（2026-10-29，footer/header 回退 + 未归组虚拟化）
+## 0. V1.1 patch 0.2.4 最终结论（2026-10-29，拖拽行高占位 + 乐观 drop 提交 + header/footer 精确化）
+
+**V1.1 patch 0.2.4 QA 验证线 PASS（隔离 home `.spike-homes/qa-0.2.4-final4` + 4419；全新 setup，0 删除）：**
+
+| 层 | 结果 | 证据 |
+|---|---|---|
+| `npm test`（仓库全量） | **211/211 PASS**（0 fail / 0 skip；新增 `tests/client/optimistic.test.js` 8 条队列语义 + 占位/文案/权重源码契约断言） | 控制台输出 |
+| E2E 18 步（`e2e/groups.spec.mjs`，零依赖 CDP） | **18/18 PASS**（step 时间和 **79,277 ms**，~79s；`consoleErrors=[]`、`pageErrors=[]`） | `scripts/qa/evidence-perf/024-final2/e2e-20261029-120454.json` + 18 张截图 |
+| step 10 重启 hydration | **PASS**：groups=4、filter=hidden、`blankLifecycle.drift=false`；**虚拟化感知断言**：DOM 会话行 28→28、floor 20、10 条组内会话全部在场；不再要求「重启前后 DOM 行数精确相等」（视口外未归组行不需要在 DOM） | 同上 step 10 detail |
+| step 1/2/16 footer 文案 | **PASS**：初始精确「切换到自由分组视图」/“Switch to free grouping view”；groups 精确「返回默认工作区视图」/“Back to default workspace view”；28px/13px/16px 不变 | 同上 |
+| step 16 header 权重 | **PASS**：`.dsg-header-title` 14/20、`font-weight: 400`（官方 section label），primary + accent icon 16px | 同上 |
+| step 18 插入占位 | **PASS**：session-before/after 32px、group-before/after 34px、child slot 6→34px、group-append（展开/收起）、ungrouped 32px、root-end 34px；目标行实测下移 **36px**（32 + gap/margin）；dragleave 清除；264px 无溢出（tree 252/252，占位宽 225px） | 同上 step 18 detail |
+| step 18 乐观提交 | **PASS**：CDP `Network.emulateNetworkConditions` latency=1500ms；会话 drop 后 **296ms** 内 DOM 顺序先变、`data-optimistic=true`、记录 revision 仍 29；HTTP 完成后 revision 29→30、顺序保持；分组 drop 同理（14ms 内重排，revision 30→31） | 同上 step 18 detail |
+| setup（0.2.4 全新隔离 home） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client build **195,772 bytes** / sha256 `1416bb40685164d0e2a8a359032c0656fff09c0620ac15457328d29d84a107d4`；package version `0.2.4` | `scripts/qa/evidence-perf/024-final2/setup-20261029-120032.json` |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.4.tgz`（**128,218 bytes**；unpacked **500,532**；**35 files**；sha256 `F519BFBD6B9F180BBCBA4E46CCC3DC46BBD0A92B2FA9D800422D9B97EA358C45`） | 本文件 §0.2 |
+
+### 0.1 0.2.4 修复/变更明细（本次 patch）
+
+- **插入占位**：`src/client/components.js` 新增 `DropPlaceholder`，用真实 flex 行高占位替代 2px 线/边框；`GroupNode`/`UngroupedSection`/`GroupsView` 按落点插入；`GroupDropSlot` 激活时 6→34px；CSS `.dsg-drop-placeholder` 32/34px + accent 虚线边框 + accent fade 背景；`onDragLeave` 清除（忽略进入子元素/占位自身）；testid `session-groups-drop-indicator` 保留 + `data-drop-height`。
+- **乐观提交**：新增 `src/client/optimistic.js` 单写者队列；`state.js` 新增 `optimistic-doc`/`optimistic-confirmed`/`optimistic-rollback` 与 `optimistic` 标记；`plugin.js` 的 `commitDoc` 改为 `commitStrict`（先 flush 后锁内求值），新增 `commitOptimistic`；会话/分组拖拽与菜单上移/下移改走乐观路径；create/rename/delete/icon/move 对话框改为 updater，避免旧快照覆盖。
+- **header/footer**：`.dsg-header-title` 600→400；`footer.toGroups`/`footer.toWorkspace` zh/en 精确文案；E2E step 1/2/16 改为全等断言。
+- **不变**：数据模型/Host 路由/存储路径/宽度/搜索/虚拟化/主题 token/依赖集合；0.2.3 的虚拟化与 0.2.1 排版保持。
+
+### 0.2 0.2.4 打包记录
+
+- 命令：最终 `npm run build`（lib/client.js **195,772 bytes** / sha256 `1416bb40…`）后 `npm pack`（`files` 只含发布文件）。
+- 产物：`dsh-session-groups-0.2.4.tgz`；**128,218 bytes**；unpacked **500,532 bytes**；**35 files**。
+- sha256：`F519BFBD6B9F180BBCBA4E46CCC3DC46BBD0A92B2FA9D800422D9B97EA358C45`；npm shasum `5b6bd9b9f2060d3fee0c01974dbddcd64a3943e3`；integrity `sha512-18NYqmGqZiLeXlg64D1KeHKwZBAWNu/Nazr9dFWFpuxacDDqffwR391ZYmu1mEO35Al+vFaFKmdx490GGJhMQg==`。
+- 内容：`src/**`（28，含新增 `src/client/optimistic.js`）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 35）。
+- **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
+
+## 0-0.2.3. V1.1 patch 0.2.3 最终结论（2026-10-29，footer/header 回退 + 未归组虚拟化，历史）
 
 **V1.1 patch 0.2.3 QA 验证线全绿 PASS（隔离 home `.spike-homes/qa-0.2.3-e2e` + 4408；大列表 `.spike-homes/qa-0.2.3-large` + 4407）：**
 
@@ -269,7 +300,7 @@ cd C:\Users\Momiji\Projects\dsh-session-groups
 # 仓库全量测试（含 QA 独立线）
 npm test
 
-# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 17 步 → audit → teardown）
+# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 18 步 → audit → teardown）
 pwsh -NoProfile -File scripts/qa/run-v1.ps1
 
 # 分步
@@ -284,6 +315,7 @@ E2E 期间 4402 为 QA 独占；client 用复制 home + 4403，互不干扰。
 
 ## 7. 更新记录
 
+- 2026-10-29 12:05：**0.2.4 插入占位 + 乐观 drop 提交 patch** —— `npm test` **211/211**；E2E **18/18 PASS**（79,277ms；`console/pageErrors=[]`；step 10 虚拟化感知重启断言：groups/filter/顺序/组内行全等，DOM 行只要求 floor 20；step 18 九类占位 32/34px、push 36px、264px 无溢出、会话 296ms/分组 14ms 内乐观重排且 HTTP 前 revision 不变）；setup 18/18（`removed=0`、client build 195,772 bytes / sha `1416bb40…`）；`npm pack` 35 files / 128,218 bytes / sha256 `F519BFBD…`；`.spike-homes/qa-0.2.4-final4` 保留，真实 home 零写入。
 - 2026-10-29 08:07：**0.2.3 虚拟化 + footer/header 回退 patch** —— `npm test` **203/203**；E2E **17/17 PASS**（82,357ms；step 1 单按钮三态/rail 28px；step 2/16 header 顺序 search→view-options→plus；step 9 rail footer 28×28 图标；step 13/16 footer 28/13/16 + 264px 无溢出；step 16 虚拟窗口 total/end-start/rendered；`console/pageErrors=[]`）；大列表 probe **PASS**（1,510 逻辑行：DOM 1,510→20、hover 12.2→3.8ms、dragover 48→20ms、search 266→193ms、drop 85→60ms、scrollHeight 51,616 不变）；setup 18/18（`removed=0`、client build 182,529 bytes / sha `774d8fc0…`）；`npm pack` 34 files / 119,275 bytes / sha256 `77011E39…`；`.spike-homes/qa-0.2.3-e2e` + `qa-0.2.3-large` 保留，真实 home 零写入。
 - 2026-10-29 00:28：**0.2.2 UI layout + 主题感知 + drag perf patch（最终复跑）** —— `npm test` 190/190；E2E **17/17 PASS**（step 时间和 72,511ms；step 1 footer 两段标签/active/显式 setMode 往返；step 2 header 顺序/搜索收起/view-options 三行 30px + Escape/点外关闭；step 13/16 header 36px + 264px 展开搜索无溢出；step 14 中间 50% 无效 toast 改为等待旧 toast 过期后再断言（去 flake）；step 15 无下拉 Escape/关闭按钮收起搜索行；step 16 footer/header 度量；step 17 深色 surfaces 对比度 13.3–17.4；`console/pageErrors=[]`；step 10 PASS 15.6s）；setup 18/18（`removed=0`、client build 176,007 bytes / sha `59f45afa…`）；`npm pack` 33 files / 113,452 bytes / sha256 `3625A5F2…`；`.spike-homes/qa-0.2.2-e2e-4` 保留，真实 home 零写入。
 - 2026-10-28 21:50：**0.2.1 间距对齐 patch** —— `npm test` 183/183；E2E **16/16 PASS**（step 16 扩充间距断言：行 padding 8/8 + gap 6、tree/组体/组线 row-gap 2、组缩进 10/10、header 4/6/8/2 + row-gap 8 + 78px、搜索 6/10 + gap 8/2、264px header/tree 252/252 无溢出；`console/pageErrors=[]`；step 10 PASS 19.1s）；setup 18/18（`removed=0`、client sha `cef4fb47…`）；`npm pack` 32 files / 103,874 bytes / sha256 `4ED5DE48…`；`.spike-homes/qa-0.2.1-spacing` 保留。

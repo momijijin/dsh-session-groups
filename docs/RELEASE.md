@@ -1,17 +1,17 @@
 # V1.1 发布与安装说明（未安装到用户 desktop）
 
-- 版本：`0.2.3`（V1.1 virtualized ungrouped list + footer/header correction）
+- 版本：`0.2.4`（V1.1 optimistic drop commits + insertion placeholders + official header/footer copy）
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：**V1.1 QA 全绿（17/17 E2E、203/203 tests、audit PASS、large-list probe PASS）**；等待用户验收后才安装到 desktop profile
-- 范围：V1 全部能力 + 左栏宽度 264–760、分组拖拽排序/改父级、会话搜索下拉、官方侧栏排版/间距/图标对齐、footer 单按钮视图切换、header `搜索/视图选项/＋`、归档 popover、深色主题 surfaces、未归组列表虚拟化
+- 状态：**V1.1 QA 全绿（18/18 E2E、211/211 tests、step 12 audit PASS；large-list probe 沿用 0.2.3，虚拟化未改）**；等待用户验收后才安装到 desktop profile
+- 范围：V1 全部能力 + 左栏宽度 264–760、分组拖拽排序/改父级、会话搜索下拉、官方侧栏排版/间距/图标对齐、footer 单按钮视图切换、header `搜索/视图选项/＋`、归档 popover、深色主题 surfaces、未归组列表虚拟化、**拖拽行高插入占位 + 乐观 drop 提交**
 
 ## 1. 构建
 
 ```powershell
 cd C:\Users\Momiji\Projects\dsh-session-groups
 pnpm install          # 已安装过可跳过；本版未新增依赖
-npm run build         # 生成 lib/client.js（182,529 bytes）
-npm test              # 203/203
+npm run build         # 生成 lib/client.js（195,772 bytes）
+npm test              # 211/211
 node --check lib/client.js
 ```
 
@@ -19,7 +19,7 @@ node --check lib/client.js
 
 ```powershell
 npm pack
-# dsh-session-groups-0.2.3.tgz（大小以实际产物为准）
+# dsh-session-groups-0.2.4.tgz（大小以实际产物为准）
 ```
 
 包内容固定为 `src/**`、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`。
@@ -27,15 +27,15 @@ npm pack
 
 最终 tarball 记录（以实际产物为准）：
 
-- 文件：`dsh-session-groups-0.2.3.tgz`
-- 大小：**119,275 bytes**（unpacked 466.3 kB；34 files）
-- SHA256：`77011E393E4C144006060C60074ECAA6C5B9A12B0AD07AC36981737894F44D5F`
+- 文件：`dsh-session-groups-0.2.4.tgz`
+- 大小：**128,218 bytes**（unpacked **500,532 bytes**；**35 files**）
+- SHA256：`F519BFBD6B9F180BBCBA4E46CCC3DC46BBD0A92B2FA9D800422D9B97EA358C45`；npm shasum `5b6bd9b9f2060d3fee0c01974dbddcd64a3943e3`；integrity `sha512-18NYqmGqZiLeXlg64D1KeHKwZBAWNu/Nazr9dFWFpuxacDDqffwR391ZYmu1mEO35Al+vFaFKmdx490GGJhMQg==`。
 
 ## 3. 安装
 
 ### Desktop（用户验收后）
 
-设置 → 插件 → 添加插件 → 选择 `dsh-session-groups-0.2.3.tgz`（或本地目录），启用后重启/刷新。
+设置 → 插件 → 添加插件 → 选择 `dsh-session-groups-0.2.4.tgz`（或本地目录），启用后重启/刷新。
 
 不要用 `dsh plugin --profile desktop` 改 App 管理的 profile。
 
@@ -46,7 +46,7 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\releas
 $desktop = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 & $desktop --expose-internals $cli --profile groups-spike --from-default-profile web
-& $desktop --expose-internals $cli plugin --profile groups-spike add "file:C:\...\dsh-session-groups-0.2.3.tgz"
+& $desktop --expose-internals $cli plugin --profile groups-spike add "file:C:\...\dsh-session-groups-0.2.4.tgz"
 & $desktop --expose-internals $cli --profile groups-spike --port 4405 --no-open
 ```
 
@@ -69,8 +69,10 @@ $cli = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\resources\app\lib\des
 - P2：全文搜索、跨设备同步、自定义图标上传、会话删除。
 - 未归组列表按 `.dsg-tree` 视口 + overscan=8 窗口化（行 32 / gap 2 / 段头 34）；组树完整渲染。真实 home 的 1,639 个 session 目录中 1,474 个是 subagent（UI 过滤），实际可见未归组约 10 行；1,500+ 行由 QA 大列表 fixture 验证。窗口化不改变逻辑顺序/搜索/拖拽/归档。
 - 分组数据单窗口 V1；多窗口冲突通过 409 提示，不做实时合并。
+- **乐观提交边界（0.2.4）**：drop 当帧即渲染，HTTP 在后台单写者队列合并/重试（无自动重试，失败即回滚 + toast）。若 pop 时恰好有另一窗口写入导致 409，本次及尚未发送的乐观移动会回滚到最近确认 doc（符合“失败回滚”契约，不做自动重放）。拖拽期间非乐观对话框写入会等乐观队列 flush 后再执行；严格写期间的 drop 会等该写入落定后按新 doc 计算。
+- **占位边界**：占位只在有效落点渲染；悬停折叠组不自动展开（与 0.2.3 相同），group child 槽仅在展开组体出现。占位为 32/34px 行高 + 1px 虚线 accent 边框，深色主题随 `--dsw-alias-state-business-primary` / `-fade` 变化。
 
 ## 6. 验证证据
 
-- `docs/TEST-RESULTS.md`：V1.1 0.2.3（npm test 203/203、E2E 17/17、E2E step 12 数据审计、大列表 before/after、打包 sha256）
-- `scripts/qa/evidence-perf/`：`e2e/e2e-20261029-074237.json` + 17 步截图、`e2e-setup/setup-20261029-073936.json`、`large-before.json` / `large-after.json`、`screenshots/large-list-before.png` / `-after.png`、`ui-perf-report.md`（本地，不随包发布）
+- `docs/TEST-RESULTS.md`：V1.1 0.2.4（npm test 211/211、E2E 18/18、E2E step 12 数据审计、step 10 虚拟化感知重启、step 18 占位/乐观提交、打包 sha256）
+- `scripts/qa/evidence-perf/`：`024-final2/e2e-20261029-120454.json` + 18 步截图、`024-final2/setup-20261029-120032.json`、`024-final2/audit-*.json`、`large-before.json` / `large-after.json`（0.2.3 虚拟化基线）、`.superpowers/sdd/2026-10-28-session-groups-v1.1/optimistic-report.md`（本地，不随包发布）

@@ -182,6 +182,85 @@ const TextButton = ({ label, onClick, testId, data }) =>
 const StatusDot = ({ status }) => h('span', { class: 'dsg-session-dot', 'data-tone': statusTone(status), 'aria-hidden': 'true' })
 
 // ---------------------------------------------------------------------------
+// Drag insertion placeholder (0.2.4)
+// ---------------------------------------------------------------------------
+/**
+ * A real row-height gap at the insertion point. The previous feedback drew a
+ * 2px line/border on the target row, which was too subtle to read as "the row
+ * will land here". This placeholder participates in the flex layout, so the
+ * rows after the insertion point are physically pushed down by roughly one row
+ * (32px session rows / 34px group rows) and the gap disappears when the drag
+ * leaves, drops or ends.
+ *
+ * The stable `session-groups-drop-indicator` testid is kept from V1; the
+ * `data-drop-kind`/`data-drop-target` attributes carry the same vocabulary and
+ * `data-drop-height` exposes the row height to tests.
+ */
+const DropPlaceholder = ({ target, store, handlers, height }) => {
+  const t = rt()?.t ?? ((key) => key)
+  const nameOf = (groupId) => findGroup(store?.doc, groupId)?.name ?? ''
+  let label = t('drag.dropHere')
+  let targetId = 'ungrouped'
+  switch (target?.kind) {
+    case 'group-before':
+      label = t('drag.groupBefore', { name: nameOf(target.targetId) })
+      targetId = target.targetId ?? ''
+      break
+    case 'group-after':
+      label = t('drag.groupAfter', { name: nameOf(target.targetId) })
+      targetId = target.targetId ?? ''
+      break
+    case 'group-append':
+      label = t('drag.groupAppend', { name: nameOf(target.groupId) })
+      targetId = target.groupId ?? ''
+      break
+    case 'group-head':
+      label = t('drag.groupInto', { name: nameOf(target.groupId) })
+      targetId = target.groupId ?? ''
+      break
+    case 'group-child':
+      label = t('drag.groupInto', { name: nameOf(target.parentId) })
+      targetId = target.parentId ?? ''
+      break
+    case 'group-root-end':
+      label = t('drag.groupRootEnd')
+      targetId = 'root-end'
+      break
+    case 'ungrouped':
+      label = t('drag.toUngrouped')
+      targetId = 'ungrouped'
+      break
+    case 'session-before':
+    case 'session-after':
+      targetId = target.sessionId ?? ''
+      break
+    default:
+      break
+  }
+  return h(
+    'div',
+    {
+      class: 'dsg-drop-placeholder',
+      role: 'presentation',
+      'data-testid': 'session-groups-drop-indicator',
+      'data-drop-kind': target?.kind ?? '',
+      'data-drop-target': targetId,
+      'data-drop-height': String(height),
+      style: { '--dsg-drop-height': `${height}px` },
+      onDragOver: (event) => handlers.onPlaceholderDragOver(event),
+      onDrop: (event) => handlers.onPlaceholderDrop(event, target),
+      onDragLeave: (event) => handlers.onDragLeave(event),
+    },
+    h('span', { class: 'dsg-drop-placeholder-label' }, label)
+  )
+}
+
+/** Session placeholders match the 32px session row, group ones the 34px group row. */
+const SESSION_PLACEHOLDER_HEIGHT = 32
+const GROUP_PLACEHOLDER_HEIGHT = 34
+
+
+// ---------------------------------------------------------------------------
 // Session row
 // ---------------------------------------------------------------------------
 const SessionRow = ({
@@ -201,20 +280,10 @@ const SessionRow = ({
   const title = sessionTitle(row, { blankLabel: rt()?.t('session.blank'), untitledLabel: rt()?.t('session.untitled') })
   const workspaceName = sessionNode.workspace ? workspaceLabel(sessionNode.workspace) : rt()?.t('session.noWorkspace')
   const current = store?.currentSessionId === sessionId
-  const dropTarget = store?.dropTarget
-  const isDropTarget = dropTarget && dropTarget.sessionId === sessionId
-  const indicator = isDropTarget
-    ? h('div', {
-        class: 'dsg-drop-indicator',
-        'data-testid': 'session-groups-drop-indicator',
-        'data-drop-kind': dropTarget.kind,
-        'data-drop-target': sessionId,
-      })
-    : null
   return h(
     'div',
     {
-      class: classNames('dsg-session-row', isDropTarget && dropTarget.kind === 'session-before' && 'dsg-insert-before', isDropTarget && dropTarget.kind === 'session-after' && 'dsg-insert-after'),
+      class: 'dsg-session-row',
       role: 'treeitem',
       tabindex: '0',
       draggable: 'true',
@@ -247,6 +316,7 @@ const SessionRow = ({
       },
       onDragEnd: handlers.onDragEnd,
       onDragOver: (event) => handlers.onDragOverSession(event, sessionId, groupId, ungrouped),
+      onDragLeave: handlers.onDragLeave,
       onDrop: (event) => handlers.onDropSession(event, sessionId, groupId, ungrouped),
     },
     h(StatusDot, { status }),
@@ -257,8 +327,7 @@ const SessionRow = ({
       'span',
       { class: 'dsg-session-actions' },
       IconButton({ label: rt()?.t('session.menu'), glyph: 'more', testId: 'session-groups-session-menu', data: { 'data-session-id': sessionId }, onClick: (event) => handlers.openSessionMenu(event, sessionNode) })
-    ),
-    indicator
+    )
   )
 }
 
@@ -278,16 +347,28 @@ const GroupDropSlot = ({ parentId, beforeGroupId, store, handlers }) => {
     dropTarget && dropTarget.kind === 'group-child' && dropTarget.parentId === parentId && (dropTarget.beforeGroupId ?? null) === anchor
   const forbidden =
     dropTarget && dropTarget.kind === 'group-forbidden' && dropTarget.parentId === parentId && (dropTarget.beforeGroupId ?? null) === anchor
-  return h('div', {
-    class: 'dsg-group-drop-slot',
-    'data-testid': 'session-groups-group-drop',
-    'data-parent-id': parentId,
-    'data-before-group-id': anchor ?? '',
-    'data-drop-active': active ? 'true' : 'false',
-    'data-drop-forbidden': forbidden ? 'true' : 'false',
-    onDragOver: (event) => handlers.onDragOverGroupSlot(event, parentId, anchor),
-    onDrop: (event) => handlers.onDropGroupSlot(event, parentId, anchor),
-  })
+  return h(
+    'div',
+    {
+      class: 'dsg-group-drop-slot',
+      'data-testid': 'session-groups-group-drop',
+      'data-parent-id': parentId,
+      'data-before-group-id': anchor ?? '',
+      'data-drop-active': active ? 'true' : 'false',
+      'data-drop-forbidden': forbidden ? 'true' : 'false',
+      onDragOver: (event) => handlers.onDragOverGroupSlot(event, parentId, anchor),
+      onDragLeave: handlers.onDragLeave,
+      onDrop: (event) => handlers.onDropGroupSlot(event, parentId, anchor),
+    },
+    active
+      ? h(DropPlaceholder, {
+          target: { kind: 'group-child', parentId, beforeGroupId: anchor },
+          store,
+          handlers,
+          height: GROUP_PLACEHOLDER_HEIGHT,
+        })
+      : null
+  )
 }
 
 const GroupNode = ({ node, depth, props, handlers, store }) => {
@@ -300,6 +381,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
   const isBefore = headerKind === 'group-before'
   const isAfter = headerKind === 'group-after'
   const isForbidden = headerKind === 'group-forbidden'
+  const isHeadTarget = dropTarget?.kind === 'group-head' && dropTarget.groupId === group.id
   const dragging = store.draggedGroupId === group.id
   const visibleSessions = node.children.filter((child) => child.kind === 'session')
   const childGroups = node.children.filter((child) => child.kind === 'group')
@@ -316,18 +398,46 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
       bodyChildren.push(h(GroupNode, { key: child.group.id, node: child, depth: depth + 1, props, handlers, store }))
     }
   }
+
+  // Session insertion uses a real placeholder row before/after the target row
+  // (not a 2px border) so the rows around the insertion point physically move.
+  const sessionChildren = []
+  for (const child of visibleSessions) {
+    const sessionId = child.session.id
+    if (dropTarget?.kind === 'session-before' && dropTarget.sessionId === sessionId) {
+      sessionChildren.push(h(DropPlaceholder, { key: `ph-b-${sessionId}`, target: dropTarget, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT }))
+    }
+    sessionChildren.push(h(SessionRow, { key: sessionId, sessionNode: child, depth: depth + 1, groupId: group.id, props, handlers }))
+    if (dropTarget?.kind === 'session-after' && dropTarget.sessionId === sessionId) {
+      sessionChildren.push(h(DropPlaceholder, { key: `ph-a-${sessionId}`, target: dropTarget, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT }))
+    }
+  }
+
+  const appendPlaceholder = isAppendTarget
+    ? h(DropPlaceholder, { key: 'ph-append', target: { kind: 'group-append', groupId: group.id }, store, handlers, height: GROUP_PLACEHOLDER_HEIGHT })
+    : null
+  const headPlaceholder = isHeadTarget
+    ? h(DropPlaceholder, { key: 'ph-head', target: { kind: 'group-head', groupId: group.id }, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT })
+    : null
+  const lineChildren = [...bodyChildren]
+  if (headPlaceholder) lineChildren.push(headPlaceholder)
+  if (node.visibleCount === 0) {
+    lineChildren.push(h('div', { key: 'empty', class: 'dsg-group-empty', 'data-testid': 'session-groups-empty' }, notFound))
+  }
+  lineChildren.push(...sessionChildren)
+  // group-append: placeholder at the end of the group body when expanded.
+  if (appendPlaceholder) lineChildren.push(appendPlaceholder)
+
   return h(
     'div',
     { class: 'dsg-group' },
+    isBefore
+      ? h(DropPlaceholder, { target: { kind: 'group-before', targetId: group.id }, store, handlers, height: GROUP_PLACEHOLDER_HEIGHT })
+      : null,
     h(
       'div',
       {
-        class: classNames(
-          'dsg-group-row',
-          isAppendTarget && 'dsg-insert-after',
-          isBefore && 'dsg-insert-before',
-          isAfter && 'dsg-insert-after'
-        ),
+        class: 'dsg-group-row',
         role: 'treeitem',
         tabindex: '0',
         draggable: 'true',
@@ -337,7 +447,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
         'data-depth': String(displayDepth(depth)),
         'data-expanded': expanded ? 'true' : 'false',
         'data-drop-active': isAppendTarget ? 'true' : 'false',
-        'data-drop-kind': headerKind ?? '',
+        'data-drop-kind': isAppendTarget ? 'group-append' : headerKind ?? '',
         'data-drop-forbidden': isForbidden ? 'true' : 'false',
         'data-dragging': dragging ? 'true' : 'false',
         title: groupPath(store.doc, group.id),
@@ -352,6 +462,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
         onDragStart: (event) => handlers.onGroupDragStart(event, group),
         onDragEnd: handlers.onDragEnd,
         onDragOver: (event) => handlers.onDragOverGroup(event, group.id),
+        onDragLeave: handlers.onDragLeave,
         onDrop: (event) => handlers.onDropGroup(event, group.id),
       },
       h('span', { class: 'dsg-group-caret' }, renderGlyph(h, expanded ? 'chevronDown' : 'chevronRight', 16)),
@@ -375,15 +486,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
           data: { 'data-group-id': group.id },
           onClick: (event) => handlers.openGroupMenu(event, group),
         })
-      ),
-      isAppendTarget
-        ? h('div', {
-            class: 'dsg-drop-indicator',
-            'data-testid': 'session-groups-drop-indicator',
-            'data-drop-kind': 'group-append',
-            'data-drop-target': group.id,
-          })
-        : null
+      )
     ),
     expanded
       ? h(
@@ -395,18 +498,18 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
               class: 'dsg-group-line',
               'data-empty': node.visibleCount === 0 ? 'true' : 'false',
               onDragOver: (event) => handlers.onDragOverGroupHead(event, group.id),
+              onDragLeave: handlers.onDragLeave,
               onDrop: (event) => handlers.onDropGroupHead(event, group.id),
             },
-            ...bodyChildren,
-            node.visibleCount === 0
-              ? h('div', { class: 'dsg-group-empty', 'data-testid': 'session-groups-empty' }, notFound)
-              : null,
-            ...visibleSessions.map((child) =>
-              h(SessionRow, { key: child.session.id, sessionNode: child, depth: depth + 1, groupId: group.id, props, handlers })
-            )
+            ...lineChildren
           )
         )
-      : null
+      : null,
+    isAfter
+      ? h(DropPlaceholder, { target: { kind: 'group-after', targetId: group.id }, store, handlers, height: GROUP_PLACEHOLDER_HEIGHT })
+      : null,
+    // group-append on a collapsed group: placeholder directly after its row.
+    !expanded && appendPlaceholder ? appendPlaceholder : null
   )
 }
 
@@ -551,7 +654,14 @@ const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
       bodyChildren.push(h(VirtualSpacer, { key: 'pad-top', height: win.topPad, position: 'top' }))
     }
     for (const child of visibleRows) {
-      bodyChildren.push(h(SessionRow, { key: child.session.id, sessionNode: child, depth: 0, groupId: null, ungrouped: true, props, handlers }))
+      const sessionId = child.session.id
+      if (dropTarget?.kind === 'session-before' && dropTarget.sessionId === sessionId) {
+        bodyChildren.push(h(DropPlaceholder, { key: `ph-b-${sessionId}`, target: dropTarget, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT }))
+      }
+      bodyChildren.push(h(SessionRow, { key: sessionId, sessionNode: child, depth: 0, groupId: null, ungrouped: true, props, handlers }))
+      if (dropTarget?.kind === 'session-after' && dropTarget.sessionId === sessionId) {
+        bodyChildren.push(h(DropPlaceholder, { key: `ph-a-${sessionId}`, target: dropTarget, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT }))
+      }
     }
     if (win.bottomPad > 0) {
       bodyChildren.push(h(VirtualSpacer, { key: 'pad-bottom', height: win.bottomPad, position: 'bottom' }))
@@ -580,20 +690,18 @@ const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
           }
         },
         onDragOver: (event) => handlers.onDragOverUngrouped(event),
+        onDragLeave: handlers.onDragLeave,
         onDrop: (event) => handlers.onDropUngrouped(event),
       },
       h('span', { class: 'dsg-group-caret' }, renderGlyph(h, expanded ? 'chevronDown' : 'chevronRight', 16)),
       h('span', { class: 'dsg-group-name' }, rt()?.t('ungrouped.title')),
-      h('span', { class: 'dsg-ungrouped-count' }, total),
-      isDrop
-        ? h('div', {
-            class: 'dsg-drop-indicator',
-            'data-testid': 'session-groups-drop-indicator',
-            'data-drop-kind': dropKind,
-            'data-drop-target': 'ungrouped',
-          })
-        : null
+      h('span', { class: 'dsg-ungrouped-count' }, total)
     ),
+    // A session dropped on the ungrouped section becomes the first row; the
+    // placeholder sits directly under the header (visible even when scrolled).
+    dropKind === 'ungrouped'
+      ? h(DropPlaceholder, { target: { kind: 'ungrouped' }, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT })
+      : null,
     expanded
       ? h(
           'div',
@@ -609,6 +717,7 @@ const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
               'data-virtual-count': String(win.count),
               'data-virtual-total': String(total),
               onDragOver: (event) => handlers.onDragOverUngrouped(event),
+              onDragLeave: handlers.onDragLeave,
               onDrop: (event) => handlers.onDropUngrouped(event),
             },
             ...bodyChildren
@@ -1720,10 +1829,11 @@ export const GroupsView = (props) => {
     if (!source || !target || target.kind === 'invalid') return
     const visibleUngrouped = tree.ungrouped.map((node) => node.session.id)
     try {
-      // Resolve against the latest confirmed doc inside the commit queue; the
-      // rendered doc can lag one or more in-flight drops.
-      await rt()?.commitDoc((currentDoc) => applyDrop(currentDoc, source, target, visibleUngrouped).doc)
+      // Optimistic (0.2.4): resolve against the current optimistic doc so the
+      // row moves in this tick; the queue persists/coalesces/reconciles async.
+      await rt()?.commitOptimistic((currentDoc) => applyDrop(currentDoc, source, target, visibleUngrouped).doc)
     } catch (error) {
+      if (error?.reported === true) return
       toast('error', t('toast.dropFailed'))
       if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] drop failed', error)
     }
@@ -1742,7 +1852,7 @@ export const GroupsView = (props) => {
     dragRef.current = null
     rt()?.setFloatingLabel?.(null)
     try {
-      await rt()?.commitDoc((latest) => {
+      await rt()?.commitOptimistic((latest) => {
         const resolved = resolveGroupDrop({ doc: latest, draggedId, target })
         if (resolved.invalid) {
           const error = new Error(resolved.reason)
@@ -1754,6 +1864,7 @@ export const GroupsView = (props) => {
       })
     } catch (error) {
       if (error === GROUP_DROP_NOOP) return
+      if (error?.reported === true) return
       if (error?.groupDropInvalid) {
         toast('error', t('drag.groupInvalid'))
         return
@@ -1773,7 +1884,7 @@ export const GroupsView = (props) => {
 
   /** Menu move-up/move-down: one sibling step inside the latest confirmed doc. */
   const moveGroupStep = (groupId, delta) => {
-    const task = rt()?.commitDoc((latest) => {
+    const task = rt()?.commitOptimistic((latest) => {
       const group = findGroup(latest, groupId)
       if (!group) throw GROUP_DROP_NOOP
       const siblings = childrenOf(latest, group.parentId)
@@ -1783,7 +1894,7 @@ export const GroupsView = (props) => {
       return moveGroup(latest, groupId, group.parentId, nextIndex)
     })
     task?.catch((error) => {
-      if (error === GROUP_DROP_NOOP) return
+      if (error === GROUP_DROP_NOOP || error?.reported === true) return
       toast('error', t('toast.dropFailed'))
       if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] group move failed', error)
     })
@@ -2076,6 +2187,43 @@ export const GroupsView = (props) => {
       setDropTargetTracked(null)
       rt()?.setFloatingLabel?.(null)
     },
+    /**
+     * Clear the insertion placeholder as soon as the pointer leaves the row.
+     * Moving into a child of the same row (or into the placeholder that is
+     * pushing the row) must not clear it, otherwise the layout would oscillate.
+     */
+    onDragLeave: (event) => {
+      if (!dragRef.current) return
+      const current = event?.currentTarget
+      const next = event?.relatedTarget
+      if (current && next && typeof current.contains === 'function' && current.contains(next)) return
+      if (next && typeof next.closest === 'function' && next.closest('.dsg-drop-placeholder')) return
+      clearAutoExpand()
+      setDropTargetTracked(null)
+      rt()?.setFloatingLabel?.(null)
+    },
+    onPlaceholderDragOver: (event) => {
+      if (!dragRef.current) return
+      // Keep the resolved target alive while the pointer is over the gap.
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+    },
+    onPlaceholderDrop: (event, target) => {
+      const drag = dragRef.current
+      if (!drag) return
+      event.preventDefault()
+      event.stopPropagation()
+      clearAutoExpand()
+      rt()?.setFloatingLabel?.(null)
+      if (drag.kind === 'group') {
+        const resolved = resolveTargetFor(target)
+        if (!resolved) return
+        commitGroupDrop(drag.groupId, resolved)
+        return
+      }
+      commitDrop(drag, target)
+    },
     onDragOverSession: (event, sessionId, groupId, ungrouped) => {
       const drag = dragRef.current
       if (!drag || drag.kind !== 'session') return
@@ -2242,7 +2390,7 @@ export const GroupsView = (props) => {
 
   return h(
     'div',
-    { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true' },
+    { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true', 'data-optimistic': store.optimistic ? 'true' : 'false' },
     h(Header, { store: viewState, handlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds }),
     wide && widthSupported && appliedWidth !== null
       ? h(ResizeHandle, {
@@ -2261,7 +2409,12 @@ export const GroupsView = (props) => {
           'div',
           { class: 'dsg-tree', role: 'tree', 'aria-label': t('view.title') },
           h(UngroupedSection, { node: tree.ungrouped, store: viewState, props, handlers, virtualRef }),
-          ...tree.groups.map((node) => h(GroupNode, { key: node.group.id, node, depth: 0, props, handlers, store: viewState }))
+          ...tree.groups.map((node) => h(GroupNode, { key: node.group.id, node, depth: 0, props, handlers, store: viewState })),
+          // Group dragged to the root end: a group-row-height placeholder after
+          // the last group makes the insertion point unmistakable.
+          dropTarget?.kind === 'group-root-end'
+            ? h(DropPlaceholder, { target: dropTarget, store: viewState, handlers, height: GROUP_PLACEHOLDER_HEIGHT })
+            : null
         ),
     h(Toast, { store }),
     h(MenuPopover, { store, handlers }),
