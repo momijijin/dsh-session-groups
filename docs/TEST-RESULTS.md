@@ -5,6 +5,38 @@
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
+## 0. V1.1 patch 0.2.9 最终结论（2026-10-29，删除目的地 + 空叶直接删除 + 颜色文案）
+
+**V1.1 patch 0.2.9 QA 验证线 PASS（隔离 home `.spike-homes/qa-0.2.9-final5`；setup/E2E 端口 4421；setup 18/18、smoke 11/11、真实 home 零写入、HOME-0 removed=0）：**
+
+| 层 | 结果 | 证据 |
+|---|---|---|
+| `npm test`（仓库全量） | **283/283 PASS**（0 fail / 0 skip；新增 model `deleteGroupTo` 3 条、`deleteGroupOptions` 2 条、delete 选择契约 2 条、UI 源码契约 1 条；净增 8） | 控制台输出 |
+| E2E 22 步（默认开启诊断） | **22/22 PASS**（step 合计 **105,119 ms**；`consoleErrors=[]`、`pageErrors=[]`）；step 22 断言颜色菜单/标题「修改颜色」、空叶删除无对话框（MutationObserver）+ revision +1、非空删除 body 2 会话/1 子组、Confirm 初始 disabled/「移动并删除」/danger、目的地含根/目标/目标子组且排除自身/子组/孙组、点击只高亮、Escape 不改记录、Confirm 后 revision +1、直接会话前插目的地、子组/孙组 parentId 正确、组数 −1、会话集合不变 | `scripts/qa/evidence/029-final5/e2e-20261029-200319.json` + 22 张截图 |
+| 诊断持久化（E2E runner 非步骤校验） | **PASS**：隔离 home NDJSON **1,204 行 / 4 runIds / 0 invalidLines**，`nativeSeen`/`handlerSeen`/`optimisticSeen` 全 true；HUD `dsg 0.2.9` | 同上 `diagnostics` 字段 + `.spike-homes/qa-0.2.9-final5/storages/dsh-session-groups.diagnostics.ndjson` |
+| setup（0.2.9 新隔离 home） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client **277,119 bytes** / sha256 `68B564E50B7B103AAFDA89D1932DC6F890B9FACE249461EC4154FC191FE65CD9`；package version `0.2.9` | `scripts/qa/evidence/029-final5/setup-20261029-195858.json` |
+| smoke（同一 0.2.9 构建） | **PASS 11/11**；无 page exception、`consoleErrors=0`；load route 200 revision 48 | `scripts/qa/evidence/029-final5/smoke-20261029-200511.json` |
+| 数据审计 | **PASS 11/11**（`-Mode exercise -CommitProbe`）：load 200 revision 48、no-op commit 48→49；workspace.json 与 3 个 sample sessions hash 不变；desktop/web profile 指纹不变；只记录文件变化 | `scripts/qa/evidence/029-final5/audit-exercise-20261029-200524-commit.json` |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.9.tgz`（**182,450 bytes**；unpacked **706,539**；**40 files**；sha256 见 §0.2） | 本文件 §0.2 |
+
+> 证据文件位于 `scripts/qa/evidence/029-final5/`（`scripts/qa/.gitignore` 排除，本地保留；不入包/不入库）；实现 home 与诊断 trace 位于 `.spike-homes/qa-0.2.9-final5/`（gitignore）。E2E 截图同目录 `screenshots/e2e/`。
+
+### 0.1 0.2.9 变更明细（本次 patch）
+
+- **颜色文案**：`group.color` / `dialog.groupColor` 改为「修改颜色」/「Change color」；色板、自定义 hex、Cancel/Escape 行为未改。
+- **模型**：`deleteGroupTo(doc, groupId, destinationId)` 单文档克隆内移动直接会话（前插）与直接子组（改 parentId、保留子树）后删组；`null` = 未归组/根。校验 `group-not-found` / `parent-not-found` / `cycle`（自身+全部递归后代）/ `depth-exceeded`（`destinationDepth + 1 + subtreeHeight(child) <= 8`）；`deleteGroup` 改为默认父级包装，旧测试/调用兼容。新增 `groupSubtreeHeight`。
+- **客户端**：`deleteGroupOptions` 过滤循环与过深目的地（根恒可用）；`deleteGroupNeedsDialog` 判定空叶直接删除；`delete-group` 加入选择对话框契约（无预选、点击只高亮、Confirm 初始 disabled、payload `{destinationId}`）；删除 footer danger「移动并删除」，空叶走 `deleteGroupDirect` 单提交 + `toast.groupDeleted`。
+- **测试/版本**：新增 model/dialog/UI 单测与 E2E step 22；`dsh.plugin.json`/`package.json`/`PLUGIN_VERSION` 同步 0.2.9。E2E step 8 增加按 session 日志大小选择 rename 目标（真实 home 夹具含 10MB+ 会话时宿主 rename 会阻塞 CDP 主线程 >30s），不改变 step 8 语义。
+- 保留 0.2.8 官方状态 UI/空组 drop box/浮动 label、0.2.7 行布局/自定义色/右键菜单、0.2.6 颜色与选择对话框、0.2.5 诊断、0.2.4 乐观提交、0.2.3 虚拟化；`DOC_VERSION`/Host 路由/存储不变。
+
+### 0.2 0.2.9 打包记录
+
+- 命令：`npm run build`（lib/client.js **277,119 bytes** / sha256 `68B564E50B7B103AAFDA89D1932DC6F890B9FACE249461EC4154FC191FE65CD9`）→ `npm pack`。
+- 产物：`dsh-session-groups-0.2.9.tgz`；**182,450 bytes**；unpacked **706,539 bytes**；**40 files**。
+- sha256：`8011249A67926C1C3430F569E06A13C76C48B65F48B509DE2D06066E1B698CE2`；npm shasum（SHA-1）`059cd8add132712f14400186221589cd3a443e96`；integrity `sha512-z0IsBJGxzK1PNlGA9UVpHelcI+dS0JwtGCO+W6p8WIDCO7pB4V4sLzHMiXU4FZn0aFFjJnJ8djC7dE857U5JAw==`。
+- 内容：`src/**`（33 个 JS）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 40）。
+- **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
+
 ## 0. V1.1 patch 0.2.8 最终结论（2026-10-29，官方会话状态 + 空组 drop box + 拖拽 label）
 
 **V1.1 patch 0.2.8 QA 验证线 PASS（隔离 home `.spike-homes/qa-0.2.8-final6`；setup/E2E 端口 4416；setup 18/18、integration 16/16、smoke 10/10、真实 home 零写入、HOME-0 removed=0）：**
@@ -430,7 +462,7 @@ cd C:\Users\Momiji\Projects\dsh-session-groups
 # 仓库全量测试（含 QA 独立线）
 npm test
 
-# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 21 步 → audit → teardown）
+# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 22 步 → audit → teardown）
 pwsh -NoProfile -File scripts/qa/run-v1.ps1
 
 # 分步
@@ -454,3 +486,6 @@ E2E 期间 4402 为 QA 独占；client 用复制 home + 4403，互不干扰。
 - 2026-10-28 18:07：V1.1 QA 全绿（0.2.0）—— `npm test` 181/181、E2E 15/15 PASS（step 10 含 hydration wait）、audit commit 11/11 PASS（rev 29→30）、setup 18/18 PASS；`.spike-homes/qa` 按任务要求保留待最终清理；冷启动两次 step 2 失败证据见 §0C.2。
 - 2026-10-19 02:51：V1 QA 终验全绿 —— `npm test` 151/151、E2E 12/12 PASS、audit load 10/10 + commit 11/11 PASS、setup 18/18 + teardown 6/6 PASS；真实 home 与 `.git` 零写入；`.spike-homes/qa` 已清理、4402 已释放。
 - 2026-10-18 23:2x：初版（Host 集成 16/16、client-logic 18+1、E2E BLOCKED 等 client build）。
+
+
+

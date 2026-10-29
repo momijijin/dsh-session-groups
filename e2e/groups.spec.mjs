@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // e2e/groups.spec.mjs
 //
-// V1 E2E acceptance (docs/TEST-PLAN.md §5, 21 steps) - zero-dependency.
+// V1 E2E acceptance (docs/TEST-PLAN.md §5, 22 steps) - zero-dependency.
 //
 // Drives the real isolated DSH web UI (`.spike-homes/qa`, port 4402) through the
 // Chrome DevTools Protocol using the Chromium already present on this machine.
@@ -13,10 +13,10 @@
 // When the client UI is not present yet the runner exits 3 (BLOCKED) with a
 // diagnostic, so the pipeline can distinguish "not implemented" from "broken".
 //
-// Exit codes: 0 = all 21 steps PASS, 1 = a step FAILED, 2 = harness error,
+// Exit codes: 0 = all 22 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1199,6 +1199,30 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
     return ids;
   };
 
+  /** Session-log sizes: step 8 must rename a small fixture, because the host
+   *  renderer / rename path can block the CDP main thread for a >30s step when
+   *  the real-home fixture contains a very large session log. */
+  const hostSessionSizes = () => {
+    const sizes = new Map();
+    try {
+      const sessionsRoot = join(QA_HOME, 'sessions');
+      for (const workspaceDir of readdirSync(sessionsRoot, { withFileTypes: true })) {
+        if (!workspaceDir.isDirectory()) continue;
+        for (const sessionDir of readdirSync(join(sessionsRoot, workspaceDir.name), { withFileTypes: true })) {
+          if (!sessionDir.isDirectory()) continue;
+          let bytes = 0;
+          try {
+            for (const file of readdirSync(join(sessionsRoot, workspaceDir.name, sessionDir.name), { withFileTypes: true })) {
+              if (file.isFile()) bytes += statSync(join(sessionsRoot, workspaceDir.name, sessionDir.name, file.name)).size;
+            }
+          } catch { /* unreadable session log */ }
+          sizes.set(sessionDir.name, bytes);
+        }
+      }
+    } catch { /* sessions root missing */ }
+    return sizes;
+  };
+
   /** Registry-global archived session ids from the isolated home. */
   const archivedSessionIds = () => {
     try {
@@ -1646,6 +1670,8 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         // registered, rendered, non-blank, non-archived session.
         const isBlankRow = (row) => /新会话/.test(row.text || '') || row.sid === state.createdSession;
         const hostIds = hostSessionIds();
+        const hostSizes = hostSessionSizes();
+        const smallEnough = (row) => (hostSizes.get(row.sid) ?? Number.POSITIVE_INFINITY) <= 256 * 1024;
         const usable = (row) => row
           && !isBlankRow(row)
           && registered.has(row.sid)
@@ -1656,11 +1682,16 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         // Rename a normal fixture session in group A. Prefer the FIRST real
         // candidate (after the intentionally created blank): the last row in the
         // list can be a very large/old host session whose rename makes the host
-        // renderer busy for >30 s even though the title updates. The fallbacks
-        // keep the step working if group A's order changes.
+        // renderer busy for >30 s even though the title updates. Real-home
+        // fixtures grow over time, so also prefer a small session log instead of
+        // picking a multi-MB transcript that can starve the CDP main thread.
         const groupAReal = rows.filter((row) => realFirst(row) && row.groupId === state.groups.a);
         const anyReal = rows.filter(realFirst);
+        const groupASmall = groupAReal.filter(smallEnough);
+        const anySmall = anyReal.filter(smallEnough);
         const candidates = [
+          groupASmall[0],
+          anySmall[0],
           groupAReal[0],
           anyReal[0],
           groupAReal[groupAReal.length - 1],
@@ -3721,7 +3752,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           return el ? { text: el.textContent, runId: el.getAttribute('data-run-id'), pointerEvents: getComputedStyle(el).pointerEvents } : null;
         })()`);
         if (!hud) throw new Error('0.2.5 diagnostics HUD is missing');
-        if (!/dsg 0\.2\.8/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
+        if (!/dsg 0\.2\.9/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
         if (hud.pointerEvents !== 'none') throw new Error(`diagnostics HUD must be pointer-events:none, got ${hud.pointerEvents}`);
         const hudNative = /n=(\d+)/.exec(hud.text);
         if (!hudNative || Number(hudNative[1]) <= 0) throw new Error(`diagnostics HUD native dragover count missing/zero: ${JSON.stringify(hud.text)}`);
@@ -3850,10 +3881,10 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const clickGroupMenuColor = async (gid) => {
           await ui.openGroupMenu(gid);
           const items = await ui.menuItems();
-          if (!items.some((text) => /^(颜色|Color)$/.test(text))) {
-            throw new Error(`group menu must offer 颜色/Color (items: ${JSON.stringify(items.slice(0, 20))})`);
+          if (!items.some((text) => /^(修改颜色|Change color)$/.test(text))) {
+            throw new Error(`group menu must offer 修改颜色/Change color (items: ${JSON.stringify(items.slice(0, 20))})`);
           }
-          await ui.clickMenuItem(/^(颜色|Color)$/);
+          await ui.clickMenuItem(/^(修改颜色|Change color)$/);
           await waitDialogKind('group-color');
         };
 
@@ -4035,13 +4066,13 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if ((await rowAttr(colorGroup, 'data-color')) !== 'purple') throw new Error('outside click must not change the group color');
         if (recordRevision() !== revision) throw new Error('Escape/outside close must not write the record');
 
-        // (6) 0.2.5 diagnostics stay on: HUD mounted, plain DOM, build 0.2.6.
+        // (6) 0.2.5 diagnostics stay on: HUD mounted, plain DOM, build 0.2.9.
         const hud = await driver.evaluate(`(() => {
           const el = document.querySelector(${JSON.stringify(DIAGNOSTICS_HUD)});
           return el ? { text: el.textContent, runId: el.getAttribute('data-run-id'), pointerEvents: getComputedStyle(el).pointerEvents } : null;
         })()`);
         if (!hud) throw new Error('0.2.6 diagnostics HUD is missing');
-        if (!/dsg 0\.2\.8/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
+        if (!/dsg 0\.2\.9/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
         if (hud.pointerEvents !== 'none') throw new Error(`diagnostics HUD must be pointer-events:none, got ${hud.pointerEvents}`);
 
         return {
@@ -4433,7 +4464,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (!(revision >= 0)) throw new Error('step 20 could not read the record revision');
         const beforeCustomRevision = revision;
         await ui.openGroupMenu(groupId);
-        await ui.clickMenuItem(/^(颜色|Color)$/);
+        await ui.clickMenuItem(/^(修改颜色|Change color)$/);
         await waitDialogKind('group-color');
         let colors = await dialogColorState();
         if (!colors) throw new Error('color dialog state missing');
@@ -4484,7 +4515,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
 
         // Reopening on a custom color: 0 presets selected, hex pre-filled.
         await ui.openGroupMenu(groupId);
-        await ui.clickMenuItem(/^(颜色|Color)$/);
+        await ui.clickMenuItem(/^(修改颜色|Change color)$/);
         await waitDialogKind('group-color');
         colors = await dialogColorState();
         if (colors.selectedCount !== 0) throw new Error('a custom color must show 0 selected presets');
@@ -4504,7 +4535,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
 
         // Picking a preset clears the custom color and writes the palette id.
         await ui.openGroupMenu(groupId);
-        await ui.clickMenuItem(/^(颜色|Color)$/);
+        await ui.clickMenuItem(/^(修改颜色|Change color)$/);
         await waitDialogKind('group-color');
         await driver.evaluate(`document.querySelector(${JSON.stringify(DIALOG_COLOR)} + '[data-color="purple"]')?.click()`);
         await sleep(120);
@@ -5002,6 +5033,265 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         };
       },
     },
+    {
+      id: 22,
+      name: 'delete-destination-dialog-empty-direct-and-color-label',
+      async run() {
+        // 0.2.9: color item/title copy, empty-leaf direct delete and the
+        // destination picker for a non-empty group (cycle exclusions + atomic
+        // move-and-delete). Starts in the groups view (step 21 restores width).
+        if (!(await ui.exists(VIEW))) throw new Error('step 22 must start in the groups view');
+        await ui.closeViewOptions();
+        await ui.closeSearch();
+        if (await ui.dialogOpen()) {
+          await driver.evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+          await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'leftover dialog closed before step 22', 5000);
+        }
+        if (await ui.exists(MENU)) await ui.closeMenu();
+        if ((await ui.filterState()) !== 'all') await ui.setFilter('all');
+
+        const recordPath = join(QA_HOME, 'storages', 'dsh-session-groups.json');
+        const readRecord = () => JSON.parse(readFileSync(recordPath, 'utf8'));
+        const recordRevision = () => Number(readRecord()?.revision ?? -1);
+        const waitRecord = async (predicate, label, waitMs = 12000) => {
+          const end = Date.now() + waitMs;
+          let last = null;
+          while (Date.now() < end) {
+            try {
+              last = readRecord();
+              if (predicate(last)) return last;
+            } catch { /* record not written yet */ }
+            await sleep(150);
+          }
+          throw new Error(`${label} (last revision: ${String(last?.revision)})`);
+        };
+        const dialogTitle = async () => String(await driver.evaluate(`(document.querySelector(${JSON.stringify(DIALOG)} + ' .dsg-dialog-title')?.textContent ?? '').trim()`));
+        const optionState = async () => driver.evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(DIALOG_GROUP)}), (el) => ({
+          gid: el.getAttribute('data-group-id'),
+          selected: el.getAttribute('data-selected'),
+          ariaSelected: el.getAttribute('aria-selected'),
+          label: (el.textContent ?? '').trim(),
+        }))`);
+        const confirmState = async () => driver.evaluate(`(() => {
+          const button = document.querySelector(${JSON.stringify(DIALOG_CONFIRM)});
+          return button ? { disabled: button.disabled, text: (button.textContent ?? '').trim(), variant: button.getAttribute('data-variant') } : null;
+        })()`);
+        const clickDestination = async (gid) => {
+          const clicked = await driver.evaluate(`(() => {
+            const option = Array.from(document.querySelectorAll(${JSON.stringify(DIALOG_GROUP)}))
+              .find((el) => el.getAttribute('data-group-id') === ${JSON.stringify(gid)});
+            if (!option) return false;
+            option.click();
+            return true;
+          })()`);
+          if (!clicked) throw new Error(`delete destination option not found: ${gid}`);
+          await sleep(150);
+        };
+
+        // (1) Color menu copy: 修改颜色 / Change color, and the dialog title uses
+        // the same wording. Cancelling writes nothing.
+        const colorGroupId = await ui.createGroup(`Color label ${Date.now().toString(36)}`);
+        if (!colorGroupId) throw new Error('step 22 could not create the color-label group');
+        const colorRevision = recordRevision();
+        await ui.openGroupMenu(colorGroupId);
+        const menuItems = await ui.menuItems();
+        if (!menuItems.some((text) => /^(修改颜色|Change color)$/.test(text))) {
+          throw new Error(`group menu color item must be 修改颜色 / Change color, got ${JSON.stringify(menuItems)}`);
+        }
+        if (!menuItems.some((text) => text === '删除分组' || text === 'Delete group')) {
+          throw new Error(`group menu delete item must stay available, got ${JSON.stringify(menuItems)}`);
+        }
+        await ui.clickMenuItem(/^(修改颜色|Change color)$/);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(DIALOG)})`, 'color dialog open', 5000);
+        const colorKind = await driver.evaluate(`document.querySelector(${JSON.stringify(DIALOG)})?.getAttribute('data-kind')`);
+        if (colorKind !== 'group-color') throw new Error(`color dialog kind expected group-color, got ${colorKind}`);
+        const colorTitle = await dialogTitle();
+        if (!/^(修改颜色|Change color)$/.test(colorTitle)) {
+          throw new Error(`color dialog title must be 修改颜色 / Change color, got ${JSON.stringify(colorTitle)}`);
+        }
+        await ui.click('.dsg-dialog-cancel');
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'color dialog closed', 5000);
+        const colorCancelled = recordRevision() === colorRevision;
+        if (!colorCancelled) throw new Error('cancelling the color dialog must not commit');
+        const colorRule = await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(colorGroupId)} + '"]');
+          const icon = row ? row.querySelector('.dsg-group-icon svg') : null;
+          return { hasIcon: !!icon, color: row ? getComputedStyle(icon ?? row).color : null };
+        })()`);
+        if (!colorRule.hasIcon) throw new Error('color-label group lost its icon');
+
+        // (2) Empty leaf delete: group menu -> no dialog (observed across the
+        // whole async commit) -> group gone + toast, exactly one revision.
+        await driver.evaluate(`(() => {
+          window.__dsgDialogSeen = false;
+          window.__dsgDialogObserver?.disconnect?.();
+          const observer = new MutationObserver(() => {
+            if (document.querySelector(${JSON.stringify(DIALOG)})) window.__dsgDialogSeen = true;
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
+          window.__dsgDialogObserver = observer;
+        })()`);
+        await ui.openGroupMenu(colorGroupId);
+        await ui.clickMenuItem(/^(删除分组|Delete group)$/);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(colorGroupId)} + '"]')`, 'empty group deleted directly', 8000);
+        const dialogSeen = await driver.evaluate(`(() => { window.__dsgDialogObserver?.disconnect?.(); return window.__dsgDialogSeen; })()`);
+        if (dialogSeen) throw new Error('empty group delete must not open a dialog');
+        const emptyToast = await ui.waitFor(`(document.querySelector(${JSON.stringify(TOAST)})?.textContent ?? '').includes('分组已删除') || (document.querySelector(${JSON.stringify(TOAST)})?.textContent ?? '').includes('Group deleted')`, 'empty delete toast', 5000);
+        if (!emptyToast) throw new Error('empty group delete toast missing');
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'empty group delete left no dialog', 2000);
+        const afterEmpty = await waitRecord((doc) => !doc.groups.some((group) => group.id === colorGroupId), 'empty group removed from record');
+        if (Number(afterEmpty.revision) !== colorRevision + 1) {
+          throw new Error(`empty direct delete must be one commit: ${colorRevision} -> ${afterEmpty.revision}`);
+        }
+
+        // (3) Non-empty group: destination picker, cycle exclusions, highlight-only
+        // selection, Escape no-op and atomic move+delete confirm.
+        const stamp = Date.now().toString(36);
+        const destId = await ui.createGroup(`Dest ${stamp}`);
+        const destChildId = await ui.createChildGroup(destId, `Dest child ${stamp}`);
+        const targetId = await ui.createGroup(`Target ${stamp}`);
+        const childId = await ui.createChildGroup(targetId, `Child ${stamp}`);
+        const grandChildId = await ui.createChildGroup(childId, `Grand ${stamp}`);
+        let sessionRows = (await ui.sessions()).filter((row) => row.archived !== true && row.sid);
+        if (sessionRows.length < 3) {
+          // Previous steps may have collapsed groups; expand them so at least
+          // three real session rows are available as drag sources.
+          await driver.evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(GROUP)} + '[data-expanded="false"]'), (row) => row.click())`);
+          await sleep(500);
+          sessionRows = (await ui.sessions()).filter((row) => row.archived !== true && row.sid);
+        }
+        if (sessionRows.length < 3) throw new Error(`step 22 needs 3 visible sessions, got ${sessionRows.length}`);
+        const destSession = sessionRows[0].sid;
+        const targetSessions = [sessionRows[1].sid, sessionRows[2].sid];
+        await ui.dragSessionToGroup(destSession, destChildId);
+        for (const sid of targetSessions) await ui.dragSessionToGroup(sid, targetId);
+        const afterDrag = await waitRecord(
+          (doc) => (doc.groups.find((group) => group.id === targetId)?.sessionIds.length ?? 0) === 2,
+          'target sessions moved into the delete target'
+        );
+        if (JSON.stringify(afterDrag.groups.find((group) => group.id === targetId)?.sessionIds) !== JSON.stringify(targetSessions)) {
+          throw new Error('target session order changed during the drag');
+        }
+        const beforeDelete = readRecord();
+        const groupsBefore = beforeDelete.groups.length;
+        const sessionsBefore = new Set([
+          ...beforeDelete.ungrouped,
+          ...beforeDelete.groups.flatMap((group) => group.sessionIds),
+        ]);
+        const destChildBefore = beforeDelete.groups.find((group) => group.id === destChildId);
+        if (!destChildBefore) throw new Error('destination child missing before delete');
+        const targetBefore = beforeDelete.groups.find((group) => group.id === targetId);
+        if (!targetBefore || targetBefore.sessionIds.length !== 2) {
+          throw new Error(`target group must hold the two moved sessions before delete: ${JSON.stringify(targetBefore?.sessionIds)}`);
+        }
+
+        const openDelete = async () => {
+          await ui.openGroupMenu(targetId);
+          await ui.clickMenuItem(/^(删除分组|Delete group)$/);
+          await ui.waitFor(`!!document.querySelector(${JSON.stringify(DIALOG)})`, 'delete dialog open', 5000);
+          if ((await driver.evaluate(`document.querySelector(${JSON.stringify(DIALOG)})?.getAttribute('data-kind')`)) !== 'delete-group') {
+            throw new Error('non-empty delete must open the delete-group dialog');
+          }
+          const title = await dialogTitle();
+          if (!/^(删除分组|Delete group)$/.test(title)) throw new Error(`delete dialog title expected 删除分组, got ${JSON.stringify(title)}`);
+        };
+
+        const revisionBeforeDialog = recordRevision();
+        await openDelete();
+        const confirmInitial = await confirmState();
+        if (!confirmInitial || confirmInitial.disabled !== true) throw new Error('delete Confirm must start disabled without a destination');
+        if (!/^(移动并删除|Move and delete)$/.test(confirmInitial.text)) {
+          throw new Error(`delete Confirm label must be 移动并删除 / Move and delete, got ${JSON.stringify(confirmInitial.text)}`);
+        }
+        if (confirmInitial.variant !== 'danger') throw new Error(`delete Confirm must be danger-styled, got ${confirmInitial.variant}`);
+        const bodyText = String(await driver.evaluate(`(document.querySelector('[data-testid="session-groups-dialog-delete-body"]')?.textContent ?? '').replace(/\\s+/g, ' ').trim()`));
+        if (!bodyText.includes('2') || !bodyText.includes('1')) {
+          throw new Error(`delete body must state 2 sessions + 1 subgroup: ${JSON.stringify(bodyText)}`);
+        }
+        const options = await optionState();
+        const optionIds = options.map((option) => option.gid);
+        if (!optionIds.includes('')) throw new Error('delete destination list must include the root/ungrouped option');
+        for (const excluded of [targetId, childId, grandChildId]) {
+          if (optionIds.includes(excluded)) throw new Error(`delete destination must exclude cycle group ${excluded}`);
+        }
+        for (const included of [destId, destChildId]) {
+          if (!optionIds.includes(included)) throw new Error(`delete destination should include ${included}`);
+        }
+        const rootOption = options.find((option) => option.gid === '');
+        if (!/根目录|root/i.test(rootOption.label)) throw new Error(`root option label must mention root: ${JSON.stringify(rootOption.label)}`);
+
+        await clickDestination(destChildId);
+        const selected = await optionState();
+        const selectedOption = selected.find((option) => option.gid === destChildId);
+        if (selectedOption.selected !== 'true' || selectedOption.ariaSelected !== 'true') {
+          throw new Error(`clicking a destination must only highlight it: ${JSON.stringify(selectedOption)}`);
+        }
+        if (recordRevision() !== revisionBeforeDialog) throw new Error('highlighting a destination must not commit');
+        const confirmSelected = await confirmState();
+        if (!confirmSelected || confirmSelected.disabled !== false) throw new Error('delete Confirm must enable after a valid destination');
+        await driver.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'Escape closes the delete dialog', 5000);
+        if (recordRevision() !== revisionBeforeDialog) throw new Error('Escape must not commit the delete');
+        const stillThere = readRecord().groups.some((group) => group.id === targetId);
+        if (!stillThere) throw new Error('Escape must keep the target group');
+
+        await openDelete();
+        await clickDestination(destChildId);
+        await ui.click(DIALOG_CONFIRM);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'delete dialog closed after confirm', 10000);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(targetId)} + '"]')`, 'target group row removed', 8000);
+        const afterDelete = await waitRecord((doc) => !doc.groups.some((group) => group.id === targetId), 'target group removed from record');
+        if (Number(afterDelete.revision) !== revisionBeforeDialog + 1) {
+          throw new Error(`move+delete must be one atomic commit: ${revisionBeforeDialog} -> ${afterDelete.revision}`);
+        }
+        if (afterDelete.groups.length !== groupsBefore - 1) throw new Error('delete removed more than the target group');
+        const sessionsAfter = new Set([...afterDelete.ungrouped, ...afterDelete.groups.flatMap((group) => group.sessionIds)]);
+        for (const sid of sessionsBefore) {
+          if (!sessionsAfter.has(sid)) throw new Error(`delete lost session ${sid}`);
+        }
+        for (const sid of sessionsAfter) {
+          if (!sessionsBefore.has(sid)) throw new Error(`delete invented session ${sid}`);
+        }
+        const movedDest = afterDelete.groups.find((group) => group.id === destChildId);
+        if (!movedDest) throw new Error('destination child disappeared');
+        const expectedSessions = [...targetBefore.sessionIds, ...destChildBefore.sessionIds];
+        if (JSON.stringify(movedDest.sessionIds) !== JSON.stringify(expectedSessions)) {
+          throw new Error(`direct sessions must be prepended to the destination: ${JSON.stringify(movedDest.sessionIds)} vs ${JSON.stringify(expectedSessions)}`);
+        }
+        const movedChild = afterDelete.groups.find((group) => group.id === childId);
+        const movedGrand = afterDelete.groups.find((group) => group.id === grandChildId);
+        if (!movedChild || movedChild.parentId !== destChildId) throw new Error('direct child group must reparent to the destination');
+        if (!movedGrand || movedGrand.parentId !== childId) throw new Error('child subtree must move intact');
+        if (afterDelete.groups.some((group) => group.id === targetId)) throw new Error('target group still in record');
+        const deleteToast = await ui.waitFor(`(document.querySelector(${JSON.stringify(TOAST)})?.textContent ?? '').includes('分组已删除') || (document.querySelector(${JSON.stringify(TOAST)})?.textContent ?? '').includes('Group deleted')`, 'move+delete toast', 5000);
+        if (!deleteToast) throw new Error('move+delete toast missing');
+
+        return {
+          color: { menu: '修改颜色', title: colorTitle, cancelled: colorCancelled },
+          emptyDelete: { group: colorGroupId, dialogSeen, toast: true, revision: afterEmpty.revision },
+          dialog: {
+            group: targetId,
+            sessions: targetSessions.length,
+            childGroups: 1,
+            options: optionIds,
+            excluded: [targetId, childId, grandChildId],
+            included: [destId, destChildId],
+            rootOption: true,
+            confirm: { label: confirmInitial.text, disabledInitially: true, enabledAfterPick: true, variant: confirmInitial.variant },
+            escapeNoChange: true,
+          },
+          move: {
+            destination: destChildId,
+            sessions: movedDest.sessionIds,
+            child: movedChild.id,
+            childParent: movedChild.parentId,
+            grandParent: movedGrand.parentId,
+            revision: afterDelete.revision,
+            sessionsPreserved: sessionsAfter.size,
+          },
+        };
+      },
+    },
   ];
 }
 
@@ -5016,7 +5306,7 @@ async function captureScreenshot(driver, args, path) {
 }
 
 /**
- * 0.2.5 diagnostics persistence check (outside the 19 acceptance steps):
+ * 0.2.5 diagnostics persistence check (outside the acceptance steps):
  * POST a probe batch through the real client/host route, then read the NDJSON
  * file from the isolated home and assert the drag trace was appended there.
  * This is the only place the E2E runner verifies the host route + file write.
@@ -5128,7 +5418,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 21-step acceptance (isolated DSH home, CDP)');
+  console.log(' V1 E2E - 22-step acceptance (isolated DSH home, CDP)');
   console.log('============================================================');
 
   let driver = null;
@@ -5190,7 +5480,7 @@ async function main() {
 
     if (!failed && !evidence.blockedReason) {
       // 0.2.5: the diagnostics route + isolated-home NDJSON write must work with
-      // the real drag trace; this is not an acceptance step (still 21/21).
+      // the real drag trace; this is not an acceptance step (still 22/22).
       try {
         const diagnostics = await verifyDiagnostics(driver);
         evidence.diagnostics = diagnostics;
@@ -5240,6 +5530,9 @@ main().then((code) => { process.exitCode = code; }).catch((error) => {
   console.error(error);
   process.exitCode = 2;
 });
+
+
+
 
 
 

@@ -6,7 +6,7 @@
  * Cordis validates plugin return values as effects (Gate 0: returning an object
  * raises `TypeError: Invalid effect`).
  */
-import { createGroup, deleteGroup, moveGroup, renameGroup, setGroupColor, setGroupColorHex, setGroupIcon } from '../shared/model.js'
+import { createGroup, deleteGroup, deleteGroupTo, moveGroup, renameGroup, setGroupColor, setGroupColorHex, setGroupIcon } from '../shared/model.js'
 import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
@@ -281,11 +281,22 @@ export const createPlugin = () => {
     if (dialog) store.dispatch('dialog', { dialog: { ...dialog, error: messageKey } })
   }
 
-  const commitDocFromAction = async (nextDoc) => {
+  const commitDocFromAction = async (nextDoc, successKey = 'toast.saved') => {
     const committed = await commitDoc(nextDoc)
     closeDialog()
-    notify({ kind: 'success', message: t('toast.saved') })
+    notify({ kind: 'success', message: t(successKey) })
     return committed
+  }
+
+  /** Empty-leaf delete (0.2.9): no dialog, one commit, group-deleted toast. */
+  const deleteGroupDirect = async (groupId) => {
+    try {
+      return await commitDocFromAction((latest) => deleteGroup(latest, groupId), 'toast.groupDeleted')
+    } catch (error) {
+      notify({ kind: 'error', message: t('toast.deleteFailed') })
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] direct delete failed', error)
+      return null
+    }
   }
 
   const confirmDialog = async (dialog, payload = {}) => {
@@ -313,8 +324,10 @@ export const createPlugin = () => {
           return
         }
         case 'delete-group': {
-          await commitDocFromAction((latest) => deleteGroup(latest, dialog.groupId))
-          notify({ kind: 'success', message: t('toast.groupDeleted') })
+          await commitDocFromAction(
+            (latest) => deleteGroupTo(latest, dialog.groupId, payload.destinationId ?? null),
+            'toast.groupDeleted'
+          )
           return
         }
         case 'icon': {
@@ -433,6 +446,7 @@ export const createPlugin = () => {
       toggleMode,
       openDialog,
       confirmDialog,
+      deleteGroupDirect,
       setArchiveFilter,
       setFloatingLabel,
       startDragLabel: () => {},

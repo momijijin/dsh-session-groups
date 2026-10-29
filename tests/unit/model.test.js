@@ -7,10 +7,12 @@ import {
   childrenOf,
   createGroup,
   deleteGroup,
+  deleteGroupTo,
   emptyDoc,
   groupColor,
   groupColorHex,
   groupColorValue,
+  groupSubtreeHeight,
   inferWorkspaceId,
   isColorHex,
   isDescendant,
@@ -195,6 +197,93 @@ test('deleteGroup promotes children and moves sessions to parent head', () => {
   assert.equal(doc.groups.find((g) => g.id === b).parentId, null)
   assert.deepEqual(doc.ungrouped.slice(0, 1), ['s1'])
   assert.deepEqual(doc.groups.find((g) => g.id === b).sessionIds, ['s2'])
+})
+
+test('deleteGroupTo moves direct sessions and child groups to an explicit destination', () => {
+  let doc = createGroup(emptyDoc(), { name: 'A' })
+  const a = doc.groups[0].id
+  doc = createGroup(doc, { name: 'B', parentId: a })
+  const b = doc.groups.find((group) => group.name === 'B').id
+  doc = createGroup(doc, { name: 'B-child', parentId: b })
+  const bChild = doc.groups.find((group) => group.name === 'B-child').id
+  doc = createGroup(doc, { name: 'Dest' })
+  const dest = doc.groups.find((group) => group.name === 'Dest').id
+  doc = createGroup(doc, { name: 'Dest-child', parentId: dest })
+  const destChild = doc.groups.find((group) => group.name === 'Dest-child').id
+  doc = assignSession(doc, 's1', a, 0)
+  doc = assignSession(doc, 's2', a, 0)
+  doc = assignSession(doc, 's3', b, 0)
+  doc = assignSession(doc, 'existing', destChild, 0)
+
+  const next = deleteGroupTo(doc, a, destChild)
+  assert.equal(next.groups.some((group) => group.id === a), false)
+  assert.deepEqual(
+    next.groups.find((group) => group.id === destChild).sessionIds,
+    ['s2', 's1', 'existing'],
+    'direct sessions are prepended to the chosen destination'
+  )
+  assert.equal(next.groups.find((group) => group.id === b).parentId, destChild)
+  assert.equal(next.groups.find((group) => group.id === bChild).parentId, b, 'the child subtree is preserved')
+  assert.deepEqual(next.groups.find((group) => group.id === b).sessionIds, ['s3'])
+  assert.equal(next.ungrouped.includes('s1'), false)
+  assert.equal(next.ungrouped.includes('s2'), false)
+  assert.equal(doc.groups.some((group) => group.id === a), true, 'deleteGroupTo is pure')
+})
+
+test('deleteGroupTo supports the ungrouped/root destination and deleteGroup stays a parent wrapper', () => {
+  let doc = createGroup(emptyDoc(), { name: 'A' })
+  const a = doc.groups[0].id
+  doc = createGroup(doc, { name: 'B', parentId: a })
+  const b = doc.groups.find((group) => group.name === 'B').id
+  doc = createGroup(doc, { name: 'B-child', parentId: b })
+  const bChild = doc.groups.find((group) => group.name === 'B-child').id
+  doc = assignSession(doc, 's1', a, 0)
+  doc = assignSession(doc, 's2', a, 0)
+  doc = assignSession(doc, 'old', null, 0)
+
+  const rooted = deleteGroupTo(doc, a, null)
+  assert.equal(rooted.groups.some((group) => group.id === a), false)
+  assert.deepEqual(rooted.ungrouped, ['s2', 's1', 'old'], 'sessions are prepended to Ungrouped')
+  assert.equal(rooted.groups.find((group) => group.id === b).parentId, null)
+  assert.equal(rooted.groups.find((group) => group.id === bChild).parentId, b)
+
+  const wrapped = deleteGroup(doc, a)
+  assert.deepEqual(
+    wrapped.groups.find((group) => group.id === b).parentId,
+    null,
+    'deleteGroup defaults to the deleted group parent (root here)'
+  )
+  assert.deepEqual(wrapped.ungrouped, ['s2', 's1', 'old'])
+})
+
+test('deleteGroupTo validates group/destination/cycle/depth', () => {
+  let doc = createGroup(emptyDoc(), { name: 'A' })
+  const a = doc.groups[0].id
+  doc = createGroup(doc, { name: 'B', parentId: a })
+  const b = doc.groups.find((group) => group.name === 'B').id
+  doc = createGroup(doc, { name: 'C', parentId: b })
+  const c = doc.groups.find((group) => group.name === 'C').id
+  assert.throws(() => deleteGroupTo(doc, 'missing', null), /group-not-found/)
+  assert.throws(() => deleteGroupTo(doc, a, 'missing'), /parent-not-found/)
+  assert.throws(() => deleteGroupTo(doc, a, a), /cycle/)
+  assert.throws(() => deleteGroupTo(doc, a, b), /cycle/)
+  assert.throws(() => deleteGroupTo(doc, a, c), /cycle/)
+
+  let deep = createGroup(emptyDoc(), { name: 'T' })
+  const t = deep.groups[0].id
+  let parentId = t
+  for (let i = 1; i <= 7; i += 1) {
+    deep = createGroup(deep, { name: `C${i}`, parentId })
+    parentId = deep.groups.find((group) => group.name === `C${i}`).id
+  }
+  deep = createGroup(deep, { name: 'D1' })
+  const d1 = deep.groups.find((group) => group.name === 'D1').id
+  deep = createGroup(deep, { name: 'D2', parentId: d1 })
+  const d2 = deep.groups.find((group) => group.name === 'D2').id
+  assert.equal(groupSubtreeHeight(deep, t), 7)
+  assert.throws(() => deleteGroupTo(deep, t, d2), /depth-exceeded/)
+  assert.doesNotThrow(() => deleteGroupTo(deep, t, d1), 'depth 1 destination fits the 8-level cap')
+  assert.doesNotThrow(() => deleteGroupTo(deep, t, null), 'root destination is always allowed')
 })
 
 test('assignSession moves across groups without duplication', () => {

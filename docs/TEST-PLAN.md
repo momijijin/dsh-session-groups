@@ -1,6 +1,6 @@
 # V1/V1.1 测试计划
 
-- 目标：证明“分组只改视图、不改宿主数据”，同时证明拖拽/嵌套/筛选/新建在真实 DSH 中可用；V1.1 追加证明左栏宽度、分组拖拽、会话搜索、官方侧栏排版对齐；0.2.4 追加证明拖拽行高插入占位与乐观 drop 提交（HTTP 未完成前 DOM 已移动）；0.2.5 追加证明官方 header 图标几何与拖拽诊断（HUD + NDJSON 落盘 + 分析器）；0.2.7 追加证明行 meta 布局、自定义颜色与右键/键盘菜单；0.2.8 追加证明官方会话状态（6 互斥 + subagents 次要）、空组 drop box 与单实例拖拽 label
+- 目标：证明“分组只改视图、不改宿主数据”，同时证明拖拽/嵌套/筛选/新建在真实 DSH 中可用；V1.1 追加证明左栏宽度、分组拖拽、会话搜索、官方侧栏排版对齐；0.2.4 追加证明拖拽行高插入占位与乐观 drop 提交（HTTP 未完成前 DOM 已移动）；0.2.5 追加证明官方 header 图标几何与拖拽诊断（HUD + NDJSON 落盘 + 分析器）；0.2.7 追加证明行 meta 布局、自定义颜色与右键/键盘菜单；0.2.8 追加证明官方会话状态（6 互斥 + subagents 次要）、空组 drop box 与单实例拖拽 label；0.2.9 追加证明删除分组目的地选择/循环与深度排除、空叶直接删除与颜色文案
 - 负责人：QA（计划、证据、验收结论）；Host/Client 各写自己模块的测试；Lead 做最终审计
 - 环境：先用独立 `DSH_HOME`（`.spike-homes/qa`）+ `groups-spike` profile，再 desktop profile 人工验收；profile 不隔离 `sessions/`/`storages/`，禁止用真实 `~/.dsh` 跑 E2E
 - 关联：`docs/V1-PLAN.md`、`docs/CONTRACTS.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
@@ -12,7 +12,7 @@
 | 单元 | Node `node --test` | `src/shared/model.js` 纯函数 | Host/Client 写，QA 审 | 每次提交 |
 | Host 集成 | Node `node --test` + 临时目录 | 存储、原子写、revision、路由围栏 | Host | 每次提交 |
 | Client 逻辑 | Node `node --test` | 可见性、筛选、工作区映射、拖拽 hit-test | Client | 每次提交 |
-| E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索/排版/深色主题 + 0.2.4 占位/乐观提交 + 0.2.5 HUD/诊断落盘 + 0.2.6 分组颜色/选择对话框 + 0.2.7 行 meta/自定义色/右键菜单 + 0.2.8 官方状态/空组 drop box/单实例拖拽 label（21 步 + 1 个非步骤持久化校验） | QA | 每日/合并前 |
+| E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索/排版/深色主题 + 0.2.4 占位/乐观提交 + 0.2.5 HUD/诊断落盘 + 0.2.6 分组颜色/选择对话框 + 0.2.7 行 meta/自定义色/右键菜单 + 0.2.8 官方状态/空组 drop box/单实例拖拽 label + 0.2.9 删除目的地/空叶删除/颜色文案（22 步 + 1 个非步骤持久化校验） | QA | 每日/合并前 |
 | 诊断 trace | Node `node --test` + `analyze-drag-trace.mjs` | 环/flush/beacon/HUD、NDJSON 解析、target/label/gap/native/autoexpand/placeholder/optimistic/burst/stall | Client/QA | 每次提交 |
 | 大列表 probe | Node CDP 脚本 | 1,500+ 未归组行：DOM 行数、初始/滚动/hover/dragOver/search/drop 耗时 | QA | 0.2.3 及后续性能改动 |
 | 人工验收 | 清单 + 截图 | desktop profile 9 步 | QA + 用户 | 发布前 |
@@ -28,6 +28,7 @@
 | U1 | `createGroup` 根组/子组 | 新 id、parentId、顺序正确 |
 | U2 | `renameGroup` trim/空名/80 字符 | 空名拒绝；超长截断或拒绝（契约定） |
 | U3 | `deleteGroup` 有子组/有会话 | 子组提升；会话移到父组头/未归组头；无删除 |
+| U3b | `deleteGroupTo` 目标组/根（0.2.9） | 直接会话前插到目标、直接子组改 parentId 且子树完整；根=null 时会话入未归组、子组升根；`deleteGroup` 保持父级默认包装；missing/parent-not-found/cycle/depth 抛错；纯函数 |
 | U4 | `moveGroup` 同级前/后、跨父级 | 顺序正确；子树跟随 |
 | U5 | `moveGroup` 移入自身/后代 | 返回错误或原 doc；无环 |
 | U6 | `assignSession` 从组 A 到组 B | 旧组移除；新组指定 index；不重复 |
@@ -86,8 +87,9 @@
 | C19 | 分组颜色 + 选择对话框（0.2.6） | 调色板恰为 `blue/green/orange/red/purple/gray`；`createGroup` 默认蓝、未知 color 归一化蓝、`setGroupColor` 只改目标且纯函数；`validateDoc` 允许缺省 color、拒绝未知 palette id；`normalizeDoc`/host commit 将缺省归一化蓝（round-trip）；`dialog-selection.js` 的初始选择/有效性/confirm payload 覆盖 icon、move-session、move-group（排除自身+后代）、new-session（inferred/无选择 disabled）、group-color；CSS/源码契约：blue header title、28×28 行操作、16px glyph/4px gap、2px guide@caret、色板 swatch、点击只高亮、footer Confirm/Cancel 对所有对话框存在 |
 | C20 | 行 meta + 自定义色 + 右键菜单（0.2.7） | `colorHex` normalize（`#RGB`/`RGB`/大写/6 位；alpha/非法 null）、precedence、`setGroupColorHex`/`setGroupColor` 清 hex、`validateDoc` 拒绝非 canonical persisted hex、`normalizeDoc`/host load/commit 归一化；新建组默认 `hash`；`relativeTimeParts` just now/minutes/hours/days/years + 非法/未来省略 + absolute title；`clampMenuPosition`/pointer +2/row bottom+8 与 8px viewport clamp；dialog-selection custom initial/valid/payload；CSS/源码契约：组行 caret→icon→name→actions→count、会话行 actions→time、12/16 + 40px min-width、隐藏操作 pointer-events none、16/4/2px guide + 组色 60%/45%、caret 85%、2 列 32px 色板 + 固定 16px check 槽 + native/hex 行 + aria-live hint |
 | C21 | 官方状态 + 空组 drop box + 拖拽 label（0.2.8） | `sessionStatuses` 官方优先级（3 个 pending kind > running > subagents-only > completed > idle）、未知 pending kind 忽略、subagents 与 pending/running 共存、非法 count 忽略；`runningSubagentCount` 取 `projectionsBySession.subagentCatalog`（status.running 优先、row.running 回落、external 计数同官方、无投影返回 0），`runningSubagentCounts` 只产出正数；model/filter 透传 `runningSubagentCount`；`createFloatingLabel` 单例复用/隐藏重复节点/文本+可见性+位置缓存/rAF 合并 last-wins/hide+dispose flush/rAF 缺失同步路径；CSS/源码契约：16×20 状态槽（idle 空、archived/blank 空）、14px 双圆 spinner（r9.5/track25%/dash 12 150/1.5s/reduced-motion）、10px 点（inset20%/warn+success token）、compact pending 尾格、visually-hidden 状态文本、时间 10/16、空组 dashed 32px 盒（plus14/12px/drop-active accent）、placeholder 抑制、`.dsg-session-dot`/`.dsg-group-empty` 删除 |
+| C22 | 删除分组目的地（0.2.9） | `deleteGroupTo` 直接会话前插、直接子组改 parentId、子树保留、根=null、缺组/缺目的地/自身/后代 cycle/depth 抛错、纯函数；`deleteGroup` 父级包装等价；`deleteGroupOptions` 排除自身+全部递归后代，有子组时按 `destinationDepth + 1 + subtreeHeight(child) <= 8` 排除过深目标（根恒可用）；`deleteGroupNeedsDialog` 仅在有会话或直接子组时为 true；`delete-group` 选择契约（无预选、点击只高亮、Confirm 初始 disabled、payload `{destinationId}`、root label）；颜色菜单/对话框文案「修改颜色」/「Change color」；CSS/源码契约：danger Confirm「移动并删除」、body/options testid、空叶 `deleteGroupDirect` 单提交 + `toast.groupDeleted` |
 
-## 5. E2E（Playwright/CDP，21 步）
+## 5. E2E（Playwright/CDP，22 步）
 
 环境：
 
@@ -134,13 +136,13 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
     - 占位真实参与布局：hover 前后目标/后继行 top 位移 ≥28–30px；`dragleave` 后占位立即消失；drop/dragend 后清理；
     - 264px 下 hover 占位时 `.dsg-tree` / 占位 `scrollWidth ≤ clientWidth+1`，随后恢复宽度；
     - **乐观证据**：用 CDP `Fetch.enable`（Request 阶段）挂起 commit 请求（不注入页面 fetch 包装）；拖会话/分组后断言 DOM 顺序已改变、`data-optimistic="true"`、**记录文件 revision 仍等于拖拽前的值**（HTTP 未落盘），`Fetch.continueRequest` 后记录 revision 前进、`data-optimistic="false"` 且 DOM 顺序保持；
-    - **0.2.5/0.2.6/0.2.7/0.2.8 诊断 HUD**：`session-groups-diagnostics-hud` 存在、computed `pointer-events:none`、文本含 `dsg 0.2.8` 与本轮 `n=`（native dragover）>0、`chg=`/`rend=` 计数；HUD 由 ≥10 次拖拽事件驱动但自身不产生 React 行渲染（只读文本断言）。E2E runner 在 21 步之后额外 POST 一个 `e2e-probe` batch 到 `/dsh-session-groups/diagnostics`，读取隔离 home 的 `storages/dsh-session-groups.diagnostics.ndjson`，断言 `schemaVersion=1`、行可解析、包含 `native.*`/`handler`/`optimistic|queue` 事件且 `runId` 分组正确（该检查不计入 21 步）。
+    - **0.2.5/0.2.6/0.2.7/0.2.8/0.2.9 诊断 HUD**：`session-groups-diagnostics-hud` 存在、computed `pointer-events:none`、文本含 `dsg 0.2.9` 与本轮 `n=`（native dragover）>0、`chg=`/`rend=` 计数；HUD 由 ≥10 次拖拽事件驱动但自身不产生 React 行渲染（只读文本断言）。E2E runner 在 22 步之后额外 POST 一个 `e2e-probe` batch 到 `/dsh-session-groups/diagnostics`，读取隔离 home 的 `storages/dsh-session-groups.diagnostics.ndjson`，断言 `schemaVersion=1`、行可解析、包含 `native.*`/`handler`/`optimistic|queue` 事件且 `runId` 分组正确（该检查不计入 22 步）。
 19. **0.2.6 分组颜色 + 选择对话框**（step 18 留在分组视图）：
     - 分组菜单出现「颜色」；打开 `group-color` 对话框：6 个 palette 选项、当前颜色（默认蓝）高亮、footer Confirm/Cancel 存在且 Confirm 可用；点 purple 只高亮（`aria-checked`、唯一选中、对话框不关、行 `data-color` 不变、记录 revision 不变）；Cancel 关闭且不变；重开选 purple + Confirm → 行 `data-color=purple`、图标 computed color = `--dsg-color-purple`、记录 color=purple 且 revision 前进；
     - `icon` 对话框：当前图标高亮；点 star 只高亮、行图标 markup/revision 不变；Cancel 不改；重开 + Confirm → 记录 icon=star；
     - `move-session` 对话框：当前组预选；点另一 root 组只高亮、不移动、revision 不变；Confirm 后会话出现在目标组且记录落盘；
     - `new-session` 对话框：推断工作区可见预选（无推断则 Confirm disabled，点选后 enabled）；点击其他工作区只高亮且不写记录；Cancel 不创建会话（行数不变）；
-    - Escape 与点击 backdrop 关闭 color 对话框且不改变颜色/revision；HUD 仍在且 build=0.2.8；264px 无溢出由 step 16/18/21 继续守护。
+    - Escape 与点击 backdrop 关闭 color 对话框且不改变颜色/revision；HUD 仍在且 build=0.2.9；264px 无溢出由 step 16/18/21 继续守护。
 20. **0.2.7 行 meta + 自定义色 + 右键菜单**（step 19 留在分组视图）：
     - 组行 DOM 顺序 caret/icon/name/actions/count；count 12/16、tabular、右对齐、距行右 8px 且始终可见；actions 两键 28×28/gap 4，空闲 opacity 0 + pointer-events none，真实鼠标 hover 后 opacity 1/pointer-events auto；
     - 会话行 time 在 actions 之后、最右 8px、min-width 40、右对齐、tabular；文本匹配 just now/minutes/hours/days/years（zh/en），`title` 非空且为绝对时间；0.2.8 起字号为官方 10/16；缺失/非法 updatedAt 的省略由 C20 单测覆盖；
@@ -151,14 +153,20 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
     - 每条会话行有 16×20 `session-groups-session-status` 槽；idle/archived/blank 槽内 0 子节点、无 hidden 标签（不是透明点）；ongoing 渲染 14px spinner（`viewBox 0 0 24 24`、两个 r=9.5 圆、track/arc）；warning/done 渲染 10×10 点（6px core）；非 idle 行至少 1 个 `.dsg-visually-hidden` 文本；时间 10/16 且当前夹具无 compact 状态；
     - 新建空组：`session-groups-empty` 是整宽（与 `.dsg-group-line` 内容宽一致）dashed 32px 盒、radius 6、`padding 0 8px`、12px、居中 flex、14px plus + 非空 label；body `group-append` 占位出现时该盒消失（不双渲染），dragleave 后恢复；组 drag 的 `group-before` 边界落点保留该盒并切 accent（border/background/color 与 DropPlaceholder 一致）；264px 下 tree/盒无横向溢出；
     - 会话拖拽多次 dragover：`session-groups-floating-label` 始终只有 1 个节点、1 个可见、文本非空、`position:fixed`、left/top 24/120、位于 tree 外；dragend 后同一节点隐藏（不新增/不删除文件）。
-22. **0.2.3 大列表 probe（独立 QA home，不并入日常 21 步）**：
+22. **0.2.9 删除目的地 + 空叶直接删除 + 颜色文案**（step 21 留在分组视图）：
+    - 新建空组：分组菜单颜色项文本精确为「修改颜色」（en「Change color」），点击打开 `group-color` 对话框，标题同为「修改颜色」；Cancel 后记录 revision 不变；删除项仍在菜单；
+    - 同一空组从菜单删除：`MutationObserver` 证明整个异步提交期间没有出现 `delete-group` 对话框；组行消失、记录 revision +1、toast「分组已删除」；
+    - 新建目标组（1 个子组）、目标子组（1 个孙组）、目的地组/目的地子组；把 2 条会话拖入目标、1 条拖入目的地子组；打开目标组删除菜单：对话框 `data-kind=delete-group`、标题「删除分组」、body 显示 2 会话/1 子组、Confirm 初始 disabled 且文案「移动并删除」/danger；
+    - 目的地选项包含未归组/根（空串 `data-group-id`，label 含根目录）与目的地/目的地子组；排除目标自身、子组、孙组；点击目的地子组只高亮（`data-selected=true`）、不写记录、Confirm enabled；Escape 关闭后目标与记录 revision 不变；
+    - 重开并选目的地子组 + Confirm：对话框关闭、目标行消失、记录 revision 恰好 +1；目标直接会话按原顺序前插到目的地子组已有会话之前；子组 parentId=目的地子组、孙组 parentId=子组；组数 −1、会话集合完全不变；toast「分组已删除」。
+23. **0.2.3 大列表 probe（独立 QA home，不并入日常 22 步）**：
     - 环境：`scripts/qa/setup.ps1 -QaHome .spike-homes/qa-0.2.3-large` → `node scripts/qa/make-large-list-fixture.mjs --home ... --extra 1500` → `start-web.ps1 -Port 4407`；
     - 断言 1,500+ 逻辑未归组行下 `domUngroupedRows` 在 20–30（<80），`treeScrollHeight` 与全量渲染一致（spacers 精确）；
     - 记录初始渲染、滚动两帧、hover、dragover 指示、窗口外搜索 reveal/scroll、可见行拖入组耗时；before(0.2.2)/after(0.2.3) 同 fixture 对比，写入 `docs/TEST-RESULTS.md` 与 `.superpowers/sdd/.../virtualization-report.md`。
 
 V1.1 新增/相关 stable testids（详见 `docs/CONTRACTS.md §4.1`）：
 
-`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle`（0.2.3 单按钮）、`session-groups-search-toggle`、`session-groups-search-close`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`、`session-groups-virtual-spacer`（0.2.3）、`session-groups-drop-indicator`（0.2.4 行高占位，`data-drop-height`）、`session-groups-diagnostics-hud`（0.2.5，`data-run-id`/`data-schema-version`）、`session-groups-dialog-options` / `session-groups-dialog-workspace` / `session-groups-dialog-group` / `session-groups-dialog-icon` / `session-groups-dialog-color`（0.2.6 选择对话框，`data-selected`/`aria-selected|checked`）、`session-groups-group-count` / `session-groups-session-time` / `session-groups-dialog-color-check` / `session-groups-dialog-color-hex` / `session-groups-dialog-color-native` / `session-groups-dialog-color-hint`（0.2.7）、`session-groups-session-status`（0.2.8 状态槽，`data-state`/`data-status-kind`；`session-groups-empty` 0.2.8 起带 `data-drop-active`）。
+`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle`（0.2.3 单按钮）、`session-groups-search-toggle`、`session-groups-search-close`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`、`session-groups-virtual-spacer`（0.2.3）、`session-groups-drop-indicator`（0.2.4 行高占位，`data-drop-height`）、`session-groups-diagnostics-hud`（0.2.5，`data-run-id`/`data-schema-version`）、`session-groups-dialog-options` / `session-groups-dialog-workspace` / `session-groups-dialog-group` / `session-groups-dialog-icon` / `session-groups-dialog-color`（0.2.6 选择对话框，`data-selected`/`aria-selected|checked`）、`session-groups-group-count` / `session-groups-session-time` / `session-groups-dialog-color-check` / `session-groups-dialog-color-hex` / `session-groups-dialog-color-native` / `session-groups-dialog-color-hint`（0.2.7）、`session-groups-session-status`（0.2.8 状态槽，`data-state`/`data-status-kind`；`session-groups-empty` 0.2.8 起带 `data-drop-active`）、`session-groups-dialog-delete-body` / `session-groups-dialog-delete-options`（0.2.9 删除目的地；选项复用 `session-groups-dialog-group`）。
 
 Playwright 拖拽注意：
 
@@ -175,9 +183,11 @@ V1.1 回归注意：
 - **step 15**：会通过宿主归档一条会话（宿主侧副作用，记录文件不变），证据中记录该 sid/title。
 - **step 16**：依赖 step 15 结束时仍在分组视图；先收起搜索字段再测 36px header，测量搜索结果时再展开并关闭；字号/间距为只读 DOM 断言；264px 探针会临时改宽度并恢复原宽度（不写记录文件）。失败信息必须列出「期望值 vs 实测值」。
 - **step 17**：设置/移除 `body[data-ds-dark-theme]` 只影响本次浏览器文档；不写 profile、不写记录文件；结束后恢复原属性。
-- **step 18**：占位检查全部用 hover-only（不落盘）；乐观检查用 CDP Fetch 挂起 commit，断言 DOM 已移动且记录 revision 未变；随后 continue 并等待 revision 前进/data-optimistic=false；264px 探针临时改宽度后恢复；**0.2.5 诊断默认开启**，HUD 只读断言，runner 末尾额外校验 NDJSON 落盘（失败只影响 diagnostics 结论，不改变 21 步编号）。
+- **step 18**：占位检查全部用 hover-only（不落盘）；乐观检查用 CDP Fetch 挂起 commit，断言 DOM 已移动且记录 revision 未变；随后 continue 并等待 revision 前进/data-optimistic=false；264px 探针临时改宽度后恢复；**0.2.5 诊断默认开启**，HUD 只读断言，runner 末尾额外校验 NDJSON 落盘（失败只影响 diagnostics 结论，不改变 22 步编号）。
 - **step 19**：依赖 step 18 结束时仍在分组视图；会真实写分组颜色/图标并移动一条会话（记录 revision 前进 3 次），选择/取消阶段只读；最后 Escape/backdrop 关闭不改状态；new-session 只 Cancel，不创建会话。
 - **step 20**：依赖 step 19 结束时仍在分组视图；行布局/guide 为只读，颜色部分真实写 custom hex 再恢复 palette purple（revision 前进 2 次）；菜单部分只读并用 CDP mouse/KeyboardEvent 验证位置/关闭/回焦；右键/拖拽抑制不写记录。
+- **step 21**：依赖 step 20 结束时仍在分组视图；新建空组并保留在记录中，264px 探针临时改宽度后恢复；状态/时间/空盒/拖拽 label 均为只读或 hover 断言，不写分组记录。
+- **step 22**：依赖 step 21 结束时仍在分组视图；颜色对话框只 Cancel（不写）；空叶删除真实提交 1 次；非空删除先点选 + Escape（只读），再重开 Confirm 真实提交 1 次；断言记录 revision 精确 +1 且会话集合不变。
 
 ## 6. 人工验收（desktop profile）
 
@@ -223,7 +233,9 @@ V1.1 回归注意：
 
 - 单测/集成输出（TAP/日志）
 - E2E trace/video（失败必存）
-- E2E 21 步 JSON（`scripts/qa/evidence/e2e-<ts>.json`）+ 截图（分组视图、拖拽插入占位、组内新建、归档三态、rail、切回官方、宽度把手、组拖、搜索下拉、排版断言、深色主题 surfaces、乐观 drop、行 meta/自定义色/右键菜单、官方状态/空组 drop box/拖拽浮层）
+- E2E 22 步 JSON（`scripts/qa/evidence/e2e-<ts>.json`）+ 截图（分组视图、拖拽插入占位、组内新建、归档三态、rail、切回官方、宽度把手、组拖、搜索下拉、排版断言、深色主题 surfaces、乐观 drop、行 meta/自定义色/右键菜单、官方状态/空组 drop box/拖拽浮层/删除目的地）
 - 数据审计输出（load-only + commit probe）
 - 手工验收签字
 - 已知问题清单（含 P2）
+
+

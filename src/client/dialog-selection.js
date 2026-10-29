@@ -8,11 +8,14 @@
  * helpers own the initial selection, validity and confirm payload so the React
  * component only renders state; unit tests cover the full matrix without a DOM.
  */
-import { DEFAULT_GROUP_COLOR, DEFAULT_ICON, GROUP_ICONS } from '../shared/constants.js'
+import { DEFAULT_GROUP_COLOR, DEFAULT_ICON, GROUP_ICONS, MAX_DEPTH } from '../shared/constants.js'
 import {
+  childrenOf,
   findGroup,
   groupColor,
   groupColorHex,
+  groupDepth,
+  groupSubtreeHeight,
   isColorHex,
   isDescendant,
   isKnownColor,
@@ -20,7 +23,14 @@ import {
 } from '../shared/model.js'
 
 /** Dialog kinds whose body is a selectable option list. */
-export const SELECTION_DIALOG_KINDS = Object.freeze(['new-session', 'move-session', 'move-group', 'icon', 'group-color'])
+export const SELECTION_DIALOG_KINDS = Object.freeze([
+  'new-session',
+  'move-session',
+  'move-group',
+  'icon',
+  'group-color',
+  'delete-group',
+])
 
 export const isSelectionDialog = (kind) => SELECTION_DIALOG_KINDS.includes(kind)
 
@@ -44,6 +54,40 @@ export const findGroupsFlat = (doc) => {
  */
 export const moveGroupOptions = (doc, groupId) =>
   findGroupsFlat(doc).filter((group) => group.id !== groupId && !isDescendant(doc, group.id, groupId))
+
+/**
+ * Destinations offered when deleting a non-empty group (0.2.9). Excludes the
+ * group itself and every recursive descendant (cycle), and — when the group has
+ * child groups — any destination whose depth cannot hold every direct child
+ * subtree (`destinationDepth + 1 + subtreeHeight(child) > MAX_DEPTH`). The
+ * implicit root/ungrouped option (`null`) is always available and is rendered
+ * by the component.
+ */
+export const deleteGroupOptions = (doc, groupId) => {
+  const group = findGroup(doc, groupId)
+  if (!group) return []
+  const childGroups = childrenOf(doc, groupId)
+  const maxChildHeight = childGroups.reduce(
+    (height, child) => Math.max(height, groupSubtreeHeight(doc, child.id)),
+    0
+  )
+  return findGroupsFlat(doc).filter((candidate) => {
+    if (candidate.id === groupId || isDescendant(doc, candidate.id, groupId)) return false
+    if (childGroups.length === 0) return true
+    return groupDepth(doc, candidate.id) + 1 + maxChildHeight <= MAX_DEPTH
+  })
+}
+
+/**
+ * 0.2.9 delete contract: a group with no direct sessions and no direct child
+ * groups deletes immediately (no dialog); otherwise the destination picker is
+ * required because sessions/children must be relocated first.
+ */
+export const deleteGroupNeedsDialog = (doc, groupId) => {
+  const group = findGroup(doc, groupId)
+  if (!group) return false
+  return group.sessionIds.length > 0 || childrenOf(doc, groupId).length > 0
+}
 
 /**
  * Initial highlight for a selection dialog. `move-*` dialogs store the current
@@ -99,6 +143,11 @@ export const selectionIsValid = (dialog, selection, doc) => {
       if (!findGroup(doc, selection)) return false
       return !isDescendant(doc, selection, dialog.groupId)
     }
+    case 'delete-group': {
+      if (selection === null) return true
+      if (typeof selection !== 'string' || selection === dialog.groupId) return false
+      return deleteGroupOptions(doc, dialog.groupId).some((group) => group.id === selection)
+    }
     default:
       return false
   }
@@ -117,6 +166,8 @@ export const dialogConfirmPayload = (dialog, selection) => {
     case 'move-session':
     case 'move-group':
       return { groupId: selection }
+    case 'delete-group':
+      return selection === undefined ? {} : { destinationId: selection }
     default:
       return {}
   }

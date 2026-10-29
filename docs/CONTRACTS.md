@@ -10,6 +10,7 @@
 - V1.1（0.2.6，2026-10-29）：**group color + selection-dialog patch**——`Group` 新增**可选** `color`（`blue|green|orange|red|purple|gray`，默认蓝；`DOC_VERSION` 不变，旧文档无 color 仍合法并按蓝显示/归一化）；新增 `setGroupColor` 与分组菜单「颜色」对话框。header 标题与 accent 图标统一 primary accent；行 hover 操作按钮 16→28px 命中区（glyph 仍 16px、gap 4px）；分组左侧引导线移到父级 caret 尖端（x=16、2px 宽、子内容 padding 4，缩进仍 20px/级）。icon / move-session / move-group / new-session / group-color 五类选择对话框统一「点击只高亮、footer Confirm/Cancel 才生效」；输入/删除/运行中归档对话框行为不变。`load`/`commit` 路由与记录文件路径不变；host 在 commit 校验后将缺省 color 归一化为 `blue` 落盘。
 - V1.1（0.2.7，2026-10-29）：**row layout + custom color + context-menu patch**——`Group` 新增**可选** `colorHex`（canonical lowercase `#rrggbb`，无 alpha；显示优先级 `colorHex > color`；`DOC_VERSION` 不变）。host commit 归一化合法短/大写 hex 并拒绝 alpha/非法值（422 `group-color-hex:<id>`）；load 时把合法非 canonical hex 归一化，非法值仍 `invalid-file` quarantine。新增 `setGroupColorHex`；`setGroupColor` 清除 `colorHex`。新建组默认 `hash` 图标（旧组保留原图标）。组行 DOM 顺序 caret→icon→name→actions→count；会话行 dot→title→workspace→actions→time；计数/更新时间右对齐（12/16，时间 min-width 40）；隐藏操作区 `opacity:0;pointer-events:none`。组/未归组 guide 统一 16/4、2px、上下内缩 2（组色 60%，未归组 label-tertiary 45%）；caret 组色 85%、icon 100%。组行/会话行支持 `contextmenu` 与 Shift+F10/ContextMenu，菜单按实测 rect 在 8px 视口内 clamp；Escape/外部/滚动/resize 关闭并回焦来源行。颜色对话框改为 3×2 32px 色板 + 固定 16px check 槽 + 自定义 `type=color`/hex 行（`#RGB`/`RGB` 展开，非法 Confirm disabled，11px aria-live 提示）。
 - V1.1（0.2.8，2026-10-29）：**official session status + empty drop box + drag-label hardening patch**——会话状态严格对齐官方 `dsh-client-ui-workspace`：6 个互斥标签（idle/running/waitingApproval/planReview/waitingAnswer/completed）+ 1 个可共存的 `subagentsRunning`（来自 host `projectionsBySession.subagentCatalog` 的运行中子会话计数）；优先级 pending > running > subagents-only > completed > idle，未知 `pendingInteraction.kind` 不产生状态。UI：idle/archived/blank 保留 16×20 空槽（不再画透明点）；running 使用官方 14px 双圆环 spinner（r=9.5/stroke 2/track 25%/arc dash 12 150/spin+dash 1.5s/reduced-motion 静态）；pending 与 completed 使用 10px 点（6px core，warn/success）；pending 时 trailing time 换成官方 compact 文案（待审批/计划待审/待回答）；所有显示状态带 visually-hidden 文本；时间字号 12→官方 10/16。空组/未归组空提示改为与 DropPlaceholder 同形的整宽 dashed 32px 盒（plus+12px 文案；drop-active 用 accent surface），组体已有 placeholder 时不再同时渲染。浮动拖拽 label 改为单实例控制器：复用 DOM 中既有 `session-groups-floating-label`、隐藏重复节点、缓存 text/visibility/position、rAF 合并（last-wins）、hide/dispose flush。无数据模型/Host 路由/存储变化。
+- V1.1（0.2.9，2026-10-29）：**delete-group destination patch**——分组菜单颜色项与颜色对话框标题改为「修改颜色」/「Change color」（与「更换图标」对齐；色板/自定义色行为不变）。删除分组：空叶分组（无直接会话、无直接子组）直接删除、不弹对话框，仅 toast；非空分组弹出「删除分组」对话框，必须先选择直接会话与直接子组的去向（未归组/根目录或某个分组）再确认。`deleteGroupTo(doc, groupId, destinationId)` 在单次克隆文档中把直接会话前插到目标、直接子组改 parentId（保留子树），校验 `cycle` / `depth-exceeded` / `parent-not-found`；`deleteGroup` 保留为默认父级的兼容包装。目的地列表排除自身与全部递归后代；有子组时还排除 `destinationDepth + 1 + subtreeHeight(child) > MAX_DEPTH` 的目标（根/未归组恒可用）。对话框遵循选择对话框契约（点击只高亮、Confirm 初始 disabled），footer 使用 danger 样式与「移动并删除」/「Move and delete」。无 `DOC_VERSION`/Host 路由/存储变化。
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
@@ -171,7 +172,9 @@ setGroupColor(doc, groupId, color): GroupDoc
 isKnownColor(color): boolean
 normalizeColor(color): GroupColor
 groupColor(group): GroupColor
+groupSubtreeHeight(doc, groupId): number
 deleteGroup(doc, groupId): GroupDoc
+deleteGroupTo(doc, groupId, destinationId: string | null): GroupDoc
 moveGroup(doc, groupId, parentId, index): GroupDoc
 assignSession(doc, sessionId, groupId, index): GroupDoc
 removeSession(doc, sessionId): GroupDoc
@@ -193,7 +196,7 @@ buildRenderTree(doc, sessionsById, workspaces, options): RenderNode[]
 }
 ```
 
-`deleteGroup`: children promoted to parent; sessions to parent head or ungrouped head; no archive/delete.
+`deleteGroup`: 0.2.9 compatibility wrapper — defaults to `deleteGroupTo(doc, groupId, group.parentId)`. `deleteGroupTo`: prepends the group's direct sessions to the destination (or ungrouped), reparents direct child groups to `destinationId` (or root), preserves their subtrees, then removes only the deleted group. Throws `group-not-found`, `parent-not-found`, `cycle` (self/recursive descendant) or `depth-exceeded` (a child subtree would exceed `MAX_DEPTH`); `null` root is always allowed. No archive/delete of sessions.
 
 `buildRenderTree`:
 
@@ -246,13 +249,13 @@ Visibility/status:
 
 ### 4.05 Selection dialogs（0.2.6）
 
-五类小选择对话框（`icon` / `move-session` / `move-group` / `new-session` / `group-color`）共用同一交互：
+五类小选择对话框（`icon` / `move-session` / `move-group` / `new-session` / `group-color`）共用同一交互；0.2.9 起 `delete-group` 也加入该契约：
 
-- 打开时按当前值/推断值预选（icon=当前图标；move-*=当前组/父级；new-session=`inferred` workspace；group-color=当前颜色或蓝），预选项必须有可见高亮（`aria-selected` 或 `aria-checked`）。
+- 打开时按当前值/推断值预选（icon=当前图标；move-*=当前组/父级；new-session=`inferred` workspace；group-color=当前颜色或蓝），预选项必须有可见高亮（`aria-selected` 或 `aria-checked`）。`delete-group` **不预选**：目的地必须由用户明确选择，Confirm 初始 disabled。
 - 点击选项只更新高亮，不关闭对话框、不写 doc/host；已选项 `data-selected="true"`。
-- footer 固定 Cancel/Confirm：Confirm 仅在存在有效选择时可用（无有效选择时 disabled），点击后走既有 `commitStrict`/host action；Cancel/Escape/点击 backdrop 关闭且不改变任何状态。
-- 输入类（new/rename）与 delete/archive-running 对话框保持原行为（输入 Enter 确认；delete/archive 的 Confirm 为 danger）。
-- 实现：纯函数 `src/client/dialog-selection.js`（初始选择/有效性/confirmation payload），组件只渲染；单测 `tests/client/dialog-selection.test.js`。
+- footer 固定 Cancel/Confirm：Confirm 仅在存在有效选择时可用（无有效选择时 disabled），点击后走既有 `commitStrict`/host action；Cancel/Escape/点击 backdrop 关闭且不改变任何状态。`delete-group` 的 Confirm 为 danger，文案「移动并删除」/「Move and delete」，payload 为 `{ destinationId: string | null }`。
+- 输入类（new/rename）与 archive-running 对话框保持原行为（输入 Enter 确认；archive-running 的 Confirm 为 danger）。空叶分组删除不进入对话框，直接单次提交并 toast。
+- 实现：纯函数 `src/client/dialog-selection.js`（初始选择/有效性/confirmation payload/删除目的地过滤），组件只渲染；单测 `tests/client/dialog-selection.test.js`。
 
 ### 4.1 Stable UI test ids（E2E 契约）
 
@@ -269,6 +272,8 @@ V1.1（0.2.6）additive 追加：`session-groups-dialog-options`（选择对话�
 V1.1（0.2.7）additive 追加：`session-groups-group-count`（组行最右计数）、`session-groups-session-time`（会话行最右相对更新时间，`title` 为绝对时间）、`session-groups-dialog-color-check`（每个色板 cell 固定的 16px check 槽，未选中 `visibility:hidden`/`data-empty=true`）、`session-groups-dialog-color-hex`（自定义 hex 文本输入，maxlength 7）、`session-groups-dialog-color-native`（`input[type=color]` 自定义 swatch）、`session-groups-dialog-color-hint`（11px `aria-live=polite` 提示/错误）。组 wrapper 新增内联 `--dsg-group-color` 与可选 `data-color-hex="#rrggbb"`；组行/会话行新增 `aria-haspopup="menu"`，右键/ContextMenu 菜单仍使用 `session-groups-menu`。
 
 V1.1（0.2.8）additive 追加：`session-groups-session-status`（会话行首位 16×20 状态槽；`data-state="idle|ongoing|warning|done"`、`data-status-kind="idle|running|pending|subagents|completed"`；idle/archived/blank 槽内为空，状态文本走 `.dsg-visually-hidden`）。`session-groups-session-time` 同时承载 pending 的 compact 文案（`data-compact-status="approval|plan-review|question"`），普通时间仍为 10/16。`session-groups-empty` 改为整宽 dashed drop box（`data-drop-active`、组上 `data-group-id`、未归组 `data-ungrouped="true"`；含 14px plus 与 12px label）。`session-groups-floating-label` 仍是唯一拖拽浮层节点；0.2.8 复用/隐藏重复节点，不新增第二个。
+
+V1.1（0.2.9）additive 追加：`session-groups-dialog-delete-body`（非空删除对话框的说明文本，含会话/子组计数）、`session-groups-dialog-delete-options`（目的地 listbox；选项仍复用 `session-groups-dialog-group`，空串 `data-group-id` = 未归组/根目录）。删除对话框的 Confirm 仍使用 `session-groups-dialog-confirm`（`data-variant="danger"`，文案「移动并删除」/「Move and delete」，未选择有效目的地时 disabled）；`dialog.groupColor`/`group.color` 文案改为「修改颜色」/「Change color」，testid 不变。
 
 | testid | 位置 | 附加属性 |
 |---|---|---|
@@ -302,7 +307,9 @@ V1.1（0.2.8）additive 追加：`session-groups-session-status`（会话行首�
 | `session-groups-error` | 错误 banner | — |
 | `session-groups-dialog` | 新建/改名/确认对话框根 | `data-kind` |
 | `session-groups-dialog-input` | 对话框输入 | — |
-| `session-groups-dialog-confirm` | 对话框确认 | — |
+| `session-groups-dialog-confirm` | 对话框确认 | 删除分组：`data-variant="danger"`，文案「移动并删除」 |
+| `session-groups-dialog-delete-body` | 非空删除对话框说明（0.2.9） | 含会话/直接子组计数 |
+| `session-groups-dialog-delete-options` | 删除目的地列表（0.2.9，`role=listbox`；选项复用 `session-groups-dialog-group`） | 空串 `data-group-id` = 未归组/根目录 |
 | `session-groups-rail` / `session-groups-rail-expand` | 56px rail / 展开 | — |
 | `session-groups-resize-handle` | 左栏右边缘宽度把手（仅 `wide` 且可覆盖） | `role="separator"`, `aria-valuemin/max/now` |
 | `session-groups-search` | header 第二行搜索输入（由搜索图标展开，非始终可见） | `role="combobox"`, `aria-expanded`, `aria-controls` |

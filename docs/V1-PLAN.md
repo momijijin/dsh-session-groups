@@ -27,7 +27,7 @@
 | D11 | 竖线 | 跟组内容高度（含子组），不是撑满视口剩余高度；空组 24px stub。 |
 | D12 | 搜索 | **V1.1 已实现**标题/工作区/组路径下拉搜索（归档置灰、选中展开祖先并滚动高亮）；全文搜索仍 P2。 |
 
-## 2.1 V1.1 增补（0.2.0，2026-10-28；0.2.1 排版 patch；0.2.2 UI layout patch；0.2.3 虚拟化 patch；0.2.4 占位/乐观 patch；0.2.5 图标/诊断 patch；0.2.6 颜色/选择对话框 patch；0.2.7 行 meta/自定义色/右键菜单 patch；0.2.8 官方状态/空组 drop box/拖拽 label patch）
+## 2.1 V1.1 增补（0.2.0，2026-10-28；0.2.1 排版 patch；0.2.2 UI layout patch；0.2.3 虚拟化 patch；0.2.4 占位/乐观 patch；0.2.5 图标/诊断 patch；0.2.6 颜色/选择对话框 patch；0.2.7 行 meta/自定义色/右键菜单 patch；0.2.8 官方状态/空组 drop box/拖拽 label patch；0.2.9 删除目的地/空叶删除/颜色文案 patch）
 
 | # | 变更 | 结论 |
 |---|---|---|
@@ -42,6 +42,7 @@
 | V1.1-9 | 分组颜色 + 选择对话框（0.2.6） | `Group` 新增**可选** `color`（`blue/green/orange/red/purple/gray`，默认 `blue`；旧文档缺省按蓝显示，commit 归一化蓝落盘；`DOC_VERSION` 不变）+ `setGroupColor` + 分组菜单「颜色」色板对话框；组行图标/子组引导线使用所选颜色。header 标题与 accent 同 primary accent；行 hover 操作按钮 16→28px（glyph 16/gap 4）；组引导线移到父 caret 尖端（x=16、2px、content padding 4、缩进仍 20/级）。icon/move-session/move-group/new-session/group-color 五类对话框统一「点击只高亮 + footer Confirm/Cancel」；输入/删除/归档对话框不变。 |
 | V1.1-10 | 行 meta + 自定义色 + 右键菜单（0.2.7） | 组行 caret→icon→name→actions→count、会话行 dot→title→workspace→actions→time；count/time 12/16、tabular、右对齐（time min-width 40、绝对时间 title、缺失省略）；隐藏 actions `pointer-events:none`，hover/focus 才可点；264px 容器查询隐藏 workspace badge。组/未归组 guide 统一 16/4/2（组色 60%，未归组 45%，上下内缩 2）；caret 85%/icon 100%。`colorHex` 可选、canonical lowercase、显示优先于 `color`；host commit/load 归一化合法 hex、非法 quarantine；组 wrapper 内联 `--dsg-group-color`；颜色对话框 3×2 32px + 固定 check 槽 + native/hex 自定义行。右键/Shift+F10 菜单按实测 rect clamp，关闭回焦来源行；新建组默认 hash 图标。 |
 | V1.1-11 | 官方状态 + 空组 drop box + 拖拽 label（0.2.8） | 会话状态严格对齐官方：6 个互斥标签（idle/running/waitingApproval/planReview/waitingAnswer/completed）+ 可共存的 `subagentsRunning`；优先级 pending > running > subagents-only > completed > idle；未知 pending kind 忽略；subagent 计数取 host `projectionsBySession.subagentCatalog`（status.running 优先，row.running 回落，无数据省略）。UI：idle/archived/blank 为 16×20 空槽（无透明点）；running 为官方 14px 双圆 spinner；pending/completed 为 10px 点（6px core/warn+success）；pending 尾格换 compact 文案；所有显示状态带 visually-hidden 文本；时间 10/16。空组/未归组空提示为整宽 dashed 32px 盒（14px plus + 12px 文案；drop-active accent；body placeholder 存在时不渲染）。浮动拖拽 label 改为单实例控制器（复用 DOM/隐藏重复/缓存 text+visibility+rAF last-wins/hide+dispose flush）。 |
+| V1.1-12 | 删除目的地 + 空叶删除 + 颜色文案（0.2.9） | 分组菜单/颜色对话框标题统一「修改颜色」/「Change color」，色板行为不变。空叶分组（无直接会话/子组）直接删除，不弹框、仅 toast；非空分组先选直接会话与直接子组的去向（未归组/根或分组）再删除，Confirm danger「移动并删除」且无有效选择时 disabled。`deleteGroupTo` 单文档内直接会话前插目标、直接子组改 parentId 保留子树后删组；排除自身/全部递归后代；有子组时按 `destinationDepth + 1 + subtreeHeight(child) > MAX_DEPTH` 排除过深目标（根恒可用）；`deleteGroup` 保留父级默认包装。 |
 
 V1.1 明确不做：图标上传、撤销、置顶徽标、折叠组聚合计数、多窗口实时合并、全文搜索、跨设备同步、宿主布局包修改。
 
@@ -242,7 +243,7 @@ V1.1 明确不做：图标上传、撤销、置顶徽标、折叠组聚合计数
 8. 一键切回官方工作区视图，官方功能原样。
 9. 审计：会话标题、工作区归属、`workspace.json`、session 日志未因分组操作改变；只写 `dsh-session-groups.json`。
 
-V1.1 加验（21 步 E2E，0.2.8）：
+V1.1 加验（22 步 E2E，0.2.9）：
 
 10. 左栏宽度 264–760：官方宽度进入前记录、切回后一致；reload/rail/双击复位；264px 头部无水平溢出且单个 footer 按钮标签可见、rail 28px 图标。
 11. 组拖：同级排序/跨父改父级/空组与 0 子组槽/根末尾/自身后代无效/快速双拖/菜单上移下移/子树跟随；no-op 不涨 revision。
@@ -255,6 +256,7 @@ V1.1 加验（21 步 E2E，0.2.8）：
 18. 分组颜色/选择对话框（0.2.6）：分组菜单「颜色」→ 6 色板、当前色高亮；点击只高亮（不关框/不写记录），Cancel 不变，Confirm 后行 `data-color`/图标颜色/记录 color 一致；icon/move-session/new-session 对话框同样先高亮后 Confirm，Escape/backdrop 关闭不变；header 标题与 accent 同 primary accent；行操作 28×28；组引导线在父 caret 尖端（2px）。
 19. 行 meta/自定义色/右键菜单（0.2.7）：组 count/会话 time 位置与字号、隐藏 actions 命中区、hover 显示；未归组/组 guide 颜色与 16/4/2 几何；caret 85%/icon 100%；颜色对话框 2 列 32px、固定 check 槽、自定义 `#0f0`→`#00ff00`、invalid disabled、预设清 custom；右键/Shift+F10 位置 +2/row bottom+8、clamp、关闭回焦、拖拽抑制。
 20. 官方状态/空组 drop box/拖拽 label（0.2.8）：16×20 状态槽（idle 空、archived/blank 空、spinner 14px 双圆、dot 10px、hidden 状态文本、时间 10/16）；空组整宽 dashed 32px 盒 + 14px plus（append 占位时隐藏、group-before 时 accent）；264px 无溢出；拖拽中 `session-groups-floating-label` 始终单节点/单可见、dragend 后隐藏。
+21. 删除目的地（0.2.9）：颜色菜单/对话框「修改颜色」；空叶分组菜单删除无对话框、revision +1、toast；非空分组删除对话框显示 2 会话/1 子组、Confirm 初始 disabled、目的地列表含根/目的地/目的地子组且排除目标/子组/孙组；点击只高亮、Escape 不改记录；Confirm 后 revision 恰好 +1、直接会话前插目的地、子组/孙组 parentId 正确、组数 −1、会话集合不变。
 
 通过标准：V1 9 步 + V1.1 3 组全过；20 次拖拽误放 ≤1；0 次丢会话/重复行；0 次标题被分组操作改写；坏文件/路由失败不白屏。
 
@@ -288,3 +290,5 @@ V1.1 加验（21 步 E2E，0.2.8）：
 - 不做会话删除。
 - 不做跨设备同步。
 - 不做分组颜色/自定义图标上传（V1 用插件自带 8 个 inline SVG；颜色/上传 P2）。
+
+

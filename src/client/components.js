@@ -23,6 +23,8 @@ import {
   currentGroupIdOf,
   currentIconOf,
   currentParentOf,
+  deleteGroupNeedsDialog,
+  deleteGroupOptions,
   dialogConfirmPayload,
   findGroupsFlat,
   initialDialogSelection,
@@ -1593,7 +1595,7 @@ const MenuPopover = ({ store, handlers }) => {
  * (`aria-selected`); the shared dialog footer owns the actual move, so a stray
  * click can never move a session or group by itself.
  */
-const GroupListPicker = ({ options, selection, onSelect }) => {
+const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaLabel, testId = 'session-groups-dialog-options' }) => {
   const t = rt()?.t
   const option = (key, value, label, depth) =>
     h(
@@ -1623,10 +1625,10 @@ const GroupListPicker = ({ options, selection, onSelect }) => {
     {
       class: 'dsg-menu dsg-dialog-list',
       role: 'listbox',
-      'data-testid': 'session-groups-dialog-options',
-      'aria-label': t('dialog.moveTo'),
+      'data-testid': testId,
+      'aria-label': ariaLabel ?? t('dialog.moveTo'),
     },
-    option('ungrouped', null, t('ungrouped.title'), 0),
+    option('ungrouped', null, rootLabel ?? t('ungrouped.title'), 0),
     ...options.map((group) => option(group.id, group.id, group.name, group.depth + 1))
   )
 }
@@ -1658,7 +1660,27 @@ const DialogHost = ({ store, props }) => {
   const title = t(dialog.titleKey)
   const optionCheck = () => h('span', { class: 'dsg-dialog-option-check', 'aria-hidden': 'true' }, renderGlyph(h, 'check', 16))
   const bodyNodes = []
-  if (dialog.kind === 'delete-group') bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.deleteBody', { n: dialog.sessionCount ?? 0 })))
+  if (dialog.kind === 'delete-group') {
+    const options = deleteGroupOptions(store.doc, dialog.groupId)
+    bodyNodes.push(
+      h(
+        'div',
+        { class: 'dsg-dialog-body', 'data-testid': 'session-groups-dialog-delete-body' },
+        t('dialog.deleteMoveBody', { sessions: dialog.sessionCount ?? 0, groups: dialog.childCount ?? 0 })
+      )
+    )
+    bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.deleteDestination')))
+    bodyNodes.push(
+      h(GroupListPicker, {
+        options,
+        selection,
+        onSelect: setSelection,
+        rootLabel: t('dialog.rootDestination'),
+        ariaLabel: t('dialog.deleteDestination'),
+        testId: 'session-groups-dialog-delete-options',
+      })
+    )
+  }
   if (dialog.kind === 'archive-running') bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.archiveRunningBody', { families: formatActivity(dialog.activity) })))
   if (dialog.kind === 'new-session') {
     if ((dialog.choices ?? []).length === 0) bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.noWorkspace')))
@@ -1902,7 +1924,7 @@ const DialogHost = ({ store, props }) => {
             onClick: () =>
               confirm(needsInput ? { value: value.trim() } : selectable ? dialogConfirmPayload(dialog, selection) : {}),
           },
-          danger ? t('dialog.stopAndArchive') : t('dialog.confirm')
+          danger ? (dialog.kind === 'delete-group' ? t('dialog.moveAndDelete') : t('dialog.stopAndArchive')) : t('dialog.confirm')
         )
       )
     )
@@ -2583,8 +2605,18 @@ export const GroupsView = (props) => {
       rt()?.openDialog({ kind: 'move-group', groupId, titleKey: 'dialog.moveTo', currentId: currentParentOf(store.doc, groupId) }),
     openDeleteGroup: (groupId) => {
       const group = findGroup(store.doc, groupId)
-      const sessionCount = group ? group.sessionIds.length : 0
-      rt()?.openDialog({ kind: 'delete-group', groupId, titleKey: 'dialog.deleteGroup', sessionCount })
+      if (!group) return undefined
+      // 0.2.9: an empty leaf deletes immediately (no dialog, toast only); any
+      // direct sessions or child groups require an explicit destination.
+      if (!deleteGroupNeedsDialog(store.doc, groupId)) return rt()?.deleteGroupDirect?.(groupId)
+      rt()?.openDialog({
+        kind: 'delete-group',
+        groupId,
+        titleKey: 'dialog.deleteGroup',
+        sessionCount: group.sessionIds.length,
+        childCount: childrenOf(store.doc, groupId).length,
+      })
+      return undefined
     },
     openSessionMenu: (event, sessionNode) => {
       const row = sessionNode.session

@@ -21,6 +21,8 @@ import {
   currentGroupIdOf,
   currentIconOf,
   currentParentOf,
+  deleteGroupNeedsDialog,
+  deleteGroupOptions,
   dialogConfirmPayload,
   findGroupsFlat,
   initialDialogSelection,
@@ -44,10 +46,17 @@ const fixture = () => {
   return { doc, a, b, c, bChild }
 }
 
-test('selection dialog kinds are exactly the four small pickers plus group-color', () => {
-  assert.deepEqual([...SELECTION_DIALOG_KINDS], ['new-session', 'move-session', 'move-group', 'icon', 'group-color'])
+test('selection dialog kinds are exactly the small pickers plus group-color and delete-group', () => {
+  assert.deepEqual([...SELECTION_DIALOG_KINDS], [
+    'new-session',
+    'move-session',
+    'move-group',
+    'icon',
+    'group-color',
+    'delete-group',
+  ])
   for (const kind of SELECTION_DIALOG_KINDS) assert.equal(isSelectionDialog(kind), true)
-  for (const kind of ['new-group', 'rename-group', 'rename-session', 'delete-group', 'archive-running']) {
+  for (const kind of ['new-group', 'rename-group', 'rename-session', 'archive-running']) {
     assert.equal(isSelectionDialog(kind), false)
   }
 })
@@ -116,6 +125,58 @@ test('move options: flat list preserves sibling order/depth; move-group excludes
   assert.deepEqual(moveGroupOptions(doc, a).map((group) => group.id), [c], 'self and descendants are not offered')
   assert.deepEqual(moveGroupOptions(doc, b).map((group) => group.id), [a, c], 'parent stays a valid target')
   assert.equal(moveGroupOptions(doc, c).some((group) => group.id === bChild), true)
+})
+
+test('delete options exclude self and the recursive subtree, and keep root implicit', () => {
+  const { doc, a, b, c, bChild } = fixture()
+  assert.deepEqual(deleteGroupOptions(doc, a).map((group) => group.id), [c])
+  assert.deepEqual(deleteGroupOptions(doc, b).map((group) => group.id), [a, c], 'the parent stays a valid destination')
+  assert.deepEqual(deleteGroupOptions(doc, c).map((group) => group.id), [a, b, bChild])
+  assert.deepEqual(deleteGroupOptions(doc, 'missing'), [])
+})
+
+test('delete options exclude destinations too shallow for a child subtree (root stays allowed)', () => {
+  let deep = createGroup(emptyDoc(), { name: 'T' })
+  const target = deep.groups[0].id
+  let parentId = target
+  const chain = []
+  for (let i = 1; i <= 7; i += 1) {
+    deep = createGroup(deep, { name: `C${i}`, parentId })
+    parentId = deep.groups.find((group) => group.name === `C${i}`).id
+    chain.push(parentId)
+  }
+  deep = createGroup(deep, { name: 'D1' })
+  const d1 = deep.groups.find((group) => group.name === 'D1').id
+  deep = createGroup(deep, { name: 'D2', parentId: d1 })
+  const d2 = deep.groups.find((group) => group.name === 'D2').id
+  const options = deleteGroupOptions(deep, target)
+  assert.deepEqual(options.map((group) => group.id), [d1], 'depth-2 D2 is excluded, depth-1 D1 fits')
+  for (const id of [target, ...chain, d2]) {
+    assert.equal(options.some((group) => group.id === id), false, `${id} must not be offered`)
+  }
+})
+
+test('delete dialog selection: no default, root/valid destinations confirm, invalid ones cannot', () => {
+  const { doc, a, b, c, bChild } = fixture()
+  assert.equal(initialDialogSelection({ kind: 'delete-group', groupId: a }, doc), undefined)
+  assert.equal(selectionIsValid({ kind: 'delete-group', groupId: a }, null, doc), true, 'root/ungrouped is valid')
+  assert.equal(selectionIsValid({ kind: 'delete-group', groupId: a }, c, doc), true)
+  assert.equal(selectionIsValid({ kind: 'delete-group', groupId: a }, a, doc), false, 'self is not a destination')
+  assert.equal(selectionIsValid({ kind: 'delete-group', groupId: a }, b, doc), false, 'child is not a destination')
+  assert.equal(selectionIsValid({ kind: 'delete-group', groupId: a }, bChild, doc), false, 'grandchild is not a destination')
+  assert.equal(selectionIsValid({ kind: 'delete-group', groupId: a }, 'missing', doc), false)
+  assert.equal(selectionIsValid({ kind: 'delete-group', groupId: a }, undefined, doc), false)
+  assert.deepEqual(dialogConfirmPayload({ kind: 'delete-group' }, null), { destinationId: null })
+  assert.deepEqual(dialogConfirmPayload({ kind: 'delete-group' }, c), { destinationId: c })
+  assert.deepEqual(dialogConfirmPayload({ kind: 'delete-group' }, undefined), {})
+})
+
+test('delete dialog is only required when the group has sessions or direct child groups', () => {
+  const { doc, a, b, c } = fixture()
+  assert.equal(deleteGroupNeedsDialog(doc, a), true, 'a direct session requires a destination')
+  assert.equal(deleteGroupNeedsDialog(doc, b), true, 'a direct child group requires a destination')
+  assert.equal(deleteGroupNeedsDialog(doc, c), false, 'empty leaf deletes directly')
+  assert.equal(deleteGroupNeedsDialog(doc, 'missing'), false)
 })
 
 test('custom colorHex selection: current custom wins, validity and payload are distinct', () => {

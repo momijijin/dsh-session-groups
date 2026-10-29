@@ -118,10 +118,11 @@ export const isDescendant = (doc, groupId, maybeAncestorId) => {
   return false
 }
 
-const subtreeHeight = (doc, groupId) => {
+/** Height of the group's subtree below it (0 for a leaf; child chain adds 1 each). */
+export const groupSubtreeHeight = (doc, groupId) => {
   const children = childrenOf(doc, groupId)
   if (children.length === 0) return 0
-  return 1 + Math.max(...children.map((child) => subtreeHeight(doc, child.id)))
+  return 1 + Math.max(...children.map((child) => groupSubtreeHeight(doc, child.id)))
 }
 
 const insertGroupAt = (doc, group, index) => {
@@ -203,27 +204,60 @@ export const moveGroup = (doc, groupId, parentId, index) => {
   if (parentId === groupId || isDescendant(next, parentId, groupId)) throw new Error('cycle')
   if (parentId !== null && !findGroup(next, parentId)) throw new Error('parent-not-found')
   const parentDepth = parentId === null ? 0 : groupDepth(next, parentId)
-  if (parentDepth + 1 + subtreeHeight(next, groupId) > MAX_DEPTH) throw new Error('depth-exceeded')
+  if (parentDepth + 1 + groupSubtreeHeight(next, groupId) > MAX_DEPTH) throw new Error('depth-exceeded')
   next.groups.splice(findGroupIndex(next, groupId), 1)
   group.parentId = parentId
   insertGroupAt(next, group, index)
   return next
 }
 
-export const deleteGroup = (doc, groupId) => {
+/**
+ * Delete a group after relocating its direct sessions and direct child groups
+ * to `destinationId` (`null` = ungrouped/root). Child groups keep their whole
+ * subtree; only their `parentId` changes. Sessions are prepended to the chosen
+ * destination (0.2.4 drop semantics / previous delete-group behavior) and the
+ * mutation is one cloned document (single atomic commit).
+ *
+ * Throws `group-not-found` for an unknown group, `parent-not-found` for an
+ * unknown destination, `cycle` for the group itself or any recursive
+ * descendant, and `depth-exceeded` when a child subtree would not fit below the
+ * destination. The root destination is always allowed.
+ */
+export const deleteGroupTo = (doc, groupId, destinationId) => {
   const next = cloneDoc(doc)
   const group = findGroup(next, groupId)
   if (!group) throw new Error('group-not-found')
-  const parent = group.parentId === null ? null : findGroup(next, group.parentId)
-  next.groups.splice(findGroupIndex(next, groupId), 1)
-  for (const child of next.groups) {
-    if (child.parentId === groupId) child.parentId = group.parentId
+  const destination = destinationId === null ? null : findGroup(next, destinationId)
+  if (destinationId !== null && !destination) throw new Error('parent-not-found')
+  if (destinationId === groupId || (destinationId !== null && isDescendant(next, destinationId, groupId))) {
+    throw new Error('cycle')
   }
-  if (group.sessionIds.length > 0) {
-    if (parent) parent.sessionIds = [...group.sessionIds, ...parent.sessionIds]
-    else next.ungrouped = [...group.sessionIds, ...next.ungrouped]
+  const childGroups = childrenOf(next, groupId)
+  if (destination !== null && childGroups.length > 0) {
+    const destinationDepth = groupDepth(next, destination.id)
+    for (const child of childGroups) {
+      if (destinationDepth + 1 + groupSubtreeHeight(next, child.id) > MAX_DEPTH) {
+        throw new Error('depth-exceeded')
+      }
+    }
+  }
+  next.groups.splice(findGroupIndex(next, groupId), 1)
+  if (destination === null) {
+    next.ungrouped = [...group.sessionIds, ...next.ungrouped]
+  } else {
+    destination.sessionIds = [...group.sessionIds, ...destination.sessionIds]
+  }
+  for (const child of next.groups) {
+    if (child.parentId === groupId) child.parentId = destinationId
   }
   return next
+}
+
+/** Back-compat wrapper: delete into the group's current parent (0.2.8 behavior). */
+export const deleteGroup = (doc, groupId) => {
+  const group = findGroup(doc, groupId)
+  if (!group) throw new Error('group-not-found')
+  return deleteGroupTo(doc, groupId, group.parentId)
 }
 
 const removeSessionEverywhere = (doc, sessionId) => {

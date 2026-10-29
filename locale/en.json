@@ -20,7 +20,7 @@
   "group.moveUp": "Move up",
   "group.moveDown": "Move down",
   "group.icon": "Change icon",
-  "group.color": "Color",
+  "group.color": "Change color",
   "group.sessionCount": "{n} sessions",
   "drag.groupBefore": "Drop before “{name}”",
   "drag.groupAfter": "Drop after “{name}”",
@@ -64,11 +64,14 @@
   "dialog.moveTo": "Move to group",
   "dialog.newSession": "New session in group",
   "dialog.newSessionWorkspace": "Choose a workspace",
-  "dialog.groupColor": "Group color",
+  "dialog.groupColor": "Change color",
   "dialog.namePlaceholder": "Group name",
   "dialog.confirm": "Confirm",
   "dialog.cancel": "Cancel",
-  "dialog.deleteBody": "Subgroups move up one level and {n} sessions move to the parent level or Ungrouped; no session is deleted or archived.",
+  "dialog.deleteMoveBody": "This group contains {sessions} sessions and {groups} subgroups. Choose where to move them before deleting the group; no session is deleted or archived.",
+  "dialog.deleteDestination": "Destination",
+  "dialog.rootDestination": "Ungrouped (root)",
+  "dialog.moveAndDelete": "Move and delete",
   "dialog.archiveRunning": "Session is running",
   "dialog.archiveRunningBody": "This session has activity in progress ({families}). Archiving stops that activity.",
   "dialog.stopAndArchive": "Stop and archive",
@@ -98,6 +101,7 @@
   "toast.moved": "Moved",
   "toast.groupDeleted": "Group deleted",
   "toast.dropFailed": "Move failed",
+  "toast.deleteFailed": "Delete failed",
   "error.title": "The groups view failed",
   "error.body": "Fell back to the flat session list — switch back to workspaces or retry.",
   "error.retry": "Retry",
@@ -133,3 +137,4 @@
   "time.days": "{n} d ago",
   "time.years": "{n} yr ago"
 }
+

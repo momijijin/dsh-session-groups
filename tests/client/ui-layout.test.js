@@ -229,10 +229,10 @@ test('0.2.6 group palette: six ids, color-token rules and a menu color dialog', 
     assert.equal(typeof zh[`color.${color}`], 'string', `zh color.${color}`)
     assert.equal(typeof en[`color.${color}`], 'string', `en color.${color}`)
   }
-  assert.equal(zh['group.color'], '颜色')
-  assert.equal(en['group.color'], 'Color')
-  assert.equal(zh['dialog.groupColor'], '分组颜色')
-  assert.equal(en['dialog.groupColor'], 'Group color')
+  assert.equal(zh['group.color'], '修改颜色')
+  assert.equal(en['group.color'], 'Change color')
+  assert.equal(zh['dialog.groupColor'], '修改颜色')
+  assert.equal(en['dialog.groupColor'], 'Change color')
   // Color rules drive the icon and the child guide line.
   assert.match(block('.dsg-group-icon {'), /color:\s*var\(--dsg-group-color/)
   // Menu item opens the color dialog; the dialog renders palette swatches.
@@ -441,4 +441,36 @@ test('0.2.7 right-click/keyboard menu wiring and clamped anchors', () => {
   const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
   assert.match(plugin, /'scroll', closeMenuOnViewportChange, true/)
   assert.match(plugin, /'resize', closeMenuOnViewportChange/)
+})
+
+
+test('0.2.9 delete group: destination picker, empty direct path and move-and-delete footer', () => {
+  // Group menu keeps the delete entry and the color entry now says 修改颜色/Change color.
+  assert.match(components, /t\('group\.delete'\)/)
+  assert.match(components, /t\('group\.color'\)/)
+  assert.equal(zh['group.color'], '修改颜色')
+  assert.equal(en['group.color'], 'Change color')
+  // Non-empty delete dialog: 删除分组 title, counts, destination list and root option.
+  assert.match(components, /kind: 'delete-group'/)
+  assert.match(components, /titleKey: 'dialog\.deleteGroup'/)
+  assert.match(components, /t\('dialog\.deleteMoveBody'/)
+  assert.match(components, /session-groups-dialog-delete-body/)
+  assert.match(components, /deleteGroupOptions\(store\.doc, dialog\.groupId\)/)
+  assert.match(components, /rootLabel: t\('dialog\.rootDestination'\)/)
+  assert.match(components, /session-groups-dialog-delete-options/)
+  // Footer is danger-styled and says 移动并删除 / Move and delete only for this dialog.
+  assert.match(components, /dialog\.kind === 'delete-group' \? t\('dialog\.moveAndDelete'\)/)
+  assert.equal(zh['dialog.moveAndDelete'], '移动并删除')
+  assert.equal(en['dialog.moveAndDelete'], 'Move and delete')
+  assert.match(components, /data-variant': danger \? 'danger' : 'primary'/)
+  // Empty leaf: no dialog, direct runtime commit + toast.
+  assert.match(components, /deleteGroupNeedsDialog\(store\.doc, groupId\)/)
+  assert.match(components, /deleteGroupDirect\?\.\(groupId\)/)
+  const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
+  assert.match(plugin, /const deleteGroupDirect = async \(groupId\)/)
+  assert.match(plugin, /'toast\.groupDeleted'/)
+  assert.match(plugin, /deleteGroupTo\(latest, dialog\.groupId, payload\.destinationId \?\? null\)/)
+  assert.match(plugin, /deleteGroupDirect,/)
+  // A destination is mandatory before Confirm: no initial highlight for delete.
+  assert.equal(components.includes("t('dialog.deleteBody'"), false)
 })

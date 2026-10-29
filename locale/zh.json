@@ -20,7 +20,7 @@
   "group.moveUp": "上移",
   "group.moveDown": "下移",
   "group.icon": "更换图标",
-  "group.color": "颜色",
+  "group.color": "修改颜色",
   "group.sessionCount": "{n} 个会话",
   "drag.groupBefore": "放入『{name}』前",
   "drag.groupAfter": "放入『{name}』后",
@@ -64,11 +64,14 @@
   "dialog.moveTo": "移动到分组",
   "dialog.newSession": "在分组内新建会话",
   "dialog.newSessionWorkspace": "选择工作区",
-  "dialog.groupColor": "分组颜色",
+  "dialog.groupColor": "修改颜色",
   "dialog.namePlaceholder": "分组名称",
   "dialog.confirm": "确定",
   "dialog.cancel": "取消",
-  "dialog.deleteBody": "子分组将提升到上一级，{n} 个会话移动到上一级或未归组；不会删除或归档任何会话。",
+  "dialog.deleteMoveBody": "该分组包含 {sessions} 个会话、{groups} 个子分组。请选择它们的移动目的地后再删除分组；不会删除或归档任何会话。",
+  "dialog.deleteDestination": "移动目的地",
+  "dialog.rootDestination": "未归组（根目录）",
+  "dialog.moveAndDelete": "移动并删除",
   "dialog.archiveRunning": "会话正在运行",
   "dialog.archiveRunningBody": "该会话有正在进行的活动（{families}）。仍然归档会停止这些活动。",
   "dialog.stopAndArchive": "停止并归档",
@@ -98,6 +101,7 @@
   "toast.moved": "已移动",
   "toast.groupDeleted": "分组已删除",
   "toast.dropFailed": "移动失败",
+  "toast.deleteFailed": "删除失败",
   "error.title": "分组视图出错了",
   "error.body": "已降级为扁平会话列表，可切回工作区视图或重试。",
   "error.retry": "重试",
@@ -133,3 +137,4 @@
   "time.days": "{n} 天前",
   "time.years": "{n} 年前"
 }
+
