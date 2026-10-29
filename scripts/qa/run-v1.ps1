@@ -7,7 +7,7 @@
 #   2. integration    node --test tests/integration  (H1-H10; auto-skips until src/host lands)
 #   3. client build   `node scripts/build-client.mjs` when lib/client.js is missing (esbuild installed)
 #   4. smoke          HTTP + headless-browser console check against 4402
-#   5. e2e            e2e/groups.spec.mjs (17-step acceptance; zero-dependency CDP runner)
+#   5. e2e            e2e/groups.spec.mjs (19-step acceptance; zero-dependency CDP runner)
 #   6. audit          only dsh-session-groups.json may change; real home fingerprint unchanged
 #   7. teardown       stop server + delete .spike-homes/qa (unless -KeepProfile)
 #
@@ -166,7 +166,7 @@ try {
         # -- E2E -----------------------------------------------------------
         if (-not $SkipE2E) {
             Write-Host ''
-            Write-Host '>>>> e2e (17-step acceptance, zero-dependency CDP)'
+            Write-Host '>>>> e2e (19-step acceptance, zero-dependency CDP)'
             $started = Get-Date
             $e2eLog = Join-Path $evidence "e2e-$timestamp.log"
             $e2eScript = Join-Path $repoRoot 'e2e/groups.spec.mjs'

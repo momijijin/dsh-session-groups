@@ -20,6 +20,7 @@
   "group.moveUp": "上移",
   "group.moveDown": "下移",
   "group.icon": "更换图标",
+  "group.color": "颜色",
   "group.sessionCount": "{n} 个会话",
   "drag.groupBefore": "放入『{name}』前",
   "drag.groupAfter": "放入『{name}』后",
@@ -58,6 +59,7 @@
   "dialog.moveTo": "移动到分组",
   "dialog.newSession": "在分组内新建会话",
   "dialog.newSessionWorkspace": "选择工作区",
+  "dialog.groupColor": "分组颜色",
   "dialog.namePlaceholder": "分组名称",
   "dialog.confirm": "确定",
   "dialog.cancel": "取消",
@@ -100,5 +102,11 @@
   "search.results": "搜索结果",
   "search.empty": "没有匹配的会话",
   "search.close": "关闭搜索",
-  "search.archivedDisabled": "已归档会话不可打开"
+  "search.archivedDisabled": "已归档会话不可打开",
+  "color.blue": "蓝色",
+  "color.green": "绿色",
+  "color.orange": "橙色",
+  "color.red": "红色",
+  "color.purple": "紫色",
+  "color.gray": "灰色"
 }

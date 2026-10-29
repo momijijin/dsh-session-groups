@@ -182,7 +182,7 @@ export const validDoc = (overrides = {}) => ({
 export const validDocWithGroup = () => ({
   version: 1,
   revision: 0,
-  groups: [{ id: 'g-0123456789ab', name: '施工中', icon: 'folder', parentId: null, sessionIds: ['s1'] }],
+  groups: [{ id: 'g-0123456789ab', name: '施工中', icon: 'folder', color: 'blue', parentId: null, sessionIds: ['s1'] }],
   ungrouped: ['s2'],
 });
 

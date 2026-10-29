@@ -146,6 +146,52 @@ test('POST commit: 200 on success, then 409 conflict with the current doc on a s
   assert.equal(stale.json.doc.revision, 1)
 })
 
+test('POST commit round-trips palette colors and normalizes legacy groups to blue', async (t) => {
+  const mounted = await mountRoutes({ connection: cookieConnection() })
+  t.after(() => mounted.cleanup())
+
+  const doc = sampleDoc()
+  doc.groups[0] = { ...doc.groups[0], color: 'purple' }
+  const first = await mounted.call(
+    COMMIT_PATH,
+    makeRequest({ method: 'POST', headers: allowedHeaders, body: commitBody(0, doc) }),
+  )
+  assert.equal(first.res.statusCode, 200)
+  assert.equal(first.json.ok, true)
+  assert.equal(first.json.doc.groups[0].color, 'purple', 'chosen palette id persists')
+  assert.equal(first.json.doc.groups[1].color, 'blue', 'missing color normalizes to the blue default on write')
+
+  const loaded = await mounted.call(LOAD_PATH, makeRequest({ headers: { cookie: 'token=ok' } }))
+  assert.equal(loaded.res.statusCode, 200)
+  assert.equal(loaded.json.doc.groups[0].color, 'purple')
+  assert.equal(loaded.json.doc.groups[1].color, 'blue')
+
+  // A legacy document on disk (no color) still loads; display falls back to blue.
+  const legacy = sampleDoc()
+  delete legacy.groups[0].color
+  const legacyWrite = await mounted.call(
+    COMMIT_PATH,
+    makeRequest({ method: 'POST', headers: allowedHeaders, body: commitBody(1, legacy) }),
+  )
+  assert.equal(legacyWrite.res.statusCode, 200)
+  assert.equal(legacyWrite.json.doc.groups[0].color, 'blue')
+})
+
+test('POST commit rejects unknown palette ids with 422 group-color', async (t) => {
+  const mounted = await mountRoutes({ connection: cookieConnection() })
+  t.after(() => mounted.cleanup())
+
+  const doc = sampleDoc()
+  doc.groups[0] = { ...doc.groups[0], color: 'pink' }
+  const { res, json } = await mounted.call(
+    COMMIT_PATH,
+    makeRequest({ method: 'POST', headers: allowedHeaders, body: commitBody(0, doc) }),
+  )
+  assert.equal(res.statusCode, 422)
+  assert.equal(json.code, 'invalid')
+  assert.match(json.message, /group-color:g-aaaaaaaaaaaa/)
+})
+
 test('POST commit rejects malformed bodies with 422 invalid', async (t) => {
   const mounted = await mountRoutes({ connection: cookieConnection() })
   t.after(() => mounted.cleanup())
@@ -156,6 +202,7 @@ test('POST commit rejects malformed bodies with 422 invalid', async (t) => {
     { name: 'missing baseRevision', body: JSON.stringify({ doc: sampleDoc() }), expected: /baseRevision/ },
     { name: 'invalid doc', body: commitBody(0, { version: 1, groups: [{ id: 'g-a', name: 'A', parentId: null, sessionIds: ['s1'] }], ungrouped: ['s1'] }), expected: /duplicate-session:s1/ },
     { name: 'wrong version', body: commitBody(0, { ...sampleDoc(), version: 2 }), expected: /version must be 1/ },
+    { name: 'unknown group color', body: commitBody(0, { ...sampleDoc(), groups: [{ ...sampleDoc().groups[0], color: 'pink' }] }), expected: /group-color/ },
   ]
   for (const item of cases) {
     const { res, json } = await mounted.call(
@@ -265,6 +312,7 @@ test('parseCommitBody ignores the client revision and validates the frozen shape
   assert.equal(parsed.ok, true)
   assert.equal(parsed.baseRevision, 7)
   assert.equal(parsed.doc.revision, 0)
+  assert.equal(parsed.doc.groups[0].color, 'blue', 'the route stamps the default palette id')
 })
 
 test('loadResponse/commitResponse map store results to the frozen wire shapes', () => {

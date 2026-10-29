@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // e2e/groups.spec.mjs
 //
-// V1 E2E acceptance (docs/TEST-PLAN.md §5, 18 steps) - zero-dependency.
+// V1 E2E acceptance (docs/TEST-PLAN.md §5, 19 steps) - zero-dependency.
 //
 // Drives the real isolated DSH web UI (`.spike-homes/qa`, port 4402) through the
 // Chrome DevTools Protocol using the Chromium already present on this machine.
@@ -13,7 +13,7 @@
 // When the client UI is not present yet the runner exits 3 (BLOCKED) with a
 // diagnostic, so the pipeline can distinguish "not implemented" from "broken".
 //
-// Exit codes: 0 = all 18 steps PASS, 1 = a step FAILED, 2 = harness error,
+// Exit codes: 0 = all 19 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -44,6 +44,11 @@ const UNGROUPED = '[data-testid="session-groups-ungrouped"]';
 const DIALOG = '[data-testid="session-groups-dialog"]';
 const DIALOG_INPUT = '[data-testid="session-groups-dialog-input"]';
 const DIALOG_CONFIRM = '[data-testid="session-groups-dialog-confirm"]';
+const DIALOG_WORKSPACE = '[data-testid="session-groups-dialog-workspace"]';
+const DIALOG_GROUP = '[data-testid="session-groups-dialog-group"]';
+const DIALOG_ICON = '[data-testid="session-groups-dialog-icon"]';
+const DIALOG_COLOR = '[data-testid="session-groups-dialog-color"]';
+const DIAGNOSTICS_HUD = '[data-testid="session-groups-diagnostics-hud"]';
 const FILTER_STATE = '[data-testid="session-groups-view-options"]';
 const VIEW_OPTIONS = '[data-testid="session-groups-view-options"]';
 const VIEW_OPTIONS_POPOVER = '[data-testid="session-groups-view-options-popover"]';
@@ -1513,6 +1518,8 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (kind !== 'new-session') throw new Error(`group + dialog kind expected "new-session", got "${kind}"`);
         const choiceCount = await ui.count('[data-testid="session-groups-dialog-workspace"]');
         if (choiceCount === 0) throw new Error('group + dialog offered no workspace choices');
+        // 0.2.6: clicking a workspace only highlights it; the shared footer
+        // Confirm applies the choice (same contract as rename/new dialogs).
         const chosen = await driver.evaluate(`(() => {
           const button = document.querySelector('[data-testid="session-groups-dialog-workspace"]');
           if (!button) return null;
@@ -1521,6 +1528,13 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           return text;
         })()`);
         if (!chosen) throw new Error('could not pick a workspace in the group + dialog');
+        const stillOpen = await ui.exists(DIALOG);
+        if (!stillOpen) throw new Error('selecting a workspace must not close the dialog before Confirm');
+        const selected = await ui.attrs('[data-testid="session-groups-dialog-workspace"]', 'data-selected');
+        if (selected[0] !== 'true') throw new Error(`selected workspace must be visibly highlighted, got ${JSON.stringify(selected)}`);
+        const confirmDisabled = await driver.evaluate(`document.querySelector(${JSON.stringify(DIALOG_CONFIRM)})?.hasAttribute('disabled') === true`);
+        if (confirmDisabled) throw new Error('Confirm must be enabled once a workspace is selected');
+        await ui.confirmDialog();
         await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'new-session dialog closed', 10000);
         await ui.waitFor(`document.querySelectorAll(${JSON.stringify(SESSION)}).length > 0`, 'session rows present', 10000);
         await ui.waitFor(
@@ -2811,7 +2825,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           };
           const tree = document.querySelector('.dsg-tree');
           const groupBody = document.querySelector('.dsg-group-body');
-          const groupLine = document.querySelector('.dsg-group-line');
+          const groupLine = document.querySelector('.dsg-group .dsg-group-line');
           const ungroupedHeader = document.querySelector('.dsg-ungrouped-header');
           const rootStyle = getComputedStyle(root);
 
@@ -2858,6 +2872,29 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
               primary: tokenColor('--dsw-alias-label-primary'),
               accent: tokenColor('--dsw-alias-state-business-primary'),
             },
+            guide: (() => {
+              if (!groupLine) return null;
+              const lineStyle = getComputedStyle(groupLine);
+              const before = getComputedStyle(groupLine, '::before');
+              const lineRect = groupLine.getBoundingClientRect();
+              const guideGroup = groupLine.closest('.dsg-group');
+              const row = guideGroup ? guideGroup.querySelector(':scope > .dsg-group-row') : null;
+              const caret = row ? row.querySelector('.dsg-group-caret') : null;
+              const rowRect = row ? row.getBoundingClientRect() : null;
+              const caretRect = caret ? caret.getBoundingClientRect() : null;
+              const width = px(before.width);
+              const left = px(before.left);
+              return {
+                marginLeft: px(lineStyle.marginLeft),
+                paddingLeft: px(lineStyle.paddingLeft),
+                borderLeftWidth: px(lineStyle.borderLeftWidth),
+                width,
+                left,
+                lineCenterX: lineRect.left + left + width / 2,
+                rowLeft: rowRect ? rowRect.left : null,
+                caretCenterX: caretRect ? caretRect.left + caretRect.width / 2 : null,
+              };
+            })(),
             spacing: {
               header: {
                 ...spaceOf(header),
@@ -2936,8 +2973,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           throw new Error(`dsg-header-title must use the official section-label weight 400, got ${metrics.text.headerTitle.fontWeight}`);
         }
         near(metrics.text.headerTitleLabel.fontSize, 14, 'dsg-header-label font-size');
-        if (metrics.text.headerTitle.color !== metrics.tokens.primary) {
-          throw new Error(`dsg-header-title must use primary text (${metrics.tokens.primary}), got ${metrics.text.headerTitle.color}`);
+        // 0.2.6 feedback item 1: the title text and icon share the primary accent.
+        if (metrics.text.headerTitle.color !== metrics.tokens.accent) {
+          throw new Error(`dsg-header-title must use the primary accent (${metrics.tokens.accent}), got ${metrics.text.headerTitle.color}`);
         }
         if (metrics.text.headerAccentColor !== metrics.tokens.accent) {
           throw new Error(`header accent icon must use the primary accent (${metrics.tokens.accent}), got ${metrics.text.headerAccentColor}`);
@@ -3002,8 +3040,8 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           near(size.width, 16, `${label} width`);
           near(size.height, 16, `${label} height`);
         }
-        near(metrics.icons.groupActionButton.width, 16, 'group action button width');
-        near(metrics.icons.groupActionButton.height, 16, 'group action button height');
+        near(metrics.icons.groupActionButton.width, 28, 'group action button width');
+        near(metrics.icons.groupActionButton.height, 28, 'group action button height');
         for (const [index, size] of metrics.icons.glyphSizes.entries()) {
           near(size.width, 16, `glyph[${index}] width`);
           near(size.height, 16, `glyph[${index}] height`);
@@ -3034,8 +3072,20 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         near(space.groupBody.rowGap, 2, 'dsg-group-body row-gap', 1);
         if (!space.groupLine) throw new Error('dsg-group-line spacing probe is missing');
         near(space.groupLine.rowGap, 2, 'dsg-group-line row-gap', 1);
-        near(space.groupLine.marginLeft, 10, 'dsg-group-line margin-left', 1);
-        near(space.groupLine.paddingLeft, 10, 'dsg-group-line padding-left', 1);
+        // 0.2.6 feedback item 3: the 2px guide sits at the parent caret tip.
+        if (!metrics.guide) throw new Error('dsg-group-line guide probe is missing');
+        near(metrics.guide.marginLeft, 16, 'dsg-group-line guide margin-left', 1);
+        near(metrics.guide.paddingLeft, 4, 'dsg-group-line content padding-left', 1);
+        near(metrics.guide.borderLeftWidth, 0, 'dsg-group-line layout border-left', 1);
+        near(metrics.guide.width, 2, 'dsg-group-line guide width', 0.5);
+        if (!(Math.abs(metrics.guide.lineCenterX - metrics.guide.caretCenterX) <= 1)) {
+          throw new Error(
+            `group guide must sit at the parent caret tip: line=${metrics.guide.lineCenterX}, caret=${metrics.guide.caretCenterX}`,
+          );
+        }
+        if (!(Math.abs(metrics.guide.lineCenterX - metrics.guide.rowLeft - 16) <= 1)) {
+          throw new Error(`group guide x must be ~16px from the row start, got ${metrics.guide.lineCenterX - metrics.guide.rowLeft}`);
+        }
         if (space.ungroupedHeader) {
           near(space.ungroupedHeader.columnGap, 6, 'dsg-ungrouped-header column-gap', 1);
         }
@@ -3187,7 +3237,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
               treeRowGap: 2,
               headerPadding: '4px 4px 4px 2px',
               headerRowGap: 8,
-              groupGuide: { marginLeft: 10, paddingLeft: 10 },
+              groupGuide: { marginLeft: 16, paddingLeft: 4, width: 2, x: 16 },
             },
           },
           spacing: {
@@ -3641,7 +3691,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           return el ? { text: el.textContent, runId: el.getAttribute('data-run-id'), pointerEvents: getComputedStyle(el).pointerEvents } : null;
         })()`);
         if (!hud) throw new Error('0.2.5 diagnostics HUD is missing');
-        if (!/dsg 0\.2\.5/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
+        if (!/dsg 0\.2\.6/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
         if (hud.pointerEvents !== 'none') throw new Error(`diagnostics HUD must be pointer-events:none, got ${hud.pointerEvents}`);
         const hudNative = /n=(\d+)/.exec(hud.text);
         if (!hudNative || Number(hudNative[1]) <= 0) throw new Error(`diagnostics HUD native dragover count missing/zero: ${JSON.stringify(hud.text)}`);
@@ -3683,6 +3733,307 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         };
       },
     },
+    {
+      id: 19,
+      name: 'group-color-and-selection-dialogs',
+      async run() {
+        // 0.2.6: group color customization plus the shared selection-dialog
+        // contract. A click only highlights an option; Cancel closes without a
+        // write; Confirm applies exactly once. Icon/move-session/new-session use
+        // the same footer, and the 0.2.5 diagnostics HUD stays mounted.
+        if (!(await ui.exists(VIEW))) throw new Error('step 19 must start in the groups view');
+        await ui.closeViewOptions();
+        if (await ui.dialogOpen()) {
+          await driver.evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+          await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'leftover dialog closed before step 19', 5000);
+        }
+        await ui.closeSearch();
+        await ui.dismissOverlay();
+
+        const recordPath = join(QA_HOME, 'storages', 'dsh-session-groups.json');
+        const readRecord = () => {
+          try {
+            return JSON.parse(readFileSync(recordPath, 'utf8'));
+          } catch {
+            return null;
+          }
+        };
+        const recordRevision = () => Number(readRecord()?.revision ?? -1);
+        const recordGroup = (gid) => (readRecord()?.groups ?? []).find((group) => group.id === gid) ?? null;
+        const waitRevisionAbove = async (previous, label, waitMs = 12000) => {
+          const end = Date.now() + waitMs;
+          let last = -1;
+          while (Date.now() < end) {
+            last = recordRevision();
+            if (last > previous) return last;
+            await sleep(150);
+          }
+          throw new Error(`${label}: record revision stayed ${last} (expected > ${previous})`);
+        };
+        const waitDialogKind = async (kind) => {
+          await ui.waitFor(
+            `document.querySelector(${JSON.stringify(DIALOG)})?.getAttribute('data-kind') === ${JSON.stringify(kind)}`,
+            `dialog kind ${kind}`,
+            5000,
+          );
+          await sleep(100);
+        };
+        const closeByCancel = async (description) => {
+          await driver.evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+          await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, description, 5000);
+        };
+        const dialogControls = () =>
+          driver.evaluate(`(() => {
+            const dialog = document.querySelector(${JSON.stringify(DIALOG)});
+            if (!dialog) return null;
+            const confirm = dialog.querySelector(${JSON.stringify(DIALOG_CONFIRM)});
+            const cancel = dialog.querySelector('.dsg-dialog-cancel');
+            return {
+              kind: dialog.getAttribute('data-kind'),
+              confirm: confirm ? { present: true, disabled: confirm.hasAttribute('disabled'), text: (confirm.textContent ?? '').trim() } : { present: false },
+              cancel: cancel ? { present: true, text: (cancel.textContent ?? '').trim() } : { present: false },
+            };
+          })()`);
+        const optionState = (selector) =>
+          driver.evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(selector)}), (el) => ({
+            selected: el.getAttribute('data-selected') === 'true',
+            ariaSelected: el.getAttribute('aria-selected'),
+            ariaChecked: el.getAttribute('aria-checked'),
+            color: el.getAttribute('data-color'),
+            icon: el.getAttribute('data-icon'),
+            groupId: el.getAttribute('data-group-id'),
+            workspaceId: el.getAttribute('data-workspace-id'),
+            text: (el.textContent ?? '').trim(),
+          }))`);
+        const rowAttr = (gid, attribute) =>
+          driver.evaluate(`(() => {
+            const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+            return row ? row.getAttribute(${JSON.stringify(attribute)}) : null;
+          })()`);
+        const rowIconMarkup = (gid) =>
+          driver.evaluate(`(() => {
+            const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+            return row ? (row.querySelector('.dsg-group-icon')?.innerHTML ?? '') : '';
+          })()`);
+        const clickOption = (selector) =>
+          driver.evaluate(`document.querySelector(${JSON.stringify(selector)})?.click() ?? false`);
+        const clickGroupMenuColor = async (gid) => {
+          await ui.openGroupMenu(gid);
+          const items = await ui.menuItems();
+          if (!items.some((text) => /^(颜色|Color)$/.test(text))) {
+            throw new Error(`group menu must offer 颜色/Color (items: ${JSON.stringify(items.slice(0, 20))})`);
+          }
+          await ui.clickMenuItem(/^(颜色|Color)$/);
+          await waitDialogKind('group-color');
+        };
+
+        const roots = await ui.rootGroupIds();
+        let colorGroup = null;
+        let moveSession = null;
+        for (const gid of roots) {
+          const ids = await ui.sessionIdsInGroup(gid);
+          if (ids.length > 0) {
+            colorGroup = gid;
+            moveSession = ids[0];
+            break;
+          }
+        }
+        if (!colorGroup) throw new Error('step 19 needs a root group with a session');
+        const moveTarget = roots.find((gid) => gid !== colorGroup) ?? null;
+        if (!moveTarget) throw new Error('step 19 needs a second root group as the move target');
+        let revision = recordRevision();
+        if (!(revision >= 0)) throw new Error('step 19 could not read the record revision');
+
+        // (1) Group color: palette dialog starts on the current/default color.
+        await clickGroupMenuColor(colorGroup);
+        let controls = await dialogControls();
+        if (controls?.kind !== 'group-color') throw new Error(`color dialog kind expected group-color, got ${controls?.kind}`);
+        if (!controls.confirm.present || !controls.cancel.present) {
+          throw new Error('group-color dialog must render Confirm and Cancel buttons');
+        }
+        if (controls.confirm.disabled) throw new Error('group-color Confirm must be enabled with the default selection');
+        let colors = await optionState(DIALOG_COLOR);
+        if (colors.length !== 6) throw new Error(`group-color dialog expected 6 palette options, got ${colors.length}`);
+        if (!colors.every((option) => option.ariaChecked === 'true' || option.ariaChecked === 'false')) {
+          throw new Error('group-color options must expose aria-checked true/false');
+        }
+        const initialColor = colors.find((option) => option.selected);
+        if (!initialColor) throw new Error('group-color dialog must start with a visible selection');
+        const initialRowColor = await rowAttr(colorGroup, 'data-color');
+        await clickOption(`${DIALOG_COLOR}[data-color="purple"]`);
+        await sleep(120);
+        colors = await optionState(DIALOG_COLOR);
+        if (!colors.find((option) => option.color === 'purple')?.selected) throw new Error('clicking purple must highlight it');
+        if (colors.filter((option) => option.selected).length !== 1) throw new Error('exactly one color option may be selected');
+        if ((await ui.dialogOpen()) !== true) throw new Error('selecting a color must not close the dialog');
+        if ((await rowAttr(colorGroup, 'data-color')) !== initialRowColor) throw new Error('selecting a color must not apply before Confirm');
+        if (recordRevision() !== revision) throw new Error('color selection must not write the record');
+        await closeByCancel('group-color dialog closed by Cancel');
+        if ((await rowAttr(colorGroup, 'data-color')) !== initialRowColor) throw new Error('Cancel must not change the group color');
+        if (recordRevision() !== revision) throw new Error('Cancel must not write the record');
+
+        await clickGroupMenuColor(colorGroup);
+        await clickOption(`${DIALOG_COLOR}[data-color="purple"]`);
+        await sleep(80);
+        await ui.confirmDialog();
+        await ui.waitFor(
+          `document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(colorGroup)} + '"]')?.getAttribute('data-color') === 'purple'`,
+          'group row shows the confirmed purple color',
+          8000,
+        );
+        revision = await waitRevisionAbove(revision, 'group color commit persisted');
+        if (recordGroup(colorGroup)?.color !== 'purple') {
+          throw new Error(`record group color expected purple, got ${String(recordGroup(colorGroup)?.color)}`);
+        }
+        const iconColor = await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(colorGroup)} + '"]');
+          const icon = row ? row.querySelector('.dsg-group-icon svg') : null;
+          const root = document.querySelector('.dsg-root');
+          const probe = document.createElement('span');
+          probe.style.color = 'var(--dsg-color-purple)';
+          root.appendChild(probe);
+          const expected = getComputedStyle(probe).color;
+          probe.remove();
+          return { actual: icon ? getComputedStyle(icon).color : null, expected };
+        })()`);
+        if (!iconColor.actual || iconColor.actual !== iconColor.expected) {
+          throw new Error(`group icon must use the chosen color: actual=${iconColor.actual} expected=${iconColor.expected}`);
+        }
+
+        // (2) Icon dialog: current icon selected; click only highlights; Cancel
+        // leaves the row unchanged; a second attempt + Confirm applies the icon.
+        const iconRevision = recordRevision();
+        const iconBefore = await rowIconMarkup(colorGroup);
+        await ui.openGroupMenu(colorGroup);
+        await ui.clickMenuItem(/^(更换图标|Change icon)$/);
+        await waitDialogKind('icon');
+        controls = await dialogControls();
+        if (!controls.confirm.present || controls.confirm.disabled) throw new Error('icon Confirm must be enabled with a visible current selection');
+        let icons = await optionState(DIALOG_ICON);
+        if (icons.length !== 8) throw new Error(`icon dialog expected 8 icon options, got ${icons.length}`);
+        const currentIcon = icons.find((option) => option.selected);
+        if (!currentIcon) throw new Error('icon dialog must highlight the current icon');
+        await clickOption(`${DIALOG_ICON}[data-icon="star"]`);
+        await sleep(100);
+        icons = await optionState(DIALOG_ICON);
+        if (!icons.find((option) => option.icon === 'star')?.selected) throw new Error('clicking an icon must highlight it');
+        if ((await ui.dialogOpen()) !== true) throw new Error('selecting an icon must not close the dialog');
+        if ((await rowIconMarkup(colorGroup)) !== iconBefore) throw new Error('selecting an icon must not apply before Confirm');
+        if (recordRevision() !== iconRevision) throw new Error('icon selection must not write the record');
+        await closeByCancel('icon dialog closed by Cancel');
+        if ((await rowIconMarkup(colorGroup)) !== iconBefore) throw new Error('Cancel must not change the icon');
+
+        await ui.openGroupMenu(colorGroup);
+        await ui.clickMenuItem(/^(更换图标|Change icon)$/);
+        await waitDialogKind('icon');
+        await clickOption(`${DIALOG_ICON}[data-icon="star"]`);
+        await sleep(80);
+        await ui.confirmDialog();
+        revision = await waitRevisionAbove(iconRevision, 'icon commit persisted');
+        if (recordGroup(colorGroup)?.icon !== 'star') throw new Error(`record icon expected star, got ${String(recordGroup(colorGroup)?.icon)}`);
+
+        // (3) Move-session dialog: current group selected; click stays open and
+        // does not move; Confirm moves the session to the target group.
+        const moveRevision = recordRevision();
+        await ui.openSessionMenu(moveSession);
+        await ui.clickMenuItem(/^(移动到分组…|Move to group…)$/);
+        await waitDialogKind('move-session');
+        controls = await dialogControls();
+        if (!controls.confirm.present || controls.confirm.disabled) throw new Error('move-session Confirm must be enabled with the current group selected');
+        let groups = await optionState(DIALOG_GROUP);
+        if (groups.length < 2) throw new Error(`move-session dialog expected group choices, got ${groups.length}`);
+        const currentGroup = groups.find((option) => option.selected);
+        if (!currentGroup || currentGroup.groupId !== colorGroup) {
+          throw new Error(`move-session dialog must start on the current group ${colorGroup}, got ${JSON.stringify(currentGroup)}`);
+        }
+        await clickOption(`${DIALOG_GROUP}[data-group-id="${moveTarget}"]`);
+        await sleep(120);
+        groups = await optionState(DIALOG_GROUP);
+        if (!groups.find((option) => option.groupId === moveTarget)?.selected) throw new Error('clicking a target group must highlight it');
+        if ((await ui.dialogOpen()) !== true) throw new Error('selecting a move target must not close the dialog');
+        if (!(await ui.sessionIdsInGroup(colorGroup)).includes(moveSession)) throw new Error('selecting a move target must not move the session');
+        if (recordRevision() !== moveRevision) throw new Error('move selection must not write the record');
+        await ui.confirmDialog();
+        const movedSelector = `${SESSION}[data-session-id="${moveSession}"][data-group-id="${moveTarget}"]`;
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(movedSelector)})`, 'session moved to the target group after Confirm', 10000);
+        revision = await waitRevisionAbove(moveRevision, 'move-session commit persisted');
+        if (!(await ui.sessionIdsInGroup(moveTarget)).includes(moveSession)) throw new Error('moved session is missing from the target group');
+
+        // (4) New-session workspace dialog: inferred workspace is selected; a new
+        // pick only highlights; Cancel creates nothing.
+        const newSessionRevision = recordRevision();
+        const rowsBefore = (await ui.sessions()).length;
+        await ui.click(`${GROUP_ADD}[data-group-id="${moveTarget}"]`);
+        await waitDialogKind('new-session');
+        controls = await dialogControls();
+        if (!controls.confirm.present) throw new Error('new-session dialog must render the shared Confirm/Cancel footer');
+        const workspaces = await optionState(DIALOG_WORKSPACE);
+        if (workspaces.length === 0) throw new Error('new-session dialog offered no workspace options');
+        let inferred = workspaces.find((option) => option.selected);
+        if (inferred && controls.confirm.disabled) throw new Error('new-session Confirm must be enabled with the inferred workspace selected');
+        if (!inferred) {
+          // No usable inference: Confirm must start disabled, then enable after a pick.
+          if (!controls.confirm.disabled) throw new Error('new-session Confirm must be disabled without a workspace selection');
+          await clickOption(`${DIALOG_WORKSPACE}[data-workspace-id="${workspaces[0].workspaceId}"]`);
+          await sleep(100);
+          const enabledAfterPick = await driver.evaluate(`document.querySelector(${JSON.stringify(DIALOG_CONFIRM)})?.hasAttribute('disabled') === false`);
+          if (!enabledAfterPick) throw new Error('new-session Confirm must enable after selecting a workspace');
+          inferred = workspaces[0];
+        }
+        if (workspaces.length > 1) {
+          const other = workspaces.find((option) => !option.selected);
+          await clickOption(`${DIALOG_WORKSPACE}[data-workspace-id="${other.workspaceId}"]`);
+          await sleep(100);
+          if ((await ui.dialogOpen()) !== true) throw new Error('selecting a workspace must not close the dialog');
+          if (recordRevision() !== newSessionRevision) throw new Error('workspace selection must not write the record');
+        }
+        await closeByCancel('new-session dialog closed by Cancel');
+        if (recordRevision() !== newSessionRevision) throw new Error('Cancel must not write the record');
+        // The record revision is the authoritative "no create" proof: confirming
+        // the dialog would run startSession + assignSession and bump it. The DOM
+        // session-row count is virtualization-sensitive (opening the dialog can
+        // scroll the ungrouped window), so it is reported but not compared here.
+
+        // (5) Escape and outside-click keep the same "close without change" rule.
+        await clickGroupMenuColor(colorGroup);
+        await driver.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'Escape closes the color dialog', 5000);
+        if ((await rowAttr(colorGroup, 'data-color')) !== 'purple') throw new Error('Escape must not change the group color');
+        await clickGroupMenuColor(colorGroup);
+        await driver.evaluate(`document.querySelector('.dsg-dialog-backdrop')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'outside click closes the color dialog', 5000);
+        if ((await rowAttr(colorGroup, 'data-color')) !== 'purple') throw new Error('outside click must not change the group color');
+        if (recordRevision() !== revision) throw new Error('Escape/outside close must not write the record');
+
+        // (6) 0.2.5 diagnostics stay on: HUD mounted, plain DOM, build 0.2.6.
+        const hud = await driver.evaluate(`(() => {
+          const el = document.querySelector(${JSON.stringify(DIAGNOSTICS_HUD)});
+          return el ? { text: el.textContent, runId: el.getAttribute('data-run-id'), pointerEvents: getComputedStyle(el).pointerEvents } : null;
+        })()`);
+        if (!hud) throw new Error('0.2.6 diagnostics HUD is missing');
+        if (!/dsg 0\.2\.6/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
+        if (hud.pointerEvents !== 'none') throw new Error(`diagnostics HUD must be pointer-events:none, got ${hud.pointerEvents}`);
+
+        return {
+          color: {
+            group: colorGroup,
+            initial: initialColor.color,
+            applied: 'purple',
+            recordColor: recordGroup(colorGroup)?.color,
+            revision,
+          },
+          icon: { before: currentIcon.icon, applied: recordGroup(colorGroup)?.icon },
+          move: { session: moveSession, from: colorGroup, to: moveTarget, revision },
+          newSession: {
+            inferred: inferred.workspaceId,
+            options: workspaces.length,
+            cancelled: true,
+            rows: rowsBefore,
+          },
+          hud: { runId: hud.runId, text: hud.text },
+        };
+      },
+    },
   ];
 }
 
@@ -3697,7 +4048,7 @@ async function captureScreenshot(driver, args, path) {
 }
 
 /**
- * 0.2.5 diagnostics persistence check (outside the 18 acceptance steps):
+ * 0.2.5 diagnostics persistence check (outside the 19 acceptance steps):
  * POST a probe batch through the real client/host route, then read the NDJSON
  * file from the isolated home and assert the drag trace was appended there.
  * This is the only place the E2E runner verifies the host route + file write.
@@ -3809,7 +4160,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 18-step acceptance (isolated DSH home, CDP)');
+  console.log(' V1 E2E - 19-step acceptance (isolated DSH home, CDP)');
   console.log('============================================================');
 
   let driver = null;
@@ -3871,7 +4222,7 @@ async function main() {
 
     if (!failed && !evidence.blockedReason) {
       // 0.2.5: the diagnostics route + isolated-home NDJSON write must work with
-      // the real drag trace; this is not an acceptance step (still 18/18).
+      // the real drag trace; this is not an acceptance step (still 19/19).
       try {
         const diagnostics = await verifyDiagnostics(driver);
         evidence.diagnostics = diagnostics;

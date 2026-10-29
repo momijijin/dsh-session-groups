@@ -12,7 +12,7 @@
 | 单元 | Node `node --test` | `src/shared/model.js` 纯函数 | Host/Client 写，QA 审 | 每次提交 |
 | Host 集成 | Node `node --test` + 临时目录 | 存储、原子写、revision、路由围栏 | Host | 每次提交 |
 | Client 逻辑 | Node `node --test` | 可见性、筛选、工作区映射、拖拽 hit-test | Client | 每次提交 |
-| E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索/排版/深色主题 + 0.2.4 占位/乐观提交 + 0.2.5 HUD/诊断落盘（18 步 + 1 个非步骤持久化校验） | QA | 每日/合并前 |
+| E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索/排版/深色主题 + 0.2.4 占位/乐观提交 + 0.2.5 HUD/诊断落盘 + 0.2.6 分组颜色/选择对话框（19 步 + 1 个非步骤持久化校验） | QA | 每日/合并前 |
 | 诊断 trace | Node `node --test` + `analyze-drag-trace.mjs` | 环/flush/beacon/HUD、NDJSON 解析、target/label/gap/native/autoexpand/placeholder/optimistic/burst/stall | Client/QA | 每次提交 |
 | 大列表 probe | Node CDP 脚本 | 1,500+ 未归组行：DOM 行数、初始/滚动/hover/dragOver/search/drop 耗时 | QA | 0.2.3 及后续性能改动 |
 | 人工验收 | 清单 + 截图 | desktop profile 9 步 | QA + 用户 | 发布前 |
@@ -83,8 +83,9 @@
 | C16 | 拖拽插入占位（0.2.4） | CSS/源码契约：`.dsg-drop-placeholder` 32/34px、accent 虚线边框/背景、label；九类落点（session-before/after、group-before/after、group child slot、group-append expanded/collapsed、ungrouped、root-end）均渲染占位；旧 `.dsg-drop-indicator`/`.dsg-insert-*` 2px 样式删除；testid `session-groups-drop-indicator` + `data-drop-height` 保留 |
 | C17 | 拖拽诊断（0.2.5） | 默认开启、`localStorage='0'` 关闭；环上限与 queue 上限；20 事件/500ms 批量；flush 失败重试/计数；dragend + visibility hidden 走 sendBeacon；native capture/bubble + target ids + prevented/trusted；target change 触发 placeholder insert/remove；label 去重；handler ms/renders 统计；HUD 仅 250ms 文本更新、pointer-events none；禁用路径零监听/零 HUD |
 | C18 | 官方 header 图标（0.2.5） | `HEADER_ICON_NAMES` 恰为 search/view-options/project-add；三份 artwork 与 DSH 2.0.18 primitives 逐字节一致（search 圆+柄、sliders 两线两圆、project-add 填充轮廓+plus）；`renderHeaderIcon` 16px、1px stroke、currentColor、data-icon |
+| C19 | 分组颜色 + 选择对话框（0.2.6） | 调色板恰为 `blue/green/orange/red/purple/gray`；`createGroup` 默认蓝、未知 color 归一化蓝、`setGroupColor` 只改目标且纯函数；`validateDoc` 允许缺省 color、拒绝未知 palette id；`normalizeDoc`/host commit 将缺省归一化蓝（round-trip）；`dialog-selection.js` 的初始选择/有效性/confirm payload 覆盖 icon、move-session、move-group（排除自身+后代）、new-session（inferred/无选择 disabled）、group-color；CSS/源码契约：blue header title、28×28 行操作、16px glyph/4px gap、2px guide@caret、色板 swatch、点击只高亮、footer Confirm/Cancel 对所有对话框存在 |
 
-## 5. E2E（Playwright/CDP，18 步）
+## 5. E2E（Playwright/CDP，19 步）
 
 环境：
 
@@ -104,7 +105,7 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 3. 新建 3 组（1 个二级嵌套），刷新后仍在。
 4. 从 3 个不同工作区拖 10 个会话进组；每次检查插入占位（32px、accent 面/虚线边框、目标名/「放到这里」）、高亮与浮动标签；drop 后行立即移动、记录文件最终一致。
 5. 组内/跨组拖拽排序；刷新后顺序保持。
-6. 组头 `+` 打开预创建工作区菜单：默认推断正确；切换工作区后 `connectWorkspace` 创建；落在组第一行且无孤儿 blank。
+6. 组头 `+` 打开预创建工作区菜单：默认推断正确；**0.2.6 点击工作区只高亮（`data-selected=true`、`aria-selected`），对话框不关闭、不创建；footer Confirm 才创建**；切换工作区后 `connectWorkspace` 创建；落在组第一行且无孤儿 blank。
 7. 归档一个普通会话 → 隐藏；切「全部」可见；切「仅已归档」只显示它；取消归档回原组。再归档一个**运行中**会话 → 拒绝 → 确认框列出活动 → stopActivity 强制；取消路径不动。
 8. 重命名 → 官方侧栏同步；本视图无删除入口。
 9. 收起侧栏 → rail 展开按钮可用。
@@ -117,10 +118,10 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 16. **V1.1 排版+间距对齐（0.2.1/0.2.2）**：step 15 结束时分组视图仍激活；先收起搜索字段，再用 `getComputedStyle`/`getBoundingClientRect` 断言（不依赖截图）：
     - `.dsg-root` 的 `font-size` 等于宿主侧栏祖先的 computed `font-size`（无祖先时按 14px 契约）且 font-family 继承；
     - `.dsg-group-row` 高 34px、`.dsg-session-row` 高 32px（±1）；
-    - `.dsg-group-name`/`.dsg-session-title` 14px/20px、`.dsg-workspace-badge` 12px、header 标题 14px/20px **font-weight 400（官方 section label）** 且为 primary 文本 + accent 图标 16px；
-    - `.dsg-group-icon svg`、group caret、group action glyph、header accent 均 16×16，组操作按钮 16×16，根内所有 `.dsg-glyph`/`.dsg-icon` 均 16px；
+    - `.dsg-group-name`/`.dsg-session-title` 14px/20px、`.dsg-workspace-badge` 12px、header 标题 14px/20px **font-weight 400（官方 section label）且颜色 = primary accent** + accent 图标 16px（同 token）；
+    - `.dsg-group-icon svg`、group caret、group action glyph、header accent 均 16×16，**组操作按钮 28×28（0.2.6 命中区）**，根内所有 `.dsg-glyph`/`.dsg-icon` 均 16px；
     - **footer**：单个按钮，`BUTTON` 标签、28px 高、13px 文本、16px 图标，`data-mode=groups`/`aria-pressed=true`、文案/标题精确为「返回默认工作区视图」/“Back to default workspace view”；header 三个 action 均 28×28、16px glyph、顺序 **搜索/视图选项/`+`**；
-    - **间距**：组行/会话行 computed `padding-left/right` 8px、column-gap 6px；`.dsg-tree` row-gap 2px；组体/组线 row-gap 2px、组缩进 margin/padding 10px；header `padding: 4px 4px 4px 2px`、row-gap 8px、单行标题 28px、收起总高 36px、展开搜索后总高 74px + 搜索行 30px；搜索输入 13px/30px；搜索结果 padding ≥6px/10px、结果 column-gap 8px、下拉 row-gap 2px（全部 ±1px 容差）；
+    - **间距**：组行/会话行 computed `padding-left/right` 8px、column-gap 6px；`.dsg-tree` row-gap 2px；组体 row-gap 2px；**0.2.6 组线 guide：margin-left 16px、content padding 4px、布局 border 0、`::before` 宽 2px/left -1px，线中心 = 父组 caret 中心且距行首 16px（±1）**；header `padding: 4px 4px 4px 2px`、row-gap 8px、单行标题 28px、收起总高 36px、展开搜索后总高 74px + 搜索行 30px；搜索输入 13px/30px；搜索结果 padding ≥6px/10px、结果 column-gap 8px、下拉 row-gap 2px（全部 ±1px 容差）；
     - **264px 最小宽度**：临时拖到 264px 断言 header/tree `scrollWidth ≤ clientWidth+1` 后恢复原宽度；再展开搜索断言 header/search row/input 仍无横向溢出并收起；
     - **虚拟窗口**：`.dsg-virtual-list` 的 `data-virtual-total` 等于未归组头 `data-count`；`end-start === renderedUngrouped`；rendered ≤80；rail footer 为 28×28 图标按钮（文本为空）；
     - `--dsg-font-14` 解析为 14px（官方 token 生效）。
@@ -131,15 +132,21 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
     - 占位真实参与布局：hover 前后目标/后继行 top 位移 ≥28–30px；`dragleave` 后占位立即消失；drop/dragend 后清理；
     - 264px 下 hover 占位时 `.dsg-tree` / 占位 `scrollWidth ≤ clientWidth+1`，随后恢复宽度；
     - **乐观证据**：用 CDP `Fetch.enable`（Request 阶段）挂起 commit 请求（不注入页面 fetch 包装）；拖会话/分组后断言 DOM 顺序已改变、`data-optimistic="true"`、**记录文件 revision 仍等于拖拽前的值**（HTTP 未落盘），`Fetch.continueRequest` 后记录 revision 前进、`data-optimistic="false"` 且 DOM 顺序保持；
-    - **0.2.5 诊断 HUD**：`session-groups-diagnostics-hud` 存在、computed `pointer-events:none`、文本含 `dsg 0.2.5` 与本轮 `n=`（native dragover）>0、`chg=`/`rend=` 计数；HUD 由 ≥10 次拖拽事件驱动但自身不产生 React 行渲染（只读文本断言）。E2E runner 在 18 步之后额外 POST 一个 `e2e-probe` batch 到 `/dsh-session-groups/diagnostics`，读取隔离 home 的 `storages/dsh-session-groups.diagnostics.ndjson`，断言 `schemaVersion=1`、行可解析、包含 `native.*`/`handler`/`optimistic|queue` 事件且 `runId` 分组正确（该检查不计入 18 步）。
-19. **0.2.3 大列表 probe（独立 QA home，不并入日常 18 步）**：
+    - **0.2.5/0.2.6 诊断 HUD**：`session-groups-diagnostics-hud` 存在、computed `pointer-events:none`、文本含 `dsg 0.2.6` 与本轮 `n=`（native dragover）>0、`chg=`/`rend=` 计数；HUD 由 ≥10 次拖拽事件驱动但自身不产生 React 行渲染（只读文本断言）。E2E runner 在 19 步之后额外 POST 一个 `e2e-probe` batch 到 `/dsh-session-groups/diagnostics`，读取隔离 home 的 `storages/dsh-session-groups.diagnostics.ndjson`，断言 `schemaVersion=1`、行可解析、包含 `native.*`/`handler`/`optimistic|queue` 事件且 `runId` 分组正确（该检查不计入 19 步）。
+19. **0.2.6 分组颜色 + 选择对话框**（step 18 留在分组视图）：
+    - 分组菜单出现「颜色」；打开 `group-color` 对话框：6 个 palette 选项、当前颜色（默认蓝）高亮、footer Confirm/Cancel 存在且 Confirm 可用；点 purple 只高亮（`aria-checked`、唯一选中、对话框不关、行 `data-color` 不变、记录 revision 不变）；Cancel 关闭且不变；重开选 purple + Confirm → 行 `data-color=purple`、图标 computed color = `--dsg-color-purple`、记录 color=purple 且 revision 前进；
+    - `icon` 对话框：当前图标高亮；点 star 只高亮、行图标 markup/revision 不变；Cancel 不改；重开 + Confirm → 记录 icon=star；
+    - `move-session` 对话框：当前组预选；点另一 root 组只高亮、不移动、revision 不变；Confirm 后会话出现在目标组且记录落盘；
+    - `new-session` 对话框：推断工作区可见预选（无推断则 Confirm disabled，点选后 enabled）；点击其他工作区只高亮且不写记录；Cancel 不创建会话（行数不变）；
+    - Escape 与点击 backdrop 关闭 color 对话框且不改变颜色/revision；HUD 仍在且 build=0.2.6；264px 无溢出由 step 16/18 继续守护。
+20. **0.2.3 大列表 probe（独立 QA home，不并入日常 19 步）**：
     - 环境：`scripts/qa/setup.ps1 -QaHome .spike-homes/qa-0.2.3-large` → `node scripts/qa/make-large-list-fixture.mjs --home ... --extra 1500` → `start-web.ps1 -Port 4407`；
     - 断言 1,500+ 逻辑未归组行下 `domUngroupedRows` 在 20–30（<80），`treeScrollHeight` 与全量渲染一致（spacers 精确）；
     - 记录初始渲染、滚动两帧、hover、dragover 指示、窗口外搜索 reveal/scroll、可见行拖入组耗时；before(0.2.2)/after(0.2.3) 同 fixture 对比，写入 `docs/TEST-RESULTS.md` 与 `.superpowers/sdd/.../virtualization-report.md`。
 
 V1.1 新增/相关 stable testids（详见 `docs/CONTRACTS.md §4.1`）：
 
-`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle`（0.2.3 单按钮）、`session-groups-search-toggle`、`session-groups-search-close`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`、`session-groups-virtual-spacer`（0.2.3）、`session-groups-drop-indicator`（0.2.4 行高占位，`data-drop-height`）、`session-groups-diagnostics-hud`（0.2.5，`data-run-id`/`data-schema-version`）。
+`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle`（0.2.3 单按钮）、`session-groups-search-toggle`、`session-groups-search-close`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`、`session-groups-virtual-spacer`（0.2.3）、`session-groups-drop-indicator`（0.2.4 行高占位，`data-drop-height`）、`session-groups-diagnostics-hud`（0.2.5，`data-run-id`/`data-schema-version`）、`session-groups-dialog-options` / `session-groups-dialog-workspace` / `session-groups-dialog-group` / `session-groups-dialog-icon` / `session-groups-dialog-color`（0.2.6 选择对话框，`data-selected`/`aria-selected|checked`）。
 
 Playwright 拖拽注意：
 
@@ -156,7 +163,8 @@ V1.1 回归注意：
 - **step 15**：会通过宿主归档一条会话（宿主侧副作用，记录文件不变），证据中记录该 sid/title。
 - **step 16**：依赖 step 15 结束时仍在分组视图；先收起搜索字段再测 36px header，测量搜索结果时再展开并关闭；字号/间距为只读 DOM 断言；264px 探针会临时改宽度并恢复原宽度（不写记录文件）。失败信息必须列出「期望值 vs 实测值」。
 - **step 17**：设置/移除 `body[data-ds-dark-theme]` 只影响本次浏览器文档；不写 profile、不写记录文件；结束后恢复原属性。
-- **step 18**：占位检查全部用 hover-only（不落盘）；乐观检查用 CDP Fetch 挂起 commit，断言 DOM 已移动且记录 revision 未变；随后 continue 并等待 revision 前进/data-optimistic=false；264px 探针临时改宽度后恢复；**0.2.5 诊断默认开启**，HUD 只读断言，runner 末尾额外校验 NDJSON 落盘（失败只影响 diagnostics 结论，不改变 18 步编号）。
+- **step 18**：占位检查全部用 hover-only（不落盘）；乐观检查用 CDP Fetch 挂起 commit，断言 DOM 已移动且记录 revision 未变；随后 continue 并等待 revision 前进/data-optimistic=false；264px 探针临时改宽度后恢复；**0.2.5 诊断默认开启**，HUD 只读断言，runner 末尾额外校验 NDJSON 落盘（失败只影响 diagnostics 结论，不改变 19 步编号）。
+- **step 19**：依赖 step 18 结束时仍在分组视图；会真实写分组颜色/图标并移动一条会话（记录 revision 前进 3 次），选择/取消阶段只读；最后 Escape/backdrop 关闭不改状态；new-session 只 Cancel，不创建会话。
 
 ## 6. 人工验收（desktop profile）
 
@@ -202,7 +210,7 @@ V1.1 回归注意：
 
 - 单测/集成输出（TAP/日志）
 - E2E trace/video（失败必存）
-- E2E 18 步 JSON（`scripts/qa/evidence/e2e-<ts>.json`）+ 截图（分组视图、拖拽插入占位、组内新建、归档三态、rail、切回官方、宽度把手、组拖、搜索下拉、排版断言、深色主题 surfaces、乐观 drop）
+- E2E 19 步 JSON（`scripts/qa/evidence/e2e-<ts>.json`）+ 截图（分组视图、拖拽插入占位、组内新建、归档三态、rail、切回官方、宽度把手、组拖、搜索下拉、排版断言、深色主题 surfaces、乐观 drop）
 - 数据审计输出（load-only + commit probe）
 - 手工验收签字
 - 已知问题清单（含 P2）

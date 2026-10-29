@@ -16,7 +16,7 @@
 import { appendFile, mkdir } from 'node:fs/promises'
 import { basename, dirname } from 'node:path'
 import { DOC_VERSION } from '../shared/constants.js'
-import { validateDoc } from '../shared/model.js'
+import { normalizeColor, validateDoc } from '../shared/model.js'
 import {
   COMMIT_PATH,
   DIAGNOSTICS_PATH,
@@ -154,6 +154,10 @@ export const parseCommitBody = (body) => {
   }
   const verdict = validateDoc(candidate)
   if (!verdict.ok) return { ok: false, message: verdict.errors.join('; ') }
+  // 0.2.6 additive: validation accepts a missing `color` (legacy docs), while
+  // the host normalizes every persisted group to an explicit palette id so new
+  // writes never depend on the client-side blue fallback.
+  candidate.groups = candidate.groups.map((group) => ({ ...group, color: normalizeColor(group.color) }))
   return { ok: true, baseRevision, doc: candidate }
 }
 

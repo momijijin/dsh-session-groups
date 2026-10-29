@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs'
 import { CSS } from '../../src/client/css.js'
 import { en, zh } from '../../src/client/locale.js'
 import { UI_GLYPHS } from '../../src/client/icons.js'
+import { GROUP_COLORS } from '../../src/shared/constants.js'
 
 const components = readFileSync(new URL('../../src/client/components.js', import.meta.url), 'utf8')
 
@@ -51,7 +52,8 @@ test('header is a 36px official section row: title 14/20 weight 400 + accent ico
   assert.match(title, /font-size:\s*var\(--dsg-font-14,\s*14px\)/)
   assert.match(title, /line-height:\s*20px/)
   assert.match(title, /font-weight:\s*400/)
-  assert.match(title, /color:\s*var\(--dsw-alias-label-primary/)
+  // 0.2.6 (feedback item 1): the title text and its icon share the primary accent.
+  assert.match(title, /color:\s*var\(--dsw-alias-state-business-primary/)
 
   const accent = block('.dsg-header-accent {')
   assert.match(accent, /width:\s*16px/)
@@ -172,4 +174,103 @@ test('drag insertion uses a row-height theme-aware placeholder, not a 2px border
   assert.equal(typeof en['drag.groupAppend'], 'string')
   assert.equal(typeof zh['drag.toUngrouped'], 'string')
   assert.equal(typeof en['drag.toUngrouped'], 'string')
+})
+
+test('0.2.6 row hover actions match header controls: 28x28, 16px glyph, 4px gap, rows unchanged', () => {
+  const actions = block('.dsg-group-actions, .dsg-session-actions {')
+  assert.match(actions, /gap:\s*4px/)
+  const actionButton = block('.dsg-group-actions .dsg-icon-button, .dsg-session-actions .dsg-icon-button {')
+  assert.match(actionButton, /width:\s*28px/)
+  assert.match(actionButton, /height:\s*28px/)
+  // The header controls remain the reference: 28px buttons with 16px artwork.
+  assert.match(block('.dsg-header-actions {'), /gap:\s*4px/)
+  assert.match(block('.dsg-icon-button {'), /width:\s*28px/)
+  assert.match(components, /renderGlyph\(h, glyph\)/)
+  // Row heights stay 34/32 while the hit area grows.
+  assert.match(block('.dsg-group-row {'), /height:\s*34px/)
+  assert.match(CSS, /\.dsg-session-row \{\s*height:\s*32px/)
+  // The group name/count still ellipsize (flex:1 min-width:0 / flex:none).
+  assert.match(block('.dsg-group-name {'), /flex:\s*1/)
+  assert.match(block('.dsg-group-name {'), /text-overflow:\s*ellipsis/)
+  assert.match(block('.dsg-group-count {'), /flex:\s*none/)
+})
+
+test('0.2.6 group guide sits at the parent caret tip: 2px line, 20px/level indent', () => {
+  // The ungrouped inbox keeps its historical 10/10/1px chrome.
+  const base = block('.dsg-group-line {')
+  assert.match(base, /margin-left:\s*10px/)
+  assert.match(base, /padding-left:\s*10px/)
+  assert.match(base, /border-left:\s*1px solid var\(--dsw-alias-border-l2/)
+  // Group child bodies move the 2px guide to x=16 (caret tip) with 4px padding.
+  const line = block('.dsg-group > .dsg-group-body > .dsg-group-line {')
+  assert.match(line, /position:\s*relative/)
+  assert.match(line, /margin-left:\s*16px/)
+  assert.match(line, /padding-left:\s*4px/)
+  assert.match(line, /border-left:\s*0/)
+  const guide = block('.dsg-group > .dsg-group-body > .dsg-group-line::before {')
+  assert.match(guide, /left:\s*-1px/)
+  assert.match(guide, /width:\s*2px/)
+  assert.match(guide, /background:\s*var\(--dsg-group-color/)
+  // Row padding 8 + 16px caret => caret tip x=16; guide center = margin 16 (-1 + 2/2).
+  assert.match(block('.dsg-group-row {'), /padding:\s*0 8px/)
+  assert.match(block('.dsg-group-caret {'), /width:\s*16px/)
+  // 16px margin + 4px padding = the original 20px of content start per level.
+  assert.equal(16 + 4, 20)
+})
+
+test('0.2.6 group palette: six ids, color-token rules and a menu color dialog', () => {
+  assert.deepEqual([...GROUP_COLORS], ['blue', 'green', 'orange', 'red', 'purple', 'gray'])
+  for (const color of GROUP_COLORS) {
+    assert.match(CSS, new RegExp(`\\.dsg-group\\[data-color="${color}"\\]`))
+    assert.equal(typeof zh[`color.${color}`], 'string', `zh color.${color}`)
+    assert.equal(typeof en[`color.${color}`], 'string', `en color.${color}`)
+  }
+  assert.equal(zh['group.color'], '颜色')
+  assert.equal(en['group.color'], 'Color')
+  assert.equal(zh['dialog.groupColor'], '分组颜色')
+  assert.equal(en['dialog.groupColor'], 'Group color')
+  // Color rules drive the icon and the child guide line.
+  assert.match(block('.dsg-group-icon {'), /color:\s*var\(--dsg-group-color/)
+  // Menu item opens the color dialog; the dialog renders palette swatches.
+  assert.match(components, /handlers\.openGroupColor\(menu\.groupId\)/)
+  assert.match(components, /kind: 'group-color'/)
+  assert.match(components, /'data-testid': 'session-groups-dialog-color'/)
+  assert.match(components, /role: 'radiogroup'/)
+  assert.match(components, /dsg-color-swatch/)
+  assert.match(block('.dsg-color-swatch {'), /background:|width:\s*16px/)
+  assert.match(block('.dsg-color-option[data-selected="true"] {'), /border-color:\s*var\(--dsw-alias-state-business-primary/)
+  // The plugin applies the choice through the shared model setter.
+  const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
+  assert.match(plugin, /case 'group-color'/)
+  assert.match(plugin, /setGroupColor\(latest, dialog\.groupId, payload\.color\)/)
+})
+
+test('0.2.6 selection dialogs only highlight; Confirm applies, Cancel closes unchanged', () => {
+  // Initial highlight, validity and payload all come from the pure helper module.
+  assert.match(components, /initialDialogSelection\(dialog, store\.doc\)/)
+  assert.match(components, /selectionIsValid\(dialog, selection, store\.doc\)/)
+  assert.match(components, /dialogConfirmPayload\(dialog, selection\)/)
+  // Option clicks set the selection only: no direct confirm/commit calls in the
+  // option handlers (the footer owns apply).
+  assert.equal(components.includes('onClick: () => confirm({'), false)
+  assert.equal(components.includes('onPick: (groupId)'), false)
+  assert.equal((components.match(/setSelection\(/g) ?? []).length >= 4, true)
+  // Footer is rendered for every dialog kind and disabled without a valid value.
+  assert.match(components, /class: 'dsg-dialog-confirm'/)
+  assert.match(components, /disabled: !canConfirm/)
+  assert.match(components, /class: 'dsg-dialog-cancel'/)
+  // Every selection dialog exposes a stable test id + ARIA state.
+  for (const testId of [
+    'session-groups-dialog-workspace',
+    'session-groups-dialog-group',
+    'session-groups-dialog-icon',
+    'session-groups-dialog-color',
+  ]) {
+    assert.equal(components.includes(testId), true, `missing ${testId}`)
+  }
+  assert.match(components, /'aria-selected': active \? 'true' : 'false'/)
+  assert.match(components, /'aria-checked': active \? 'true' : 'false'/)
+  // Input/delete/archive dialogs keep their existing behavior.
+  assert.match(components, /needsInput \? \{ value: value\.trim\(\) \}/)
+  assert.match(components, /t\('dialog\.stopAndArchive'\)/)
 })

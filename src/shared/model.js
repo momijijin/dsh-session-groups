@@ -1,7 +1,10 @@
 import {
+  DEFAULT_GROUP_COLOR,
   DEFAULT_ICON,
   DOC_VERSION,
+  GROUP_COLORS,
   GROUP_ICONS,
+  MAX_COLOR_LENGTH,
   MAX_DEPTH,
   MAX_GROUP_NAME,
   MAX_ICON_LENGTH,
@@ -29,6 +32,14 @@ export const newGroupId = () => {
 export const isKnownIcon = (icon) => GROUP_ICONS.includes(icon)
 
 export const normalizeIcon = (icon) => (isKnownIcon(icon) ? icon : DEFAULT_ICON)
+
+export const isKnownColor = (color) => GROUP_COLORS.includes(color)
+
+/** Unknown/missing colors fall back to the blue default (0.2.6 additive). */
+export const normalizeColor = (color) => (isKnownColor(color) ? color : DEFAULT_GROUP_COLOR)
+
+/** Display color of a group: the persisted palette id or the blue default. */
+export const groupColor = (group) => normalizeColor(group?.color)
 
 export const normalizeName = (name) => {
   const text = asString(name).trim()
@@ -94,7 +105,7 @@ const insertGroupAt = (doc, group, index) => {
   doc.groups.splice(doc.groups.indexOf(siblings[at]), 0, group)
 }
 
-export const createGroup = (doc, { name, icon = DEFAULT_ICON, parentId = null, index } = {}) => {
+export const createGroup = (doc, { name, icon = DEFAULT_ICON, color = DEFAULT_GROUP_COLOR, parentId = null, index } = {}) => {
   const next = cloneDoc(doc)
   const cleanName = normalizeName(name)
   if (parentId !== null && !findGroup(next, parentId)) throw new Error('parent-not-found')
@@ -103,6 +114,7 @@ export const createGroup = (doc, { name, icon = DEFAULT_ICON, parentId = null, i
     id: newGroupId(),
     name: cleanName,
     icon: normalizeIcon(icon),
+    color: normalizeColor(color),
     parentId,
     sessionIds: [],
   }
@@ -123,6 +135,15 @@ export const setGroupIcon = (doc, groupId, icon) => {
   const group = findGroup(next, groupId)
   if (!group) throw new Error('group-not-found')
   group.icon = normalizeIcon(icon)
+  return next
+}
+
+/** Set a group's palette color (0.2.6). Unknown ids normalize to blue. */
+export const setGroupColor = (doc, groupId, color) => {
+  const next = cloneDoc(doc)
+  const group = findGroup(next, groupId)
+  if (!group) throw new Error('group-not-found')
+  group.color = normalizeColor(color)
   return next
 }
 
@@ -320,6 +341,17 @@ export const validateDoc = (doc) => {
       errors.push(`group-name:${group.id}`)
     }
     if (typeof group.icon !== 'string' || group.icon.length > MAX_ICON_LENGTH) errors.push(`group-icon:${group.id}`)
+    // 0.2.6 additive: `color` is optional (legacy docs) but, when present, must
+    // be one of the frozen palette ids; the host rejects anything else.
+    if (group.color !== undefined) {
+      if (
+        typeof group.color !== 'string' ||
+        group.color.length > MAX_COLOR_LENGTH ||
+        !GROUP_COLORS.includes(group.color)
+      ) {
+        errors.push(`group-color:${group.id}`)
+      }
+    }
     if (group.parentId !== null && typeof group.parentId !== 'string') errors.push(`group-parent:${group.id}`)
     if (!Array.isArray(group.sessionIds)) errors.push(`group-sessions:${group.id}`)
     else {
@@ -373,6 +405,7 @@ export const normalizeDoc = (doc) => {
       id: raw.id,
       name,
       icon: normalizeIcon(raw.icon),
+      color: normalizeColor(raw.color),
       parentId: typeof raw.parentId === 'string' && raw.parentId !== '' ? raw.parentId : null,
       sessionIds: [],
     })

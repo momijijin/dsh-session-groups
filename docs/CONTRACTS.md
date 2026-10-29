@@ -7,6 +7,7 @@
 - V1.1（0.2.3，2026-10-29）：**virtualization + UI 回退 patch**——footer 恢复为单个切换按钮（图标/文案随目标视图变化，`data-mode`/`title`/`aria-pressed` 反映当前态）；header 右侧顺序改为官方工作区段头 **search → view-options → plus**；未归组列表按 `.dsg-tree` 视口 + overscan 窗口化（顶部/底部 spacer 精确保高，组树保持完整），搜索选中窗口外未归组行会先强制滚入窗口；纯 helper `computeVirtualWindow` + `virtualScrollOffset`。数据模型/Host 路由/存储不变；0.2.2 的 `session-groups-toggle-groups`/`session-groups-toggle-workspace` 删除，新增 `session-groups-virtual-spacer`。
 - V1.1（0.2.4，2026-10-29）：**optimistic drop commits + insertion placeholders + official chrome patch**——会话/分组拖拽（含菜单上移/下移）改为乐观提交：drop 当帧按当前乐观 doc dispatch，`revision` 保持服务端确认值，写入进入单写者合并队列（快速移动合并、成功 reconcile、失败/冲突回滚 + 既有 toast）；非乐观提交（建组/重命名/删除/图标/移动对话框）先 flush 乐观队列再在最新 doc 上执行。拖拽落点改为真实行高占位（32px 会话 / 34px 分组，主题 accent 背景 + 虚线边框 + 目标名/「放到这里」），覆盖 session-before/after、group-before/after、子组缝隙、group-append、ungrouped/root-end；`session-groups-drop-indicator` testid 保留并新增 `data-drop-height`。`.dsg-header-title` 权重 600→400（官方 section label，14/20）；footer 文案精确为「切换到自由分组视图」/「返回默认工作区视图」。数据模型/Host 路由/存储不变。
 - V1.1（0.2.5，2026-10-29）：**official header icons + drag diagnostics patch**——header 三按钮改用 DSH 2.0.18 primitives 原始 artwork（`IconSearchOutlineRegular` / `IconSlidersTwoOutlineRegular` / `IconProjectAddOutlineRegular`，16px、1px stroke）；新增**只增不改**的 `POST /dsh-session-groups/diagnostics`（fence 后 append-only NDJSON 到 storages 下的诊断文件）、客户端诊断环/flush/HUD（默认开启，`localStorage['dsh-session-groups.diagnostics']='0'` 关闭）与分析器脚本。数据模型、`load`/`commit`、记录文件路径与官方数据写入不变。
+- V1.1（0.2.6，2026-10-29）：**group color + selection-dialog patch**——`Group` 新增**可选** `color`（`blue|green|orange|red|purple|gray`，默认蓝；`DOC_VERSION` 不变，旧文档无 color 仍合法并按蓝显示/归一化）；新增 `setGroupColor` 与分组菜单「颜色」对话框。header 标题与 accent 图标统一 primary accent；行 hover 操作按钮 16→28px 命中区（glyph 仍 16px、gap 4px）；分组左侧引导线移到父级 caret 尖端（x=16、2px 宽、子内容 padding 4，缩进仍 20px/级）。icon / move-session / move-group / new-session / group-color 五类选择对话框统一「点击只高亮、footer Confirm/Cancel 才生效」；输入/删除/运行中归档对话框行为不变。`load`/`commit` 路由与记录文件路径不变；host 在 commit 校验后将缺省 color 归一化为 `blue` 落盘。
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
@@ -40,9 +41,12 @@ export interface Group {
   id: string;            // "g-" + 12 hex
   name: string;          // 1..80 chars, trimmed; >80 -> reject
   icon: GroupIcon;
+  color?: GroupColor;    // 0.2.6 additive; missing -> blue (legacy docs valid)
   parentId: string | null;
   sessionIds: string[];  // display order
 }
+
+export type GroupColor = 'blue' | 'green' | 'orange' | 'red' | 'purple' | 'gray';
 
 export interface GroupDoc {
   version: 1;
@@ -54,7 +58,7 @@ export interface GroupDoc {
 
 Invariants:
 
-1. `id` unique; `name` trimmed 1..80; invalid icon -> `folder`.
+1. `id` unique; `name` trimmed 1..80; invalid icon -> `folder`; optional `color` must be a known palette id (missing/invalid input normalizes to `blue`; `validateDoc` rejects an unknown persisted id with `group-color:<id>`).
 2. `parentId` null or existing group; no cycles; max depth 8 (UI soft 4).
 3. A session id appears at most once across all groups and `ungrouped`.
 4. `revision` host-owned; clients send only `baseRevision`.
@@ -156,9 +160,13 @@ validateDoc(doc): { ok: boolean; errors: string[] }
 findGroup(doc, groupId): Group | null
 childrenOf(doc, parentId): Group[]
 isDescendant(doc, groupId, maybeAncestorId): boolean
-createGroup(doc, { name, icon, parentId, index }): GroupDoc
+createGroup(doc, { name, icon, color, parentId, index }): GroupDoc
 renameGroup(doc, groupId, name): GroupDoc
 setGroupIcon(doc, groupId, icon): GroupDoc
+setGroupColor(doc, groupId, color): GroupDoc
+isKnownColor(color): boolean
+normalizeColor(color): GroupColor
+groupColor(group): GroupColor
 deleteGroup(doc, groupId): GroupDoc
 moveGroup(doc, groupId, parentId, index): GroupDoc
 assignSession(doc, sessionId, groupId, index): GroupDoc
@@ -230,6 +238,16 @@ Visibility/status:
 - **失败/冲突回滚**：任何持久化失败/409 都回到 `lastConfirmed` doc 与确认 revision，清空 pending，沿用 `banner.conflict` / `toast.dropFailed` 提示；错误标记 `reported`，调用方不重复 toast。
 - **非乐观提交协调**：`commitStrict(updater)` 先 `flush()` 乐观队列，再持单写者锁；updater 在锁内对最新 doc 求值。严格写期间的乐观 drop 延迟到锁释放后，再对服务端确认 doc 求值，避免旧 doc 覆盖新状态。建组/重命名/删除/图标/移动会话/移动分组全部走此路径。
 
+### 4.05 Selection dialogs（0.2.6）
+
+五类小选择对话框（`icon` / `move-session` / `move-group` / `new-session` / `group-color`）共用同一交互：
+
+- 打开时按当前值/推断值预选（icon=当前图标；move-*=当前组/父级；new-session=`inferred` workspace；group-color=当前颜色或蓝），预选项必须有可见高亮（`aria-selected` 或 `aria-checked`）。
+- 点击选项只更新高亮，不关闭对话框、不写 doc/host；已选项 `data-selected="true"`。
+- footer 固定 Cancel/Confirm：Confirm 仅在存在有效选择时可用（无有效选择时 disabled），点击后走既有 `commitStrict`/host action；Cancel/Escape/点击 backdrop 关闭且不改变任何状态。
+- 输入类（new/rename）与 delete/archive-running 对话框保持原行为（输入 Enter 确认；delete/archive 的 Confirm 为 danger）。
+- 实现：纯函数 `src/client/dialog-selection.js`（初始选择/有效性/confirmation payload），组件只渲染；单测 `tests/client/dialog-selection.test.js`。
+
 ### 4.1 Stable UI test ids（E2E 契约）
 
 V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 `docs/TEST-PLAN.md`。
@@ -239,6 +257,8 @@ V1.1（0.2.0）additive 追加：`session-groups-resize-handle`、`session-group
 V1.1（0.2.2）additive 追加：`session-groups-search-toggle`（header 搜索开关）、`session-groups-search-close`（搜索行关闭/收起）、`session-groups-view-options`（header 视图选项按钮）、`session-groups-view-options-popover`（归档三态 popover）。搜索行默认不渲染；搜索图标开合，Escape（无下拉时）与关闭按钮收起整行。`session-groups-archive-filter` 从旧的循环按钮改为 popover 内三行（`data-filter=hidden|all|only` + `data-active`）；`session-groups-return` 只在错误/扁平回退里保留。**0.2.3 删除 footer 两段 testid** `session-groups-toggle-groups` / `session-groups-toggle-workspace`；`session-groups-toggle` 恢复为单个按钮（`data-mode`/`data-target`/`data-wide`/`aria-pressed`/`title`），并新增 `session-groups-virtual-spacer`（`data-position=top|bottom`）。未归组头增加 `data-count`（逻辑行数），虚拟列表行容器增加 `data-virtual-start|end|count|total`。
 
 V1.1（0.2.5）additive 追加：`session-groups-diagnostics-hud`（诊断 HUD 根，`pointer-events:none`，纯 DOM 文本；`data-run-id`/`data-schema-version`）。HUD 只在诊断开启（默认）时挂载；`localStorage['dsh-session-groups.diagnostics']='0'` 时不渲染 HUD、不发 diagnostics 请求。header 三个按钮的 testid 不变，仅内部 SVG 换成官方 artwork。
+
+V1.1（0.2.6）additive 追加：`session-groups-dialog-options`（选择对话框选项容器，`role=listbox|radiogroup`）、`session-groups-dialog-workspace`（`data-workspace-id`/`data-selected`/`aria-selected`）、`session-groups-dialog-group`（`data-group-id`，空串=未归组）、`session-groups-dialog-icon`（`data-icon`/`aria-checked`）、`session-groups-dialog-color`（`data-color`/`aria-checked`）。分组行新增 `data-color="blue|green|orange|red|purple|gray"`；`session-groups-dialog-confirm`/`.dsg-dialog-cancel` 现在对所有对话框都存在。
 
 | testid | 位置 | 附加属性 |
 |---|---|---|

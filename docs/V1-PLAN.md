@@ -27,7 +27,7 @@
 | D11 | 竖线 | 跟组内容高度（含子组），不是撑满视口剩余高度；空组 24px stub。 |
 | D12 | 搜索 | **V1.1 已实现**标题/工作区/组路径下拉搜索（归档置灰、选中展开祖先并滚动高亮）；全文搜索仍 P2。 |
 
-## 2.1 V1.1 增补（0.2.0，2026-10-28；0.2.1 排版 patch；0.2.2 UI layout patch；0.2.3 虚拟化 patch；0.2.4 占位/乐观 patch；0.2.5 图标/诊断 patch）
+## 2.1 V1.1 增补（0.2.0，2026-10-28；0.2.1 排版 patch；0.2.2 UI layout patch；0.2.3 虚拟化 patch；0.2.4 占位/乐观 patch；0.2.5 图标/诊断 patch；0.2.6 颜色/选择对话框 patch）
 
 | # | 变更 | 结论 |
 |---|---|---|
@@ -39,8 +39,9 @@
 | V1.1-6 | UI 回退 + 虚拟化（0.2.3） | **footer 回退为单个 28px 按钮**：点击切换分组/工作区，图标与文案随目标视图变化（16px glyph、13px 文本），当前态写入 `data-mode`/`title`/`aria-pressed`；rail 为 28px 图标按钮。**header 右侧顺序对齐官方工作区段头：search → view-options → plus**。**未归组列表虚拟化**：固定行高 32 + 2px gap + 34px 段头，按 `.dsg-tree` 视口 + overscan=8 只渲染可见行，top/bottom spacer 精确保留总高；搜索选中窗口外未归组行先强制滚入窗口再高亮。真实 home 的 1,639 个 session 目录中仅 ~96 个 root（1,474 个 subagent 被过滤），实际可见未归组 **10**；1,500 行场景用 QA 大列表 fixture 验证（DOM 行数 1,510→20，见 TEST-RESULTS）。 |
 | V1.1-7 | 拖拽占位 + 乐观提交（0.2.4） | **插入占位**：有效落点渲染真实行高占位（session 32px / group 34px，accent 背景 + 虚线边框 + 「放到这里」/目标名），覆盖 session-before/after、group-before/after、child slot（6→34px）、group-append（展开组体末尾 / 收起组头后）、ungrouped、root-end；后续行物理下移，dragleave/drop/dragend 清除；264px 无溢出。**乐观提交**：drop 当帧按当前乐观 doc dispatch，revision 保持确认值；单写者队列合并快速移动，成功 reconcile、失败/冲突回滚 + 既有 toast；非乐观 doc 提交先 flush 再按最新 doc 执行。footer 文案精确为「切换到自由分组视图」/「返回默认工作区视图」；header title 去 600 → 400（官方 section label 14/20）。 |
 | V1.1-8 | 官方 header 图标 + 拖拽诊断（0.2.5） | **图标**：header search/view-options/new-group 改用 DSH Desktop 2.0.18 primitives 原始 artwork（`IconSearchOutlineRegular` / `IconSlidersTwoOutlineRegular` / `IconProjectAddOutlineRegular`，16px、1px stroke，顺序不变），不再用自定义近似图形。**诊断**：默认开启的客户端事件环（native+plugin+timer/render/context）+ `POST /dsh-session-groups/diagnostics` 追加 NDJSON 到 `storages/dsh-session-groups.diagnostics.ndjson` + ≤4Hz 纯 DOM HUD + `scripts/qa/analyze-drag-trace.mjs`；`localStorage['dsh-session-groups.diagnostics']='0'` 可关闭；只写诊断文件，不碰官方数据。 |
+| V1.1-9 | 分组颜色 + 选择对话框（0.2.6） | `Group` 新增**可选** `color`（`blue/green/orange/red/purple/gray`，默认 `blue`；旧文档缺省按蓝显示，commit 归一化蓝落盘；`DOC_VERSION` 不变）+ `setGroupColor` + 分组菜单「颜色」色板对话框；组行图标/子组引导线使用所选颜色。header 标题与 accent 同 primary accent；行 hover 操作按钮 16→28px（glyph 16/gap 4）；组引导线移到父 caret 尖端（x=16、2px、content padding 4、缩进仍 20/级）。icon/move-session/move-group/new-session/group-color 五类对话框统一「点击只高亮 + footer Confirm/Cancel」；输入/删除/归档对话框不变。 |
 
-V1.1 明确不做：分组颜色/图标上传、撤销、置顶徽标、折叠组聚合计数、多窗口实时合并、全文搜索、跨设备同步、宿主布局包修改。
+V1.1 明确不做：图标上传、撤销、置顶徽标、折叠组聚合计数、多窗口实时合并、全文搜索、跨设备同步、宿主布局包修改。
 
 ## 3. 平台硬约束（必须记住）
 
@@ -239,7 +240,7 @@ V1.1 明确不做：分组颜色/图标上传、撤销、置顶徽标、折叠�
 8. 一键切回官方工作区视图，官方功能原样。
 9. 审计：会话标题、工作区归属、`workspace.json`、session 日志未因分组操作改变；只写 `dsh-session-groups.json`。
 
-V1.1 加验（18 步 E2E，0.2.5）：
+V1.1 加验（19 步 E2E，0.2.6）：
 
 10. 左栏宽度 264–760：官方宽度进入前记录、切回后一致；reload/rail/双击复位；264px 头部无水平溢出且单个 footer 按钮标签可见、rail 28px 图标。
 11. 组拖：同级排序/跨父改父级/空组与 0 子组槽/根末尾/自身后代无效/快速双拖/菜单上移下移/子树跟随；no-op 不涨 revision。
@@ -249,6 +250,7 @@ V1.1 加验（18 步 E2E，0.2.5）：
 15. 虚拟化大列表 probe：1,500+ 逻辑未归组行下 DOM 行数 <80、滚动高度保持、窗口外搜索 reveal、可见行拖放；before/after 行数与耗时见 `docs/TEST-RESULTS.md`。
 16. 占位/乐观：九类插入点均渲染 32/34px accent 占位、后续行下移、dragleave 清除、264px 无溢出；CDP Fetch 挂起 commit 时 drop 后 DOM 已移动且记录 revision 未变，放行后 revision 前进、顺序保持。
 17. 官方图标/诊断（0.2.5）：header 三图标几何与 2.0.18 primitives 一致（16px/1px）；HUD 可见且 `pointer-events:none`、native dragover/chg/rend 计数非零；`POST /dsh-session-groups/diagnostics` 在隔离 home 的 `storages/dsh-session-groups.diagnostics.ndjson` 追加 `runId/schemaVersion` 行，含 native/handler/optimistic 事件，且记录文件/官方数据不变。
+18. 分组颜色/选择对话框（0.2.6）：分组菜单「颜色」→ 6 色板、当前色高亮；点击只高亮（不关框/不写记录），Cancel 不变，Confirm 后行 `data-color`/图标颜色/记录 color 一致；icon/move-session/new-session 对话框同样先高亮后 Confirm，Escape/backdrop 关闭不变；header 标题与 accent 同 primary accent；行操作 28×28；组引导线在父 caret 尖端（2px）。
 
 通过标准：V1 9 步 + V1.1 3 组全过；20 次拖拽误放 ≤1；0 次丢会话/重复行；0 次标题被分组操作改写；坏文件/路由失败不白屏。
 

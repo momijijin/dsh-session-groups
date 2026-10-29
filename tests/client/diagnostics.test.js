@@ -13,6 +13,7 @@ import {
   DIAGNOSTICS_HUD_TESTID,
   DIAGNOSTICS_STORAGE_KEY,
 } from '../../src/client/diagnostics.js'
+import { PLUGIN_VERSION } from '../../src/shared/constants.js'
 
 const flushMicrotasks = () => new Promise((resolve) => setImmediate(resolve))
 
@@ -291,7 +292,7 @@ test('HUD is plain DOM text updated on the interval, not per event', () => {
   const { instance, fake, timers } = makeInstance({ hud: true, batchSize: 999 })
   const hud = fake.body.children[0]
   assert.equal(hud.dataset.testid, DIAGNOSTICS_HUD_TESTID)
-  assert.match(hud.textContent, /dsg 0\.2\.5 run-unit/)
+  assert.match(hud.textContent, new RegExp(`dsg ${PLUGIN_VERSION.replaceAll('.', '\\.')} run-unit`))
   assert.equal(timers.intervals.length, 1)
   assert.equal(timers.intervals[0].ms, 250)
 

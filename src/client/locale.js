@@ -34,6 +34,7 @@ export const zh = {
   'group.moveUp': '上移',
   'group.moveDown': '下移',
   'group.icon': '更换图标',
+  'group.color': '颜色',
   'group.sessionCount': '{n} 个会话',
   'drag.groupBefore': '放入『{name}』前',
   'drag.groupAfter': '放入『{name}』后',
@@ -72,6 +73,7 @@ export const zh = {
   'dialog.moveTo': '移动到分组',
   'dialog.newSession': '在分组内新建会话',
   'dialog.newSessionWorkspace': '选择工作区',
+  'dialog.groupColor': '分组颜色',
   'dialog.namePlaceholder': '分组名称',
   'dialog.confirm': '确定',
   'dialog.cancel': '取消',
@@ -115,6 +117,12 @@ export const zh = {
   'search.empty': '没有匹配的会话',
   'search.close': '关闭搜索',
   'search.archivedDisabled': '已归档会话不可打开',
+  'color.blue': '蓝色',
+  'color.green': '绿色',
+  'color.orange': '橙色',
+  'color.red': '红色',
+  'color.purple': '紫色',
+  'color.gray': '灰色',
 }
 
 /** English dictionary (complete relative to zh). */
@@ -140,6 +148,7 @@ export const en = {
   'group.moveUp': 'Move up',
   'group.moveDown': 'Move down',
   'group.icon': 'Change icon',
+  'group.color': 'Color',
   'group.sessionCount': '{n} sessions',
   'drag.groupBefore': 'Drop before “{name}”',
   'drag.groupAfter': 'Drop after “{name}”',
@@ -178,6 +187,7 @@ export const en = {
   'dialog.moveTo': 'Move to group',
   'dialog.newSession': 'New session in group',
   'dialog.newSessionWorkspace': 'Choose a workspace',
+  'dialog.groupColor': 'Group color',
   'dialog.namePlaceholder': 'Group name',
   'dialog.confirm': 'Confirm',
   'dialog.cancel': 'Cancel',
@@ -221,6 +231,12 @@ export const en = {
   'search.empty': 'No matching sessions',
   'search.close': 'Close search',
   'search.archivedDisabled': 'Archived sessions cannot be opened',
+  'color.blue': 'Blue',
+  'color.green': 'Green',
+  'color.orange': 'Orange',
+  'color.red': 'Red',
+  'color.purple': 'Purple',
+  'color.gray': 'Gray',
 }
 
 /** Dictionaries keyed by host locale id prefix. */

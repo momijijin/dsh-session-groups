@@ -5,7 +5,40 @@
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
-## 0. V1.1 patch 0.2.5 最终结论（2026-10-29，官方 header 图标 + 拖拽诊断 trace/HUD + 分析器）
+## 0. V1.1 patch 0.2.6 最终结论（2026-10-29，分组颜色 + 统一选择对话框）
+
+**V1.1 patch 0.2.6 QA 验证线 PASS（隔离 home `.spike-homes/qa-0.2.6c`；setup 端口 4405 / E2E 端口 4406；setup 18/18、真实 home 零写入）：**
+
+| 层 | 结果 | 证据 |
+|---|---|---|
+| `npm test`（仓库全量） | **248/248 PASS**（0 fail / 0 skip，~4s；新增 `dialog-selection` 6 条、model 颜色 3 条、host color round-trip/422 2 条、CSS/selection 契约 3 条） | 控制台输出 |
+| E2E 19 步（默认开启诊断） | **19/19 PASS**（step 合计 **94,440 ms**；`consoleErrors=[]`、`pageErrors=[]`）；step 16 header title = primary accent `rgb(65,118,230)`（14/20/weight 400）、行操作 **28×28**、组引导线 center=30 / row left=14 / caret center=30（**x=16**）且宽 2px；step 19 color blue→purple、icon folder→star、move session、new-session 3 options/inferred+Cancel、HUD `dsg 0.2.6`（n=28/chg=54/rend=6199，rev=34） | `scripts/qa/evidence/e2e-20261029-151549.json` + 19 张截图 |
+| 诊断持久化（E2E runner 非步骤校验） | **PASS**：页面 POST `e2e-probe` → 200 `{ok:true,appended:1}`；隔离 home NDJSON **1,043 行 / 4 runs / 0 invalidLines**，`nativeSeen`/`handlerSeen`/`optimisticSeen` 全 true | 同上 `diagnostics` 字段 + `.spike-homes/qa-0.2.6c/storages/dsh-session-groups.diagnostics.ndjson` |
+| setup（0.2.6 隔离 home） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client **240,484 bytes** / sha256 `5FF20C9343D655A5E5D71DAA559805D97FC248693A5591BABFF4044C165B6D7A`；package version `0.2.6` | `scripts/qa/evidence/setup-20261029-151303.json` |
+| 数据审计 | **PASS 7/7**（`-ExpectGroupFile change -AllowHostSessionChanges`）：只 `dsh-session-groups.json` 按预期变更（revision 34）；`workspace.json` 宿主侧新增会话（显式放行）；3 sample sessions / desktop/web profile 指纹不变；诊断文件 append-only 放行（AUD-5） | `scripts/qa/evidence/audit-baseline-20261029-151409.json` / `audit-verify-20261029-151644.json` |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.6.tgz`（**156,381 bytes**；unpacked **611,646**；**37 files**；sha256 `A4F5DC2DEB59551CA091CDEB6BE32FAD2F05D2E1C0B439B80C49EAD811597CFC`） | 本文件 §0.2 |
+
+> 证据文件位于 `scripts/qa/evidence/`（`scripts/qa/.gitignore` 排除，本地保留；不入包/不入库）；实现 home 与诊断 trace 位于 `.spike-homes/qa-0.2.6c/`（gitignore）。E2E 截图同目录 `screenshots/e2e/`。
+
+### 0.1 0.2.6 变更明细（本次 patch）
+
+- **颜色模型（additive，`DOC_VERSION` 不变）**：`src/shared/constants.js` 新增 `GROUP_COLORS`（blue/green/orange/red/purple/gray）与 `DEFAULT_GROUP_COLOR='blue'`；`src/shared/model.js` 新增 `isKnownColor`/`normalizeColor`/`groupColor`/`setGroupColor`，`createGroup` 默认蓝、未知值归一化蓝；`validateDoc` 允许缺省 color、拒绝未知 palette id（`group-color:<id>`）；`normalizeDoc` 将缺省/非法值归为蓝。
+- **Host**：`parseCommitBody` 先按 shared model 校验，再把缺省 `color` 归一化为 `blue` 后写入；`load`/`commit`/记录路径/`DOC_VERSION` 不变；commit round-trip 与非法 color 422 有测试。
+- **分组颜色 UI**：组菜单新增「颜色」（`group.color`），色板对话框 `group-color`（6 个 `role=radio` swatch + `aria-checked`）；组行 `data-color`、组图标与子组引导线使用对应 token/hex；旧记录无 color 显示蓝。
+- **header/行操作/引导线**：`.dsg-header-title` 与 `.dsg-header-accent` 同用 `--dsw-alias-state-business-primary`（14/20/400）；行 hover 操作按钮 28×28、glyph 16、gap 4；组引导线改为 `.dsg-group > .dsg-group-body > .dsg-group-line` 的 `::before`（x=16、2px、content padding 4；未归组行保留原 10/10/1px）。
+- **选择对话框**：新增纯函数 `src/client/dialog-selection.js`（初始选择/有效性/payload、move 选项排除自身+后代）；`DialogHost` 对 icon / move-session / move-group / new-session / group-color 统一「点击只高亮、footer Confirm/Cancel」；无有效选择 Confirm disabled；输入/删除/运行中归档对话框行为不变。
+- **Locale/文档/测试**：`group.color`、`dialog.groupColor`、`color.*` zh/en 同步；新增 C19、E2E step 19；README/RELEASE/TEST-PLAN/TEST-RESULTS/CONTRACTS/V1-PLAN 更新到 0.2.6。
+- **保留**：0.2.5 诊断默认开启/HUD/trace/分析器、0.2.4 乐观提交/行高占位、0.2.3 虚拟化、0.2.1/0.2.2 排版与主题、依赖集合不变。
+
+### 0.2 0.2.6 打包记录
+
+- 命令：`npm run build`（lib/client.js **240,484 bytes** / sha256 `5FF20C93…`）→ `npm pack`。
+- 产物：`dsh-session-groups-0.2.6.tgz`；**156,381 bytes**；unpacked **611,646 bytes**；**37 files**。
+- sha256：`A4F5DC2DEB59551CA091CDEB6BE32FAD2F05D2E1C0B439B80C49EAD811597CFC`；npm shasum `1a91688eefc9cbf31db58539967a90f1ef85d058`；integrity `sha512-/k4E0ZMpuX2Eh9PJ6zSHYsM96KjwyFuARp60xgwNCNlJ80X6YbsoE6nRsQZrdGbo93wAB5ExLclLcxIGnauJcw==`。
+- 内容：`src/**`（30，含新增 `src/client/dialog-selection.js`）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 37）。
+- **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
+
+## 0-0.2.5. V1.1 patch 0.2.5 最终结论（2026-10-29，官方 header 图标 + 拖拽诊断 trace/HUD + 分析器，历史）
 
 **V1.1 patch 0.2.5 QA 验证线 PASS（隔离 home `.spike-homes/qa-0.2.5`；setup 端口 4402 / E2E 端口 4403；setup 18/18、真实 home 零写入）：**
 
@@ -333,7 +366,7 @@ cd C:\Users\Momiji\Projects\dsh-session-groups
 # 仓库全量测试（含 QA 独立线）
 npm test
 
-# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 18 步 → audit → teardown）
+# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 19 步 → audit → teardown）
 pwsh -NoProfile -File scripts/qa/run-v1.ps1
 
 # 分步

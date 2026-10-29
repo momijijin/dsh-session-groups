@@ -6,7 +6,7 @@
  * Cordis validates plugin return values as effects (Gate 0: returning an object
  * raises `TypeError: Invalid effect`).
  */
-import { createGroup, deleteGroup, moveGroup, renameGroup, setGroupIcon } from '../shared/model.js'
+import { createGroup, deleteGroup, moveGroup, renameGroup, setGroupColor, setGroupIcon } from '../shared/model.js'
 import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
@@ -325,6 +325,10 @@ export const createPlugin = () => {
           await commitDocFromAction((latest) => setGroupIcon(latest, dialog.groupId, payload.icon))
           return
         }
+        case 'group-color': {
+          await commitDocFromAction((latest) => setGroupColor(latest, dialog.groupId, payload.color))
+          return
+        }
         case 'move-session': {
           await actions.moveSession(dialog.sessionId, payload.groupId ?? null, undefined)
           closeDialog()
@@ -336,6 +340,7 @@ export const createPlugin = () => {
           return
         }
         case 'new-session': {
+          if (typeof payload.workspaceId !== 'string' || payload.workspaceId === '') return failDialog('dialog.createFailed')
           const result = await actions.createSessionInGroup({ groupId: dialog.groupId, workspaceId: payload.workspaceId })
           if (store.getSnapshot().archiveFilter === 'only') {
             setArchiveFilter('all')
@@ -357,8 +362,16 @@ export const createPlugin = () => {
       }
     } catch (error) {
       if (dialog.kind === 'rename-session') notify({ kind: 'error', message: t('toast.renameFailed') })
-      else if (dialog.kind === 'delete-group' || dialog.kind === 'new-group' || dialog.kind === 'rename-group') failDialog('commit-failed')
-      else notify({ kind: 'error', message: t('toast.dropFailed') })
+      else if (
+        dialog.kind === 'delete-group' ||
+        dialog.kind === 'new-group' ||
+        dialog.kind === 'rename-group' ||
+        dialog.kind === 'icon' ||
+        dialog.kind === 'group-color' ||
+        dialog.kind === 'move-group'
+      ) {
+        failDialog('commit-failed')
+      } else notify({ kind: 'error', message: t('toast.dropFailed') })
       if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] dialog action failed', error)
     }
   }

@@ -7,8 +7,20 @@
  * from those hooks; the only local state is this plugin's view store.
  */
 import { Component, createElement, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { MAX_GROUP_NAME } from '../shared/constants.js'
-import { childrenOf, findGroup, moveGroup } from '../shared/model.js'
+import { GROUP_COLORS, GROUP_ICONS, MAX_GROUP_NAME } from '../shared/constants.js'
+import { childrenOf, findGroup, groupColor, moveGroup } from '../shared/model.js'
+import {
+  currentColorOf,
+  currentGroupIdOf,
+  currentIconOf,
+  currentParentOf,
+  dialogConfirmPayload,
+  findGroupsFlat,
+  initialDialogSelection,
+  isSelectionDialog,
+  moveGroupOptions,
+  selectionIsValid,
+} from './dialog-selection.js'
 import { createActions, formatActivity, workspaceChoices, workspaceLabel } from './actions.js'
 import {
   buildVisibleTree,
@@ -445,7 +457,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
 
   return h(
     'div',
-    { class: 'dsg-group' },
+    { class: 'dsg-group', 'data-color': groupColor(group) },
     isBefore
       ? h(DropPlaceholder, { target: { kind: 'group-before', targetId: group.id }, store, handlers, height: GROUP_PLACEHOLDER_HEIGHT })
       : null,
@@ -459,6 +471,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
         'aria-expanded': expanded ? 'true' : 'false',
         'data-testid': 'session-groups-group',
         'data-group-id': group.id,
+        'data-color': groupColor(group),
         'data-depth': String(displayDepth(depth)),
         'data-expanded': expanded ? 'true' : 'false',
         'data-drop-active': isAppendTarget ? 'true' : 'false',
@@ -1311,6 +1324,7 @@ const MenuPopover = ({ store, handlers }) => {
     children.push(item('new-subgroup', t('group.newSubgroup'), () => handlers.openNewGroup(null, menu.groupId)))
     children.push(item('rename', t('group.rename'), () => handlers.openRenameGroup(menu.groupId)))
     children.push(item('icon', t('group.icon'), () => handlers.openIconGroup(menu.groupId)))
+    children.push(item('color', t('group.color'), () => handlers.openGroupColor(menu.groupId)))
     children.push(item('move', t('group.moveTo'), () => handlers.openMoveGroup(menu.groupId)))
     children.push(moveItem('move-up', t('group.moveUp'), 'session-groups-group-move-up', previous === null, -1))
     children.push(moveItem('move-down', t('group.moveDown'), 'session-groups-group-move-down', next === null, 1))
@@ -1341,15 +1355,46 @@ const MenuPopover = ({ store, handlers }) => {
   )
 }
 
-const GroupListPicker = ({ groups, excludeId, onPick, currentId }) => {
+/**
+ * Move-to-group option list (0.2.6). A click only highlights the row
+ * (`aria-selected`); the shared dialog footer owns the actual move, so a stray
+ * click can never move a session or group by itself.
+ */
+const GroupListPicker = ({ options, selection, onSelect }) => {
   const t = rt()?.t
+  const option = (key, value, label, depth) =>
+    h(
+      'button',
+      {
+        key,
+        type: 'button',
+        role: 'option',
+        'aria-selected': selection === value ? 'true' : 'false',
+        class: 'dsg-menu-item dsg-dialog-option',
+        'data-testid': 'session-groups-dialog-group',
+        'data-group-id': value ?? '',
+        'data-selected': selection === value ? 'true' : 'false',
+        style: { paddingLeft: `${10 + depth * 12}px` },
+        onClick: (event) => {
+          event.stopPropagation()
+          onSelect(value)
+        },
+      },
+      h('span', { class: 'dsg-dialog-option-label' }, label),
+      selection === value
+        ? h('span', { class: 'dsg-dialog-option-check', 'aria-hidden': 'true' }, renderGlyph(h, 'check', 16))
+        : null
+    )
   return h(
     'div',
-    { class: 'dsg-menu', style: { position: 'static', boxShadow: 'none' } },
-    h('button', { type: 'button', class: 'dsg-menu-item', onClick: () => onPick(null) }, t('ungrouped.title')),
-    ...groups
-      .filter((group) => group.id !== excludeId)
-      .map((group) => h('button', { key: group.id, type: 'button', class: 'dsg-menu-item', onClick: () => onPick(group.id) }, group.name))
+    {
+      class: 'dsg-menu dsg-dialog-list',
+      role: 'listbox',
+      'data-testid': 'session-groups-dialog-options',
+      'aria-label': t('dialog.moveTo'),
+    },
+    option('ungrouped', null, t('ungrouped.title'), 0),
+    ...options.map((group) => option(group.id, group.id, group.name, group.depth + 1))
   )
 }
 
@@ -1357,71 +1402,153 @@ const DialogHost = ({ store, props }) => {
   const dialog = store.dialog
   const t = rt()?.t
   const [value, setValue] = useState('')
+  const [selection, setSelection] = useState(undefined)
   const inputRef = useRef(null)
   useEffect(() => {
     setValue(dialog?.value ?? '')
+    // Every selection dialog opens with a visible current/inferred highlight;
+    // when nothing usable exists Confirm stays disabled until the user picks.
+    setSelection(dialog ? initialDialogSelection(dialog, store.doc) : undefined)
     if (dialog && (dialog.kind === 'new-group' || dialog.kind === 'rename-group' || dialog.kind === 'rename-session')) {
       const timer = setTimeout(() => inputRef.current?.focus(), 10)
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [dialog])
   if (!dialog) return null
   const close = () => dispatch('dialog', { dialog: null })
   const confirm = (payload) => rt()?.confirmDialog(dialog, payload)
   const errorText = dialog.error ? t(dialog.error === 'name-required' ? 'dialog.namePlaceholder' : dialog.error) : null
   const title = t(dialog.titleKey)
+  const optionCheck = () => h('span', { class: 'dsg-dialog-option-check', 'aria-hidden': 'true' }, renderGlyph(h, 'check', 16))
   const bodyNodes = []
   if (dialog.kind === 'delete-group') bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.deleteBody', { n: dialog.sessionCount ?? 0 })))
   if (dialog.kind === 'archive-running') bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.archiveRunningBody', { families: formatActivity(dialog.activity) })))
   if (dialog.kind === 'new-session') {
-    if (dialog.choices.length === 0) bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.noWorkspace')))
+    if ((dialog.choices ?? []).length === 0) bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.noWorkspace')))
     else {
       bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.newSessionWorkspace')))
       bodyNodes.push(
-        ...dialog.choices.map((workspace) =>
-          h(
-            'button',
-            {
-              key: workspace.workspaceId,
-              type: 'button',
-              class: 'dsg-menu-item',
-              'data-testid': 'session-groups-dialog-workspace',
-              'data-workspace-id': workspace.workspaceId,
-              onClick: () => confirm({ workspaceId: workspace.workspaceId }),
-            },
-            `${workspaceLabel(workspace)}${workspace.workspaceId === dialog.inferred ? ' ★' : ''}`
-          )
+        h(
+          'div',
+          {
+            class: 'dsg-menu dsg-dialog-list',
+            role: 'listbox',
+            'data-testid': 'session-groups-dialog-options',
+            'aria-label': t('dialog.newSessionWorkspace'),
+          },
+          ...dialog.choices.map((workspace) => {
+            const active = selection === workspace.workspaceId
+            return h(
+              'button',
+              {
+                key: workspace.workspaceId,
+                type: 'button',
+                role: 'option',
+                'aria-selected': active ? 'true' : 'false',
+                class: 'dsg-menu-item dsg-dialog-option',
+                'data-testid': 'session-groups-dialog-workspace',
+                'data-workspace-id': workspace.workspaceId,
+                'data-selected': active ? 'true' : 'false',
+                onClick: (event) => {
+                  event.stopPropagation()
+                  setSelection(workspace.workspaceId)
+                },
+              },
+              h(
+                'span',
+                { class: 'dsg-dialog-option-label' },
+                `${workspaceLabel(workspace)}${workspace.workspaceId === dialog.inferred ? ' ★' : ''}`
+              ),
+              active ? optionCheck() : null
+            )
+          })
         )
       )
     }
   }
   if (dialog.kind === 'move-session' || dialog.kind === 'move-group') {
-    bodyNodes.push(
-      h(GroupListPicker, {
-        groups: findGroupsFlat(store.doc),
-        excludeId: dialog.kind === 'move-group' ? dialog.groupId : undefined,
-        onPick: (groupId) => confirm({ groupId }),
-      })
-    )
+    const options = dialog.kind === 'move-group' ? moveGroupOptions(store.doc, dialog.groupId) : findGroupsFlat(store.doc)
+    bodyNodes.push(h(GroupListPicker, { options, selection, onSelect: setSelection }))
   }
   if (dialog.kind === 'icon') {
+    const icons = Array.isArray(dialog.icons) ? dialog.icons : []
     bodyNodes.push(
       h(
         'div',
-        { class: 'dsg-menu', style: { position: 'static', boxShadow: 'none', flexDirection: 'row', flexWrap: 'wrap' } },
-        ...dialog.icons.map((icon) =>
-          h(
+        {
+          class: 'dsg-menu dsg-dialog-icon-grid',
+          role: 'radiogroup',
+          'data-testid': 'session-groups-dialog-options',
+          'aria-label': title,
+        },
+        ...icons.map((icon) => {
+          const active = selection === icon
+          return h(
             'button',
-            { key: icon, type: 'button', class: 'dsg-menu-item', title: icon, onClick: () => confirm({ icon }) },
+            {
+              key: icon,
+              type: 'button',
+              role: 'radio',
+              'aria-checked': active ? 'true' : 'false',
+              class: 'dsg-menu-item dsg-dialog-option dsg-icon-option',
+              'data-testid': 'session-groups-dialog-icon',
+              'data-icon': icon,
+              'data-selected': active ? 'true' : 'false',
+              title: icon,
+              onClick: (event) => {
+                event.stopPropagation()
+                setSelection(icon)
+              },
+            },
             renderIcon(h, icon, 16),
-            icon
+            h('span', { class: 'dsg-dialog-option-label' }, icon)
           )
-        )
+        })
+      )
+    )
+  }
+  if (dialog.kind === 'group-color') {
+    bodyNodes.push(
+      h(
+        'div',
+        {
+          class: 'dsg-color-grid',
+          role: 'radiogroup',
+          'data-testid': 'session-groups-dialog-options',
+          'aria-label': t('dialog.groupColor'),
+        },
+        ...GROUP_COLORS.map((color) => {
+          const active = selection === color
+          return h(
+            'button',
+            {
+              key: color,
+              type: 'button',
+              role: 'radio',
+              'aria-checked': active ? 'true' : 'false',
+              class: 'dsg-dialog-option dsg-color-option',
+              'data-testid': 'session-groups-dialog-color',
+              'data-color': color,
+              'data-selected': active ? 'true' : 'false',
+              title: t(`color.${color}`),
+              onClick: (event) => {
+                event.stopPropagation()
+                setSelection(color)
+              },
+            },
+            h('span', { class: 'dsg-color-swatch', 'aria-hidden': 'true', style: { background: `var(--dsg-color-${color})` } }),
+            h('span', { class: 'dsg-dialog-option-label' }, t(`color.${color}`)),
+            active ? optionCheck() : null
+          )
+        })
       )
     )
   }
   const needsInput = dialog.kind === 'new-group' || dialog.kind === 'rename-group' || dialog.kind === 'rename-session'
-  const canConfirm = !needsInput || value.trim().length > 0
+  const selectable = isSelectionDialog(dialog.kind)
+  const danger = dialog.kind === 'delete-group' || dialog.kind === 'archive-running'
+  const canConfirm = needsInput ? value.trim().length > 0 : selectable ? selectionIsValid(dialog, selection, store.doc) : true
   return h(
     'div',
     {
@@ -1455,35 +1582,22 @@ const DialogHost = ({ store, props }) => {
         'div',
         { class: 'dsg-dialog-actions' },
         h('button', { type: 'button', class: 'dsg-dialog-cancel', onClick: close }, t('dialog.cancel')),
-        needsInput || dialog.kind === 'delete-group' || dialog.kind === 'archive-running'
-          ? h(
-              'button',
-              {
-                type: 'button',
-                class: 'dsg-dialog-confirm',
-                'data-testid': 'session-groups-dialog-confirm',
-                'data-variant': dialog.kind === 'delete-group' || dialog.kind === 'archive-running' ? 'danger' : 'primary',
-                disabled: !canConfirm,
-                onClick: () => confirm(needsInput ? { value: value.trim() } : {}),
-              },
-              dialog.kind === 'archive-running' ? t('dialog.stopAndArchive') : t('dialog.confirm')
-            )
-          : null
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'dsg-dialog-confirm',
+            'data-testid': 'session-groups-dialog-confirm',
+            'data-variant': danger ? 'danger' : 'primary',
+            disabled: !canConfirm,
+            onClick: () =>
+              confirm(needsInput ? { value: value.trim() } : selectable ? dialogConfirmPayload(dialog, selection) : {}),
+          },
+          danger ? t('dialog.stopAndArchive') : t('dialog.confirm')
+        )
       )
     )
   )
-}
-
-const findGroupsFlat = (doc) => {
-  const out = []
-  const walk = (parentId, depth) => {
-    for (const group of doc.groups.filter((item) => item.parentId === parentId)) {
-      out.push({ ...group, depth })
-      walk(group.id, depth + 1)
-    }
-  }
-  walk(null, 0)
-  return out
 }
 
 const Rail = ({ props }) => {
@@ -2138,8 +2252,23 @@ export const GroupsView = (props) => {
     searchArchived: () => toast('info', t('search.archivedDisabled')),
     openNewGroup: (event, parentId) => rt()?.openDialog({ kind: 'new-group', parentId, titleKey: parentId ? 'dialog.newSubgroup' : 'dialog.newGroup' }),
     openRenameGroup: (groupId) => rt()?.openDialog({ kind: 'rename-group', groupId, titleKey: 'dialog.renameGroup', value: findGroup(store.doc, groupId)?.name ?? '' }),
-    openIconGroup: (groupId) => rt()?.openDialog({ kind: 'icon', groupId, titleKey: 'group.icon', icons: ['folder', 'folder-open', 'star', 'flag', 'bookmark', 'tag', 'bulb', 'rocket'] }),
-    openMoveGroup: (groupId) => rt()?.openDialog({ kind: 'move-group', groupId, titleKey: 'dialog.moveTo' }),
+    openIconGroup: (groupId) =>
+      rt()?.openDialog({
+        kind: 'icon',
+        groupId,
+        titleKey: 'group.icon',
+        icons: [...GROUP_ICONS],
+        current: currentIconOf(store.doc, groupId),
+      }),
+    openGroupColor: (groupId) =>
+      rt()?.openDialog({
+        kind: 'group-color',
+        groupId,
+        titleKey: 'dialog.groupColor',
+        current: currentColorOf(store.doc, groupId),
+      }),
+    openMoveGroup: (groupId) =>
+      rt()?.openDialog({ kind: 'move-group', groupId, titleKey: 'dialog.moveTo', currentId: currentParentOf(store.doc, groupId) }),
     openDeleteGroup: (groupId) => {
       const group = findGroup(store.doc, groupId)
       const sessionCount = group ? group.sessionIds.length : 0
@@ -2178,7 +2307,8 @@ export const GroupsView = (props) => {
       rt()?.openDialog({ kind: 'new-session', groupId, titleKey: 'dialog.newSession', choices: choices.choices, inferred: choices.inferred })
     },
     openRenameSession: (sessionId, title) => rt()?.openDialog({ kind: 'rename-session', sessionId, titleKey: 'dialog.renameSession', value: title ?? '' }),
-    openMoveSession: (sessionId) => rt()?.openDialog({ kind: 'move-session', sessionId, titleKey: 'dialog.moveTo' }),
+    openMoveSession: (sessionId) =>
+      rt()?.openDialog({ kind: 'move-session', sessionId, titleKey: 'dialog.moveTo', currentId: currentGroupIdOf(store.doc, sessionId) }),
     archiveSession: (sessionId) => rt()?.archiveSession(sessionId),
     unarchiveSession: (sessionId) => rt()?.unarchiveSession(sessionId),
     pinSession: (sessionId, pinned) => rt()?.pinSession(sessionId, pinned),
@@ -2511,11 +2641,6 @@ export const GroupsViewBoundary = (props) =>
     },
     h(GroupsView, props)
   )
-
-const currentGroupIdOf = (doc, sessionId) => {
-  for (const group of doc.groups) if (group.sessionIds.includes(sessionId)) return group.id
-  return null
-}
 
 // Keep the module-level runtime reachable for plugin.js helpers.
 export const __internal = { findGroupsFlat, currentGroupIdOf }

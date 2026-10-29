@@ -17,7 +17,10 @@
  * are `height 34/32` with `padding: 0 8px` and `gap: 6px`; the section header
  * is a single 36px row (28px controls + official 36px rhythm) with an optional
  * 30px search row below it; tree rows breathe at a 2px vertical gap; group
- * guides indent 10/10; menus/dialogs use 30px items / 16px padding.
+ * guides sit at the parent caret tip (x=16) as a 2px line with 4px content
+ * padding (still 20px of indent per level); menus/dialogs use 30px items /
+ * 16px padding. 0.2.6 adds the six-color group palette and selection-dialog
+ * footer styling.
  *
  * Surfaces are theme-aware (0.2.2): menus/dropdowns use the official menu
  * surface token (`--dsw-specific-menu`), dialogs use `--dsw-alias-bg-layer-2`,
@@ -47,6 +50,13 @@ export const CSS = `
   --dsg-font-12: var(--dsw-font-xxs-12-font-size, 12px);
   --dsg-font-11: var(--dsw-font-xxxs-11-font-size, 11px);
   --dsg-font-10: 10px;
+  /* 0.2.6 preset group palette: theme token first, readable hex fallback last. */
+  --dsg-color-blue: var(--dsw-alias-state-business-primary, #4d6bfe);
+  --dsg-color-green: var(--dsw-alias-state-success, #2da44e);
+  --dsg-color-orange: var(--dsw-alias-state-warning, #d29922);
+  --dsg-color-red: var(--dsw-alias-state-danger, #f85149);
+  --dsg-color-purple: var(--dsw-alias-state-purple, #8250df);
+  --dsg-color-gray: var(--dsw-alias-label-tertiary, #6e7781);
 }
 /* Form controls do not inherit the host font family by default. */
 .dsg-root button, .dsg-root input { font-family: inherit; }
@@ -78,10 +88,10 @@ export const CSS = `
   overflow: hidden;
   font-size: var(--dsg-font-14, 14px);
   line-height: 20px;
-  /* Official section label inherits the base weight (no extra 600). */
+  /* Official section label weight; 0.2.6 uses the same primary accent as the
+   * icon (feedback item 1) so the title reads as the active section header. */
   font-weight: 400;
-  /* Official section label: primary text, not the muted tertiary chrome. */
-  color: var(--dsw-alias-label-primary, CanvasText);
+  color: var(--dsw-alias-state-business-primary, CanvasText);
   white-space: nowrap;
 }
 .dsg-header-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -204,6 +214,14 @@ export const CSS = `
   user-select: none;
 }
 .dsg-group-row { height: 34px; padding: 0 8px; font-weight: 500; }
+/* 0.2.6 palette: the chosen color lives on the row and colors the icon plus the
+ * child guide line (accent marker); unknown/missing color falls back to blue. */
+.dsg-group[data-color="blue"] { --dsg-group-color: var(--dsg-color-blue); }
+.dsg-group[data-color="green"] { --dsg-group-color: var(--dsg-color-green); }
+.dsg-group[data-color="orange"] { --dsg-group-color: var(--dsg-color-orange); }
+.dsg-group[data-color="red"] { --dsg-group-color: var(--dsg-color-red); }
+.dsg-group[data-color="purple"] { --dsg-group-color: var(--dsg-color-purple); }
+.dsg-group[data-color="gray"] { --dsg-group-color: var(--dsg-color-gray); }
 .dsg-group-row:hover, .dsg-session-row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.1)); }
 .dsg-group-row[data-drop-active="true"] { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14)); }
 .dsg-group-row[draggable="true"] { cursor: grab; }
@@ -230,15 +248,46 @@ export const CSS = `
 .dsg-group-line[data-empty="true"] .dsg-group-drop-slot { height: 12px; }
 .dsg-group-line[data-empty="true"] .dsg-group-drop-slot[data-drop-active="true"] { height: 34px; }
 .dsg-group-caret { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; color: var(--dsw-alias-label-tertiary, CanvasText); flex: none; }
-.dsg-group-icon { color: var(--dsw-alias-label-secondary, CanvasText); display: inline-flex; flex: none; }
+.dsg-group-icon { color: var(--dsg-group-color, var(--dsw-alias-label-secondary, CanvasText)); display: inline-flex; flex: none; }
 .dsg-group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-14, 14px); line-height: 20px; }
 .dsg-group-count { flex: none; font-size: var(--dsg-font-12, 12px); color: var(--dsw-alias-label-tertiary, CanvasText); font-variant-numeric: tabular-nums; }
-.dsg-group-actions, .dsg-session-actions { display: inline-flex; align-items: center; gap: 2px; flex: none; opacity: 0; transition: opacity .12s ease; }
+.dsg-group-actions, .dsg-session-actions { display: inline-flex; align-items: center; gap: 4px; flex: none; opacity: 0; transition: opacity .12s ease; }
 .dsg-group-row:hover .dsg-group-actions, .dsg-group-row:focus-within .dsg-group-actions,
 .dsg-session-row:hover .dsg-session-actions, .dsg-session-row:focus-within .dsg-session-actions { opacity: 1; }
-.dsg-group-actions .dsg-icon-button, .dsg-session-actions .dsg-icon-button { width: 16px; height: 16px; }
+/* 0.2.6: row actions match the 28x28 header buttons (16px glyph, 4px gap) so the
+ * hover hit area is finger/mouse safe; row heights stay 34/32. */
+.dsg-group-actions .dsg-icon-button, .dsg-session-actions .dsg-icon-button { width: 28px; height: 28px; }
 .dsg-group-body { display: flex; flex-direction: column; gap: 2px; }
-.dsg-group-line { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.28)); display: flex; flex-direction: column; gap: 2px; min-height: 24px; }
+.dsg-group-line {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.28));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 24px;
+}
+/* 0.2.6: only a group's own child body uses the new 2px guide at the parent
+ * caret tip (row padding 8 + caret 16 => x=16); the ungrouped inbox keeps its
+ * existing 10/10 chrome. Drawn as a pseudo element so it consumes no layout
+ * width; nested indentation stays at 20px/level like before, keeping the 264px
+ * minimum overflow-free at the maximum depth. */
+.dsg-group > .dsg-group-body > .dsg-group-line {
+  position: relative;
+  margin-left: 16px;
+  padding-left: 4px;
+  border-left: 0;
+}
+.dsg-group > .dsg-group-body > .dsg-group-line::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--dsg-group-color, var(--dsw-alias-border-l2, rgba(128,128,128,.28)));
+}
 /* Windowed ungrouped rows: only the visible slice + overscan is in the DOM;
  * the 2px gaps stay identical to a full list (top/bottom spacers preserve the
  * exact scroll height, see virtual-list.js). */
@@ -353,6 +402,58 @@ export const CSS = `
 .dsg-dialog-confirm[data-variant="danger"] { background: var(--dsw-alias-state-danger, #f85149); }
 .dsg-dialog-confirm:disabled { opacity: .5; cursor: default; }
 .dsg-dialog-cancel { appearance: none; height: 28px; padding: 0 14px; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: transparent; color: var(--dsw-alias-label-primary, CanvasText); font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; }
+/* 0.2.6 selection dialogs (icon / move-to / new-session / group-color): options
+ * only highlight; the shared footer owns Confirm/Cancel. */
+.dsg-dialog-list {
+  position: static;
+  max-height: 260px;
+  box-shadow: none;
+  background: var(--dsw-alias-bg-layer-1, Canvas);
+}
+.dsg-dialog-option { width: 100%; }
+.dsg-dialog-option[data-selected="true"],
+.dsg-dialog-option[aria-selected="true"],
+.dsg-dialog-option[aria-checked="true"] {
+  background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14));
+  color: var(--dsw-alias-label-primary, CanvasText);
+}
+.dsg-dialog-option-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsg-dialog-option-check { display: inline-flex; flex: none; width: 16px; height: 16px; align-items: center; justify-content: center; color: var(--dsw-alias-state-business-primary, CanvasText); }
+.dsg-dialog-icon-grid {
+  position: static;
+  flex-direction: row;
+  flex-wrap: wrap;
+  box-shadow: none;
+}
+.dsg-icon-option { width: auto; flex: 1 1 104px; }
+.dsg-color-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.dsg-color-option {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: var(--dsw-radius-sm, 6px);
+  border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35));
+  background: transparent;
+  color: var(--dsw-alias-label-primary, CanvasText);
+  font-size: var(--dsg-font-13, 13px);
+  line-height: 20px;
+  cursor: pointer;
+}
+.dsg-color-option:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); }
+.dsg-color-option[data-selected="true"] {
+  border-color: var(--dsw-alias-state-business-primary, #4d6bfe);
+  background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14));
+}
+.dsg-color-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, CanvasText 22%, transparent);
+}
 .dsg-toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 90; padding: 6px 14px; border-radius: 999px; font-size: var(--dsg-font-13, 13px); color: var(--dsw-alias-toast-label, var(--dsw-alias-label-inverse, Canvas)); background: var(--dsw-alias-toast-bg, var(--dsw-alias-label-primary, CanvasText)); opacity: .94; box-shadow: 0 4px 16px rgba(0,0,0,.24); }
 .dsg-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; }
 .dsg-rail-button { width: 36px; height: 36px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.08)); color: var(--dsw-alias-label-secondary, CanvasText); border-radius: var(--dsw-radius-md, 8px); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }

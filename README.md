@@ -4,8 +4,8 @@ DSH 左侧栏的全局会话分组视图：分组只服务显示层，跨工作�
 
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 - 工作名：`dsh-session-groups`（显示名：全局会话分组）
-- 版本：`0.2.5`（V1.1 official header icons + drag diagnostics trace/HUD + analyzer）
-- 状态：**V1.1 QA 全绿（0.2.5：234/234 tests、E2E 18/18、diagnostics HUD/route PASS、audit PASS）**，待用户验收；未安装到 desktop profile
+- 版本：`0.2.6`（V1.1 group color + selection dialogs patch）
+- 状态：**V1.1 QA 全绿（0.2.6：248/248 tests、E2E 19/19、diagnostics HUD/route PASS、audit PASS）**，待用户验收；未安装到 desktop profile
 
 ## V1.1 新增（0.2.0）
 
@@ -20,7 +20,16 @@ DSH 左侧栏的全局会话分组视图：分组只服务显示层，跨工作�
 - 间距按官方工作区 chrome 同步放大：行 `padding: 0 8px`、行 gap 6px，树/组体/组线纵向 gap 2px，组缩进 10/10，header `padding: 4px 4px 4px 2px`（0.2.2 单行 36px）+ row gap 8px，搜索/菜单/对话框改用更大 padding（菜单项 30px、对话框 16/12），264px 最小宽度仍无横向溢出。
 - E2E step 16 `typography-matches-official-sidebar` 直接断言 computed style、字号/行高/图标、间距与 264px 无溢出（不依赖截图）。
 
-### 0.2.5 官方 header 图标 + 拖拽诊断（patch，当前）
+### 0.2.6 分组颜色 + 选择对话框（patch，当前）
+
+- **header 标题**：`分组` 文案与 accent 图标统一使用 primary accent（`--dsw-alias-state-business-primary`），保持 14/20、weight 400 与官方图标/顺序。
+- **行操作命中区**：分组/会话行右侧 hover 按钮 28×28（与 header 一致）、glyph 16px、gap 4px；行高仍 34/32，名称/计数继续 ellipsis，264px 无溢出。
+- **组引导线**：移到父级 caret 尖端（行 padding 8 + 16px caret → x=16），2px 宽，子内容 padding 4px；每级缩进仍 20px，最大深度/264px 安全。
+- **分组颜色**：`Group` 新增可选 `color`（blue/green/orange/red/purple/gray，默认蓝；旧记录无 color 合法并按蓝显示，host commit 归一化蓝落盘；`DOC_VERSION` 不变）。分组菜单新增「颜色」色板对话框；组行图标与子组引导线使用所选颜色。
+- **选择对话框**：icon、move-session、move-group、new-session workspace 与 group-color 统一「点击只高亮（`aria-selected`/`aria-checked`），footer 确认/取消才生效」；预选当前/推断值，无有效选择 Confirm disabled；输入/删除/运行中归档对话框保持原行为。
+- 保留 0.2.5 诊断（默认开启/HUD/trace）、0.2.4 乐观提交/行高占位、0.2.3 虚拟化、主题/排版契约；`npm test` 248/248、E2E 19/19。
+
+### 0.2.5 官方 header 图标 + 拖拽诊断（patch，历史）
 
 - **官方图标**：header 三个按钮改用 DSH Desktop 2.0.18 `@deepseek-ai/dsh-client-ui-primitives` 的原始 artwork——搜索 `IconSearchOutlineRegular`、视图选项 `IconSlidersTwoOutlineRegular`、新建分组 `IconProjectAddOutlineRegular`（viewBox 0 0 16 16、1px stroke、16px 渲染，几何逐字节复制；顺序仍为 search → view-options → plus）。不再使用自定义 search/sliders/plus 近似图形。
 - **拖拽诊断（默认开启）**：新增事件环（上限 4000）与批量上报，覆盖 native `dragstart/dragenter/dragover/dragleave/drop/dragend`（capture+bubble、target tag/testid/sessionId/groupId、clientX/Y、defaultPrevented before/after、trusted）、插件 handler（会话/分组/slot/ungrouped、auto-expand schedule/fire/cancel、dropTarget change、placeholder insert/remove、label change、drop accept、optimistic enqueue/coalesce/send/HTTP/reconcile/rollback、dragend）与 timing（handler ms、rAF frame gap、longtask、React render counters、revision/optimistic、tree counts、viewport/sidebar、build/mode/theme）。
@@ -59,7 +68,7 @@ V1 能力（建组/嵌套/跨工作区拖会话/归档三态/组内新建/重命
 
 ```powershell
 npm pack
-# 产物：dsh-session-groups-0.2.5.tgz
+# 产物：dsh-session-groups-0.2.6.tgz
 ```
 
 DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本地目录），启用后重启/刷新。
@@ -72,8 +81,8 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 - [V1.1 实施计划](docs/superpowers/plans/2026-10-28-session-groups-v1.1.md)
 - [契约](docs/CONTRACTS.md) — 数据模型、路由、API、testid、生命周期
 - [Gate 0 Spike](docs/SPIKE.md) / [Gate 0 结论](docs/GATE0-SUMMARY.md)
-- [测试计划](docs/TEST-PLAN.md) — 单测/宿主集成/18 步 E2E/数据审计
-- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 18/18 E2E、234/234、诊断 trace/HUD、大列表 before/after、审计与打包证据
+- [测试计划](docs/TEST-PLAN.md) — 单测/宿主集成/19 步 E2E/数据审计
+- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 19/19 E2E、248/248、诊断 trace/HUD、大列表 before/after、审计与打包证据
 - [发布说明](docs/RELEASE.md) — 构建/打包/安装/卸载/已知限制
 - [ADR-001 左栏模式切换](docs/adr/0001-sidebar-mode-switch.md) / [ADR-002 分组存储](docs/adr/0002-group-storage.md) / [ADR-003 路由围栏](docs/adr/0003-route-fence.md)
 
@@ -87,7 +96,7 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 
 ## 当前阶段
 
-- V1 实现完成；V1.1（0.2.5）完成左栏宽度、分组拖拽排序/改父级、会话搜索、官方侧栏排版/间距/图标对齐、单按钮视图切换/header 操作区/主题感知 surfaces、未归组列表虚拟化、拖拽行高占位与乐观提交、**官方 header 三图标 + 拖拽诊断 trace/HUD/分析器**。
-- 验证：`npm test` 234/234；官方 E2E 18/18（默认诊断开启；含 step 2/16 footer 文案与 header title 400、step 16 排版/间距/264px/虚拟窗口、step 17 深色主题、step 18 九类占位 + 乐观 DOM 位移 + HUD）；E2E runner 另验证 `/dsh-session-groups/diagnostics` 在隔离 home 追加 3,091 行 NDJSON（native/handler/optimistic 齐全、0 parseErrors）；数据审计只写记录文件、诊断文件按 append-only 单独放行；真实 `~/.dsh` 零写入。
+- V1 实现完成；V1.1（0.2.6）完成左栏宽度、分组拖拽排序/改父级、会话搜索、官方侧栏排版/间距/图标对齐、单按钮视图切换/header 操作区/主题感知 surfaces、未归组列表虚拟化、拖拽行高占位与乐观提交、官方 header 三图标 + 拖拽诊断 trace/HUD/分析器、**分组颜色与统一选择对话框**。
+- 验证：`npm test` 248/248；官方 E2E 19/19（默认诊断开启；含 step 2/16 footer 文案与 header title accent/400、step 16 排版/间距/28px 行操作/2px 组引导线/264px/虚拟窗口、step 17 深色主题、step 18 九类占位 + 乐观 DOM 位移 + HUD、step 19 分组颜色与五类选择对话框）；E2E runner 另验证 `/dsh-session-groups/diagnostics` 在隔离 home 追加 NDJSON（native/handler/optimistic 齐全）；数据审计只写记录文件、诊断文件按 append-only 单独放行；真实 `~/.dsh` 零写入。
 - **尚未安装到用户 desktop profile**；等待用户验收后再安装。
 - 已知限制见 `docs/RELEASE.md` §5（运行中归档 BLOCKED-ENV、宽度 DOM 依赖、搜索范围、诊断文件增长、P1/P2 未实现项）。

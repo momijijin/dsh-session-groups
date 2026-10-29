@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { DEFAULT_GROUP_COLOR, GROUP_COLORS } from '../../src/shared/constants.js'
 import {
   assignSession,
   buildRenderTree,
@@ -7,13 +8,17 @@ import {
   createGroup,
   deleteGroup,
   emptyDoc,
+  groupColor,
   inferWorkspaceId,
   isDescendant,
+  isKnownColor,
   moveGroup,
+  normalizeColor,
   normalizeDoc,
   removeSession,
   renameGroup,
   reorderUngrouped,
+  setGroupColor,
   setGroupIcon,
   validateDoc,
   workspaceLabel,
@@ -53,6 +58,49 @@ test('renameGroup and setGroupIcon update only the target', () => {
   doc = setGroupIcon(doc, id, 'star')
   assert.equal(doc.groups[0].name, 'B')
   assert.equal(doc.groups[0].icon, 'star')
+})
+
+test('group palette: default blue, known colors, setGroupColor, unknown -> blue', () => {
+  assert.deepEqual([...GROUP_COLORS], ['blue', 'green', 'orange', 'red', 'purple', 'gray'])
+  assert.equal(DEFAULT_GROUP_COLOR, 'blue')
+  assert.equal(isKnownColor('purple'), true)
+  assert.equal(isKnownColor('pink'), false)
+  assert.equal(normalizeColor(undefined), 'blue')
+  assert.equal(normalizeColor('pink'), 'blue')
+  assert.equal(normalizeColor('gray'), 'gray')
+
+  let doc = createGroup(emptyDoc(), { name: 'A' })
+  assert.equal(doc.groups[0].color, 'blue', 'new groups default to blue')
+  doc = createGroup(doc, { name: 'B', color: 'purple' })
+  assert.equal(doc.groups[1].color, 'purple')
+  doc = createGroup(doc, { name: 'C', color: 'not-a-color' })
+  assert.equal(doc.groups[2].color, 'blue', 'unknown input normalizes to blue')
+
+  const a = doc.groups[0].id
+  doc = setGroupColor(doc, a, 'orange')
+  assert.equal(groupColor(doc.groups[0]), 'orange')
+  assert.equal(groupColor({ name: 'legacy' }), 'blue', 'docs without color display blue')
+  assert.equal(groupColor(null), 'blue')
+  assert.throws(() => setGroupColor(doc, 'missing', 'red'), /group-not-found/)
+  assert.equal(doc.groups[0].color, 'orange', 'setGroupColor is pure')
+})
+
+test('validateDoc: color is optional but must be a known palette id when present', () => {
+  const doc = createGroup(emptyDoc(), { name: 'A' })
+  const group = doc.groups[0]
+  assert.equal(validateDoc(doc).ok, true)
+  for (const color of GROUP_COLORS) {
+    const valid = { ...doc, groups: [{ ...group, color }] }
+    assert.equal(validateDoc(valid).ok, true, color)
+  }
+  const legacyGroup = { ...group }
+  delete legacyGroup.color
+  assert.equal(validateDoc({ ...doc, groups: [legacyGroup] }).ok, true, 'legacy groups without color stay valid')
+  for (const color of ['pink', '', 7, null, true]) {
+    const verdict = validateDoc({ ...doc, groups: [{ ...group, color }] })
+    assert.equal(verdict.ok, false, `color ${JSON.stringify(color)} must be rejected`)
+    assert.match(verdict.errors.join(';'), /group-color/)
+  }
 })
 
 test('moveGroup reorders siblings and keeps the subtree', () => {
@@ -229,4 +277,17 @@ test('normalizeDoc drops duplicates and repairs bad parents', () => {
   assert.equal(doc.groups[0].parentId, null)
   assert.deepEqual(doc.groups[0].sessionIds, ['s1'])
   assert.deepEqual(doc.ungrouped, ['s3'])
+  assert.equal(doc.groups[0].color, 'blue', 'normalizeDoc fills the blue default for legacy docs')
+  const colored = normalizeDoc({
+    version: 1,
+    revision: 0,
+    groups: [
+      { id: 'g1', name: 'A', icon: 'folder', color: 'purple', parentId: null, sessionIds: [] },
+      { id: 'g2', name: 'B', icon: 'folder', color: 'pink', parentId: null, sessionIds: [] },
+    ],
+    ungrouped: [],
+  })
+  assert.equal(colored.groups[0].color, 'purple')
+  assert.equal(colored.groups[1].color, 'blue')
+  assert.equal(validateDoc(colored).ok, true)
 })
