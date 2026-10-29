@@ -16,7 +16,7 @@
 import { appendFile, mkdir } from 'node:fs/promises'
 import { basename, dirname } from 'node:path'
 import { DOC_VERSION } from '../shared/constants.js'
-import { normalizeColor, validateDoc } from '../shared/model.js'
+import { normalizeColor, normalizeColorHex, validateDoc } from '../shared/model.js'
 import {
   COMMIT_PATH,
   DIAGNOSTICS_PATH,
@@ -152,6 +152,16 @@ export const parseCommitBody = (body) => {
   if (candidate.version !== DOC_VERSION) {
     return { ok: false, message: `version must be ${String(DOC_VERSION)}` }
   }
+  // 0.2.7: normalize a valid custom hex (short form/uppercase -> canonical
+  // lowercase #rrggbb) before validation. Invalid/alpha values stay as-is so
+  // validateDoc rejects them with a `group-color-hex` error.
+  candidate.groups = Array.isArray(candidate.groups)
+    ? candidate.groups.map((group) => {
+        if (!isObject(group) || group.colorHex === undefined) return group
+        const hex = normalizeColorHex(group.colorHex)
+        return hex ? { ...group, colorHex: hex } : group
+      })
+    : candidate.groups
   const verdict = validateDoc(candidate)
   if (!verdict.ok) return { ok: false, message: verdict.errors.join('; ') }
   // 0.2.6 additive: validation accepts a missing `color` (legacy docs), while

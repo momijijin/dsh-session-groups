@@ -210,6 +210,17 @@ function makeUi(driver, helpers) {
       if (!clicked) throw new Error(`click target not found: ${selector}[${index}]`);
       return true;
     },
+    /** Click without scrollIntoView: row menus close on a real scroll event. */
+    async clickNoScroll(selector, index = 0) {
+      const clicked = await evaluate(`(() => {
+        const el = document.querySelectorAll(${JSON.stringify(selector)})[${index}];
+        if (!el) return false;
+        el.click();
+        return true;
+      })()`);
+      if (!clicked) throw new Error(`click target not found: ${selector}[${index}]`);
+      return true;
+    },
     async clickText(scopeSelector, text) {
       const clicked = await evaluate(`(() => {
         const scope = document.querySelector(${JSON.stringify(scopeSelector)});
@@ -335,6 +346,7 @@ function makeUi(driver, helpers) {
       await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'dialog closed');
     },
     async createGroup(name, trigger = 'new-group') {
+      await ui.dismissOverlay();
       if (trigger === 'new-group') await ui.click('[data-testid="session-groups-new-group"]');
       await ui.fillDialog(name);
       await ui.confirmDialog();
@@ -342,7 +354,8 @@ function makeUi(driver, helpers) {
       return ui.groupIdByName(name);
     },
     async createChildGroup(parentGid, name) {
-      await ui.click(`${GROUP_MENU}[data-group-id="${parentGid}"]`);
+      await ui.dismissOverlay();
+      await ui.clickNoScroll(`${GROUP_MENU}[data-group-id="${parentGid}"]`);
       await sleep(200);
       const items = await evaluate(`Array.from(document.querySelectorAll('button, [role="menuitem"], li'), (el) => (el.textContent ?? '').trim())`);
       const label = items.find((text) => /新建子分组|子分组/.test(text));
@@ -813,6 +826,17 @@ function makeUi(driver, helpers) {
       })()`);
       if (!start) throw new Error(`group + button not found for ${gid}`);
       await sleep(150);
+      // Hidden row actions are pointer-events:none until the row is hovered;
+      // move the real mouse over the row once so the action area becomes
+      // interactive before the topmost-element guard runs.
+      await driver.cdp.send('Input.dispatchMouseEvent', {
+        type: 'mouseMoved',
+        x: start.x,
+        y: start.y,
+        button: 'none',
+        buttons: 0,
+      }, driver.sessionId);
+      await sleep(150);
       const hit = await evaluate(`(() => {
         const button = document.querySelector(${JSON.stringify(GROUP_ADD)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
         const el = document.elementFromPoint(${Number(start.x)}, ${Number(start.y)});
@@ -872,7 +896,7 @@ function makeUi(driver, helpers) {
       })()`);
     },
     async openGroupMenu(gid) {
-      await ui.click(`${GROUP_MENU}[data-group-id="${gid}"]`);
+      await ui.clickNoScroll(`${GROUP_MENU}[data-group-id="${gid}"]`);
       await ui.waitFor(`!!document.querySelector(${JSON.stringify(MENU)})`, `group menu ${gid} open`, 5000);
       await sleep(120);
     },
@@ -1429,6 +1453,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
       id: 3,
       name: 'create-three-groups-one-nested',
       async run() {
+        // The Preview Notice can mount a moment after the first groups render;
+        // dismiss it before opening any row menu.
+        await ui.dismissOverlay();
         const a = await ui.createGroup('施工中');
         const b = await ui.createGroup('已完成');
         const c = await ui.createGroup('稍后处理');
@@ -1626,15 +1653,16 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           && !archivedIds.has(row.sid)
           && row.sid !== state.archivedSession;
         const realFirst = (row) => usable(row) && !/^session-00000000-/.test(row.sid);
-        // Rename the LAST real candidate in group A (oldest in the rendered
-        // order), not the newest: the newest session can be the one the host is
-        // still projecting/resuming in the isolated home, and renaming it can
-        // block the renderer for a long time independently of this plugin
-        // (verified by renaming it through the official workspace menu only).
-        // Any real session exercises the same host rename + snapshot sync path.
+        // Rename a normal fixture session in group A. Prefer the FIRST real
+        // candidate (after the intentionally created blank): the last row in the
+        // list can be a very large/old host session whose rename makes the host
+        // renderer busy for >30 s even though the title updates. The fallbacks
+        // keep the step working if group A's order changes.
         const groupAReal = rows.filter((row) => realFirst(row) && row.groupId === state.groups.a);
         const anyReal = rows.filter(realFirst);
         const candidates = [
+          groupAReal[0],
+          anyReal[0],
           groupAReal[groupAReal.length - 1],
           anyReal[anyReal.length - 1],
           rows.filter((row) => usable(row) && row.groupId === state.groups.a).at(-1),
@@ -3691,7 +3719,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           return el ? { text: el.textContent, runId: el.getAttribute('data-run-id'), pointerEvents: getComputedStyle(el).pointerEvents } : null;
         })()`);
         if (!hud) throw new Error('0.2.5 diagnostics HUD is missing');
-        if (!/dsg 0\.2\.6/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
+        if (!/dsg 0\.2\.7/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
         if (hud.pointerEvents !== 'none') throw new Error(`diagnostics HUD must be pointer-events:none, got ${hud.pointerEvents}`);
         const hudNative = /n=(\d+)/.exec(hud.text);
         if (!hudNative || Number(hudNative[1]) <= 0) throw new Error(`diagnostics HUD native dragover count missing/zero: ${JSON.stringify(hud.text)}`);
@@ -3910,7 +3938,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         controls = await dialogControls();
         if (!controls.confirm.present || controls.confirm.disabled) throw new Error('icon Confirm must be enabled with a visible current selection');
         let icons = await optionState(DIALOG_ICON);
-        if (icons.length !== 8) throw new Error(`icon dialog expected 8 icon options, got ${icons.length}`);
+        if (icons.length !== 9) throw new Error(`icon dialog expected 9 icon options, got ${icons.length}`);
         const currentIcon = icons.find((option) => option.selected);
         if (!currentIcon) throw new Error('icon dialog must highlight the current icon');
         await clickOption(`${DIALOG_ICON}[data-icon="star"]`);
@@ -4011,7 +4039,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           return el ? { text: el.textContent, runId: el.getAttribute('data-run-id'), pointerEvents: getComputedStyle(el).pointerEvents } : null;
         })()`);
         if (!hud) throw new Error('0.2.6 diagnostics HUD is missing');
-        if (!/dsg 0\.2\.6/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
+        if (!/dsg 0\.2\.7/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
         if (hud.pointerEvents !== 'none') throw new Error(`diagnostics HUD must be pointer-events:none, got ${hud.pointerEvents}`);
 
         return {
@@ -4031,6 +4059,613 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             rows: rowsBefore,
           },
           hud: { runId: hud.runId, text: hud.text },
+        };
+      },
+    },
+    {
+      id: 20,
+      name: 'row-meta-context-menu-and-custom-color',
+      async run() {
+        // 0.2.7 UX acceptance: count/time far-right layout, unified ungrouped
+        // guide, caret/icon/guide color hierarchy, 2-column custom-color dialog
+        // and right-click/keyboard menus (measured clamp, close/focus contract).
+        if (!(await ui.exists(VIEW))) throw new Error('step 20 must start in the groups view');
+        await ui.closeViewOptions();
+        await ui.closeSearch();
+        if (await ui.dialogOpen()) {
+          await driver.evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+          await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'leftover dialog closed before step 20', 5000);
+        }
+        await ui.dismissOverlay();
+
+        const recordPath = join(QA_HOME, 'storages', 'dsh-session-groups.json');
+        const readRecord = () => {
+          try {
+            return JSON.parse(readFileSync(recordPath, 'utf8'));
+          } catch {
+            return null;
+          }
+        };
+        const recordRevision = () => Number(readRecord()?.revision ?? -1);
+        const recordGroup = (gid) => (readRecord()?.groups ?? []).find((group) => group.id === gid) ?? null;
+        const waitRevisionAbove = async (previous, label, waitMs = 12000) => {
+          const end = Date.now() + waitMs;
+          let last = -1;
+          while (Date.now() < end) {
+            last = recordRevision();
+            if (last > previous) return last;
+            await sleep(150);
+          }
+          throw new Error(`${label}: record revision stayed ${last} (expected > ${previous})`);
+        };
+        const waitDialogKind = async (kind) => {
+          await ui.waitFor(
+            `document.querySelector(${JSON.stringify(DIALOG)})?.getAttribute('data-kind') === ${JSON.stringify(kind)}`,
+            `dialog kind ${kind}`,
+            5000,
+          );
+          await sleep(100);
+        };
+        const near = (actual, expected, label, tolerance = 0) => {
+          if (typeof actual !== 'number' || Math.abs(actual - expected) > tolerance) {
+            throw new Error(`${label}: expected ${expected}${tolerance ? ` ±${tolerance}` : ''}, got ${actual}`);
+          }
+        };
+        const rowAttr = (gid, attribute) =>
+          driver.evaluate(`(() => {
+            const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+            return row ? row.getAttribute(${JSON.stringify(attribute)}) : null;
+          })()`);
+        const rowWrapperAttr = (gid, attribute) =>
+          driver.evaluate(`(() => {
+            const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+            const wrap = row ? row.closest('.dsg-group') : null;
+            return wrap ? wrap.getAttribute(${JSON.stringify(attribute)}) : null;
+          })()`);
+        const rowIconColor = (gid) =>
+          driver.evaluate(`(() => {
+            const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(gid)} + '"]');
+            const icon = row ? row.querySelector('.dsg-group-icon svg') : null;
+            const caret = row ? row.querySelector('.dsg-group-caret') : null;
+            const wrap = row ? row.closest('.dsg-group') : null;
+            const line = wrap ? wrap.querySelector(':scope > .dsg-group-body > .dsg-group-line') : null;
+            return {
+              icon: icon ? getComputedStyle(icon).color : null,
+              caret: caret ? getComputedStyle(caret).color : null,
+              caretOpacity: caret ? getComputedStyle(caret).opacity : null,
+              guide: line ? getComputedStyle(line, '::before').backgroundColor : null,
+            };
+          })()`);
+        const dialogColorState = () =>
+          driver.evaluate(`(() => {
+            const dialog = document.querySelector(${JSON.stringify(DIALOG)});
+            if (!dialog) return null;
+            const grid = dialog.querySelector('[data-testid="session-groups-dialog-options"]');
+            const options = Array.from(dialog.querySelectorAll(${JSON.stringify(DIALOG_COLOR)}));
+            const checks = Array.from(dialog.querySelectorAll('[data-testid="session-groups-dialog-color-check"]'));
+            const custom = dialog.querySelector('.dsg-color-custom-row');
+            const hex = dialog.querySelector('[data-testid="session-groups-dialog-color-hex"]');
+            const native = dialog.querySelector('[data-testid="session-groups-dialog-color-native"]');
+            const hint = dialog.querySelector('[data-testid="session-groups-dialog-color-hint"]');
+            const confirm = dialog.querySelector(${JSON.stringify(DIALOG_CONFIRM)});
+            const gridStyle = grid ? getComputedStyle(grid) : null;
+            return {
+              columns: gridStyle ? gridStyle.gridTemplateColumns.split(/\\s+/).filter(Boolean).length : null,
+              optionCount: options.length,
+              heights: options.map((el) => el.getBoundingClientRect().height),
+              selectedCount: options.filter((el) => el.getAttribute('data-selected') === 'true').length,
+              selectedColors: options.filter((el) => el.getAttribute('data-selected') === 'true').map((el) => el.getAttribute('data-color')),
+              checks: checks.map((el) => ({
+                width: el.getBoundingClientRect().width,
+                visibility: getComputedStyle(el).visibility,
+                empty: el.getAttribute('data-empty'),
+              })),
+              customSelected: custom ? custom.getAttribute('data-selected') : null,
+              hexValue: hex ? hex.value : null,
+              nativeType: native ? native.type : null,
+              hintTone: hint ? hint.getAttribute('data-tone') : null,
+              hintLive: hint ? hint.getAttribute('aria-live') : null,
+              hintText: hint ? (hint.textContent ?? '').trim() : null,
+              confirmDisabled: confirm ? confirm.hasAttribute('disabled') : null,
+            };
+          })()`);
+        const menuState = () =>
+          driver.evaluate(`(() => {
+            const menu = document.querySelector(${JSON.stringify(MENU)});
+            if (!menu) return null;
+            const rect = menu.getBoundingClientRect();
+            return {
+              kind: menu.getAttribute('data-menu-kind'),
+              source: menu.getAttribute('data-source-id'),
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              width: rect.width,
+              height: rect.height,
+              viewport: { width: innerWidth, height: innerHeight },
+              active: document.activeElement
+                ? {
+                    testid: document.activeElement.getAttribute('data-testid'),
+                    groupId: document.activeElement.getAttribute('data-group-id'),
+                    sessionId: document.activeElement.getAttribute('data-session-id'),
+                  }
+                : null,
+            };
+          })()`);
+
+        // Pick a root group that has at least one session, and make sure it is
+        // expanded so the guide/placeholder assertions see a body.
+        const roots = await ui.rootGroupIds();
+        let groupId = null;
+        let sessionId = null;
+        for (const gid of roots) {
+          const ids = await ui.sessionIdsInGroup(gid);
+          if (ids.length > 0) {
+            groupId = gid;
+            sessionId = ids[0];
+            break;
+          }
+        }
+        if (!groupId || !sessionId) throw new Error('step 20 needs a root group with a session');
+        const expandedBefore = await rowAttr(groupId, 'data-expanded');
+        if (expandedBefore !== 'true') {
+          await driver.evaluate(`document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]')?.click()`);
+          await sleep(250);
+        }
+
+        // Idle mouse position, then measure the group row composition.
+        await driver.cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 }, driver.sessionId);
+        await sleep(150);
+        const countState = await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]');
+          if (!row) return { error: 'group row missing' };
+          row.scrollIntoView({ block: 'center' });
+          const rect = row.getBoundingClientRect();
+          const count = row.querySelector('.dsg-group-count');
+          const actions = row.querySelector('.dsg-group-actions');
+          if (!count || !actions) return { error: 'count/actions missing' };
+          const countRect = count.getBoundingClientRect();
+          const countStyle = getComputedStyle(count);
+          const actionsStyle = getComputedStyle(actions);
+          const buttons = Array.from(actions.querySelectorAll('button'), (button) => {
+            const box = button.getBoundingClientRect();
+            return { width: box.width, height: box.height, left: box.left, right: box.right };
+          });
+          return {
+            children: Array.from(row.children, (el) => el.className),
+            countText: (count.textContent ?? '').trim(),
+            countWidth: countRect.width,
+            countRightGap: rect.right - countRect.right,
+            countFontSize: Number.parseFloat(countStyle.fontSize),
+            countLineHeight: Number.parseFloat(countStyle.lineHeight),
+            countTextAlign: countStyle.textAlign,
+            countTabular: countStyle.fontVariantNumeric,
+            actionsOpacity: actionsStyle.opacity,
+            actionsPointerEvents: actionsStyle.pointerEvents,
+            buttons,
+            actionGap: buttons.length > 1 ? buttons[1].left - buttons[0].right : null,
+            rowRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+          };
+        })()`);
+        if (countState.error) throw new Error(countState.error);
+        const expectedChildren = ['dsg-group-caret', 'dsg-group-icon', 'dsg-group-name', 'dsg-group-actions', 'dsg-group-count'];
+        if (JSON.stringify(countState.children) !== JSON.stringify(expectedChildren)) {
+          throw new Error(`group row order expected ${JSON.stringify(expectedChildren)}, got ${JSON.stringify(countState.children)}`);
+        }
+        near(countState.countRightGap, 8, 'group count right edge gap', 1);
+        near(countState.countFontSize, 12, 'group count font-size');
+        near(countState.countLineHeight, 16, 'group count line-height');
+        if (countState.countTextAlign !== 'right') throw new Error(`group count must be right-aligned, got ${countState.countTextAlign}`);
+        if (!/tabular-nums/.test(countState.countTabular)) throw new Error(`group count must use tabular numerals, got ${countState.countTabular}`);
+        if (!(countState.countWidth > 0)) throw new Error('group count must always be visible');
+        if (countState.actionsOpacity !== '0') throw new Error(`idle row actions must be opacity 0, got ${countState.actionsOpacity}`);
+        if (countState.actionsPointerEvents !== 'none') {
+          throw new Error(`idle row actions must be pointer-events:none, got ${countState.actionsPointerEvents}`);
+        }
+        for (const [index, button] of countState.buttons.entries()) {
+          near(button.width, 28, `group action[${index}] width`);
+          near(button.height, 28, `group action[${index}] height`);
+        }
+        near(countState.actionGap, 4, 'group action gap', 1);
+        const hoverX = countState.rowRect.left + countState.rowRect.width / 2;
+        const hoverY = countState.rowRect.top + countState.rowRect.height / 2;
+        await driver.cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hoverX, y: hoverY }, driver.sessionId);
+        await sleep(200);
+        const hoverState = await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]');
+          const actions = row ? row.querySelector('.dsg-group-actions') : null;
+          return actions ? { opacity: getComputedStyle(actions).opacity, pointerEvents: getComputedStyle(actions).pointerEvents } : null;
+        })()`);
+        if (hoverState?.opacity !== '1' || hoverState?.pointerEvents !== 'auto') {
+          throw new Error(`hover must reveal row actions, got ${JSON.stringify(hoverState)}`);
+        }
+        await driver.cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 }, driver.sessionId);
+
+        // Session updated time is far right, 12/16 with a 40px floor and title tooltip.
+        const timeState = await driver.evaluate(`(() => {
+          const rows = Array.from(document.querySelectorAll(${JSON.stringify(SESSION)}));
+          const row = rows.find((el) => el.querySelector('.dsg-session-time'));
+          if (!row) return { missing: true, rows: rows.length };
+          const time = row.querySelector('.dsg-session-time');
+          const actions = row.querySelector('.dsg-session-actions');
+          const rect = row.getBoundingClientRect();
+          const box = time.getBoundingClientRect();
+          const style = getComputedStyle(time);
+          return {
+            missing: false,
+            text: (time.textContent ?? '').trim(),
+            title: time.getAttribute('title'),
+            fontSize: Number.parseFloat(style.fontSize),
+            lineHeight: Number.parseFloat(style.lineHeight),
+            minWidth: Number.parseFloat(style.minWidth),
+            textAlign: style.textAlign,
+            tabular: style.fontVariantNumeric,
+            rightGap: rect.right - box.right,
+            lastChild: row.lastElementChild === time,
+            afterActions: !!(actions && (actions.compareDocumentPosition(time) & Node.DOCUMENT_POSITION_FOLLOWING)),
+            type: time.getAttribute('data-testid'),
+          };
+        })()`);
+        if (timeState.missing) {
+          throw new Error(`no session updated time rendered (session rows: ${timeState.rows}); host updatedAt missing or invalid`);
+        }
+        near(timeState.fontSize, 12, 'session time font-size');
+        near(timeState.lineHeight, 16, 'session time line-height');
+        near(timeState.minWidth, 40, 'session time min-width');
+        near(timeState.rightGap, 8, 'session time right edge gap', 1);
+        if (timeState.textAlign !== 'right') throw new Error(`session time must be right-aligned, got ${timeState.textAlign}`);
+        if (!/tabular-nums/.test(timeState.tabular)) throw new Error(`session time must use tabular numerals, got ${timeState.tabular}`);
+        if (timeState.type !== 'session-groups-session-time') throw new Error('session time testid missing');
+        if (!timeState.lastChild || !timeState.afterActions) throw new Error('session time must be the last cell after the actions');
+        if (!timeState.title || timeState.title === timeState.text) throw new Error('session time must expose an absolute-time title');
+        if (!/^(刚刚|just now|\d+ (分钟前|小时前|天前|年前)|\d+ (min|hr|d|yr) ago)$/.test(timeState.text)) {
+          throw new Error(`unexpected relative session time text: ${JSON.stringify(timeState.text)}`);
+        }
+
+        // Ungrouped guide: same 16/4/2 geometry, neutral label-tertiary 45%;
+        // group guide: the group's own color at 60%, caret 85%, icon 100%.
+        const ungroupedExpanded = await driver.evaluate(`document.querySelector(${JSON.stringify(UNGROUPED)})?.getAttribute('aria-expanded')`);
+        if (ungroupedExpanded !== 'true') {
+          await driver.evaluate(`document.querySelector(${JSON.stringify(UNGROUPED)})?.click()`);
+          await sleep(250);
+        }
+        const guideState = await driver.evaluate(`(() => {
+          const px = (value) => {
+            const n = Number.parseFloat(value);
+            return Number.isFinite(n) ? n : null;
+          };
+          const probe = document.createElement('span');
+          document.querySelector('.dsg-root').appendChild(probe);
+          const expected = (css, scope) => {
+            (scope ?? document.querySelector('.dsg-root')).appendChild(probe);
+            probe.style.background = css;
+            const value = getComputedStyle(probe).backgroundColor;
+            probe.remove();
+            return value;
+          };
+          const expectedColor = (css, scope) => {
+            (scope ?? document.querySelector('.dsg-root')).appendChild(probe);
+            probe.style.color = css;
+            const value = getComputedStyle(probe).color;
+            probe.remove();
+            return value;
+          };
+          const ungroupedHeader = document.querySelector(${JSON.stringify(UNGROUPED)});
+          const ungroupedLine = document.querySelector('.dsg-ungrouped .dsg-group-body > .dsg-group-line');
+          const groupRow = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]');
+          const groupWrap = groupRow ? groupRow.closest('.dsg-group') : null;
+          const groupLine = groupWrap ? groupWrap.querySelector(':scope > .dsg-group-body > .dsg-group-line') : null;
+          const styleOf = (line) => (line ? getComputedStyle(line) : null);
+          const beforeOf = (line) => (line ? getComputedStyle(line, '::before') : null);
+          const rectOf = (el) => (el ? el.getBoundingClientRect() : null);
+          const lineInfo = (line) => {
+            const style = styleOf(line);
+            const before = beforeOf(line);
+            const rect = rectOf(line);
+            if (!style || !before || !rect) return null;
+            const left = px(before.left);
+            const width = px(before.width);
+            return {
+              marginLeft: px(style.marginLeft),
+              paddingLeft: px(style.paddingLeft),
+              width,
+              left,
+              top: px(before.top),
+              bottom: px(before.bottom),
+              centerX: rect.left + left + width / 2,
+              background: before.backgroundColor,
+            };
+          };
+          const ungrouped = lineInfo(ungroupedLine);
+          const group = lineInfo(groupLine);
+          const groupColor = groupWrap ? getComputedStyle(groupWrap).getPropertyValue('--dsg-group-color').trim() : '';
+          const rawGroupColor = groupWrap ? groupWrap.style.getPropertyValue('--dsg-group-color').trim() : '';
+          const caret = groupRow ? groupRow.querySelector('.dsg-group-caret') : null;
+          const icon = groupRow ? groupRow.querySelector('.dsg-group-icon svg') : null;
+          const headerRect = rectOf(ungroupedHeader);
+          const result = {
+            ungrouped,
+            group,
+            groupColor,
+            rawGroupColor,
+            groupColorExpected: expected('color-mix(in srgb, var(--dsg-group-color) 60%, transparent)', groupWrap),
+            ungroupedExpected: expected('color-mix(in srgb, var(--dsw-alias-label-tertiary, #6e7781) 45%, transparent)'),
+            caretColor: caret ? getComputedStyle(caret).color : null,
+            caretOpacity: caret ? getComputedStyle(caret).opacity : null,
+            iconColor: icon ? getComputedStyle(icon).color : null,
+            groupExpectedColor: expectedColor(groupColor, groupWrap),
+            ungroupedCenterFromHeader: ungrouped && headerRect ? ungrouped.centerX - headerRect.left : null,
+          };
+          probe.remove();
+          return result;
+        })()`);
+        if (!guideState.ungrouped || !guideState.group) throw new Error('step 20 guide probe missing ungrouped/group line');
+        for (const [label, line] of [['ungrouped', guideState.ungrouped], ['group', guideState.group]]) {
+          near(line.marginLeft, 16, `${label} guide margin-left`, 1);
+          near(line.paddingLeft, 4, `${label} guide content padding-left`, 1);
+          near(line.width, 2, `${label} guide width`, 0.5);
+          near(line.left, -1, `${label} guide line left`, 0.5);
+          near(line.top, 2, `${label} guide top inset`, 0.5);
+          near(line.bottom, 2, `${label} guide bottom inset`, 0.5);
+        }
+        near(guideState.ungroupedCenterFromHeader, 16, 'ungrouped guide center x', 1);
+        if (guideState.ungrouped.background !== guideState.ungroupedExpected) {
+          throw new Error(`ungrouped guide must be label-tertiary 45%: actual=${guideState.ungrouped.background} expected=${guideState.ungroupedExpected}`);
+        }
+        if (guideState.group.background !== guideState.groupColorExpected) {
+          throw new Error(`group guide must be the group color at 60%: actual=${guideState.group.background} expected=${guideState.groupColorExpected}`);
+        }
+        if (!guideState.rawGroupColor) throw new Error('group wrapper must set the inline --dsg-group-color property');
+        if (guideState.caretColor !== guideState.groupExpectedColor) {
+          throw new Error(`group caret must use the group color: actual=${guideState.caretColor} expected=${guideState.groupExpectedColor}`);
+        }
+        if (guideState.iconColor !== guideState.groupExpectedColor) {
+          throw new Error(`group icon must use the group color: actual=${guideState.iconColor} expected=${guideState.groupExpectedColor}`);
+        }
+        near(Number(guideState.caretOpacity), 0.85, 'group caret opacity', 0.02);
+
+        // Color dialog: 2 columns x 3 rows of 32px cells, fixed check slot, and
+        // a custom native-swatch/hex row. Invalid hex disables Confirm.
+        let revision = recordRevision();
+        if (!(revision >= 0)) throw new Error('step 20 could not read the record revision');
+        const beforeCustomRevision = revision;
+        await ui.openGroupMenu(groupId);
+        await ui.clickMenuItem(/^(颜色|Color)$/);
+        await waitDialogKind('group-color');
+        let colors = await dialogColorState();
+        if (!colors) throw new Error('color dialog state missing');
+        if (colors.columns !== 2) throw new Error(`color dialog must render a 2-column grid, got ${colors.columns}`);
+        if (colors.optionCount !== 6) throw new Error(`color dialog expected 6 presets, got ${colors.optionCount}`);
+        if (colors.checks.length !== 6) throw new Error(`every preset cell must reserve a check slot, got ${colors.checks.length}`);
+        for (const [index, option] of colors.heights.entries()) near(option, 32, `color preset[${index}] height`, 1);
+        for (const [index, check] of colors.checks.entries()) {
+          near(check.width, 16, `color preset[${index}] check width`, 1);
+          if (check.visibility !== 'hidden' && check.visibility !== 'visible') {
+            throw new Error(`color check[${index}] must be hidden or visible, got ${check.visibility}`);
+          }
+          if ((check.empty === 'true') !== (check.visibility === 'hidden')) {
+            throw new Error(`color check[${index}] visibility/empty mismatch: ${JSON.stringify(check)}`);
+          }
+        }
+        if (colors.customSelected !== 'false') throw new Error('palette color must not mark the custom row selected');
+        if (colors.hexValue !== '') throw new Error(`palette selection must leave the custom hex empty, got ${JSON.stringify(colors.hexValue)}`);
+        if (colors.nativeType !== 'color') throw new Error(`custom swatch must be <input type=color>, got ${colors.nativeType}`);
+        if (colors.hintLive !== 'polite') throw new Error('color hint must be aria-live=polite');
+
+        await ui.setNativeValue('[data-testid="session-groups-dialog-color-hex"]', '#0f0');
+        await sleep(150);
+        colors = await dialogColorState();
+        if (colors.confirmDisabled !== false) throw new Error('valid #RGB hex must enable Confirm');
+        if (colors.selectedCount !== 0) throw new Error('custom selection must deselect every preset');
+        if (colors.customSelected !== 'true') throw new Error('custom row must be selected for a custom hex');
+        if ((await rowWrapperAttr(groupId, 'data-color-hex')) !== null) throw new Error('custom selection must not apply before Confirm');
+        if (recordRevision() !== beforeCustomRevision) throw new Error('custom selection must not write the record');
+
+        await ui.confirmDialog();
+        await ui.waitFor(
+          `document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]')?.closest('.dsg-group')?.getAttribute('data-color-hex') === '#00ff00'`,
+          'custom #0f0 expands and persists as #00ff00',
+          10000,
+        );
+        revision = await waitRevisionAbove(beforeCustomRevision, 'custom color commit persisted');
+        if (recordGroup(groupId)?.colorHex !== '#00ff00') {
+          throw new Error(`record colorHex expected #00ff00, got ${String(recordGroup(groupId)?.colorHex)}`);
+        }
+        const customColor = await rowIconColor(groupId);
+        if (customColor.icon !== 'rgb(0, 255, 0)') {
+          throw new Error(`custom color must drive the group icon, got ${customColor.icon}`);
+        }
+        if (customColor.caret !== 'rgb(0, 255, 0)') {
+          throw new Error(`custom color must drive the group caret, got ${customColor.caret}`);
+        }
+
+        // Reopening on a custom color: 0 presets selected, hex pre-filled.
+        await ui.openGroupMenu(groupId);
+        await ui.clickMenuItem(/^(颜色|Color)$/);
+        await waitDialogKind('group-color');
+        colors = await dialogColorState();
+        if (colors.selectedCount !== 0) throw new Error('a custom color must show 0 selected presets');
+        if (colors.hexValue !== '#00ff00') throw new Error(`custom dialog must prefill #00ff00, got ${JSON.stringify(colors.hexValue)}`);
+        if (colors.customSelected !== 'true') throw new Error('custom row must start selected for a custom color');
+        if (colors.confirmDisabled !== false) throw new Error('custom Confirm must start enabled');
+        const beforeInvalidRevision = recordRevision();
+        await ui.setNativeValue('[data-testid="session-groups-dialog-color-hex"]', '#12');
+        await sleep(150);
+        colors = await dialogColorState();
+        if (colors.confirmDisabled !== true) throw new Error('invalid hex must disable Confirm');
+        if (colors.hintTone !== 'error') throw new Error(`invalid hex must show an error hint, got ${colors.hintTone}`);
+        if ((colors.hintText ?? '').length === 0) throw new Error('invalid hex hint must not be empty');
+        await driver.evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'invalid custom color dialog closed by Cancel', 5000);
+        if (recordRevision() !== beforeInvalidRevision) throw new Error('Cancel must not write an invalid custom color');
+
+        // Picking a preset clears the custom color and writes the palette id.
+        await ui.openGroupMenu(groupId);
+        await ui.clickMenuItem(/^(颜色|Color)$/);
+        await waitDialogKind('group-color');
+        await driver.evaluate(`document.querySelector(${JSON.stringify(DIALOG_COLOR)} + '[data-color="purple"]')?.click()`);
+        await sleep(120);
+        colors = await dialogColorState();
+        if (colors.selectedCount !== 1 || colors.selectedColors[0] !== 'purple') {
+          throw new Error(`preset click must select exactly purple, got ${JSON.stringify(colors.selectedColors)}`);
+        }
+        if (colors.customSelected !== 'false') throw new Error('preset click must deselect the custom row');
+        const beforePaletteRevision = recordRevision();
+        await ui.confirmDialog();
+        await ui.waitFor(
+          `document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]')?.getAttribute('data-color') === 'purple'`,
+          'palette purple applied after custom color',
+          10000,
+        );
+        revision = await waitRevisionAbove(beforePaletteRevision, 'palette commit after custom color persisted');
+        if (recordGroup(groupId)?.color !== 'purple') throw new Error('record palette color expected purple');
+        if (recordGroup(groupId)?.colorHex !== undefined) throw new Error('preset selection must clear colorHex in the record');
+
+        // Right-click opens the same menu at cursor+2px without toggling/opening.
+        const groupRect = await ui.rect(`${GROUP}[data-group-id="${groupId}"]`);
+        if (!groupRect) throw new Error('group row rect missing for context-menu test');
+        const clickX = groupRect.left + Math.min(60, groupRect.width / 2);
+        const clickY = groupRect.top + Math.min(12, groupRect.height / 2);
+        const expandedBeforeMenu = await rowAttr(groupId, 'data-expanded');
+        await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]');
+          row.focus();
+          row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: ${clickX}, clientY: ${clickY} }));
+        })()`);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(MENU)})`, 'group context menu open', 5000);
+        await sleep(120);
+        let menu = await menuState();
+        if (!menu || menu.kind !== 'group' || menu.source !== groupId) {
+          throw new Error(`group context menu source mismatch: ${JSON.stringify(menu)}`);
+        }
+        const groupMenu = menu;
+        near(menu.left, Math.min(Math.max(8, clickX + 2), menu.viewport.width - menu.width - 8), 'group context menu x (+2px, clamped)', 1);
+        near(menu.top, Math.min(Math.max(8, clickY + 2), menu.viewport.height - menu.height - 8), 'group context menu y (+2px, clamped)', 1);
+        if ((await rowAttr(groupId, 'data-expanded')) !== expandedBeforeMenu) {
+          throw new Error('right-click must not open/collapse the group');
+        }
+        if (await ui.dialogOpen()) throw new Error('right-click on the group must not open a dialog');
+        await driver.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(MENU)})`, 'group context menu closed by Escape', 5000);
+        const focusedAfterEscape = await driver.evaluate(`document.activeElement?.getAttribute('data-group-id') ?? null`);
+        if (focusedAfterEscape !== groupId) throw new Error(`Escape must return focus to the group row, got ${focusedAfterEscape}`);
+
+        // Session right-click near the bottom-right corner exercises the measured clamp.
+        const currentSessionBefore = await driver.evaluate(`document.querySelector('[data-current="true"]')?.getAttribute('data-session-id') ?? null`);
+        const sessionRect = await ui.rect(`${SESSION}[data-session-id="${sessionId}"]`);
+        if (!sessionRect) throw new Error('session rect missing for context-menu test');
+        await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(SESSION)} + '[data-session-id="' + ${JSON.stringify(sessionId)} + '"]');
+          row.focus();
+          row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: innerWidth - 6, clientY: innerHeight - 6 }));
+        })()`);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(MENU)})`, 'session context menu open', 5000);
+        await sleep(150);
+        menu = await menuState();
+        if (!menu || menu.kind !== 'session' || menu.source !== sessionId) {
+          throw new Error(`session context menu source mismatch: ${JSON.stringify(menu)}`);
+        }
+        if (!(menu.left >= 8 && menu.top >= 8 && menu.right <= menu.viewport.width - 8 + 1 && menu.bottom <= menu.viewport.height - 8 + 1)) {
+          throw new Error(`session context menu must clamp to the 8px viewport inset: ${JSON.stringify(menu)}`);
+        }
+        const currentSessionAfter = await driver.evaluate(`document.querySelector('[data-current="true"]')?.getAttribute('data-session-id') ?? null`);
+        if (currentSessionAfter !== currentSessionBefore) throw new Error('right-click must not open/select the session');
+        await driver.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(MENU)})`, 'session context menu closed by Escape', 5000);
+        const focusSession = await driver.evaluate(`document.activeElement?.getAttribute('data-session-id') ?? null`);
+        if (focusSession !== sessionId) throw new Error(`Escape must return focus to the session row, got ${focusSession}`);
+
+        // Shift+F10 anchors at row left/bottom+8; scroll/resize/outside close.
+        const keyboardAnchor = await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]');
+          row.focus();
+          const rect = row.getBoundingClientRect();
+          row.dispatchEvent(new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true, cancelable: true }));
+          return { left: rect.left, bottom: rect.bottom };
+        })()`);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(MENU)})`, 'Shift+F10 menu open', 5000);
+        await sleep(120);
+        menu = await menuState();
+        if (!menu || menu.kind !== 'group' || menu.source !== groupId) {
+          throw new Error(`Shift+F10 menu source mismatch: ${JSON.stringify(menu)}`);
+        }
+        const keyboardMenu = menu;
+        near(menu.left, Math.min(Math.max(8, keyboardAnchor.left), menu.viewport.width - menu.width - 8), 'Shift+F10 menu x (row left, clamped)', 1);
+        near(menu.top, Math.min(Math.max(8, keyboardAnchor.bottom + 8), menu.viewport.height - menu.height - 8), 'Shift+F10 menu y (row bottom + 8, clamped)', 1);
+        await driver.evaluate(`document.querySelector('.dsg-tree')?.dispatchEvent(new Event('scroll'))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(MENU)})`, 'scroll closes the row menu', 5000);
+
+        await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]');
+          const rect = row.getBoundingClientRect();
+          row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rect.left + 40, clientY: rect.top + 10 }));
+        })()`);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(MENU)})`, 'resize menu open', 5000);
+        await driver.evaluate(`window.dispatchEvent(new Event('resize'))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(MENU)})`, 'resize closes the row menu', 5000);
+
+        await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]');
+          const rect = row.getBoundingClientRect();
+          row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rect.left + 40, clientY: rect.top + 10 }));
+        })()`);
+        await ui.waitFor(`!!document.querySelector(${JSON.stringify(MENU)})`, 'outside-close menu open', 5000);
+        await driver.evaluate(`document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }))`);
+        await ui.waitFor(`!document.querySelector(${JSON.stringify(MENU)})`, 'outside pointerdown closes the row menu', 5000);
+
+        // A context menu during a group drag is suppressed.
+        await ui.beginGroupDrag(groupId);
+        await driver.evaluate(`(() => {
+          const row = document.querySelector(${JSON.stringify(GROUP)} + '[data-group-id="' + ${JSON.stringify(groupId)} + '"]');
+          row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 120, clientY: 120 }));
+        })()`);
+        await sleep(150);
+        if (await ui.exists(MENU)) throw new Error('context menu must be suppressed while dragging');
+        await ui.endDrag();
+
+        const ariaPopup = await driver.evaluate(`(() => ({
+          group: document.querySelector(${JSON.stringify(GROUP)})?.getAttribute('aria-haspopup'),
+          session: document.querySelector(${JSON.stringify(SESSION)})?.getAttribute('aria-haspopup'),
+        }))()`);
+        if (ariaPopup.group !== 'menu' || ariaPopup.session !== 'menu') {
+          throw new Error(`rows must expose aria-haspopup=menu: ${JSON.stringify(ariaPopup)}`);
+        }
+
+        return {
+          count: {
+            order: countState.children,
+            text: countState.countText,
+            rightGap: countState.countRightGap,
+            font: `${countState.countFontSize}/${countState.countLineHeight}`,
+            actions: countState.buttons.map((button) => `${button.width}x${button.height}`),
+            actionGap: countState.actionGap,
+            idle: { opacity: countState.actionsOpacity, pointerEvents: countState.actionsPointerEvents },
+            hover: hoverState,
+          },
+          time: timeState,
+          guide: {
+            ungrouped: { centerFromHeader: guideState.ungroupedCenterFromHeader, background: guideState.ungrouped.background },
+            group: { background: guideState.group.background, caret: guideState.caretColor, icon: guideState.iconColor },
+          },
+          color: {
+            group: groupId,
+            customHex: recordGroup(groupId)?.colorHex ?? null,
+            palette: recordGroup(groupId)?.color ?? null,
+            revision,
+            presets: 6,
+            columns: colors.columns,
+            checkSlots: colors.checks.length,
+            invalidDisabled: true,
+          },
+          menu: {
+            groupAnchor: { x: groupMenu.left, y: groupMenu.top },
+            keyboardAnchor: { x: keyboardMenu.left, y: keyboardMenu.top, row: keyboardAnchor },
+            focusRestored: true,
+            closesOn: ['escape', 'scroll', 'resize', 'outside', 'drag-suppressed'],
+          },
+          ariaPopup,
+          record: { revision, color: recordGroup(groupId)?.color ?? null },
         };
       },
     },
@@ -4160,7 +4795,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 19-step acceptance (isolated DSH home, CDP)');
+  console.log(' V1 E2E - 20-step acceptance (isolated DSH home, CDP)');
   console.log('============================================================');
 
   let driver = null;
@@ -4222,7 +4857,7 @@ async function main() {
 
     if (!failed && !evidence.blockedReason) {
       // 0.2.5: the diagnostics route + isolated-home NDJSON write must work with
-      // the real drag trace; this is not an acceptance step (still 19/19).
+      // the real drag trace; this is not an acceptance step (still 20/20).
       try {
         const diagnostics = await verifyDiagnostics(driver);
         evidence.diagnostics = diagnostics;

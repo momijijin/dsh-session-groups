@@ -16,6 +16,7 @@ import {
   normalizeColor,
 } from '../../src/shared/model.js'
 import {
+  currentColorHexOf,
   currentColorOf,
   currentGroupIdOf,
   currentIconOf,
@@ -117,12 +118,25 @@ test('move options: flat list preserves sibling order/depth; move-group excludes
   assert.equal(moveGroupOptions(doc, c).some((group) => group.id === bChild), true)
 })
 
+test('custom colorHex selection: current custom wins, validity and payload are distinct', () => {
+  assert.equal(initialDialogSelection({ kind: 'group-color', current: 'purple', currentHex: '#A1B2C3' }, {}), '#a1b2c3')
+  assert.equal(initialDialogSelection({ kind: 'group-color', current: 'purple', currentHex: 'not-hex' }, {}), 'purple')
+  assert.equal(selectionIsValid({ kind: 'group-color' }, '#a1b2c3', {}), true)
+  assert.equal(selectionIsValid({ kind: 'group-color' }, '#A1B2C3', {}), false, 'selection is canonical')
+  assert.equal(selectionIsValid({ kind: 'group-color' }, 'purple', {}), true)
+  assert.equal(selectionIsValid({ kind: 'group-color' }, undefined, {}), false)
+  assert.deepEqual(dialogConfirmPayload({ kind: 'group-color' }, '#a1b2c3'), { colorHex: '#a1b2c3' })
+  assert.deepEqual(dialogConfirmPayload({ kind: 'group-color' }, 'gray'), { color: 'gray' })
+})
+
+
 test('current value helpers: icon/color/parent/owning group with blue/root defaults', () => {
   const { doc, a, b, c } = fixture()
-  assert.equal(currentIconOf(doc, a), 'folder')
+  assert.equal(currentIconOf(doc, a), 'hash', 'new groups default to the hash icon')
   assert.equal(currentColorOf(doc, a), 'purple')
   assert.equal(currentColorOf(doc, c), 'blue', 'legacy/missing color displays blue')
   assert.equal(currentColorOf(doc, 'missing'), 'blue')
+  assert.equal(currentColorHexOf(doc, a), null)
   assert.equal(currentParentOf(doc, b), a)
   assert.equal(currentParentOf(doc, a), null)
   assert.equal(currentParentOf(doc, 'missing'), null)

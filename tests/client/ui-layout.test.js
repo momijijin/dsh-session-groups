@@ -10,8 +10,8 @@ import { readFileSync } from 'node:fs'
 
 import { CSS } from '../../src/client/css.js'
 import { en, zh } from '../../src/client/locale.js'
-import { UI_GLYPHS } from '../../src/client/icons.js'
-import { GROUP_COLORS } from '../../src/shared/constants.js'
+import { UI_GLYPHS, ICON_PATHS } from '../../src/client/icons.js'
+import { GROUP_COLORS, GROUP_ICONS } from '../../src/shared/constants.js'
 
 const components = readFileSync(new URL('../../src/client/components.js', import.meta.url), 'utf8')
 
@@ -195,27 +195,31 @@ test('0.2.6 row hover actions match header controls: 28x28, 16px glyph, 4px gap,
   assert.match(block('.dsg-group-count {'), /flex:\s*none/)
 })
 
-test('0.2.6 group guide sits at the parent caret tip: 2px line, 20px/level indent', () => {
-  // The ungrouped inbox keeps its historical 10/10/1px chrome.
+test('0.2.7 unified guide: 16/4 content, 2px line at x=16, 60% group / 45% ungrouped', () => {
+  // Group and ungrouped lists share the same rail geometry and 2px line; only
+  // the color differs (group 60% mix, ungrouped label-tertiary 45%).
   const base = block('.dsg-group-line {')
-  assert.match(base, /margin-left:\s*10px/)
-  assert.match(base, /padding-left:\s*10px/)
-  assert.match(base, /border-left:\s*1px solid var\(--dsw-alias-border-l2/)
-  // Group child bodies move the 2px guide to x=16 (caret tip) with 4px padding.
-  const line = block('.dsg-group > .dsg-group-body > .dsg-group-line {')
-  assert.match(line, /position:\s*relative/)
-  assert.match(line, /margin-left:\s*16px/)
-  assert.match(line, /padding-left:\s*4px/)
-  assert.match(line, /border-left:\s*0/)
-  const guide = block('.dsg-group > .dsg-group-body > .dsg-group-line::before {')
-  assert.match(guide, /left:\s*-1px/)
-  assert.match(guide, /width:\s*2px/)
-  assert.match(guide, /background:\s*var\(--dsg-group-color/)
+  assert.match(base, /position:\s*relative/)
+  assert.match(base, /margin-left:\s*16px/)
+  assert.match(base, /padding-left:\s*4px/)
+  assert.match(base, /border-left:\s*0/)
+  const neutral = block('.dsg-group-line::before {')
+  assert.match(neutral, /left:\s*-1px/)
+  assert.match(neutral, /top:\s*2px/)
+  assert.match(neutral, /bottom:\s*2px/)
+  assert.match(neutral, /width:\s*2px/)
+  assert.match(neutral, /label-tertiary[^)]*\) 45%/)
+  const groupGuide = block('.dsg-group > .dsg-group-body > .dsg-group-line::before {')
+  assert.match(groupGuide, /var\(--dsg-group-color[^;]*60%, transparent\)/)
   // Row padding 8 + 16px caret => caret tip x=16; guide center = margin 16 (-1 + 2/2).
   assert.match(block('.dsg-group-row {'), /padding:\s*0 8px/)
   assert.match(block('.dsg-group-caret {'), /width:\s*16px/)
   // 16px margin + 4px padding = the original 20px of content start per level.
   assert.equal(16 + 4, 20)
+  // Color hierarchy: caret 85%, icon 100%, guide 60%.
+  assert.match(block('.dsg-group > .dsg-group-row .dsg-group-caret {'), /var\(--dsg-group-color/)
+  assert.match(block('.dsg-group > .dsg-group-row .dsg-group-caret {'), /opacity:\s*\.85/)
+  assert.match(block('.dsg-group-icon {'), /color:\s*var\(--dsg-group-color/)
 })
 
 test('0.2.6 group palette: six ids, color-token rules and a menu color dialog', () => {
@@ -273,4 +277,94 @@ test('0.2.6 selection dialogs only highlight; Confirm applies, Cancel closes unc
   // Input/delete/archive dialogs keep their existing behavior.
   assert.match(components, /needsInput \? \{ value: value\.trim\(\) \}/)
   assert.match(components, /t\('dialog\.stopAndArchive'\)/)
+})
+
+test('0.2.7 row order: group count far right, session time far right, hidden action hit areas', () => {
+  const name = components.indexOf("class: 'dsg-group-name'")
+  const actions = components.indexOf("class: 'dsg-group-actions'", name)
+  const count = components.indexOf("class: 'dsg-group-count'", actions)
+  assert.ok(name !== -1 && actions !== -1 && count !== -1 && name < actions && actions < count)
+  assert.ok(components.includes("'data-testid': 'session-groups-group-count'"))
+  const sessionActions = components.indexOf("class: 'dsg-session-actions'")
+  const sessionTime = components.indexOf("class: 'dsg-session-time'", sessionActions)
+  assert.ok(sessionActions !== -1 && sessionTime !== -1 && sessionActions < sessionTime)
+  assert.ok(components.includes("'data-testid': 'session-groups-session-time'"))
+
+  // Count always visible, tabular 12/16, right-aligned at the 8px row padding.
+  const countCss = block('.dsg-group-count {')
+  assert.match(countCss, /text-align:\s*right/)
+  assert.match(countCss, /font-size:\s*var\(--dsg-font-12,\s*12px\)/)
+  assert.match(countCss, /line-height:\s*16px/)
+  assert.match(countCss, /font-variant-numeric:\s*tabular-nums/)
+  // Time: 12/16, 40px minimum, right-aligned.
+  const timeCss = block('.dsg-session-time {')
+  assert.match(timeCss, /min-width:\s*40px/)
+  assert.match(timeCss, /text-align:\s*right/)
+  assert.match(timeCss, /font-size:\s*var\(--dsg-font-12,\s*12px\)/)
+  assert.match(timeCss, /line-height:\s*16px/)
+  assert.match(timeCss, /tabular-nums/)
+  // Actions are invisible *and* non-interactive until hover/focus.
+  const actionsCss = block('.dsg-group-actions, .dsg-session-actions {')
+  assert.match(actionsCss, /opacity:\s*0/)
+  assert.match(actionsCss, /pointer-events:\s*none/)
+  const reveal = block('.dsg-group-row:hover .dsg-group-actions, .dsg-group-row:focus-within .dsg-group-actions,')
+  assert.match(CSS, /\.dsg-session-row:hover \.dsg-session-actions[^}]*pointer-events:\s*auto/s)
+  assert.match(reveal, /opacity:\s*1/)
+  // Row focus ring.
+  assert.match(CSS, /\.dsg-group-row:focus-visible, \.dsg-session-row:focus-visible \{[^}]*outline:\s*2px/s)
+  // The applied-width flag hides the workspace badge at the narrow minimum.
+  assert.match(CSS, /\.dsg-root\[data-narrow="true"\] \.dsg-workspace-badge \{ display: none; \}/)
+  assert.match(components, /'data-narrow': appliedWidth !== null && appliedWidth <= 320/)
+})
+
+test('0.2.7 color dialog: 2x3 32px grid, fixed check slot, custom native+hex row', () => {
+  const grid = block('.dsg-color-grid {')
+  assert.match(grid, /display:\s*grid/)
+  assert.match(grid, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/)
+  const option = block('.dsg-color-option {')
+  assert.match(option, /height:\s*32px/)
+  assert.match(option, /width:\s*100%/)
+  // Every preset cell renders a check node; unselected cells hide (not remove) it.
+  assert.match(components, /'data-testid': 'session-groups-dialog-color-check'/)
+  assert.match(components, /'data-empty': active \? 'false' : 'true'/)
+  assert.match(components, /visibility: active \? 'visible' : 'hidden'/)
+  assert.match(block('.dsg-dialog-option-check {'), /width:\s*16px/)
+  assert.match(block('.dsg-dialog-option-check {'), /flex:\s*none/)
+  // Custom row: native color swatch + 7-char hex input + aria-live hint.
+  assert.match(components, /type: 'color'/)
+  assert.match(components, /'data-testid': 'session-groups-dialog-color-native'/)
+  assert.match(components, /'data-testid': 'session-groups-dialog-color-hex'/)
+  assert.match(components, /maxlength: '7'/)
+  assert.match(components, /'aria-live': 'polite'/)
+  assert.match(components, /'data-testid': 'session-groups-dialog-color-hint'/)
+  assert.match(components, /normalizeColorHex\(raw\)/)
+  assert.match(components, /setHexInput\(''\)/)
+  assert.match(block('.dsg-color-custom-row {'), /height:\s*32px/)
+  assert.match(block('.dsg-color-hex {'), /flex:\s*1/)
+  assert.match(block('.dsg-color-hint {'), /font-size:\s*var\(--dsg-font-11,\s*11px\)/)
+})
+
+test('0.2.7 hash default icon and custom color precedence helpers', () => {
+  assert.equal(GROUP_ICONS.includes('hash'), true)
+  assert.equal(typeof ICON_PATHS.hash, 'object')
+  assert.match(components, /groupColorHex\(group\) \?\? `var\(--dsg-color-\$\{groupColor\(group\)\}\)`/)
+  assert.match(components, /style: \{ '--dsg-group-color': groupColorCss\(group\) \}/)
+  // The host stores the custom hex alongside the legacy palette id.
+  const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
+  assert.match(plugin, /setGroupColorHex\(latest, dialog\.groupId, payload\.colorHex\)/)
+})
+
+test('0.2.7 right-click/keyboard menu wiring and clamped anchors', () => {
+  assert.match(components, /onContextMenu: \(event\) => handlers\.onGroupContextMenu/)
+  assert.match(components, /onContextMenu: \(event\) => handlers\.onSessionContextMenu/)
+  assert.match(components, /'aria-haspopup': 'menu'/)
+  assert.match(components, /menuAnchorFromEvent/)
+  assert.match(components, /menuAnchorFromRow/)
+  assert.match(components, /isMenuKey\(event\)/)
+  assert.match(components, /if \(dragRef\.current\) return/)
+  // The mounted menu re-clamps with its real rect.
+  assert.match(components, /clampMenuPosition\(\{/)
+  const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
+  assert.match(plugin, /'scroll', closeMenuOnViewportChange, true/)
+  assert.match(plugin, /'resize', closeMenuOnViewportChange/)
 })

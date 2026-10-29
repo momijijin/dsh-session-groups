@@ -6,10 +6,19 @@
  * `usePanelInfo`, `…`) plus the slot owner share. Everything host-derived is read
  * from those hooks; the only local state is this plugin's view store.
  */
-import { Component, createElement, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { GROUP_COLORS, GROUP_ICONS, MAX_GROUP_NAME } from '../shared/constants.js'
-import { childrenOf, findGroup, groupColor, moveGroup } from '../shared/model.js'
+import { Component, createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME } from '../shared/constants.js'
 import {
+  childrenOf,
+  findGroup,
+  groupColor,
+  groupColorHex,
+  isColorHex,
+  moveGroup,
+  normalizeColorHex,
+} from '../shared/model.js'
+import {
+  currentColorHexOf,
   currentColorOf,
   currentGroupIdOf,
   currentIconOf,
@@ -45,6 +54,7 @@ import {
 } from './diagnostics.js'
 import { GROUP_DRAG_MIME, resolveGroupDrop } from './group-drag.js'
 import { renderGlyph, renderHeaderIcon, renderIcon } from './icons.js'
+import { clampMenuPosition, isMenuKey, menuAnchorFromEvent, menuAnchorFromRow } from './menu-position.js'
 import {
   perfDragOver,
   perfDropTarget,
@@ -65,6 +75,7 @@ import {
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
 } from './sidebar-width.js'
+import { formatAbsoluteTime, relativeTimeParts } from './time.js'
 import {
   computeVirtualWindow,
   virtualScrollOffset,
@@ -206,6 +217,42 @@ const TextButton = ({ label, onClick, testId, data }) =>
 
 const StatusDot = ({ status }) => h('span', { class: 'dsg-session-dot', 'data-tone': statusTone(status), 'aria-hidden': 'true' })
 
+/** Effective group color for the wrapper custom property (hex wins over palette). */
+const groupColorCss = (group) => groupColorHex(group) ?? `var(--dsg-color-${groupColor(group)})`
+
+/**
+ * Relative updated-time label + absolute tooltip. Missing/invalid timestamps
+ * return null so the row omits the element entirely (0.2.7).
+ */
+const sessionTime = (updatedAt) => {
+  const parts = relativeTimeParts(updatedAt)
+  if (!parts) return null
+  const t = rt()?.t ?? ((key) => key)
+  const label = parts.unit === 'justNow' ? t('time.justNow') : t(`time.${parts.unit}`, { n: parts.value })
+  return { label, title: formatAbsoluteTime(updatedAt) ?? label }
+}
+
+/** Shift+F10 / ContextMenu opens the row menu; Enter/Space keep their own action. */
+const menuKeyHandler = (event, open) => {
+  if (!isMenuKey(event)) return false
+  event.preventDefault()
+  event.stopPropagation()
+  open(event.currentTarget)
+  return true
+}
+
+const menuSourceRow = (menu) => {
+  if (!menu) return null
+  const testId = menu.kind === 'group' ? 'session-groups-group' : 'session-groups-session'
+  const attr = menu.kind === 'group' ? 'data-group-id' : 'data-session-id'
+  const value = menu.kind === 'group' ? menu.groupId : menu.sessionId
+  const rows = globalThis.document?.querySelectorAll?.(`[data-testid="${testId}"]`) ?? []
+  for (const row of rows) {
+    if (row.getAttribute?.(attr) === value) return row
+  }
+  return null
+}
+
 // ---------------------------------------------------------------------------
 // Drag insertion placeholder (0.2.4)
 // ---------------------------------------------------------------------------
@@ -306,6 +353,7 @@ const SessionRow = ({
   const title = sessionTitle(row, { blankLabel: rt()?.t('session.blank'), untitledLabel: rt()?.t('session.untitled') })
   const workspaceName = sessionNode.workspace ? workspaceLabel(sessionNode.workspace) : rt()?.t('session.noWorkspace')
   const current = store?.currentSessionId === sessionId
+  const time = sessionTime(row.updatedAt)
   return h(
     'div',
     {
@@ -315,6 +363,7 @@ const SessionRow = ({
       draggable: 'true',
       'aria-selected': current ? 'true' : undefined,
       'aria-label': title,
+      'aria-haspopup': 'menu',
       'data-testid': 'session-groups-session',
       'data-session-id': sessionId,
       ...(ungrouped ? { 'data-ungrouped': 'true' } : { 'data-group-id': groupId ?? '' }),
@@ -329,7 +378,9 @@ const SessionRow = ({
         }
         handlers.openSession(sessionId)
       },
+      onContextMenu: (event) => handlers.onSessionContextMenu(event, sessionNode),
       onKeyDown: (event) => {
+        if (menuKeyHandler(event, (rowElement) => handlers.openSessionMenuAtRow(rowElement, sessionNode))) return
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault()
           handlers.openSession(sessionId)
@@ -352,8 +403,26 @@ const SessionRow = ({
     h(
       'span',
       { class: 'dsg-session-actions' },
-      IconButton({ label: rt()?.t('session.menu'), glyph: 'more', testId: 'session-groups-session-menu', data: { 'data-session-id': sessionId }, onClick: (event) => handlers.openSessionMenu(event, sessionNode) })
-    )
+      IconButton({
+        label: rt()?.t('session.menu'),
+        glyph: 'more',
+        testId: 'session-groups-session-menu',
+        haspopup: 'menu',
+        data: { 'data-session-id': sessionId },
+        onClick: (event) => handlers.openSessionMenu(event, sessionNode),
+      })
+    ),
+    time
+      ? h(
+          'span',
+          {
+            class: 'dsg-session-time',
+            'data-testid': 'session-groups-session-time',
+            title: time.title,
+          },
+          time.label
+        )
+      : null
   )
 }
 
@@ -457,7 +526,14 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
 
   return h(
     'div',
-    { class: 'dsg-group', 'data-color': groupColor(group) },
+    {
+      class: 'dsg-group',
+      'data-color': groupColor(group),
+      ...(groupColorHex(group) ? { 'data-color-hex': groupColorHex(group) } : {}),
+      // 0.2.7 display precedence: colorHex > palette. Inline custom property is
+      // inherited by the row icon/caret and this group's child-guide pseudo.
+      style: { '--dsg-group-color': groupColorCss(group) },
+    },
     isBefore
       ? h(DropPlaceholder, { target: { kind: 'group-before', targetId: group.id }, store, handlers, height: GROUP_PLACEHOLDER_HEIGHT })
       : null,
@@ -469,6 +545,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
         tabindex: '0',
         draggable: 'true',
         'aria-expanded': expanded ? 'true' : 'false',
+        'aria-haspopup': 'menu',
         'data-testid': 'session-groups-group',
         'data-group-id': group.id,
         'data-color': groupColor(group),
@@ -480,8 +557,10 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
         'data-dragging': dragging ? 'true' : 'false',
         title: groupPath(store.doc, group.id),
         onClick: () => handlers.onGroupClick(group.id),
+        onContextMenu: (event) => handlers.onGroupContextMenu(event, group),
         onPointerDown: (event) => handlers.onGroupPointerDown(event, group),
         onKeyDown: (event) => {
+          if (menuKeyHandler(event, (rowElement) => handlers.openGroupMenuAtRow(rowElement, group))) return
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
             handlers.toggleGroup(group.id)
@@ -496,7 +575,6 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
       h('span', { class: 'dsg-group-caret' }, renderGlyph(h, expanded ? 'chevronDown' : 'chevronRight', 16)),
       h('span', { class: 'dsg-group-icon' }, renderIcon(h, group.icon, 16)),
       h('span', { class: 'dsg-group-name' }, group.name),
-      h('span', { class: 'dsg-group-count' }, node.visibleCount),
       h(
         'span',
         { class: 'dsg-group-actions' },
@@ -511,10 +589,12 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
           label: rt()?.t('group.menu'),
           glyph: 'more',
           testId: 'session-groups-group-menu',
+          haspopup: 'menu',
           data: { 'data-group-id': group.id },
           onClick: (event) => handlers.openGroupMenu(event, group),
         })
-      )
+      ),
+      h('span', { class: 'dsg-group-count', 'data-testid': 'session-groups-group-count' }, node.visibleCount)
     ),
     expanded
       ? h(
@@ -1307,10 +1387,42 @@ const Toast = ({ store }) => {
 
 const MenuPopover = ({ store, handlers }) => {
   const menu = store.menu
+  const menuRef = useRef(null)
+  // Refine the estimated anchor with the real menu rect so a ~275px group menu
+  // is clamped to the viewport instead of relying on a hard-coded 200px guess.
+  useLayoutEffect(() => {
+    const node = menuRef.current
+    if (!node || !menu) return
+    const rect = node.getBoundingClientRect()
+    // Re-clamp the *desired* anchor (not the conservative pre-clamp result):
+    // a menu that fits below the cursor keeps its exact +2px offset, while one
+    // taller than the remaining space is pushed up by its measured height.
+    const next = clampMenuPosition({
+      x: menu.anchorX ?? menu.x,
+      y: menu.anchorY ?? menu.y,
+      width: rect.width,
+      height: rect.height,
+      viewportWidth: globalThis.innerWidth,
+      viewportHeight: globalThis.innerHeight,
+    })
+    node.style.left = `${next.x}px`
+    node.style.top = `${next.y}px`
+  }, [menu])
+  // Focus the first item when the menu opens; when it closes (Escape, outside,
+  // scroll, resize or an action) focus returns to the originating row.
+  useEffect(() => {
+    if (!menu) return undefined
+    const node = menuRef.current
+    const first = node?.querySelector?.('button:not([disabled])')
+    ;(first ?? node)?.focus?.({ preventScroll: true })
+    return () => {
+      menuSourceRow(menu)?.focus?.({ preventScroll: true })
+    }
+  }, [menu])
   if (!menu) return null
   const t = rt()?.t
   const item = (key, label, onClick, extra = {}) =>
-    h('button', { key, type: 'button', class: 'dsg-menu-item', onClick: (event) => { event.stopPropagation(); handlers.closeMenu(); onClick() }, ...extra }, label)
+    h('button', { key, type: 'button', role: 'menuitem', class: 'dsg-menu-item', onClick: (event) => { event.stopPropagation(); handlers.closeMenu(); onClick() }, ...extra }, label)
   const children = []
   if (menu.kind === 'group') {
     const { previous, next } = siblingNeighbors(store.doc, menu.groupId)
@@ -1345,9 +1457,13 @@ const MenuPopover = ({ store, handlers }) => {
   return h(
     'div',
     {
+      ref: menuRef,
       class: 'dsg-menu',
       role: 'menu',
+      tabindex: '-1',
       'data-testid': 'session-groups-menu',
+      'data-menu-kind': menu.kind,
+      'data-source-id': menu.kind === 'group' ? menu.groupId : menu.sessionId,
       style: { left: `${menu.x}px`, top: `${menu.y}px` },
       onClick: (event) => event.stopPropagation(),
     },
@@ -1403,12 +1519,15 @@ const DialogHost = ({ store, props }) => {
   const t = rt()?.t
   const [value, setValue] = useState('')
   const [selection, setSelection] = useState(undefined)
+  const [hexInput, setHexInput] = useState('')
   const inputRef = useRef(null)
   useEffect(() => {
     setValue(dialog?.value ?? '')
     // Every selection dialog opens with a visible current/inferred highlight;
     // when nothing usable exists Confirm stays disabled until the user picks.
-    setSelection(dialog ? initialDialogSelection(dialog, store.doc) : undefined)
+    const initial = dialog ? initialDialogSelection(dialog, store.doc) : undefined
+    setSelection(initial)
+    setHexInput(dialog?.kind === 'group-color' && isColorHex(initial) ? initial : '')
     if (dialog && (dialog.kind === 'new-group' || dialog.kind === 'rename-group' || dialog.kind === 'rename-session')) {
       const timer = setTimeout(() => inputRef.current?.focus(), 10)
       return () => clearTimeout(timer)
@@ -1495,20 +1614,39 @@ const DialogHost = ({ store, props }) => {
               'data-testid': 'session-groups-dialog-icon',
               'data-icon': icon,
               'data-selected': active ? 'true' : 'false',
-              title: icon,
+              title: t(`icon.${icon}`),
               onClick: (event) => {
                 event.stopPropagation()
                 setSelection(icon)
               },
             },
             renderIcon(h, icon, 16),
-            h('span', { class: 'dsg-dialog-option-label' }, icon)
+            h('span', { class: 'dsg-dialog-option-label' }, t(`icon.${icon}`))
           )
         })
       )
     )
   }
   if (dialog.kind === 'group-color') {
+    const customActive = isColorHex(selection)
+    const hexValid = normalizeColorHex(hexInput) !== null
+    const nativeValue = normalizeColorHex(hexInput) ?? (isColorHex(selection) ? selection : GROUP_COLOR_HEX[selection] ?? GROUP_COLOR_HEX.blue)
+    const pickPreset = (color) => {
+      setSelection(color)
+      setHexInput('')
+    }
+    const changeHex = (raw) => {
+      setHexInput(raw)
+      const hex = normalizeColorHex(raw)
+      setSelection(hex ?? undefined)
+    }
+    const pickNative = (raw) => {
+      const hex = normalizeColorHex(raw)
+      if (!hex) return
+      setHexInput(hex)
+      setSelection(hex)
+    }
+    const hint = hexInput.trim() === '' || hexValid ? t('color.hint') : t('color.invalidHex')
     bodyNodes.push(
       h(
         'div',
@@ -1534,14 +1672,68 @@ const DialogHost = ({ store, props }) => {
               title: t(`color.${color}`),
               onClick: (event) => {
                 event.stopPropagation()
-                setSelection(color)
+                pickPreset(color)
               },
             },
             h('span', { class: 'dsg-color-swatch', 'aria-hidden': 'true', style: { background: `var(--dsg-color-${color})` } }),
             h('span', { class: 'dsg-dialog-option-label' }, t(`color.${color}`)),
-            active ? optionCheck() : null
+            // 0.2.7: the check slot is always present and only hidden, so the
+            // label column never shifts when selection moves between cells.
+            h(
+              'span',
+              {
+                class: 'dsg-dialog-option-check',
+                'data-testid': 'session-groups-dialog-color-check',
+                'data-empty': active ? 'false' : 'true',
+                'aria-hidden': 'true',
+                style: { visibility: active ? 'visible' : 'hidden' },
+              },
+              renderGlyph(h, 'check', 16)
+            )
           )
         })
+      )
+    )
+    bodyNodes.push(
+      h(
+        'div',
+        { class: 'dsg-color-custom-row', 'data-selected': customActive ? 'true' : 'false' },
+        h('span', { class: 'dsg-color-custom-label' }, t('color.custom')),
+        h('input', {
+          type: 'color',
+          class: 'dsg-color-native',
+          'data-testid': 'session-groups-dialog-color-native',
+          'aria-label': t('color.custom'),
+          value: nativeValue,
+          onChange: (event) => pickNative(event.target.value),
+        }),
+        h('input', {
+          type: 'text',
+          class: 'dsg-dialog-input dsg-color-hex',
+          'data-testid': 'session-groups-dialog-color-hex',
+          maxlength: '7',
+          spellcheck: 'false',
+          autocomplete: 'off',
+          placeholder: '#RRGGBB',
+          'aria-label': t('color.customHex'),
+          value: hexInput,
+          onChange: (event) => changeHex(event.target.value),
+          onKeyDown: (event) => {
+            if (event.key === 'Escape') close()
+          },
+        })
+      )
+    )
+    bodyNodes.push(
+      h(
+        'div',
+        {
+          class: 'dsg-color-hint',
+          'data-testid': 'session-groups-dialog-color-hint',
+          'data-tone': hexInput.trim() !== '' && !hexValid ? 'error' : 'hint',
+          'aria-live': 'polite',
+        },
+        hint
       )
     )
   }
@@ -2266,6 +2458,7 @@ export const GroupsView = (props) => {
         groupId,
         titleKey: 'dialog.groupColor',
         current: currentColorOf(store.doc, groupId),
+        currentHex: currentColorHexOf(store.doc, groupId),
       }),
     openMoveGroup: (groupId) =>
       rt()?.openDialog({ kind: 'move-group', groupId, titleKey: 'dialog.moveTo', currentId: currentParentOf(store.doc, groupId) }),
@@ -2276,11 +2469,14 @@ export const GroupsView = (props) => {
     },
     openSessionMenu: (event, sessionNode) => {
       const row = sessionNode.session
+      const point = menuAnchorFromEvent(event)
       dispatch('menu', {
         menu: {
           kind: 'session',
-          x: Math.min(event.clientX, globalThis.innerWidth - 200),
-          y: Math.min(event.clientY, globalThis.innerHeight - 200),
+          x: point.x,
+          y: point.y,
+          anchorX: point.anchorX,
+          anchorY: point.anchorY,
           sessionId: row.id,
           title: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
           archived: sessionNode.archived === true,
@@ -2288,15 +2484,60 @@ export const GroupsView = (props) => {
         },
       })
     },
+    openSessionMenuAtRow: (rowElement, sessionNode) => {
+      const row = sessionNode.session
+      const point = menuAnchorFromRow(rowElement)
+      dispatch('menu', {
+        menu: {
+          kind: 'session',
+          x: point.x,
+          y: point.y,
+          anchorX: point.anchorX,
+          anchorY: point.anchorY,
+          sessionId: row.id,
+          title: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
+          archived: sessionNode.archived === true,
+          pinned: false,
+        },
+      })
+    },
+    onSessionContextMenu: (event, sessionNode) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (dragRef.current) return
+      handlers.openSessionMenu(event, sessionNode)
+    },
     openGroupMenu: (event, group) => {
+      const point = menuAnchorFromEvent(event)
       dispatch('menu', {
         menu: {
           kind: 'group',
-          x: Math.min(event.clientX, globalThis.innerWidth - 200),
-          y: Math.min(event.clientY, globalThis.innerHeight - 200),
+          x: point.x,
+          y: point.y,
+          anchorX: point.anchorX,
+          anchorY: point.anchorY,
           groupId: group.id,
         },
       })
+    },
+    openGroupMenuAtRow: (rowElement, group) => {
+      const point = menuAnchorFromRow(rowElement)
+      dispatch('menu', {
+        menu: {
+          kind: 'group',
+          x: point.x,
+          y: point.y,
+          anchorX: point.anchorX,
+          anchorY: point.anchorY,
+          groupId: group.id,
+        },
+      })
+    },
+    onGroupContextMenu: (event, group) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (dragRef.current) return
+      handlers.openGroupMenu(event, group)
     },
     openNewSession: (event, groupId) => {
       const choices = workspaceChoices(store.doc, groupId, byId, workspaceItems, currentId)
@@ -2595,7 +2836,7 @@ export const GroupsView = (props) => {
 
   return h(
     'div',
-    { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true', 'data-optimistic': store.optimistic ? 'true' : 'false' },
+    { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true', 'data-narrow': appliedWidth !== null && appliedWidth <= 320 ? 'true' : 'false', 'data-optimistic': store.optimistic ? 'true' : 'false' },
     h(Header, { store: viewState, handlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds }),
     wide && widthSupported && appliedWidth !== null
       ? h(ResizeHandle, {

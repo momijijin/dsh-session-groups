@@ -87,6 +87,35 @@ test('H4: invalid documents are rejected by shared validateDoc and the file is u
   assert.equal(await sha256(temp.filePath), before)
 })
 
+test('0.2.7: load normalizes a hand-edited valid custom hex, invalid values quarantine', async (t) => {
+  const temp = await makeTempStore()
+  t.after(temp.cleanup)
+  const doc = {
+    version: 1,
+    revision: 3,
+    groups: [
+      { id: 'g-a', name: 'A', icon: 'hash', color: 'blue', colorHex: '#A1B2C3', parentId: null, sessionIds: [] },
+    ],
+    ungrouped: [],
+  }
+  await writeFile(temp.filePath, JSON.stringify(doc), 'utf8')
+  const loaded = await temp.store.load()
+  assert.equal(loaded.kind, 'ok')
+  assert.equal(loaded.doc.groups[0].colorHex, '#a1b2c3')
+  assert.equal(JSON.parse(await readFile(temp.filePath, 'utf8')).groups[0].colorHex, '#A1B2C3', 'load does not rewrite the file')
+
+  const committed = await temp.store.commit(3, { ...doc, groups: [{ ...doc.groups[0], colorHex: '#A1B2C3' }] })
+  assert.equal(committed.kind, 'ok')
+  assert.equal(committed.doc.groups[0].colorHex, '#a1b2c3', 'direct host writes normalize too')
+
+  const invalid = { ...doc, groups: [{ ...doc.groups[0], colorHex: '#abcd' }] }
+  await writeFile(temp.filePath, JSON.stringify(invalid), 'utf8')
+  const quarantined = await temp.store.load()
+  assert.equal(quarantined.warning, 'invalid-file')
+  assert.match(quarantined.detail, /group-color-hex:g-a/)
+  assert.equal(quarantined.doc.groups.length, 0)
+})
+
 test('icon is opaque: an unknown short icon id is accepted and stored verbatim (C7)', async (t) => {
   const temp = await makeTempStore()
   t.after(temp.cleanup)

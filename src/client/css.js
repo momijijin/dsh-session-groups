@@ -248,45 +248,53 @@ export const CSS = `
 .dsg-group-line[data-empty="true"] .dsg-group-drop-slot { height: 12px; }
 .dsg-group-line[data-empty="true"] .dsg-group-drop-slot[data-drop-active="true"] { height: 34px; }
 .dsg-group-caret { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; color: var(--dsw-alias-label-tertiary, CanvasText); flex: none; }
+/* 0.2.7 color hierarchy: group icon 100%, caret 85%, child guide 60%. The
+ * custom property is set inline by GroupNode (colorHex wins over palette). */
+.dsg-group > .dsg-group-row .dsg-group-caret { color: var(--dsg-group-color, var(--dsw-alias-label-tertiary, CanvasText)); opacity: .85; }
 .dsg-group-icon { color: var(--dsg-group-color, var(--dsw-alias-label-secondary, CanvasText)); display: inline-flex; flex: none; }
 .dsg-group-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-14, 14px); line-height: 20px; }
-.dsg-group-count { flex: none; font-size: var(--dsg-font-12, 12px); color: var(--dsw-alias-label-tertiary, CanvasText); font-variant-numeric: tabular-nums; }
-.dsg-group-actions, .dsg-session-actions { display: inline-flex; align-items: center; gap: 4px; flex: none; opacity: 0; transition: opacity .12s ease; }
+/* Count is always visible at the far right: row padding-right (8px) is the
+ * right edge. Tabular 12/16 keeps two- and three-digit counts stable. */
+.dsg-group-count { flex: none; min-width: 16px; text-align: right; font-size: var(--dsg-font-12, 12px); line-height: 16px; color: var(--dsw-alias-label-tertiary, CanvasText); font-variant-numeric: tabular-nums; }
+.dsg-group-actions, .dsg-session-actions { display: inline-flex; align-items: center; gap: 4px; flex: none; opacity: 0; pointer-events: none; transition: opacity .12s ease; }
 .dsg-group-row:hover .dsg-group-actions, .dsg-group-row:focus-within .dsg-group-actions,
-.dsg-session-row:hover .dsg-session-actions, .dsg-session-row:focus-within .dsg-session-actions { opacity: 1; }
+.dsg-session-row:hover .dsg-session-actions, .dsg-session-row:focus-within .dsg-session-actions { opacity: 1; pointer-events: auto; }
+/* Keyboard focus ring on both row types (the row itself is tabbable). */
+.dsg-group-row:focus-visible, .dsg-session-row:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, CanvasText); outline-offset: -2px; }
 /* 0.2.6: row actions match the 28x28 header buttons (16px glyph, 4px gap) so the
  * hover hit area is finger/mouse safe; row heights stay 34/32. */
 .dsg-group-actions .dsg-icon-button, .dsg-session-actions .dsg-icon-button { width: 28px; height: 28px; }
 .dsg-group-body { display: flex; flex-direction: column; gap: 2px; }
+/* 0.2.7 unified indent guide (groups + ungrouped): content starts at 20px
+ * (16px rail + 4px content padding), the 2px line is centered at x=16 and
+ * inset 2px from the body's top/bottom. The group variant is color-mixed at
+ * 60%; the ungrouped inbox uses label-tertiary at 45%. Pseudo-element means the
+ * guide spans sessions, child groups, placeholders and virtual spacers without
+ * consuming layout width; collapsed groups render no body and therefore no line. */
 .dsg-group-line {
-  margin-left: 10px;
-  padding-left: 10px;
-  border-left: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.28));
+  position: relative;
+  margin-left: 16px;
+  padding-left: 4px;
+  border-left: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-height: 24px;
 }
-/* 0.2.6: only a group's own child body uses the new 2px guide at the parent
- * caret tip (row padding 8 + caret 16 => x=16); the ungrouped inbox keeps its
- * existing 10/10 chrome. Drawn as a pseudo element so it consumes no layout
- * width; nested indentation stays at 20px/level like before, keeping the 264px
- * minimum overflow-free at the maximum depth. */
-.dsg-group > .dsg-group-body > .dsg-group-line {
-  position: relative;
-  margin-left: 16px;
-  padding-left: 4px;
-  border-left: 0;
-}
-.dsg-group > .dsg-group-body > .dsg-group-line::before {
+.dsg-group-line::before {
   content: '';
   position: absolute;
   left: -1px;
-  top: 0;
-  bottom: 0;
+  top: 2px;
+  bottom: 2px;
   width: 2px;
   border-radius: 1px;
+  background: var(--dsw-alias-border-l2, rgba(128,128,128,.28));
+  background: color-mix(in srgb, var(--dsw-alias-label-tertiary, #6e7781) 45%, transparent);
+}
+.dsg-group > .dsg-group-body > .dsg-group-line::before {
   background: var(--dsg-group-color, var(--dsw-alias-border-l2, rgba(128,128,128,.28)));
+  background: color-mix(in srgb, var(--dsg-group-color, var(--dsw-alias-label-tertiary, #6e7781)) 60%, transparent);
 }
 /* Windowed ungrouped rows: only the visible slice + overscan is in the DOM;
  * the 2px gaps stay identical to a full list (top/bottom spacers preserve the
@@ -312,6 +320,15 @@ export const CSS = `
 .dsg-session-badge { flex: none; font-size: var(--dsg-font-10, 10px); line-height: 16px; padding: 0 5px; border-radius: 999px; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.14)); color: var(--dsw-alias-label-secondary, CanvasText); }
 .dsg-workspace-badge { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-12, 12px); color: var(--dsw-alias-label-tertiary, CanvasText); opacity: 0; transition: opacity .12s ease; }
 .dsg-session-row:hover .dsg-workspace-badge, .dsg-session-row:focus-within .dsg-workspace-badge { opacity: 1; }
+/* 0.2.7 far-right session updated time: 12/16 tabular, 40px minimum so the
+ * relative strings (刚刚 / 12 天前) align; omitted by the component when the
+ * host timestamp is missing/invalid. */
+.dsg-session-time { flex: none; min-width: 40px; text-align: right; font-size: var(--dsg-font-12, 12px); line-height: 16px; color: var(--dsw-alias-label-tertiary, CanvasText); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* At the 264px minimum the workspace badge yields its space to title/actions/
+ * time. Gating on the applied sidebar width (not the viewport) avoids a
+ * container-query containing block, which would trap fixed dialogs/backdrops
+ * inside the sidebar. */
+.dsg-root[data-narrow="true"] .dsg-workspace-badge { display: none; }
 .dsg-ungrouped { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; border-radius: var(--dsw-radius-sm, 6px); }
 .dsg-ungrouped-header { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 8px; color: var(--dsw-alias-label-secondary, CanvasText); font-size: var(--dsg-font-14, 14px); line-height: 20px; font-weight: 400; }
 .dsg-ungrouped-header[data-drop-active="true"] { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14)); }
@@ -426,13 +443,18 @@ export const CSS = `
   box-shadow: none;
 }
 .dsg-icon-option { width: auto; flex: 1 1 104px; }
-.dsg-color-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 0.2.7 color dialog: six presets in a fixed 3x2 grid with 32px cells, plus a
+ * custom native-swatch/hex row. Every cell reserves a 16px check slot (hidden,
+ * not removed) so labels do not shift between selected/unselected states. */
+.dsg-color-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; }
 .dsg-color-option {
   appearance: none;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 30px;
+  width: 100%;
+  height: 32px;
   padding: 0 8px;
   border-radius: var(--dsw-radius-sm, 6px);
   border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35));
@@ -454,6 +476,36 @@ export const CSS = `
   flex: none;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, CanvasText 22%, transparent);
 }
+.dsg-color-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--dsw-radius-sm, 6px);
+  border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35));
+}
+.dsg-color-custom-row[data-selected="true"] {
+  border-color: var(--dsw-alias-state-business-primary, #4d6bfe);
+  background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14));
+}
+.dsg-color-custom-label { flex: none; font-size: var(--dsg-font-12, 12px); color: var(--dsw-alias-label-secondary, CanvasText); }
+.dsg-color-native {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35));
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+}
+.dsg-color-native::-webkit-color-swatch-wrapper { padding: 2px; }
+.dsg-color-native::-webkit-color-swatch { border: none; border-radius: 4px; }
+.dsg-color-hex { flex: 1; min-width: 0; height: 28px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .02em; }
+.dsg-color-hint { font-size: var(--dsg-font-11, 11px); line-height: 16px; color: var(--dsw-alias-label-tertiary, CanvasText); }
+.dsg-color-hint[data-tone="error"] { color: var(--dsw-alias-state-danger, #f85149); }
 .dsg-toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 90; padding: 6px 14px; border-radius: 999px; font-size: var(--dsg-font-13, 13px); color: var(--dsw-alias-toast-label, var(--dsw-alias-label-inverse, Canvas)); background: var(--dsw-alias-toast-bg, var(--dsw-alias-label-primary, CanvasText)); opacity: .94; box-shadow: 0 4px 16px rgba(0,0,0,.24); }
 .dsg-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; }
 .dsg-rail-button { width: 36px; height: 36px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.08)); color: var(--dsw-alias-label-secondary, CanvasText); border-radius: var(--dsw-radius-md, 8px); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }

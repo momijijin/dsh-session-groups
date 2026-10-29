@@ -177,6 +177,39 @@ test('POST commit round-trips palette colors and normalizes legacy groups to blu
   assert.equal(legacyWrite.json.doc.groups[0].color, 'blue')
 })
 
+test('POST commit normalizes custom colorHex and rejects alpha/invalid values', async (t) => {
+  const mounted = await mountRoutes({ connection: cookieConnection() })
+  t.after(() => mounted.cleanup())
+
+  const doc = sampleDoc()
+  doc.groups[0] = { ...doc.groups[0], color: 'purple', colorHex: '#A1B2C3' }
+  const write = await mounted.call(
+    COMMIT_PATH,
+    makeRequest({ method: 'POST', headers: allowedHeaders, body: commitBody(0, doc) }),
+  )
+  assert.equal(write.res.statusCode, 200)
+  assert.equal(write.json.doc.groups[0].colorHex, '#a1b2c3', 'valid hex is normalized to lowercase')
+  assert.equal(write.json.doc.groups[0].color, 'purple', 'palette identity is preserved alongside the custom color')
+
+  const loaded = await mounted.call(LOAD_PATH, makeRequest({ headers: { cookie: 'token=ok' } }))
+  assert.equal(loaded.json.doc.groups[0].colorHex, '#a1b2c3')
+
+  for (const [name, colorHex, pattern] of [
+    ['alpha hex', '#11223344', /group-color-hex/],
+    ['alpha short', '#abcd', /group-color-hex/],
+    ['named color', 'red', /group-color-hex/],
+  ]) {
+    const invalid = sampleDoc()
+    invalid.groups[0] = { ...invalid.groups[0], colorHex }
+    const { res, json } = await mounted.call(
+      COMMIT_PATH,
+      makeRequest({ method: 'POST', headers: allowedHeaders, body: commitBody(1, invalid) }),
+    )
+    assert.equal(res.statusCode, 422, name)
+    assert.match(json.message, pattern, name)
+  }
+})
+
 test('POST commit rejects unknown palette ids with 422 group-color', async (t) => {
   const mounted = await mountRoutes({ connection: cookieConnection() })
   t.after(() => mounted.cleanup())

@@ -6,7 +6,7 @@
  * Cordis validates plugin return values as effects (Gate 0: returning an object
  * raises `TypeError: Invalid effect`).
  */
-import { createGroup, deleteGroup, moveGroup, renameGroup, setGroupColor, setGroupIcon } from '../shared/model.js'
+import { createGroup, deleteGroup, moveGroup, renameGroup, setGroupColor, setGroupColorHex, setGroupIcon } from '../shared/model.js'
 import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
@@ -326,7 +326,11 @@ export const createPlugin = () => {
           return
         }
         case 'group-color': {
-          await commitDocFromAction((latest) => setGroupColor(latest, dialog.groupId, payload.color))
+          if (typeof payload.colorHex === 'string') {
+            await commitDocFromAction((latest) => setGroupColorHex(latest, dialog.groupId, payload.colorHex))
+          } else {
+            await commitDocFromAction((latest) => setGroupColor(latest, dialog.groupId, payload.color))
+          }
           return
         }
         case 'move-session': {
@@ -462,8 +466,19 @@ export const createPlugin = () => {
       if (store.getSnapshot().dialog) closeDialog()
       else if (store.getSnapshot().menu) store.dispatch('menu', { menu: null })
     }
+    // A row menu is anchored to a viewport point: any document scroll or window
+    // resize makes that anchor stale, so close it (scrolls inside the menu itself
+    // stay usable). Focus restoration happens in MenuPopover's unmount cleanup.
+    const closeMenuOnViewportChange = (event) => {
+      if (!store.getSnapshot().menu) return
+      const target = event?.target
+      if (target && typeof target.closest === 'function' && target.closest('.dsg-menu, .dsg-dialog')) return
+      store.dispatch('menu', { menu: null })
+    }
     doc?.addEventListener?.('pointerdown', onPointerDown, true)
     doc?.addEventListener?.('keydown', onKeyDown, true)
+    doc?.addEventListener?.('scroll', closeMenuOnViewportChange, true)
+    globalThis.addEventListener?.('resize', closeMenuOnViewportChange)
 
     // Mode controller + unload cleanup are one effect: the disposer is owned by
     // the plugin fiber (Gate 0 verified slot lifecycle).
@@ -482,6 +497,8 @@ export const createPlugin = () => {
         styleDisposer = null
         doc?.removeEventListener?.('pointerdown', onPointerDown, true)
         doc?.removeEventListener?.('keydown', onKeyDown, true)
+        doc?.removeEventListener?.('scroll', closeMenuOnViewportChange, true)
+        globalThis.removeEventListener?.('resize', closeMenuOnViewportChange)
         floatingLabel?.remove?.()
         floatingLabel = null
         queue?.dispose()

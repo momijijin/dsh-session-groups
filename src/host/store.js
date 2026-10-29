@@ -24,7 +24,7 @@ import { randomBytes } from 'node:crypto'
 import { copyFile, mkdir, open, readFile, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { DOC_VERSION } from '../shared/constants.js'
-import { emptyDoc, validateDoc } from '../shared/model.js'
+import { emptyDoc, normalizeColorHex, validateDoc } from '../shared/model.js'
 import { RECORD_FILE_NAME } from './constants.js'
 
 const RETRYABLE_CODES = new Set(['EACCES', 'EPERM', 'EBUSY', 'EMFILE', 'ENFILE'])
@@ -60,6 +60,20 @@ const pathExists = async (path) => {
 }
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+
+/**
+ * Normalize valid custom hex values before validation (0.2.7). Short/uppercase
+ * forms are canonicalized; invalid values stay untouched so validateDoc keeps
+ * rejecting them (and load keeps the existing quarantine policy).
+ */
+const normalizeGroupColorHex = (groups) =>
+  Array.isArray(groups)
+    ? groups.map((group) => {
+        if (!isObject(group) || group.colorHex === undefined) return group
+        const hex = normalizeColorHex(group.colorHex)
+        return hex && hex !== group.colorHex ? { ...group, colorHex: hex } : group
+      })
+    : groups
 
 const errorMessage = (error) => (error instanceof Error ? error.message : String(error))
 
@@ -174,6 +188,11 @@ export const createStore = (options = {}) => {
         `version must be ${String(DOC_VERSION)} (got ${JSON.stringify(parsed.version)})`,
       )
     }
+    // 0.2.7: a hand-edited valid custom hex (short/uppercase) is normalized to
+    // the canonical lowercase #rrggbb before validation. Truly invalid values
+    // (alpha, named colors, malformed strings) stay untouched and are rejected
+    // below, preserving the existing quarantine policy.
+    parsed.groups = normalizeGroupColorHex(parsed.groups)
     const verdict = validateDoc(parsed)
     if (!verdict.ok) {
       return await quarantine('invalid-file', verdict.errors.join('; '))
@@ -223,7 +242,7 @@ export const createStore = (options = {}) => {
     const candidate = {
       version: isObject(doc) ? doc.version : undefined,
       revision: 0,
-      groups: isObject(doc) ? doc.groups : undefined,
+      groups: isObject(doc) ? normalizeGroupColorHex(doc.groups) : undefined,
       ungrouped: isObject(doc) ? doc.ungrouped : undefined,
     }
     const verdict = validateDoc(candidate)

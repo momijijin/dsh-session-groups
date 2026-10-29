@@ -1,9 +1,11 @@
 import {
   DEFAULT_GROUP_COLOR,
   DEFAULT_ICON,
+  DEFAULT_NEW_GROUP_ICON,
   DOC_VERSION,
   GROUP_COLORS,
   GROUP_ICONS,
+  MAX_COLOR_HEX_LENGTH,
   MAX_COLOR_LENGTH,
   MAX_DEPTH,
   MAX_GROUP_NAME,
@@ -38,8 +40,40 @@ export const isKnownColor = (color) => GROUP_COLORS.includes(color)
 /** Unknown/missing colors fall back to the blue default (0.2.6 additive). */
 export const normalizeColor = (color) => (isKnownColor(color) ? color : DEFAULT_GROUP_COLOR)
 
-/** Display color of a group: the persisted palette id or the blue default. */
+/**
+ * Display color of a group: the persisted palette id or the blue default.
+ * 0.2.7 keeps this palette helper stable for the existing `data-color` contract;
+ * `groupColorHex`/`groupColorValue` add the custom-color precedence.
+ */
 export const groupColor = (group) => normalizeColor(group?.color)
+
+/** Canonical custom color shape persisted in `colorHex`. */
+export const COLOR_HEX_RE = /^#[0-9a-f]{6}$/
+
+/** True only for the canonical lowercase 6-digit form (no alpha). */
+export const isColorHex = (value) => typeof value === 'string' && COLOR_HEX_RE.test(value)
+
+/**
+ * Normalize user/host input to the canonical `#rrggbb` shape. Accepts `#RGB`,
+ * `RGB`, `#RRGGBB` and `RRGGBB`; expands the short form and lowercases it.
+ * Alpha (`#RGBA`, `#RRGGBBAA`) and every other shape return `null`.
+ */
+export const normalizeColorHex = (value) => {
+  if (typeof value !== 'string') return null
+  const raw = value.trim().replace(/^#/, '')
+  if (/^[0-9a-fA-F]{3}$/.test(raw)) {
+    return `#${raw[0]}${raw[0]}${raw[1]}${raw[1]}${raw[2]}${raw[2]}`.toLowerCase()
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(raw)) return `#${raw.toLowerCase()}`
+  return null
+}
+
+/** Custom color of a group, or null when absent/invalid (display falls back to palette). */
+export const groupColorHex = (group) => (isColorHex(group?.colorHex) ? group.colorHex : null)
+
+/** Effective display value: custom hex first, then the palette id. */
+export const groupColorValue = (group) => groupColorHex(group) ?? groupColor(group)
+
 
 export const normalizeName = (name) => {
   const text = asString(name).trim()
@@ -105,16 +139,18 @@ const insertGroupAt = (doc, group, index) => {
   doc.groups.splice(doc.groups.indexOf(siblings[at]), 0, group)
 }
 
-export const createGroup = (doc, { name, icon = DEFAULT_ICON, color = DEFAULT_GROUP_COLOR, parentId = null, index } = {}) => {
+export const createGroup = (doc, { name, icon = DEFAULT_NEW_GROUP_ICON, color = DEFAULT_GROUP_COLOR, colorHex, parentId = null, index } = {}) => {
   const next = cloneDoc(doc)
   const cleanName = normalizeName(name)
   if (parentId !== null && !findGroup(next, parentId)) throw new Error('parent-not-found')
   if (parentId !== null && groupDepth(next, parentId) >= MAX_DEPTH) throw new Error('depth-exceeded')
+  const hex = colorHex === undefined ? null : normalizeColorHex(colorHex)
   const group = {
     id: newGroupId(),
     name: cleanName,
     icon: normalizeIcon(icon),
     color: normalizeColor(color),
+    ...(hex ? { colorHex: hex } : {}),
     parentId,
     sessionIds: [],
   }
@@ -144,6 +180,19 @@ export const setGroupColor = (doc, groupId, color) => {
   const group = findGroup(next, groupId)
   if (!group) throw new Error('group-not-found')
   group.color = normalizeColor(color)
+  // Picking a preset is an explicit switch back from a custom color.
+  delete group.colorHex
+  return next
+}
+
+/** Set a group's custom color (0.2.7). Accepts #RGB/RGB too; persisted lowercase #rrggbb. */
+export const setGroupColorHex = (doc, groupId, colorHex) => {
+  const next = cloneDoc(doc)
+  const group = findGroup(next, groupId)
+  if (!group) throw new Error('group-not-found')
+  const hex = normalizeColorHex(colorHex)
+  if (!hex) throw new Error('invalid-color')
+  group.colorHex = hex
   return next
 }
 
@@ -352,6 +401,15 @@ export const validateDoc = (doc) => {
         errors.push(`group-color:${group.id}`)
       }
     }
+    // 0.2.7 additive: `colorHex` is optional; when present it must already be
+    // the canonical lowercase #rrggbb (the host normalizes valid input before
+    // validation). Hand-edited invalid values therefore keep the existing
+    // quarantine policy instead of being silently repaired.
+    if (group.colorHex !== undefined) {
+      if (!isColorHex(group.colorHex) || group.colorHex.length > MAX_COLOR_HEX_LENGTH) {
+        errors.push(`group-color-hex:${group.id}`)
+      }
+    }
     if (group.parentId !== null && typeof group.parentId !== 'string') errors.push(`group-parent:${group.id}`)
     if (!Array.isArray(group.sessionIds)) errors.push(`group-sessions:${group.id}`)
     else {
@@ -401,11 +459,13 @@ export const normalizeDoc = (doc) => {
     known.add(raw.id)
     firstRawById.set(raw.id, raw)
     const name = asString(raw.name).trim().slice(0, MAX_GROUP_NAME) || '未命名'
+    const hex = normalizeColorHex(raw.colorHex)
     groups.push({
       id: raw.id,
       name,
       icon: normalizeIcon(raw.icon),
       color: normalizeColor(raw.color),
+      ...(hex ? { colorHex: hex } : {}),
       parentId: typeof raw.parentId === 'string' && raw.parentId !== '' ? raw.parentId : null,
       sessionIds: [],
     })

@@ -8,8 +8,16 @@
  * helpers own the initial selection, validity and confirm payload so the React
  * component only renders state; unit tests cover the full matrix without a DOM.
  */
-import { DEFAULT_GROUP_COLOR, DEFAULT_ICON, GROUP_COLORS, GROUP_ICONS } from '../shared/constants.js'
-import { findGroup, groupColor, isDescendant, isKnownColor } from '../shared/model.js'
+import { DEFAULT_GROUP_COLOR, DEFAULT_ICON, GROUP_ICONS } from '../shared/constants.js'
+import {
+  findGroup,
+  groupColor,
+  groupColorHex,
+  isColorHex,
+  isDescendant,
+  isKnownColor,
+  normalizeColorHex,
+} from '../shared/model.js'
 
 /** Dialog kinds whose body is a selectable option list. */
 export const SELECTION_DIALOG_KINDS = Object.freeze(['new-session', 'move-session', 'move-group', 'icon', 'group-color'])
@@ -52,8 +60,11 @@ export const initialDialogSelection = (dialog, doc) => {
       const icons = Array.isArray(dialog.icons) ? dialog.icons : GROUP_ICONS
       return typeof dialog.current === 'string' && icons.includes(dialog.current) ? dialog.current : DEFAULT_ICON
     }
-    case 'group-color':
+    case 'group-color': {
+      const hex = normalizeColorHex(dialog.currentHex)
+      if (hex) return hex
       return isKnownColor(dialog.current) ? dialog.current : DEFAULT_GROUP_COLOR
+    }
     case 'new-session': {
       const choices = Array.isArray(dialog.choices) ? dialog.choices : []
       return choices.some((workspace) => workspace?.workspaceId === dialog.inferred) ? dialog.inferred : undefined
@@ -75,7 +86,7 @@ export const selectionIsValid = (dialog, selection, doc) => {
       return typeof selection === 'string' && icons.includes(selection)
     }
     case 'group-color':
-      return isKnownColor(selection)
+      return isKnownColor(selection) || isColorHex(selection)
     case 'new-session': {
       const choices = Array.isArray(dialog.choices) ? dialog.choices : []
       return choices.some((workspace) => workspace?.workspaceId === selection)
@@ -100,7 +111,7 @@ export const dialogConfirmPayload = (dialog, selection) => {
     case 'icon':
       return { icon: selection }
     case 'group-color':
-      return { color: selection }
+      return isColorHex(selection) ? { colorHex: selection } : { color: selection }
     case 'new-session':
       return { workspaceId: selection }
     case 'move-session':
@@ -116,6 +127,9 @@ export const currentIconOf = (doc, groupId) => findGroup(doc, groupId)?.icon ?? 
 
 /** Current display value for the color dialog (blue fallback for legacy docs). */
 export const currentColorOf = (doc, groupId) => groupColor(findGroup(doc, groupId))
+
+/** Current custom color at dialog-open time (null for palette/legacy groups). */
+export const currentColorHexOf = (doc, groupId) => groupColorHex(findGroup(doc, groupId))
 
 /** Current parent id for the move-group dialog (`null` means root). */
 export const currentParentOf = (doc, groupId) => findGroup(doc, groupId)?.parentId ?? null

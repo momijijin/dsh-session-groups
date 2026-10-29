@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { DEFAULT_GROUP_COLOR, GROUP_COLORS } from '../../src/shared/constants.js'
+import { DEFAULT_GROUP_COLOR, DEFAULT_NEW_GROUP_ICON, GROUP_COLORS } from '../../src/shared/constants.js'
 import {
   assignSession,
   buildRenderTree,
@@ -9,16 +9,21 @@ import {
   deleteGroup,
   emptyDoc,
   groupColor,
+  groupColorHex,
+  groupColorValue,
   inferWorkspaceId,
+  isColorHex,
   isDescendant,
   isKnownColor,
   moveGroup,
   normalizeColor,
+  normalizeColorHex,
   normalizeDoc,
   removeSession,
   renameGroup,
   reorderUngrouped,
   setGroupColor,
+  setGroupColorHex,
   setGroupIcon,
   validateDoc,
   workspaceLabel,
@@ -40,9 +45,12 @@ test('createGroup trims names, normalizes icons and nests', () => {
   let doc = createGroup(emptyDoc(), { name: '  施工中  ', icon: 'rocket' })
   assert.equal(doc.groups[0].name, '施工中')
   assert.equal(doc.groups[0].icon, 'rocket')
+  doc = createGroup(doc, { name: '默认图标' })
+  assert.equal(doc.groups[1].icon, DEFAULT_NEW_GROUP_ICON, 'new groups default to hash')
+  assert.equal(doc.groups[1].icon, 'hash')
   doc = createGroup(doc, { name: '子组', icon: 'not-an-icon', parentId: doc.groups[0].id })
-  assert.equal(doc.groups[1].icon, 'folder')
-  assert.equal(doc.groups[1].parentId, doc.groups[0].id)
+  assert.equal(doc.groups[2].icon, 'folder', 'invalid explicit icons still normalize to the legacy fallback')
+  assert.equal(doc.groups[2].parentId, doc.groups[0].id)
   assert.deepEqual(childrenOf(doc, doc.groups[0].id).map((g) => g.name), ['子组'])
 })
 
@@ -83,6 +91,47 @@ test('group palette: default blue, known colors, setGroupColor, unknown -> blue'
   assert.equal(groupColor(null), 'blue')
   assert.throws(() => setGroupColor(doc, 'missing', 'red'), /group-not-found/)
   assert.equal(doc.groups[0].color, 'orange', 'setGroupColor is pure')
+})
+
+test('custom colorHex: normalization, precedence, validation and quarantine shape', () => {
+  assert.equal(normalizeColorHex('#A1B2C3'), '#a1b2c3')
+  assert.equal(normalizeColorHex('a1b2c3'), '#a1b2c3')
+  assert.equal(normalizeColorHex('#abc'), '#aabbcc')
+  assert.equal(normalizeColorHex('ABC'), '#aabbcc')
+  assert.equal(normalizeColorHex('#abcd'), null, 'alpha short form is rejected')
+  assert.equal(normalizeColorHex('#11223344'), null, 'alpha long form is rejected')
+  assert.equal(normalizeColorHex('red'), null)
+  assert.equal(normalizeColorHex(''), null)
+  assert.equal(isColorHex('#a1b2c3'), true)
+  assert.equal(isColorHex('#A1B2C3'), false, 'persisted shape is canonical lowercase')
+  assert.equal(isColorHex('#abc'), false)
+
+  let doc = createGroup(emptyDoc(), { name: 'A', color: 'purple', colorHex: '#A1B2C3' })
+  assert.equal(doc.groups[0].colorHex, '#a1b2c3')
+  assert.equal(groupColorHex(doc.groups[0]), '#a1b2c3')
+  assert.equal(groupColorValue(doc.groups[0]), '#a1b2c3', 'colorHex wins over the palette')
+  assert.equal(groupColor(doc.groups[0]), 'purple', 'palette identity stays available')
+  assert.equal(validateDoc(doc).ok, true)
+
+  const id = doc.groups[0].id
+  doc = setGroupColorHex(doc, id, '#0F0')
+  assert.equal(doc.groups[0].colorHex, '#00ff00')
+  doc = setGroupColor(doc, id, 'orange')
+  assert.equal(doc.groups[0].colorHex, undefined, 'picking a preset clears the custom color')
+  assert.equal(groupColorValue(doc.groups[0]), 'orange')
+
+  const invalidHex = { ...doc, groups: [{ ...doc.groups[0], colorHex: '#A1B2C3' }] }
+  const verdict = validateDoc(invalidHex)
+  assert.equal(verdict.ok, false)
+  assert.match(verdict.errors.join(';'), /group-color-hex/)
+  for (const bad of ['#abcd', '#11223344', 'red', '', 7]) {
+    const invalid = { ...doc, groups: [{ ...doc.groups[0], colorHex: bad }] }
+    assert.equal(validateDoc(invalid).ok, false, `colorHex ${JSON.stringify(bad)} must be rejected`)
+  }
+
+  const normalized = normalizeDoc({ version: 1, revision: 0, groups: [{ id: 'g1', name: 'A', icon: 'folder', colorHex: '#A1B2C3', parentId: null, sessionIds: [] }], ungrouped: [] })
+  assert.equal(normalized.groups[0].colorHex, '#a1b2c3')
+  assert.equal(validateDoc(normalized).ok, true)
 })
 
 test('validateDoc: color is optional but must be a known palette id when present', () => {

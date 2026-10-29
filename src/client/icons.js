@@ -15,6 +15,8 @@ export const ICON_PATHS = Object.freeze({
   tag: ['M2.6 2.9h4.9l5.6 5.6-4.2 4.2-5.6-5.6z', 'M5.1 5.3h.01'],
   bulb: ['M8 2.4a3.6 3.6 0 0 1 2.1 6.5V11H5.9v-2.1A3.6 3.6 0 0 1 8 2.4z', 'M6.4 12.6h3.2'],
   rocket: ['M8 1.9c2.6 1.1 4.1 3.3 4.1 6.2l-2.1 3H6l-2.1-3c0-2.9 1.5-5.1 4.1-6.2z', 'M6 11.1l-2 3.2 3-1.1', 'M10 11.1l2 3.2-3-1.1', 'M8 4.2v3.2'],
+  // 0.2.7 default new-group glyph: two slanted rails crossed by two horizontals.
+  hash: ['M5.7 2.6L4.3 13.4', 'M10.2 2.6L8.8 13.4', 'M2.7 6.1h10.6', 'M2.3 10.1h10.6'],
 })
 
 /** All icon names the plugin accepts (contract set). */

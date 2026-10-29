@@ -8,6 +8,7 @@
 - V1.1（0.2.4，2026-10-29）：**optimistic drop commits + insertion placeholders + official chrome patch**——会话/分组拖拽（含菜单上移/下移）改为乐观提交：drop 当帧按当前乐观 doc dispatch，`revision` 保持服务端确认值，写入进入单写者合并队列（快速移动合并、成功 reconcile、失败/冲突回滚 + 既有 toast）；非乐观提交（建组/重命名/删除/图标/移动对话框）先 flush 乐观队列再在最新 doc 上执行。拖拽落点改为真实行高占位（32px 会话 / 34px 分组，主题 accent 背景 + 虚线边框 + 目标名/「放到这里」），覆盖 session-before/after、group-before/after、子组缝隙、group-append、ungrouped/root-end；`session-groups-drop-indicator` testid 保留并新增 `data-drop-height`。`.dsg-header-title` 权重 600→400（官方 section label，14/20）；footer 文案精确为「切换到自由分组视图」/「返回默认工作区视图」。数据模型/Host 路由/存储不变。
 - V1.1（0.2.5，2026-10-29）：**official header icons + drag diagnostics patch**——header 三按钮改用 DSH 2.0.18 primitives 原始 artwork（`IconSearchOutlineRegular` / `IconSlidersTwoOutlineRegular` / `IconProjectAddOutlineRegular`，16px、1px stroke）；新增**只增不改**的 `POST /dsh-session-groups/diagnostics`（fence 后 append-only NDJSON 到 storages 下的诊断文件）、客户端诊断环/flush/HUD（默认开启，`localStorage['dsh-session-groups.diagnostics']='0'` 关闭）与分析器脚本。数据模型、`load`/`commit`、记录文件路径与官方数据写入不变。
 - V1.1（0.2.6，2026-10-29）：**group color + selection-dialog patch**——`Group` 新增**可选** `color`（`blue|green|orange|red|purple|gray`，默认蓝；`DOC_VERSION` 不变，旧文档无 color 仍合法并按蓝显示/归一化）；新增 `setGroupColor` 与分组菜单「颜色」对话框。header 标题与 accent 图标统一 primary accent；行 hover 操作按钮 16→28px 命中区（glyph 仍 16px、gap 4px）；分组左侧引导线移到父级 caret 尖端（x=16、2px 宽、子内容 padding 4，缩进仍 20px/级）。icon / move-session / move-group / new-session / group-color 五类选择对话框统一「点击只高亮、footer Confirm/Cancel 才生效」；输入/删除/运行中归档对话框行为不变。`load`/`commit` 路由与记录文件路径不变；host 在 commit 校验后将缺省 color 归一化为 `blue` 落盘。
+- V1.1（0.2.7，2026-10-29）：**row layout + custom color + context-menu patch**——`Group` 新增**可选** `colorHex`（canonical lowercase `#rrggbb`，无 alpha；显示优先级 `colorHex > color`；`DOC_VERSION` 不变）。host commit 归一化合法短/大写 hex 并拒绝 alpha/非法值（422 `group-color-hex:<id>`）；load 时把合法非 canonical hex 归一化，非法值仍 `invalid-file` quarantine。新增 `setGroupColorHex`；`setGroupColor` 清除 `colorHex`。新建组默认 `hash` 图标（旧组保留原图标）。组行 DOM 顺序 caret→icon→name→actions→count；会话行 dot→title→workspace→actions→time；计数/更新时间右对齐（12/16，时间 min-width 40）；隐藏操作区 `opacity:0;pointer-events:none`。组/未归组 guide 统一 16/4、2px、上下内缩 2（组色 60%，未归组 label-tertiary 45%）；caret 组色 85%、icon 100%。组行/会话行支持 `contextmenu` 与 Shift+F10/ContextMenu，菜单按实测 rect 在 8px 视口内 clamp；Escape/外部/滚动/resize 关闭并回焦来源行。颜色对话框改为 3×2 32px 色板 + 固定 16px check 槽 + 自定义 `type=color`/hex 行（`#RGB`/`RGB` 展开，非法 Confirm disabled，11px aria-live 提示）。
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
@@ -20,7 +21,7 @@
 | 路由围栏 | **`ctx.connection.requestRejection(req)` 必需**；缺失时 **fail-closed 503 `fence-unavailable`**；`connection.fetch.register` 仅 P1 评估，不进 V1 正式路径 | 已实测 401/403；弱 loopback fallback 不作为正式路径 |
 | 组内新建 | 自己的预创建工作区菜单 → `uiWorkspace.connectWorkspace(id)` → 落组首 | 宿主 hero 切换可能换 session id/留 blank |
 | 运行中归档 | 捕获 `workspace/session-active`，确认后 `archiveSession(id,{stopActivity:true})` | 与官方同形；不静默失败 |
-| 图标 | 插件自带 8 个 16px inline SVG | 宿主图标集命名/集合不稳定 |
+| 图标 | 插件自带 9 个 16px inline SVG（0.2.7 增 `hash`） | 宿主图标集命名/集合不稳定 |
 | 客户端 bundle | `window.__ModuleLoader__.load({id, factory})` CJS factory，externals `react`/`react/jsx-runtime` | 平台加载器要求；避免第二份 React |
 | 数据隔离 | Gate 0 全部用独立 `DSH_HOME`（`.spike-homes/<agent>`），不共享真实 home | profile 不隔离 sessions/storages |
 
@@ -35,13 +36,15 @@ export type GroupIcon =
   | 'bookmark'
   | 'tag'
   | 'bulb'
-  | 'rocket';
+  | 'rocket'
+  | 'hash';       // 0.2.7 default for newly created groups
 
 export interface Group {
   id: string;            // "g-" + 12 hex
   name: string;          // 1..80 chars, trimmed; >80 -> reject
   icon: GroupIcon;
   color?: GroupColor;    // 0.2.6 additive; missing -> blue (legacy docs valid)
+  colorHex?: string;     // 0.2.7 additive; canonical #rrggbb, display precedence over color
   parentId: string | null;
   sessionIds: string[];  // display order
 }
@@ -58,7 +61,7 @@ export interface GroupDoc {
 
 Invariants:
 
-1. `id` unique; `name` trimmed 1..80; invalid icon -> `folder`; optional `color` must be a known palette id (missing/invalid input normalizes to `blue`; `validateDoc` rejects an unknown persisted id with `group-color:<id>`).
+1. `id` unique; `name` trimmed 1..80; invalid icon -> `folder` (new groups default `hash`); optional `color` must be a known palette id (missing/invalid input normalizes to `blue`; `validateDoc` rejects an unknown persisted id with `group-color:<id>`); optional `colorHex` must be canonical lowercase `#rrggbb` (host normalizes valid short/uppercase input; alpha/invalid persisted values reject with `group-color-hex:<id>`).
 2. `parentId` null or existing group; no cycles; max depth 8 (UI soft 4).
 3. A session id appears at most once across all groups and `ungrouped`.
 4. `revision` host-owned; clients send only `baseRevision`.
@@ -260,6 +263,8 @@ V1.1（0.2.5）additive 追加：`session-groups-diagnostics-hud`（诊断 HUD �
 
 V1.1（0.2.6）additive 追加：`session-groups-dialog-options`（选择对话框选项容器，`role=listbox|radiogroup`）、`session-groups-dialog-workspace`（`data-workspace-id`/`data-selected`/`aria-selected`）、`session-groups-dialog-group`（`data-group-id`，空串=未归组）、`session-groups-dialog-icon`（`data-icon`/`aria-checked`）、`session-groups-dialog-color`（`data-color`/`aria-checked`）。分组行新增 `data-color="blue|green|orange|red|purple|gray"`；`session-groups-dialog-confirm`/`.dsg-dialog-cancel` 现在对所有对话框都存在。
 
+V1.1（0.2.7）additive 追加：`session-groups-group-count`（组行最右计数）、`session-groups-session-time`（会话行最右相对更新时间，`title` 为绝对时间）、`session-groups-dialog-color-check`（每个色板 cell 固定的 16px check 槽，未选中 `visibility:hidden`/`data-empty=true`）、`session-groups-dialog-color-hex`（自定义 hex 文本输入，maxlength 7）、`session-groups-dialog-color-native`（`input[type=color]` 自定义 swatch）、`session-groups-dialog-color-hint`（11px `aria-live=polite` 提示/错误）。组 wrapper 新增内联 `--dsg-group-color` 与可选 `data-color-hex="#rrggbb"`；组行/会话行新增 `aria-haspopup="menu"`，右键/ContextMenu 菜单仍使用 `session-groups-menu`。
+
 | testid | 位置 | 附加属性 |
 |---|---|---|
 | `session-groups-toggle` | footer 单个视图切换按钮（28px） | `data-mode="workspace|groups"`, `data-target`, `data-wide`, `aria-pressed`, `title`/`aria-label` |
@@ -275,12 +280,14 @@ V1.1（0.2.6）additive 追加：`session-groups-dialog-options`（选择对话�
 | `session-groups-new-group` | header 新建分组 `+`（28×28） | — |
 | `session-groups-ungrouped` | 未归组区块/头 | `data-count`（逻辑会话数）, `data-drop-kind` |
 | `session-groups-virtual-spacer` | 虚拟未归组列表的 top/bottom 占位 | `data-position="top"|"bottom"` |
-| `session-groups-group` | 组行 | `data-group-id`, `data-depth`, `data-expanded` |
+| `session-groups-group` | 组行 | `data-group-id`, `data-depth`, `data-expanded`, `aria-haspopup` |
+| `session-groups-group-count` | 组行最右计数（0.2.7） | — |
+| `session-groups-session-time` | 会话行最右相对更新时间（0.2.7） | `title` 绝对时间 |
 | `session-groups-group-add` | 组头 `+` | `data-group-id` |
 | `session-groups-group-menu` | 组 `…` | `data-group-id` |
 | `session-groups-group-move-up` / `session-groups-group-move-down` | 组菜单上移/下移 | `data-group-id`, `data-disabled` |
 | `session-groups-menu` | 组/会话操作菜单根 | — |
-| `session-groups-session` | 会话行 | `data-session-id`, `data-group-id` 或 `data-ungrouped="true"` |
+| `session-groups-session` | 会话行 | `data-session-id`, `data-group-id` 或 `data-ungrouped="true"`, `aria-haspopup` |
 | `session-groups-workspace-badge` | 悬浮工作区标签 | `data-session-id` |
 | `session-groups-drop-indicator` | 插入点行高占位（0.2.4 起；会话 32px / 分组 34px，取代旧 2px 线） | `data-drop-kind`, `data-drop-target`, `data-drop-height` |
 | `session-groups-group-drop` | 组体子组缝隙槽（n 个子组 = n+1 个槽；激活时 6px→34px 占位） | `data-parent-id`, `data-before-group-id`（末尾/空组为空串）, `data-drop-active` |
