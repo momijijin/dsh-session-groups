@@ -11,6 +11,7 @@ import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
 import { dictionaries, createTranslator, LOCALE_NS } from './locale.js'
+import { createFloatingLabel } from './floating-label.js'
 import { installStyles } from './css.js'
 import { createOptimisticQueue } from './optimistic.js'
 import {
@@ -86,32 +87,27 @@ export const createPlugin = () => {
   }
 
   // --- floating drag label (V1 drag affordance; document-level overlay) ----
-  const ensureFloatingLabel = () => {
-    const doc = globalThis.document
-    if (!doc || floatingLabel !== null) return floatingLabel
-    floatingLabel = doc.createElement('div')
-    floatingLabel.className = 'dsg-floating-label'
-    floatingLabel.dataset.testid = 'session-groups-floating-label'
-    floatingLabel.style.display = 'none'
-    doc.body.appendChild(floatingLabel)
+  // One controller owns the single overlay node: it reuses a label left in the
+  // DOM by an earlier instance, hides duplicates, caches text/visibility and
+  // coalesces per-frame dragover writes. Diagnostics hear only real changes.
+  const floatingLabelController = () => {
+    if (floatingLabel === null) {
+      floatingLabel = createFloatingLabel({
+        document: globalThis.document,
+        position: CENTER,
+        onTextChange: (text) => {
+          if (diagEnabled()) diagLabel(text)
+        },
+        perfEnabled,
+        perfNow,
+        perfSample,
+      })
+    }
     return floatingLabel
   }
   const setFloatingLabel = (text) => {
-    const label = ensureFloatingLabel()
-    if (!label) return
-    const started = perfEnabled() ? perfNow() : 0
-    if (typeof text === 'string' && text !== '') {
-      label.textContent = text
-      label.style.display = 'block'
-      label.style.left = `${CENTER.x}px`
-      label.style.top = `${CENTER.y}px`
-    } else {
-      label.style.display = 'none'
-    }
-    // Diagnostics only record actual text changes; labels are translated drag
-    // prompts / group names, never session titles.
-    if (diagEnabled()) diagLabel(typeof text === 'string' && text !== '' ? text : null)
-    if (started !== 0) perfSample('floatingLabelMs', perfNow() - started)
+    if (!globalThis.document) return
+    floatingLabelController().setText(text)
   }
 
   // --- document commit queue -------------------------------------------------
@@ -499,7 +495,7 @@ export const createPlugin = () => {
         doc?.removeEventListener?.('keydown', onKeyDown, true)
         doc?.removeEventListener?.('scroll', closeMenuOnViewportChange, true)
         globalThis.removeEventListener?.('resize', closeMenuOnViewportChange)
-        floatingLabel?.remove?.()
+        floatingLabel?.dispose()
         floatingLabel = null
         queue?.dispose()
         queue = null

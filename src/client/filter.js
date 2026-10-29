@@ -75,6 +75,7 @@ export const workspaceFor = (workspaces, sessionId) => workspaceOfSession(worksp
  *   filter?: 'hidden'|'all'|'only',
  *   currentSessionId?: string|null,
  *   statuses?: Map<string, object>|null,
+ *   subagentCounts?: Map<string, number>|null,
  * }} [options]
  */
 export const buildVisibleTree = (doc, sessionsById = {}, workspaces = [], options = {}) =>
@@ -83,6 +84,7 @@ export const buildVisibleTree = (doc, sessionsById = {}, workspaces = [], option
     filter: ARCHIVE_FILTERS.includes(options.filter) ? options.filter : 'hidden',
     currentSessionId: typeof options.currentSessionId === 'string' ? options.currentSessionId : null,
     statuses: options.statuses instanceof Map ? options.statuses : null,
+    subagentCounts: options.subagentCounts instanceof Map ? options.subagentCounts : null,
   })
 
 /** Count sessions in a visible tree (groups + ungrouped). */

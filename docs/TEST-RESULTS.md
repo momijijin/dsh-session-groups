@@ -5,6 +5,38 @@
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
+## 0. V1.1 patch 0.2.8 最终结论（2026-10-29，官方会话状态 + 空组 drop box + 拖拽 label）
+
+**V1.1 patch 0.2.8 QA 验证线 PASS（隔离 home `.spike-homes/qa-0.2.8-final6`；setup/E2E 端口 4416；setup 18/18、integration 16/16、smoke 10/10、真实 home 零写入、HOME-0 removed=0）：**
+
+| 层 | 结果 | 证据 |
+|---|---|---|
+| `npm test`（仓库全量） | **275/275 PASS**（0 fail / 0 skip；新增/改写 status 3 条、filter 透传 1 条、model subagentCounts 断言、floating-label 7 条、ui-layout status/empty-box 2 条；净增 12） | 控制台输出 |
+| E2E 21 步（默认开启诊断） | **21/21 PASS**（step 合计 **96,769 ms**；`consoleErrors=[]`、`pageErrors=[]`）；step 21 断言 16×20 状态槽/官方 spinner/10px dot/10px time、空组整宽 dashed 32px 盒 + 14px plus、append 占位抑制、group-before accent、264px 无溢出、拖拽浮层单节点/单可见/固定 24/120、dragend 隐藏 | `scripts/qa/evidence/028-final6/e2e-20261029-184857.json` + 21 张截图 |
+| 诊断持久化（E2E runner 非步骤校验） | **PASS**：隔离 home NDJSON **1,104 行 / 5 runIds / 0 invalidLines**，`nativeSeen`/`handlerSeen`/`optimisticSeen` 全 true；HUD `dsg 0.2.8` | 同上 `diagnostics` 字段 + `.spike-homes/qa-0.2.8-final6/storages/dsh-session-groups.diagnostics.ndjson` |
+| setup（0.2.8 新隔离 home） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client **273,233 bytes** / sha256 `137C64BBCB56DE90702F4326F3D51998B072032F353FC281FDEEFFDFE7C98FD6`；package version `0.2.8` | `scripts/qa/evidence/028-final6/setup-20261029-184633.json` |
+| smoke（同一 0.2.8 构建） | **PASS 10/10**；无 page exception、`consoleErrors=0`；load route 200 | `scripts/qa/evidence/028-final6/smoke-20261029-184714.json` |
+| 数据审计 | **PASS 11/11**（`-Mode exercise -CommitProbe`）：load 200 revision 37、no-op commit 37→38；workspace.json 与 3 个 sample sessions hash 不变；desktop/web profile 指纹不变；只记录文件变化 | `scripts/qa/evidence/028-final6/audit-exercise-20261029-185026-commit.json` |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.8.tgz`（**178,895 bytes**；unpacked **694,099**；**40 files**；sha256 `304D6C8EB883C89BE85181D6FD41088E3D5F36A532AA8725FBFD33EDE04E3C3D`） | 本文件 §0.2 |
+
+> 证据文件位于 `scripts/qa/evidence/028-final6/`（`scripts/qa/.gitignore` 排除，本地保留；不入包/不入库）；实现 home 与诊断 trace 位于 `.spike-homes/qa-0.2.8-final6/`（gitignore）。E2E 截图同目录 `screenshots/e2e/`。
+
+### 0.1 0.2.8 变更明细（本次 patch）
+
+- **状态模型**：`sessionStatuses` 对齐官方 `dsh-client-ui-workspace`：3 个 pending kind（approval/plan-review/question）+ running + subagents-only + completed + idle；未知 pending kind 忽略；subagents 与 pending/running 共存，非法 count 忽略；`runningSubagentCount`/`runningSubagentCounts` 从 `projectionsBySession.subagentCatalog` 计数（status.running 优先、row.running 回落、无投影返回 0）。
+- **状态 UI**：会话行固定 16×20 槽；idle/archived/blank 空槽；running 官方 14px 双圆 spinner（r9.5/track 25%/dash 12 150/1.5s/reduced-motion）；pending/completed 10px 点（6px core/warn+success alias）；pending 尾格 compact 文案；visually-hidden 状态文本；时间 12→10/16；locale 增补 `status.compact.*` 与 `status.subagentsRunning.one/other`，running/planReview 文案对齐官方。
+- **空组 drop box**：`.dsg-empty-dropbox` 整宽 dashed 32px、radius 6、12px 文本、`0 8px` padding、muted border/background/color、14px plus；drop-active accent；append/head/child 体占位存在时不渲染；未归组空态复用同一盒。
+- **拖拽 label**：新增 `src/client/floating-label.js`；复用 DOM 既有 label、隐藏重复节点、缓存 text/visibility/position、rAF last-wins、hide/dispose flush、rAF 缺失同步退化；plugin 生命周期 dispose 改为 controller.dispose。
+- **文档/测试**：C21、E2E step 21、21 步 runner、testid/契约/locale/README/RELEASE/TEST-PLAN/V1-PLAN 更新到 0.2.8；`dsh.plugin.json`/`package.json`/`PLUGIN_VERSION` 同步 0.2.8。
+
+### 0.2 0.2.8 打包记录
+
+- 命令：`npm run build`（lib/client.js **273,233 bytes** / sha256 `137C64BB…`）→ `npm pack`。
+- 产物：`dsh-session-groups-0.2.8.tgz`；**178,895 bytes**；unpacked **694,099 bytes**；**40 files**。
+- sha256：`304D6C8EB883C89BE85181D6FD41088E3D5F36A532AA8725FBFD33EDE04E3C3D`；npm shasum `0960e20563c7916ed57f2f06011b87a86668b1eb`；integrity `sha512-bXeYwcpmeV9E/CYK5G1aVWu7zIGYxkBaDlj1ML4+PMhnqyZq4NXaMr9HGX1wx/SZ5XYLGawmDjKqqpE7g+DG7Q==`。
+- 内容：`src/**`（33 个 JS，含新增 `floating-label.js`）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 40）。
+- **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
+
 ## 0. V1.1 patch 0.2.7 最终结论（2026-10-29，行 meta + 自定义颜色 + 右键菜单）
 
 **V1.1 patch 0.2.7 QA 验证线 PASS（隔离 home `.spike-homes/qa-0.2.7-final`；setup/E2E 端口 4409；setup 18/18、真实 home 零写入）：**
@@ -398,7 +430,7 @@ cd C:\Users\Momiji\Projects\dsh-session-groups
 # 仓库全量测试（含 QA 独立线）
 npm test
 
-# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 20 步 → audit → teardown）
+# 一键 V1/V1.1 QA（setup → integration → build → start 4402 → smoke → E2E 21 步 → audit → teardown）
 pwsh -NoProfile -File scripts/qa/run-v1.ps1
 
 # 分步

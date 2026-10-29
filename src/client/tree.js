@@ -7,27 +7,92 @@ import { childrenOf, findGroup } from '../shared/model.js'
 /** Soft UI depth limit from V1-PLAN (contract allows 8, UI recommends 4). */
 export const UI_SOFT_DEPTH = 4
 
-/** Status text keys (locale.js owns the strings). */
-export const statusLabelKey = (status) => {
-  if (!status) return 'status.idle'
-  const pending = status.pendingInteraction
-  if (pending && typeof pending.kind === 'string') {
-    if (pending.kind === 'approval') return 'status.waitingApproval'
-    if (pending.kind === 'plan-review') return 'status.planReview'
-    if (pending.kind === 'question') return 'status.waitingAnswer'
-  }
-  if (status.running === true) return 'status.running'
-  if (status.completionUnread === true) return 'status.completed'
-  return 'status.idle'
+/**
+ * Official pending-interaction statuses (DSH `sessionStatuses`): only these
+ * three `pendingInteraction.kind` values are visible. Anything else falls
+ * through to the running/completed/idle states instead of inventing a status.
+ */
+export const PENDING_STATUSES = Object.freeze({
+  approval: Object.freeze({ state: 'warning', labelKey: 'status.waitingApproval', compactKey: 'status.compact.approval' }),
+  'plan-review': Object.freeze({ state: 'warning', labelKey: 'status.planReview', compactKey: 'status.compact.planReview' }),
+  question: Object.freeze({ state: 'warning', labelKey: 'status.waitingAnswer', compactKey: 'status.compact.answer' }),
+})
+
+/** Primary pending status descriptor, or null when the kind is unknown/absent. */
+export const pendingStatus = (status) => {
+  const kind = status?.pendingInteraction?.kind
+  if (typeof kind !== 'string') return null
+  const entry = PENDING_STATUSES[kind]
+  if (!entry) return null
+  return { ...entry, kind: 'pending', pendingKind: kind }
 }
 
-/** Visual tone for the status dot. */
-export const statusTone = (status) => {
-  if (!status) return 'idle'
-  if (status.pendingInteraction && typeof status.pendingInteraction.kind === 'string') return 'awaiting'
-  if (status.running === true) return 'running'
-  if (status.completionUnread === true) return 'done'
-  return 'idle'
+/** Official secondary/standalone `subagentsRunning` descriptor. */
+export const subagentStatus = (runningSubagentCount) => {
+  const count = Number.isInteger(runningSubagentCount) && runningSubagentCount > 0 ? runningSubagentCount : 0
+  if (count === 0) return null
+  return {
+    state: 'ongoing',
+    kind: 'subagents',
+    count,
+    labelKey: count === 1 ? 'status.subagentsRunning.one' : 'status.subagentsRunning.other',
+    params: { n: count },
+  }
+}
+
+/**
+ * Official session status list, in priority order:
+ * pending > running > subagents-only > completed > idle. Pending/running keep
+ * `subagentsRunning` as a coexisting second status; the subagents-only case uses
+ * the official ongoing renderer with that same label (no new primary status).
+ *
+ * @param {{ running?: boolean, pendingInteraction?: { kind?: string }, completionUnread?: boolean }|null} status
+ * @param {{ runningSubagentCount?: number }} [options]
+ */
+export const sessionStatuses = (status, options = {}) => {
+  const subagents = subagentStatus(options.runningSubagentCount)
+  const pending = pendingStatus(status)
+  if (pending) return subagents ? [pending, subagents] : [pending]
+  if (status?.running === true) {
+    const running = { state: 'ongoing', kind: 'running', labelKey: 'status.running' }
+    return subagents ? [running, subagents] : [running]
+  }
+  if (subagents) return [subagents]
+  if (status?.completionUnread === true) return [{ state: 'done', kind: 'completed', labelKey: 'status.completed' }]
+  return [{ state: 'idle', kind: 'idle', labelKey: 'status.idle' }]
+}
+
+/**
+ * Running child count for one session, matching the official projection rule:
+ * count `subagentCatalog` entries whose unified status is running, falling back
+ * to the child row's own `running` flag. Returns 0 when the host exposes no
+ * projection data (never invents a marker).
+ */
+export const runningSubagentCount = (sessions, parentId, statuses) => {
+  if (typeof parentId !== 'string' || parentId === '') return 0
+  const catalog = sessions?.projectionsBySession?.[parentId]?.values?.subagentCatalog
+  if (!Array.isArray(catalog)) return 0
+  const byId = sessions?.byId ?? {}
+  const getStatus = typeof statuses?.get === 'function' ? (id) => statuses.get(id) : () => undefined
+  let count = 0
+  for (const child of catalog) {
+    if (!child || typeof child.id !== 'string' || child.id === '') continue
+    const running = getStatus(child.id)?.running ?? byId[child.id]?.running
+    if (running === true) count += 1
+  }
+  return count
+}
+
+/** Map parent session id -> running subagent count (only positive counts). */
+export const runningSubagentCounts = (sessions, statuses) => {
+  const out = new Map()
+  const projections = sessions?.projectionsBySession
+  if (!projections || typeof projections !== 'object') return out
+  for (const parentId of Object.keys(projections)) {
+    const count = runningSubagentCount(sessions, parentId, statuses)
+    if (count > 0) out.set(parentId, count)
+  }
+  return out
 }
 
 /** Ancestor group ids from nearest to root. */

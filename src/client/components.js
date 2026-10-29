@@ -89,9 +89,9 @@ import {
   flattenTree,
   groupPath,
   isExpanded,
+  runningSubagentCounts,
+  sessionStatuses,
   siblingNeighbors,
-  statusLabelKey,
-  statusTone,
 } from './tree.js'
 
 const h = createElement
@@ -215,7 +215,57 @@ const TextButton = ({ label, onClick, testId, data }) =>
     label
   )
 
-const StatusDot = ({ status }) => h('span', { class: 'dsg-session-dot', 'data-tone': statusTone(status), 'aria-hidden': 'true' })
+/** Official 14px ongoing spinner: two r=9.5 circles, rotating group + dash arc. */
+const StatusSpinner = () =>
+  h(
+    'svg',
+    {
+      class: 'dsg-status-spinner',
+      width: '14',
+      height: '14',
+      viewBox: '0 0 24 24',
+      'aria-hidden': 'true',
+      focusable: 'false',
+    },
+    h(
+      'g',
+      { class: 'dsg-status-spinner-motion' },
+      h('circle', { class: 'dsg-status-spinner-track', cx: '12', cy: '12', r: '9.5' }),
+      h('circle', { class: 'dsg-status-spinner-arc', cx: '12', cy: '12', r: '9.5' })
+    )
+  )
+
+/** Official 10px solid status dot (6px painted core via inset 20%). */
+const StatusDot = ({ state }) => h('span', { class: 'dsg-status-dot', 'data-state': state, 'aria-hidden': 'true' })
+
+/** One translated status label for the visually-hidden accessibility text. */
+const statusText = (status) => {
+  const t = rt()?.t ?? ((key) => key)
+  return t(status.labelKey, status.params)
+}
+
+/**
+ * The leading 16x20 status cell shared by session rows. Idle renders an empty
+ * slot (never a transparent dot); archived/blank rows pass `hidden` and keep
+ * the same empty slot. Every visible status contributes a visually-hidden
+ * label, including the coexisting subagentsRunning status.
+ */
+const SessionStatusCell = ({ statuses, hidden = false, testId = 'session-groups-session-status' }) => {
+  const list = hidden || !Array.isArray(statuses) ? [] : statuses
+  const primary = list[0] ?? null
+  const show = primary !== null && primary.state !== 'idle'
+  return h(
+    'span',
+    {
+      class: 'dsg-session-status',
+      'data-testid': testId,
+      'data-state': show ? primary.state : 'idle',
+      'data-status-kind': show ? primary.kind : 'idle',
+    },
+    show ? (primary.state === 'ongoing' ? h(StatusSpinner) : h(StatusDot, { state: primary.state })) : null,
+    show ? list.map((status, index) => h('span', { key: `${status.labelKey}-${index}`, class: 'dsg-visually-hidden' }, statusText(status))) : null
+  )
+}
 
 /** Effective group color for the wrapper custom property (hex wins over palette). */
 const groupColorCss = (group) => groupColorHex(group) ?? `var(--dsg-color-${groupColor(group)})`
@@ -331,6 +381,24 @@ const DropPlaceholder = ({ target, store, handlers, height }) => {
 const SESSION_PLACEHOLDER_HEIGHT = 32
 const GROUP_PLACEHOLDER_HEIGHT = 34
 
+/**
+ * Empty-group / empty-ungrouped drop box (0.2.8). Same geometry and surface as
+ * DropPlaceholder: full-width dashed 32px box with a 14px plus glyph and label.
+ * It is a hint only — the surrounding group body/section owns the drop handlers.
+ */
+const EmptyDropBox = ({ label, active = false, testId = 'session-groups-empty', data }) =>
+  h(
+    'div',
+    {
+      class: 'dsg-empty-dropbox',
+      'data-testid': testId,
+      'data-drop-active': active ? 'true' : 'false',
+      role: 'presentation',
+      ...(data ?? {}),
+    },
+    h('span', { class: 'dsg-empty-dropbox-plus', 'aria-hidden': 'true' }, renderGlyph(h, 'plus', 14)),
+    h('span', { class: 'dsg-empty-dropbox-label' }, label)
+  )
 
 // ---------------------------------------------------------------------------
 // Session row
@@ -350,10 +418,17 @@ const SessionRow = ({
   const sessionId = row.id
   const archived = sessionNode.archived === true
   const status = sessionNode.status
+  const statuses = sessionStatuses(status, { runningSubagentCount: sessionNode.runningSubagentCount })
+  const primaryStatus = statuses[0]
   const title = sessionTitle(row, { blankLabel: rt()?.t('session.blank'), untitledLabel: rt()?.t('session.untitled') })
   const workspaceName = sessionNode.workspace ? workspaceLabel(sessionNode.workspace) : rt()?.t('session.noWorkspace')
   const current = store?.currentSessionId === sessionId
   const time = sessionTime(row.updatedAt)
+  // Archived and blank rows keep the 16x20 leading slot but never paint a
+  // status marker (official row contract); pending rows trade the time cell for
+  // the compact status label.
+  const hiddenStatus = archived || row.blank === true
+  const compactStatusT = !hiddenStatus && primaryStatus.compactKey ? rt()?.t(primaryStatus.compactKey) : null
   return h(
     'div',
     {
@@ -396,7 +471,7 @@ const SessionRow = ({
       onDragLeave: handlers.onDragLeave,
       onDrop: (event) => handlers.onDropSession(event, sessionId, groupId, ungrouped),
     },
-    h(StatusDot, { status }),
+    h(SessionStatusCell, { statuses, hidden: hiddenStatus }),
     h('span', { class: 'dsg-session-title' }, title),
     archived ? h('span', { class: 'dsg-session-badge' }, rt()?.t('session.archivedBadge')) : null,
     h('span', { class: 'dsg-workspace-badge', 'data-testid': 'session-groups-workspace-badge', title: sessionNode.workspace?.path ?? '' }, workspaceName),
@@ -412,17 +487,28 @@ const SessionRow = ({
         onClick: (event) => handlers.openSessionMenu(event, sessionNode),
       })
     ),
-    time
+    compactStatusT
       ? h(
           'span',
           {
-            class: 'dsg-session-time',
+            class: 'dsg-session-time dsg-session-compact-status',
             'data-testid': 'session-groups-session-time',
-            title: time.title,
+            'data-compact-status': primaryStatus.pendingKind,
+            'aria-hidden': 'true',
           },
-          time.label
+          compactStatusT
         )
-      : null
+      : time
+        ? h(
+            'span',
+            {
+              class: 'dsg-session-time',
+              'data-testid': 'session-groups-session-time',
+              title: time.title,
+            },
+            time.label
+          )
+        : null
   )
 }
 
@@ -515,10 +601,30 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
   const headPlaceholder = isHeadTarget
     ? h(DropPlaceholder, { key: 'ph-head', target: { kind: 'group-head', groupId: group.id }, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT })
     : null
+  // An empty group's hint box must not compete with a body placeholder: append,
+  // head and child-slot targets each already paint the insertion surface. A
+  // boundary target (before/after this group) paints outside the body, so the
+  // hint stays and takes the accent drop state.
+  const bodyPlaceholderVisible =
+    isAppendTarget ||
+    isHeadTarget ||
+    (dropTarget?.kind === 'group-child' && dropTarget.parentId === group.id)
+  const emptyDropActive = Boolean(
+    dropTarget &&
+      !bodyPlaceholderVisible &&
+      (dropTarget.targetId === group.id || dropTarget.groupId === group.id || dropTarget.parentId === group.id)
+  )
   const lineChildren = [...bodyChildren]
   if (headPlaceholder) lineChildren.push(headPlaceholder)
-  if (node.visibleCount === 0) {
-    lineChildren.push(h('div', { key: 'empty', class: 'dsg-group-empty', 'data-testid': 'session-groups-empty' }, notFound))
+  if (node.visibleCount === 0 && !bodyPlaceholderVisible) {
+    lineChildren.push(
+      h(EmptyDropBox, {
+        key: 'empty',
+        label: notFound,
+        active: emptyDropActive,
+        data: { 'data-group-id': group.id },
+      })
+    )
   }
   lineChildren.push(...sessionChildren)
   // group-append: placeholder at the end of the group body when expanded.
@@ -756,7 +862,18 @@ const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
 
   const bodyChildren = []
   if (total === 0) {
-    bodyChildren.push(h('div', { key: 'empty', class: 'dsg-group-empty', 'data-testid': 'session-groups-empty' }, rt()?.t('ungrouped.dropHint')))
+    // The section-level drop paints its own placeholder under the header; keep
+    // the hint visible only when it would not duplicate that surface.
+    if (dropKind !== 'ungrouped') {
+      bodyChildren.push(
+        h(EmptyDropBox, {
+          key: 'empty',
+          label: rt()?.t('ungrouped.dropHint'),
+          active: dropKind === 'group-root-end',
+          data: { 'data-ungrouped': 'true' },
+        })
+      )
+    }
   } else {
     if (win.topPad > 0) {
       bodyChildren.push(h(VirtualSpacer, { key: 'pad-top', height: win.topPad, position: 'top' }))
@@ -1881,7 +1998,7 @@ const FlatFallback = ({ props, store, reason }) => {
             'data-archived': isArchived(archived, row.id) ? 'true' : 'false',
             onClick: () => !isArchived(archived, row.id) && rt()?.actions.openSession(row.id),
           },
-          h(StatusDot, { status: null }),
+          h(SessionStatusCell, { statuses: [], hidden: true }),
           h('span', { class: 'dsg-session-title' }, sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') })),
           h('span', { class: 'dsg-workspace-badge', style: { opacity: 1 } }, (() => {
             const workspace = workspaceItems.find((item) => (item.sessionIds ?? []).includes(row.id))
@@ -1931,6 +2048,7 @@ export const GroupsView = (props) => {
   const sessions = typeof props?.useSessions === 'function' ? props.useSessions((snapshot) => snapshot) : null
   const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot) : null
   const statuses = typeof props?.useSessionStatus === 'function' ? props.useSessionStatus((snapshot) => snapshot) : null
+  const subagentCounts = runningSubagentCounts(sessions, statuses)
   const panelInfo = typeof props?.usePanelInfo === 'function' ? props.usePanelInfo((snapshot) => snapshot) : null
 
   const byId = sessions?.byId ?? {}
@@ -2138,6 +2256,7 @@ export const GroupsView = (props) => {
     filter: store.archiveFilter,
     currentSessionId: highlightCurrent,
     statuses: statuses instanceof Map ? statuses : null,
+    subagentCounts,
   })
   const ungroupedCount = tree.ungrouped.length
   // Diagnostics run context: every traced event carries the current revision,

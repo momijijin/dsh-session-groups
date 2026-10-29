@@ -9,6 +9,7 @@
 - V1.1（0.2.5，2026-10-29）：**official header icons + drag diagnostics patch**——header 三按钮改用 DSH 2.0.18 primitives 原始 artwork（`IconSearchOutlineRegular` / `IconSlidersTwoOutlineRegular` / `IconProjectAddOutlineRegular`，16px、1px stroke）；新增**只增不改**的 `POST /dsh-session-groups/diagnostics`（fence 后 append-only NDJSON 到 storages 下的诊断文件）、客户端诊断环/flush/HUD（默认开启，`localStorage['dsh-session-groups.diagnostics']='0'` 关闭）与分析器脚本。数据模型、`load`/`commit`、记录文件路径与官方数据写入不变。
 - V1.1（0.2.6，2026-10-29）：**group color + selection-dialog patch**——`Group` 新增**可选** `color`（`blue|green|orange|red|purple|gray`，默认蓝；`DOC_VERSION` 不变，旧文档无 color 仍合法并按蓝显示/归一化）；新增 `setGroupColor` 与分组菜单「颜色」对话框。header 标题与 accent 图标统一 primary accent；行 hover 操作按钮 16→28px 命中区（glyph 仍 16px、gap 4px）；分组左侧引导线移到父级 caret 尖端（x=16、2px 宽、子内容 padding 4，缩进仍 20px/级）。icon / move-session / move-group / new-session / group-color 五类选择对话框统一「点击只高亮、footer Confirm/Cancel 才生效」；输入/删除/运行中归档对话框行为不变。`load`/`commit` 路由与记录文件路径不变；host 在 commit 校验后将缺省 color 归一化为 `blue` 落盘。
 - V1.1（0.2.7，2026-10-29）：**row layout + custom color + context-menu patch**——`Group` 新增**可选** `colorHex`（canonical lowercase `#rrggbb`，无 alpha；显示优先级 `colorHex > color`；`DOC_VERSION` 不变）。host commit 归一化合法短/大写 hex 并拒绝 alpha/非法值（422 `group-color-hex:<id>`）；load 时把合法非 canonical hex 归一化，非法值仍 `invalid-file` quarantine。新增 `setGroupColorHex`；`setGroupColor` 清除 `colorHex`。新建组默认 `hash` 图标（旧组保留原图标）。组行 DOM 顺序 caret→icon→name→actions→count；会话行 dot→title→workspace→actions→time；计数/更新时间右对齐（12/16，时间 min-width 40）；隐藏操作区 `opacity:0;pointer-events:none`。组/未归组 guide 统一 16/4、2px、上下内缩 2（组色 60%，未归组 label-tertiary 45%）；caret 组色 85%、icon 100%。组行/会话行支持 `contextmenu` 与 Shift+F10/ContextMenu，菜单按实测 rect 在 8px 视口内 clamp；Escape/外部/滚动/resize 关闭并回焦来源行。颜色对话框改为 3×2 32px 色板 + 固定 16px check 槽 + 自定义 `type=color`/hex 行（`#RGB`/`RGB` 展开，非法 Confirm disabled，11px aria-live 提示）。
+- V1.1（0.2.8，2026-10-29）：**official session status + empty drop box + drag-label hardening patch**——会话状态严格对齐官方 `dsh-client-ui-workspace`：6 个互斥标签（idle/running/waitingApproval/planReview/waitingAnswer/completed）+ 1 个可共存的 `subagentsRunning`（来自 host `projectionsBySession.subagentCatalog` 的运行中子会话计数）；优先级 pending > running > subagents-only > completed > idle，未知 `pendingInteraction.kind` 不产生状态。UI：idle/archived/blank 保留 16×20 空槽（不再画透明点）；running 使用官方 14px 双圆环 spinner（r=9.5/stroke 2/track 25%/arc dash 12 150/spin+dash 1.5s/reduced-motion 静态）；pending 与 completed 使用 10px 点（6px core，warn/success）；pending 时 trailing time 换成官方 compact 文案（待审批/计划待审/待回答）；所有显示状态带 visually-hidden 文本；时间字号 12→官方 10/16。空组/未归组空提示改为与 DropPlaceholder 同形的整宽 dashed 32px 盒（plus+12px 文案；drop-active 用 accent surface），组体已有 placeholder 时不再同时渲染。浮动拖拽 label 改为单实例控制器：复用 DOM 中既有 `session-groups-floating-label`、隐藏重复节点、缓存 text/visibility/position、rAF 合并（last-wins）、hide/dispose flush。无数据模型/Host 路由/存储变化。
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
@@ -188,6 +189,7 @@ buildRenderTree(doc, sessionsById, workspaces, options): RenderNode[]
   filter: 'hidden' | 'all' | 'only';
   currentSessionId: string | null;
   statuses: Map<string, { running: boolean; pendingInteraction?: { kind: string }; completionUnread: boolean }>;
+  subagentCounts?: Map<string, number>; // 0.2.8 host projection count; missing -> 0
 }
 ```
 
@@ -199,7 +201,7 @@ buildRenderTree(doc, sessionsById, workspaces, options): RenderNode[]
 - Archived rows included in `all`, muted; `only` includes archived only; `hidden` excludes.
 - Groups always returned; `emptyVisible` when no visible children.
 - Subgroups before sessions; no interleaving.
-- `RenderNode`: `group` with `children`, `visibleCount`, `emptyVisible`; `session` with `session`, `workspace`, `archived`, `status`.
+- `RenderNode`: `group` with `children`, `visibleCount`, `emptyVisible`; `session` with `session`, `workspace`, `archived`, `status`, `runningSubagentCount` (0 when the host exposes no projection).
 
 ## 4. Client surface
 
@@ -225,6 +227,7 @@ Visibility/status:
 
 - `archivedSessionIds` is an **array**; use `.includes`.
 - `useSessionStatus` is a **Map**; fields `running`, `pendingInteraction?.kind`, `completionUnread`.
+- 0.2.8 status model mirrors the official `sessionStatuses` exactly: primary pending (`approval` / `plan-review` / `question`, only those three kinds), else running, else subagents-only, else completed, else idle. `runningSubagentCount` comes from `useSessions().projectionsBySession[parentId].values.subagentCatalog` (a child counts when its status `running` or row `running` is true); it is a coexisting secondary status for pending/running and the only status (ongoing renderer, subagents label) when nothing else applies. Unknown pending kinds are ignored; unavailable projection data omits the marker.
 - Current session: `retainedBy.mainView > 0`; do not highlight when a panel is active (`activePanelId !== null`).
 - Subagent: `origin === 'subagent'`; `parentId` is fork lineage, do not use for hiding。普通 `SessionListEntry` 的键只有 `blank,cwd,displayTitle,formatStatus,id,projectionValues,retainedBy,running,updatedAt`，**`origin`/`parentId` 可缺失**（仅 subagent 行带），读取必须容错。
 - Blank: only current blank visible; a renamed blank still shows its title. Blank placement is host-ephemeral: after restart the old id may vanish (orphan hidden) and the new blank starts ungrouped.
@@ -265,6 +268,8 @@ V1.1（0.2.6）additive 追加：`session-groups-dialog-options`（选择对话�
 
 V1.1（0.2.7）additive 追加：`session-groups-group-count`（组行最右计数）、`session-groups-session-time`（会话行最右相对更新时间，`title` 为绝对时间）、`session-groups-dialog-color-check`（每个色板 cell 固定的 16px check 槽，未选中 `visibility:hidden`/`data-empty=true`）、`session-groups-dialog-color-hex`（自定义 hex 文本输入，maxlength 7）、`session-groups-dialog-color-native`（`input[type=color]` 自定义 swatch）、`session-groups-dialog-color-hint`（11px `aria-live=polite` 提示/错误）。组 wrapper 新增内联 `--dsg-group-color` 与可选 `data-color-hex="#rrggbb"`；组行/会话行新增 `aria-haspopup="menu"`，右键/ContextMenu 菜单仍使用 `session-groups-menu`。
 
+V1.1（0.2.8）additive 追加：`session-groups-session-status`（会话行首位 16×20 状态槽；`data-state="idle|ongoing|warning|done"`、`data-status-kind="idle|running|pending|subagents|completed"`；idle/archived/blank 槽内为空，状态文本走 `.dsg-visually-hidden`）。`session-groups-session-time` 同时承载 pending 的 compact 文案（`data-compact-status="approval|plan-review|question"`），普通时间仍为 10/16。`session-groups-empty` 改为整宽 dashed drop box（`data-drop-active`、组上 `data-group-id`、未归组 `data-ungrouped="true"`；含 14px plus 与 12px label）。`session-groups-floating-label` 仍是唯一拖拽浮层节点；0.2.8 复用/隐藏重复节点，不新增第二个。
+
 | testid | 位置 | 附加属性 |
 |---|---|---|
 | `session-groups-toggle` | footer 单个视图切换按钮（28px） | `data-mode="workspace|groups"`, `data-target`, `data-wide`, `aria-pressed`, `title`/`aria-label` |
@@ -282,7 +287,8 @@ V1.1（0.2.7）additive 追加：`session-groups-group-count`（组行最右计�
 | `session-groups-virtual-spacer` | 虚拟未归组列表的 top/bottom 占位 | `data-position="top"|"bottom"` |
 | `session-groups-group` | 组行 | `data-group-id`, `data-depth`, `data-expanded`, `aria-haspopup` |
 | `session-groups-group-count` | 组行最右计数（0.2.7） | — |
-| `session-groups-session-time` | 会话行最右相对更新时间（0.2.7） | `title` 绝对时间 |
+| `session-groups-session-time` | 会话行最右尾格（0.2.7 时间 / 0.2.8 pending compact） | `title` 绝对时间；compact 时 `data-compact-status` |
+| `session-groups-session-status` | 会话行首位 16×20 状态槽（0.2.8） | `data-state`, `data-status-kind` |
 | `session-groups-group-add` | 组头 `+` | `data-group-id` |
 | `session-groups-group-menu` | 组 `…` | `data-group-id` |
 | `session-groups-group-move-up` / `session-groups-group-move-down` | 组菜单上移/下移 | `data-group-id`, `data-disabled` |
@@ -291,7 +297,7 @@ V1.1（0.2.7）additive 追加：`session-groups-group-count`（组行最右计�
 | `session-groups-workspace-badge` | 悬浮工作区标签 | `data-session-id` |
 | `session-groups-drop-indicator` | 插入点行高占位（0.2.4 起；会话 32px / 分组 34px，取代旧 2px 线） | `data-drop-kind`, `data-drop-target`, `data-drop-height` |
 | `session-groups-group-drop` | 组体子组缝隙槽（n 个子组 = n+1 个槽；激活时 6px→34px 占位） | `data-parent-id`, `data-before-group-id`（末尾/空组为空串）, `data-drop-active` |
-| `session-groups-empty` | 空组/空筛选 | `data-group-id` |
+| `session-groups-empty` | 空组/空未归组 drop box（0.2.8 整宽 dashed；组内 placeholder 渲染时隐藏） | `data-group-id` 或 `data-ungrouped="true"`, `data-drop-active` |
 | `session-groups-flat-fallback` | 加载失败扁平回退 | — |
 | `session-groups-error` | 错误 banner | — |
 | `session-groups-dialog` | 新建/改名/确认对话框根 | `data-kind` |

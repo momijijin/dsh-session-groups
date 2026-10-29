@@ -302,7 +302,34 @@ export const CSS = `
 .dsg-virtual-list { gap: 2px; }
 .dsg-virtual-spacer { flex: none; width: 100%; pointer-events: none; }
 .dsg-group-line[data-empty="true"] { min-height: 24px; }
-.dsg-group-empty { padding: 4px 8px; font-size: var(--dsg-font-13, 13px); color: var(--dsw-alias-label-tertiary, CanvasText); font-style: italic; }
+/* 0.2.8 empty-group / empty-ungrouped drop box: the same 32px dashed surface
+ * as DropPlaceholder, centered with a 14px plus glyph and a 12px label. The
+ * surrounding body owns drop handlers; the box only reflects the drop state. */
+.dsg-empty-dropbox {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px dashed var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 28%, transparent));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--dsw-alias-label-tertiary, CanvasText) 6%, transparent);
+  color: var(--dsw-alias-label-tertiary, CanvasText);
+  font-size: var(--dsg-font-12, 12px);
+  line-height: 16px;
+  overflow: hidden;
+}
+.dsg-empty-dropbox[data-drop-active="true"] {
+  border-color: var(--dsw-alias-state-business-primary, #4d6bfe);
+  background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.16));
+  color: var(--dsw-alias-state-business-primary, #4d6bfe);
+}
+.dsg-empty-dropbox-plus { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; flex: none; }
+.dsg-empty-dropbox-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dsg-session-row { height: 32px; padding: 0 8px; }
 .dsg-session-row[data-current="true"] { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.16)); }
 .dsg-session-row[data-archived="true"] { opacity: .62; }
@@ -312,18 +339,55 @@ export const CSS = `
   0% { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.5)); }
   100% { background: transparent; }
 }
-.dsg-session-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: transparent; margin: 0 2px; }
-.dsg-session-dot[data-tone="running"] { background: var(--dsw-alias-state-business-primary, #4d6bfe); }
-.dsg-session-dot[data-tone="awaiting"] { background: var(--dsw-alias-state-warning, #d29922); }
-.dsg-session-dot[data-tone="done"] { background: var(--dsw-alias-state-success, #2da44e); }
+/* 0.2.8 official session status cell: an always-present 16x20 leading slot.
+ * Idle paints nothing (no transparent dot); ongoing is the official 14px
+ * spinner; warning/done are 10px dots with a 6px currentColor core. */
+.dsg-session-status {
+  box-sizing: border-box;
+  width: 16px;
+  height: 20px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: var(--dsw-alias-label-tertiary, CanvasText);
+}
+.dsg-status-dot { position: relative; width: 10px; height: 10px; flex: none; }
+.dsg-status-dot::after {
+  content: '';
+  position: absolute;
+  inset: 20%;
+  border-radius: 50%;
+  background: currentColor;
+}
+.dsg-status-dot[data-state="warning"] { color: var(--dsw-alias-state-warn-primary, #d29922); }
+.dsg-status-dot[data-state="done"] { color: var(--dsw-alias-state-success-primary, #2da44e); }
+.dsg-status-spinner { flex: none; color: var(--dsw-alias-label-tertiary, CanvasText); }
+.dsg-status-spinner-motion { transform-origin: center; animation: dsg-state-dot-spin 1.5s linear infinite; }
+.dsg-status-spinner-track, .dsg-status-spinner-arc { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.dsg-status-spinner-track { opacity: .25; }
+.dsg-status-spinner-arc { stroke-dasharray: 12 150; animation: dsg-state-dot-dash 1.5s ease-in-out infinite; }
+@keyframes dsg-state-dot-spin { to { transform: rotate(360deg); } }
+@keyframes dsg-state-dot-dash {
+  0% { stroke-dasharray: 12 150; stroke-dashoffset: 0; }
+  50% { stroke-dasharray: 24 150; stroke-dashoffset: -6; }
+  100% { stroke-dasharray: 12 150; stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dsg-status-spinner-motion, .dsg-status-spinner-arc { animation: none; }
+  .dsg-status-spinner-arc { stroke-dasharray: 18 150; stroke-dashoffset: -3; }
+}
+.dsg-visually-hidden { clip: rect(0 0 0 0); white-space: nowrap; width: 1px; height: 1px; position: absolute; overflow: hidden; }
 .dsg-session-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-14, 14px); line-height: 20px; }
 .dsg-session-badge { flex: none; font-size: var(--dsg-font-10, 10px); line-height: 16px; padding: 0 5px; border-radius: 999px; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.14)); color: var(--dsw-alias-label-secondary, CanvasText); }
 .dsg-workspace-badge { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-12, 12px); color: var(--dsw-alias-label-tertiary, CanvasText); opacity: 0; transition: opacity .12s ease; }
 .dsg-session-row:hover .dsg-workspace-badge, .dsg-session-row:focus-within .dsg-workspace-badge { opacity: 1; }
-/* 0.2.7 far-right session updated time: 12/16 tabular, 40px minimum so the
- * relative strings (刚刚 / 12 天前) align; omitted by the component when the
- * host timestamp is missing/invalid. */
-.dsg-session-time { flex: none; min-width: 40px; text-align: right; font-size: var(--dsg-font-12, 12px); line-height: 16px; color: var(--dsw-alias-label-tertiary, CanvasText); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 0.2.8 far-right trailing cell: official 10/16 tabular time (40px minimum so
+ * relative strings align); a pending primary status swaps the time for the
+ * official compact label (待审批 / 计划待审 / 待回答). Omitted when the host
+ * timestamp is missing/invalid and no compact label applies. */
+.dsg-session-time { flex: none; min-width: 40px; text-align: right; font-size: var(--dsg-font-10, 10px); line-height: 16px; color: var(--dsw-alias-label-tertiary, CanvasText); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* At the 264px minimum the workspace badge yields its space to title/actions/
  * time. Gating on the applied sidebar width (not the viewport) avoids a
  * container-query containing block, which would trap fixed dialogs/backdrops

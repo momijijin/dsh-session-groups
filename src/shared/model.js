@@ -316,22 +316,27 @@ const sessionVisible = (row, id, archivedSet, filter, currentSessionId) => {
   return true
 }
 
-const sessionNode = (row, archivedSet, statuses, workspaces) => ({
-  kind: 'session',
-  session: row,
-  workspace: workspaceOfSession(workspaces, row.id),
-  archived: archivedSet.has(row.id),
-  status: typeof statuses?.get === 'function' ? statuses.get(row.id) ?? null : null,
-})
+const sessionNode = (row, archivedSet, statuses, workspaces, subagentCounts) => {
+  const projected = typeof subagentCounts?.get === 'function' ? subagentCounts.get(row.id) : 0
+  return {
+    kind: 'session',
+    session: row,
+    workspace: workspaceOfSession(workspaces, row.id),
+    archived: archivedSet.has(row.id),
+    status: typeof statuses?.get === 'function' ? statuses.get(row.id) ?? null : null,
+    runningSubagentCount: Number.isInteger(projected) && projected > 0 ? projected : 0,
+  }
+}
 
 export const buildRenderTree = (doc, sessionsById = {}, workspaces = [], options = {}) => {
   const filter = options.filter === 'all' || options.filter === 'only' ? options.filter : 'hidden'
   const archivedSet = new Set(toArray(options.archivedSessionIds))
   const currentSessionId = typeof options.currentSessionId === 'string' ? options.currentSessionId : null
   const statuses = options.statuses instanceof Map ? options.statuses : null
+  const subagentCounts = options.subagentCounts instanceof Map ? options.subagentCounts : null
   const sessions = isObject(sessionsById) ? sessionsById : {}
   const visible = (id) => sessionVisible(sessions[id], id, archivedSet, filter, currentSessionId)
-  const makeSession = (id) => sessionNode(sessions[id], archivedSet, statuses, workspaces)
+  const makeSession = (id) => sessionNode(sessions[id], archivedSet, statuses, workspaces, subagentCounts)
 
   const groupNode = (group) => {
     const childGroups = childrenOf(doc, group.id).map(groupNode)

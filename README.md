@@ -4,8 +4,8 @@ DSH 左侧栏的全局会话分组视图：分组只服务显示层，跨工作�
 
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 - 工作名：`dsh-session-groups`（显示名：全局会话分组）
-- 版本：`0.2.7`（V1.1 row layout + custom color + context menu patch）
-- 状态：**V1.1 QA 全绿（0.2.7：263/263 tests、E2E 20/20、diagnostics HUD/route PASS、audit PASS）**，待用户验收；未安装到 desktop profile
+- 版本：`0.2.8`（V1.1 official status + empty drop box + drag label patch）
+- 状态：**V1.1 QA 全绿（0.2.8：275/275 tests、E2E 21/21、diagnostics HUD/route PASS、audit PASS）**，待用户验收；未安装到 desktop profile
 
 ## V1.1 新增（0.2.0）
 
@@ -20,7 +20,15 @@ DSH 左侧栏的全局会话分组视图：分组只服务显示层，跨工作�
 - 间距按官方工作区 chrome 同步放大：行 `padding: 0 8px`、行 gap 6px，树/组体/组线纵向 gap 2px，组缩进 10/10，header `padding: 4px 4px 4px 2px`（0.2.2 单行 36px）+ row gap 8px，搜索/菜单/对话框改用更大 padding（菜单项 30px、对话框 16/12），264px 最小宽度仍无横向溢出。
 - E2E step 16 `typography-matches-official-sidebar` 直接断言 computed style、字号/行高/图标、间距与 264px 无溢出（不依赖截图）。
 
-### 0.2.7 行布局 + 自定义颜色 + 右键菜单（patch，当前）
+### 0.2.8 官方会话状态 + 空组 drop box + 拖拽 label（patch，当前）
+
+- **会话状态严格对齐官方**（`@deepseek-ai/dsh-client-ui-workspace` 的 `sessionStatuses`）：6 个互斥标签 `idle` / `running` / `waitingApproval` / `planReview` / `waitingAnswer` / `completed`，外加可共存的 `subagentsRunning`；优先级 **pending > running > subagents-only > completed > idle**，未知 `pendingInteraction.kind` 不产生状态。`subagentsRunning` 计数来自 host `useSessions().projectionsBySession[parentId].values.subagentCatalog`（子会话 status/row `running` 为 true 才计数），pending/running 时作为第二条状态共存，仅 subagents 时使用官方 ongoing 渲染 + 自身标签；host 无投影数据时省略，不发明主状态。
+- **状态 UI**：首位固定 16×20 槽；idle 与 archived/blank 不画任何标记（不是透明点）；running 使用官方 14px spinner（两圆 r=9.5、stroke 2、track 25%、arc dash 12 150、spin+dash 1.5s、`prefers-reduced-motion` 静态）；pending/completed 使用官方 10px 点（6px core，warn/success alias）。pending 时尾格显示 compact 文案（待审批/计划待审/待回答；en Approval/Plan review/Answer）替代时间；时间改为官方 10/16；每个显示状态都有 `.dsg-visually-hidden` 文本。没有新增 completed-read、error/paused/unread 状态。
+- **空组 / 空未归组 drop box**：旧的左对齐斜体纯文本改为与 `DropPlaceholder` 同形的整宽 dashed 盒：居中、1px dashed、radius 6、min-height 32、12px 文本、`0 8px` padding、muted border/background/color，加 14px plus glyph 与 label；drop-active 时使用 accent border/background/color。组体已有 append/head/child 占位时不再同时渲染该盒；264px 无横向溢出，深浅色主题都走 token。
+- **拖拽浮层加固**：`setFloatingLabel` 改为单实例控制器（`src/client/floating-label.js`）：复用 DOM 中已有的 `[data-testid="session-groups-floating-label"]`、隐藏任何重复节点（DOM-only，不删除文件）、缓存 text/visibility/position（相同写入与诊断跳过）、用 `requestAnimationFrame` 合并同一帧的多次 dragover（last-wins）、hide/dispose 同步 flush。label 位置仍是固定 `left:24px/top:120px` 的 document 级浮层。
+- 保留 0.2.7 行布局/自定义色/右键菜单、0.2.6 颜色/选择对话框、0.2.5 诊断、0.2.4 乐观提交、0.2.3 虚拟化；`npm test` 275/275、E2E 21/21。
+
+### 0.2.7 行布局 + 自定义颜色 + 右键菜单（patch，历史）
 
 - **行布局**：组行顺序改为 caret → 彩色图标 → 名称 → hover 操作（`+`/`…`，28×28、gap 4）→ 计数（12/16、tabular、右对齐，最右仍留 8px padding）；操作区隐藏时 `opacity:0` 且 `pointer-events:none`，hover/focus 才可点。会话行顺序为状态点 → 标题 → 工作区徽标（hover）→ 操作 → 更新时间（12/16、min-width 40、相对时间 + 绝对时间 title；缺失/非法 updatedAt 不渲染）。264px 下按实际侧栏宽度（root `data-narrow`）隐藏工作区徽标；两种行均有 `:focus-visible` 环。
 - **统一缩进引导线**：分组与未归组共用 margin-left 16 / padding-left 4 / 2px 线（中心 x≈16），上下各内缩 2px；分组线用组色 60% mix，未归组用 label-tertiary 45%；guide 覆盖 sessions/子组/占位/spacer，折叠组不渲染 body/线。组 caret 用组色 85% opacity、图标 100%、guide 60%。
@@ -76,7 +84,7 @@ V1 能力（建组/嵌套/跨工作区拖会话/归档三态/组内新建/重命
 
 ```powershell
 npm pack
-# 产物：dsh-session-groups-0.2.7.tgz
+# 产物：dsh-session-groups-0.2.8.tgz
 ```
 
 DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本地目录），启用后重启/刷新。
@@ -89,8 +97,8 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 - [V1.1 实施计划](docs/superpowers/plans/2026-10-28-session-groups-v1.1.md)
 - [契约](docs/CONTRACTS.md) — 数据模型、路由、API、testid、生命周期
 - [Gate 0 Spike](docs/SPIKE.md) / [Gate 0 结论](docs/GATE0-SUMMARY.md)
-- [测试计划](docs/TEST-PLAN.md) — 单测/宿主集成/20 步 E2E/数据审计
-- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 20/20 E2E、263/263、诊断 trace/HUD、大列表 before/after、审计与打包证据
+- [测试计划](docs/TEST-PLAN.md) — 单测/宿主集成/21 步 E2E/数据审计
+- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 21/21 E2E、275/275、诊断 trace/HUD、大列表 before/after、审计与打包证据
 - [发布说明](docs/RELEASE.md) — 构建/打包/安装/卸载/已知限制
 - [ADR-001 左栏模式切换](docs/adr/0001-sidebar-mode-switch.md) / [ADR-002 分组存储](docs/adr/0002-group-storage.md) / [ADR-003 路由围栏](docs/adr/0003-route-fence.md)
 
@@ -104,7 +112,7 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 
 ## 当前阶段
 
-- V1 实现完成；V1.1（0.2.7）完成左栏宽度、分组拖拽排序/改父级、会话搜索、官方侧栏排版/间距/图标对齐、单按钮视图切换/header 操作区/主题感知 surfaces、未归组列表虚拟化、拖拽行高占位与乐观提交、官方 header 三图标 + 拖拽诊断 trace/HUD/分析器、分组颜色与统一选择对话框、**行 meta 布局/自定义颜色/右键菜单/相对更新时间**。
-- 验证：`npm test` 263/263；官方 E2E 20/20（默认诊断开启；含 step 2/16 footer 文案与 header title accent/400、step 16 排版/间距/28px 行操作/2px 组引导线/264px/虚拟窗口、step 17 深色主题、step 18 九类占位 + 乐观 DOM 位移 + HUD、step 19 分组颜色与五类选择对话框、step 20 计数/时间位置、未归组 guide、caret/guide 颜色、2 列颜色对话框 + 自定义 hex、右键/键盘菜单与关闭/焦点契约）；E2E runner 另验证 `/dsh-session-groups/diagnostics` 在隔离 home 追加 NDJSON（native/handler/optimistic 齐全）；数据审计只写记录文件、诊断文件按 append-only 单独放行；真实 `~/.dsh` 零写入。
+- V1 实现完成；V1.1（0.2.8）完成左栏宽度、分组拖拽排序/改父级、会话搜索、官方侧栏排版/间距/图标对齐、单按钮视图切换/header 操作区/主题感知 surfaces、未归组列表虚拟化、拖拽行高占位与乐观提交、官方 header 三图标 + 拖拽诊断 trace/HUD/分析器、分组颜色与统一选择对话框、行 meta 布局/自定义颜色/右键菜单/相对更新时间、**官方会话状态/空组 drop box/单实例拖拽浮层**。
+- 验证：`npm test` 275/275；官方 E2E 21/21（默认诊断开启；含 step 2/16 footer 文案与 header title accent/400、step 16 排版/间距/28px 行操作/2px 组引导线/264px/虚拟窗口、step 17 深色主题、step 18 九类占位 + 乐观 DOM 位移 + HUD、step 19 分组颜色与五类选择对话框、step 20 计数/时间位置、未归组 guide、caret/guide 颜色、2 列颜色对话框 + 自定义 hex、右键/键盘菜单与关闭/焦点契约、step 21 官方状态槽/spinner/dot/时间 10/16、空组 drop box 与 placeholder 抑制/accent、浮层单实例）；E2E runner 另验证 `/dsh-session-groups/diagnostics` 在隔离 home 追加 NDJSON（native/handler/optimistic 齐全）；数据审计只写记录文件、诊断文件按 append-only 单独放行；真实 `~/.dsh` 零写入。
 - **尚未安装到用户 desktop profile**；等待用户验收后再安装。
 - 已知限制见 `docs/RELEASE.md` §5（运行中归档 BLOCKED-ENV、宽度 DOM 依赖、搜索范围、诊断文件增长、P1/P2 未实现项）。

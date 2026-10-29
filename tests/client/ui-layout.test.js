@@ -296,11 +296,11 @@ test('0.2.7 row order: group count far right, session time far right, hidden act
   assert.match(countCss, /font-size:\s*var\(--dsg-font-12,\s*12px\)/)
   assert.match(countCss, /line-height:\s*16px/)
   assert.match(countCss, /font-variant-numeric:\s*tabular-nums/)
-  // Time: 12/16, 40px minimum, right-aligned.
+  // 0.2.8: official trailing type is 10/16, 40px minimum, right-aligned.
   const timeCss = block('.dsg-session-time {')
   assert.match(timeCss, /min-width:\s*40px/)
   assert.match(timeCss, /text-align:\s*right/)
-  assert.match(timeCss, /font-size:\s*var\(--dsg-font-12,\s*12px\)/)
+  assert.match(timeCss, /font-size:\s*var\(--dsg-font-10,\s*10px\)/)
   assert.match(timeCss, /line-height:\s*16px/)
   assert.match(timeCss, /tabular-nums/)
   // Actions are invisible *and* non-interactive until hover/focus.
@@ -315,6 +315,80 @@ test('0.2.7 row order: group count far right, session time far right, hidden act
   // The applied-width flag hides the workspace badge at the narrow minimum.
   assert.match(CSS, /\.dsg-root\[data-narrow="true"\] \.dsg-workspace-badge \{ display: none; \}/)
   assert.match(components, /'data-narrow': appliedWidth !== null && appliedWidth <= 320/)
+})
+
+test('0.2.8 session status: official 16x20 slot, spinner, dots, hidden labels and compact trailing', () => {
+  const slot = block('.dsg-session-status {')
+  assert.match(slot, /width:\s*16px/)
+  assert.match(slot, /height:\s*20px/)
+  assert.match(slot, /flex:\s*none/)
+  assert.match(components, /class: 'dsg-session-status'/)
+  assert.match(components, /testId = 'session-groups-session-status'/)
+  // Idle/archived/blank only paint an empty slot; no transparent dot class remains.
+  assert.equal(CSS.includes('.dsg-session-dot'), false, 'the 0.2.7 6px dot must be gone')
+  assert.match(components, /const show = primary !== null && primary\.state !== 'idle'/)
+  assert.match(components, /hidden = false/)
+  assert.match(components, /hiddenStatus = archived \|\| row\.blank === true/)
+  // Official 14px spinner: two r=9.5 circles in a 24 viewBox.
+  assert.match(components, /class: 'dsg-status-spinner'/)
+  assert.match(components, /width: '14'/)
+  assert.match(components, /height: '14'/)
+  assert.match(components, /viewBox: '0 0 24 24'/)
+  assert.equal((components.match(/r: '9\.5'/g) ?? []).length, 2)
+  assert.match(components, /class: 'dsg-status-spinner-track'/)
+  assert.match(components, /class: 'dsg-status-spinner-arc'/)
+  const spinner = block('.dsg-status-spinner-motion {')
+  assert.match(spinner, /animation:\s*dsg-state-dot-spin 1\.5s linear infinite/)
+  assert.match(CSS, /\.dsg-status-spinner-arc \{ stroke-dasharray:\s*12 150;/)
+  assert.match(CSS, /\.dsg-status-spinner-arc \{[^}]*animation:\s*dsg-state-dot-dash 1\.5s ease-in-out infinite/)
+  assert.match(CSS, /stroke-width:\s*2/)
+  assert.match(block('.dsg-status-spinner-track {'), /opacity:\s*\.25/)
+  assert.match(CSS, /@media \(prefers-reduced-motion: reduce\) \{\s*\.dsg-status-spinner-motion, \.dsg-status-spinner-arc \{ animation: none; \}/)
+  // 10px dot with 6px core (inset 20%) and official warn/success aliases.
+  assert.match(block('.dsg-status-dot {'), /width:\s*10px/)
+  assert.match(block('.dsg-status-dot {'), /height:\s*10px/)
+  assert.match(block('.dsg-status-dot::after {'), /inset:\s*20%/)
+  assert.match(CSS, /--dsw-alias-state-warn-primary/)
+  assert.match(CSS, /--dsw-alias-state-success-primary/)
+  // Pending swaps the trailing time cell for the compact locale label.
+  assert.match(components, /primaryStatus\.compactKey/)
+  assert.match(components, /'data-compact-status': primaryStatus\.pendingKind/)
+  assert.match(components, /dsg-session-compact-status/)
+  // Visually hidden labels carry every displayed status (including subagents).
+  assert.match(block('.dsg-visually-hidden {'), /clip:\s*rect\(0 0 0 0\)/)
+  assert.match(components, /class: 'dsg-visually-hidden'/)
+  assert.match(components, /statusText\(status\)/)
+})
+
+test('0.2.8 empty drop box matches DropPlaceholder and never doubles a body placeholder', () => {
+  const box = block('.dsg-empty-dropbox {')
+  assert.match(box, /box-sizing:\s*border-box/)
+  assert.match(box, /display:\s*flex/)
+  assert.match(box, /align-items:\s*center/)
+  assert.match(box, /justify-content:\s*center/)
+  assert.match(box, /width:\s*100%/)
+  assert.match(box, /min-width:\s*0/)
+  assert.match(box, /min-height:\s*32px/)
+  assert.match(box, /padding:\s*0 8px/)
+  assert.match(box, /border:\s*1px dashed/)
+  assert.match(box, /border-radius:\s*6px/)
+  assert.match(box, /font-size:\s*var\(--dsg-font-12,\s*12px\)/)
+  const active = block('.dsg-empty-dropbox[data-drop-active="true"] {')
+  assert.match(active, /border-color:\s*var\(--dsw-alias-state-business-primary/)
+  assert.match(active, /background:\s*var\(--dsw-alias-state-business-primary-fade/)
+  assert.match(active, /color:\s*var\(--dsw-alias-state-business-primary/)
+  assert.match(components, /class: 'dsg-empty-dropbox'/)
+  assert.match(components, /class: 'dsg-empty-dropbox-plus'/)
+  assert.match(components, /renderGlyph\(h, 'plus', 14\)/)
+  assert.match(components, /class: 'dsg-empty-dropbox-label'/)
+  // The old left-aligned italic plain hint is gone.
+  assert.equal(components.includes('dsg-group-empty'), false)
+  assert.equal(CSS.includes('.dsg-group-empty'), false)
+  // Body placeholders suppress the hint; boundary targets keep its accent state.
+  assert.match(components, /bodyPlaceholderVisible/)
+  assert.match(components, /node\.visibleCount === 0 && !bodyPlaceholderVisible/)
+  assert.match(components, /dropKind !== 'ungrouped'/)
+  assert.match(components, /active: dropKind === 'group-root-end'/)
 })
 
 test('0.2.7 color dialog: 2x3 32px grid, fixed check slot, custom native+hex row', () => {

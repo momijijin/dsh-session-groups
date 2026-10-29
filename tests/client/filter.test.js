@@ -70,6 +70,18 @@ test('archive tri-state includes/excludes rows and keeps groups', () => {
   assert.equal(groupWithNoVisible.emptyVisible, false)
 })
 
+test('buildVisibleTree forwards host subagent counts without inventing them', () => {
+  const { doc, groupId } = docWithGroups()
+  const tree = buildVisibleTree(doc, sessionsById, [], {
+    filter: 'all',
+    subagentCounts: new Map([[ 's1', 3 ]]),
+  })
+  const node = tree.groups.find((group) => group.group.id === groupId).children.find((child) => child.session.id === 's1')
+  assert.equal(node.runningSubagentCount, 3)
+  const sibling = tree.groups.find((group) => group.group.id === groupId).children.find((child) => child.session.id === 's2')
+  assert.equal(sibling.runningSubagentCount, 0)
+})
+
 test('subagent and non-current blank rows are excluded from the tree', () => {
   const { doc } = docWithGroups()
   const tree = buildVisibleTree(doc, sessionsById, [], { filter: 'all', currentSessionId: null })

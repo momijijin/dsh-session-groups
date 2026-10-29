@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // e2e/groups.spec.mjs
 //
-// V1 E2E acceptance (docs/TEST-PLAN.md §5, 19 steps) - zero-dependency.
+// V1 E2E acceptance (docs/TEST-PLAN.md §5, 21 steps) - zero-dependency.
 //
 // Drives the real isolated DSH web UI (`.spike-homes/qa`, port 4402) through the
 // Chrome DevTools Protocol using the Chromium already present on this machine.
@@ -13,7 +13,7 @@
 // When the client UI is not present yet the runner exits 3 (BLOCKED) with a
 // diagnostic, so the pipeline can distinguish "not implemented" from "broken".
 //
-// Exit codes: 0 = all 19 steps PASS, 1 = a step FAILED, 2 = harness error,
+// Exit codes: 0 = all 21 steps PASS, 1 = a step FAILED, 2 = harness error,
 //             3 = BLOCKED (client build / plugin UI missing).
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -2946,7 +2946,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
                 width: rectOf(groupActionGlyph?.parentElement)?.width ?? null,
                 height: rectOf(groupActionGlyph?.parentElement)?.height ?? null,
               },
-              glyphSizes: Array.from(document.querySelectorAll('.dsg-root .dsg-glyph, .dsg-root .dsg-icon')).map((svg) => ({
+              glyphSizes: Array.from(document.querySelectorAll('.dsg-root .dsg-glyph, .dsg-root .dsg-icon'))
+                .filter((svg) => !svg.closest('.dsg-empty-dropbox'))
+                .map((svg) => ({
                 width: px(getComputedStyle(svg).width),
                 height: px(getComputedStyle(svg).height),
               })),
@@ -3719,7 +3721,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           return el ? { text: el.textContent, runId: el.getAttribute('data-run-id'), pointerEvents: getComputedStyle(el).pointerEvents } : null;
         })()`);
         if (!hud) throw new Error('0.2.5 diagnostics HUD is missing');
-        if (!/dsg 0\.2\.7/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
+        if (!/dsg 0\.2\.8/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
         if (hud.pointerEvents !== 'none') throw new Error(`diagnostics HUD must be pointer-events:none, got ${hud.pointerEvents}`);
         const hudNative = /n=(\d+)/.exec(hud.text);
         if (!hudNative || Number(hudNative[1]) <= 0) throw new Error(`diagnostics HUD native dragover count missing/zero: ${JSON.stringify(hud.text)}`);
@@ -4039,7 +4041,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           return el ? { text: el.textContent, runId: el.getAttribute('data-run-id'), pointerEvents: getComputedStyle(el).pointerEvents } : null;
         })()`);
         if (!hud) throw new Error('0.2.6 diagnostics HUD is missing');
-        if (!/dsg 0\.2\.7/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
+        if (!/dsg 0\.2\.8/.test(hud.text)) throw new Error(`diagnostics HUD build line missing: ${JSON.stringify(hud.text)}`);
         if (hud.pointerEvents !== 'none') throw new Error(`diagnostics HUD must be pointer-events:none, got ${hud.pointerEvents}`);
 
         return {
@@ -4282,7 +4284,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         }
         await driver.cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 }, driver.sessionId);
 
-        // Session updated time is far right, 12/16 with a 40px floor and title tooltip.
+        // Session updated time is far right, official 10/16 with a 40px floor and title tooltip.
         const timeState = await driver.evaluate(`(() => {
           const rows = Array.from(document.querySelectorAll(${JSON.stringify(SESSION)}));
           const row = rows.find((el) => el.querySelector('.dsg-session-time'));
@@ -4310,7 +4312,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (timeState.missing) {
           throw new Error(`no session updated time rendered (session rows: ${timeState.rows}); host updatedAt missing or invalid`);
         }
-        near(timeState.fontSize, 12, 'session time font-size');
+        near(timeState.fontSize, 10, 'session time font-size');
         near(timeState.lineHeight, 16, 'session time line-height');
         near(timeState.minWidth, 40, 'session time min-width');
         near(timeState.rightGap, 8, 'session time right edge gap', 1);
@@ -4669,6 +4671,337 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         };
       },
     },
+    {
+      id: 21,
+      name: 'official-status-empty-drop-box-and-single-drag-label',
+      async run() {
+        // 0.2.8: official status slots/spinner/dots/compact labels, the empty
+        // group drop box (no double placeholder) and the single floating label.
+        if (!(await ui.exists(VIEW))) throw new Error('step 21 must start in the groups view');
+        await ui.closeViewOptions();
+        await ui.closeSearch();
+        if (await ui.dialogOpen()) {
+          await driver.evaluate(`document.querySelector('.dsg-dialog-cancel')?.click()`);
+          await ui.waitFor(`!document.querySelector(${JSON.stringify(DIALOG)})`, 'leftover dialog closed before step 21', 5000);
+        }
+        if (await ui.exists(MENU)) {
+          await driver.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+          await ui.waitFor(`!document.querySelector(${JSON.stringify(MENU)})`, 'leftover menu closed before step 21', 5000);
+        }
+        const near = (actual, expected, label, tolerance = 0) => {
+          if (typeof actual !== 'number' || Math.abs(actual - expected) > tolerance) {
+            throw new Error(`${label}: expected ${expected}${tolerance ? ` ±${tolerance}` : ''}, got ${actual}`);
+          }
+        };
+
+        // (1) Leading status cell contract on every rendered session row.
+        const statusState = await driver.evaluate(`(() => {
+          const rows = Array.from(document.querySelectorAll(${JSON.stringify(SESSION)}));
+          return rows.map((row) => {
+            const cell = row.querySelector('[data-testid="session-groups-session-status"]');
+            if (!cell) return { missing: true, sid: row.getAttribute('data-session-id') };
+            const rect = cell.getBoundingClientRect();
+            const spinner = cell.querySelector('.dsg-status-spinner');
+            const dot = cell.querySelector('.dsg-status-dot');
+            const labels = Array.from(cell.querySelectorAll('.dsg-visually-hidden'), (el) => (el.textContent ?? '').trim());
+            return {
+              sid: row.getAttribute('data-session-id'),
+              state: cell.getAttribute('data-state'),
+              kind: cell.getAttribute('data-status-kind'),
+              width: rect.width,
+              height: rect.height,
+              childCount: cell.children.length,
+              spinner: spinner
+                ? {
+                    width: spinner.getBoundingClientRect().width,
+                    height: spinner.getBoundingClientRect().height,
+                    viewBox: spinner.getAttribute('viewBox'),
+                    circles: Array.from(spinner.querySelectorAll('circle'), (circle) => ({
+                      r: circle.getAttribute('r'),
+                      track: circle.classList.contains('dsg-status-spinner-track'),
+                      arc: circle.classList.contains('dsg-status-spinner-arc'),
+                    })),
+                  }
+                : null,
+              dot: dot ? { width: dot.getBoundingClientRect().width, height: dot.getBoundingClientRect().height } : null,
+              labels,
+            };
+          });
+        })()`);
+        if (statusState.length === 0) throw new Error('step 21 found no session rows');
+        for (const row of statusState) {
+          if (row.missing) throw new Error(`session ${row.sid} is missing the leading status cell`);
+          near(row.width, 16, `session ${row.sid} status cell width`);
+          near(row.height, 20, `session ${row.sid} status cell height`);
+          if (row.state === 'idle') {
+            if (row.childCount !== 0) throw new Error(`idle session ${row.sid} must paint no leading marker: ${JSON.stringify(row)}`);
+            if (row.labels.length !== 0) throw new Error(`idle session ${row.sid} must not add hidden status labels`);
+            continue;
+          }
+          if (row.labels.length === 0) throw new Error(`session ${row.sid} state ${row.state} needs a visually hidden label`);
+          if (row.state === 'ongoing') {
+            if (!row.spinner) throw new Error(`ongoing session ${row.sid} needs the spinner`);
+            near(row.spinner.width, 14, `session ${row.sid} spinner width`);
+            near(row.spinner.height, 14, `session ${row.sid} spinner height`);
+            if (row.spinner.viewBox !== '0 0 24 24') throw new Error(`session ${row.sid} spinner viewBox mismatch`);
+            if (row.spinner.circles.length !== 2) throw new Error(`session ${row.sid} spinner must render two circles`);
+            for (const circle of row.spinner.circles) {
+              if (circle.r !== '9.5') throw new Error(`session ${row.sid} spinner circle r expected 9.5, got ${circle.r}`);
+            }
+            if (!row.spinner.circles.some((circle) => circle.track) || !row.spinner.circles.some((circle) => circle.arc)) {
+              throw new Error(`session ${row.sid} spinner must have track + arc circles`);
+            }
+            if (row.dot) throw new Error(`ongoing session ${row.sid} must not also render a dot`);
+          } else if (row.state === 'warning' || row.state === 'done') {
+            if (!row.dot) throw new Error(`session ${row.sid} state ${row.state} needs a 10px dot`);
+            near(row.dot.width, 10, `session ${row.sid} dot width`);
+            near(row.dot.height, 10, `session ${row.sid} dot height`);
+            if (row.spinner) throw new Error(`session ${row.sid} dot state must not also render a spinner`);
+          } else {
+            throw new Error(`unexpected status state ${row.state} on session ${row.sid}`);
+          }
+        }
+
+        // (2) Trailing time is the official 10/16 type; no pending row exists in
+        // this fixture, so no compact status label may replace it.
+        const timeState = await driver.evaluate(`(() => {
+          const rows = Array.from(document.querySelectorAll(${JSON.stringify(SESSION)}));
+          const compact = rows.filter((row) => row.querySelector('.dsg-session-compact-status')).length;
+          const row = rows.find((candidate) => candidate.querySelector('.dsg-session-time:not(.dsg-session-compact-status)'));
+          if (!row) return { missing: true, compact };
+          const time = row.querySelector('.dsg-session-time');
+          const style = getComputedStyle(time);
+          return {
+            missing: false,
+            compact,
+            fontSize: Number.parseFloat(style.fontSize),
+            lineHeight: Number.parseFloat(style.lineHeight),
+            text: (time.textContent ?? '').trim(),
+          };
+        })()`);
+        if (timeState.missing) throw new Error('step 21 found no trailing time cell');
+        if (timeState.compact !== 0) throw new Error(`fixture has no pending interactions but ${timeState.compact} compact status labels rendered`);
+        near(timeState.fontSize, 10, 'session time font-size');
+        near(timeState.lineHeight, 16, 'session time line-height');
+        if (!timeState.text) throw new Error('session time text must not be empty');
+
+        // (3) Empty group drop box: full-width dashed 32px surface with plus.
+        const emptyName = `Empty drop ${Date.now().toString(36)}`;
+        const emptyGroupId = await ui.createGroup(emptyName);
+        if (!emptyGroupId) throw new Error('step 21 could not create an empty group');
+        const emptyRow = `${GROUP}[data-group-id="${emptyGroupId}"]`;
+        const boxSelector = `[data-testid="session-groups-empty"][data-group-id="${emptyGroupId}"]`;
+        const boxState = () =>
+          driver.evaluate(`(() => {
+            const row = document.querySelector(${JSON.stringify(emptyRow)});
+            const wrap = row ? row.closest('.dsg-group') : null;
+            const line = wrap ? wrap.querySelector(':scope > .dsg-group-body > .dsg-group-line') : null;
+            const box = wrap ? wrap.querySelector(':scope > .dsg-group-body > .dsg-group-line > [data-testid="session-groups-empty"]') : null;
+            if (!row || !line || !box) return { missing: true, row: !!row, line: !!line, box: !!box };
+            const rect = box.getBoundingClientRect();
+            const lineRect = line.getBoundingClientRect();
+            const style = getComputedStyle(box);
+            const plus = box.querySelector('.dsg-empty-dropbox-plus svg');
+            const plusRect = plus ? plus.getBoundingClientRect() : null;
+            return {
+              missing: false,
+              width: rect.width,
+              height: rect.height,
+              lineWidth: lineRect.width,
+              paddingLeft: Number.parseFloat(getComputedStyle(line).paddingLeft),
+              borderStyle: style.borderTopStyle,
+              borderWidth: style.borderTopWidth,
+              borderRadius: style.borderRadius,
+              display: style.display,
+              alignItems: style.alignItems,
+              justifyContent: style.justifyContent,
+              fontSize: Number.parseFloat(style.fontSize),
+              padding: style.padding,
+              active: box.getAttribute('data-drop-active'),
+              borderColor: style.borderTopColor,
+              background: style.backgroundColor,
+              color: style.color,
+              label: (box.querySelector('.dsg-empty-dropbox-label')?.textContent ?? '').trim(),
+              plus: plusRect ? { width: plusRect.width, height: plusRect.height } : null,
+            };
+          })()`);
+        let box = await boxState();
+        if (box.missing) throw new Error(`empty group drop box missing: ${JSON.stringify(box)}`);
+        if (Math.abs(box.width - (box.lineWidth - box.paddingLeft)) > 2) {
+          throw new Error(`empty drop box must span the group body: box=${box.width} line=${box.lineWidth} padding=${box.paddingLeft}`);
+        }
+        near(box.height, 32, 'empty drop box height');
+        if (box.borderStyle !== 'dashed') throw new Error(`empty drop box border must be dashed, got ${box.borderStyle}`);
+        near(Number.parseFloat(box.borderWidth), 1, 'empty drop box border width');
+        near(Number.parseFloat(box.borderRadius), 6, 'empty drop box radius');
+        if (box.display !== 'flex' || box.alignItems !== 'center' || box.justifyContent !== 'center') {
+          throw new Error(`empty drop box must be centered flex: ${JSON.stringify({ display: box.display, alignItems: box.alignItems, justifyContent: box.justifyContent })}`);
+        }
+        near(box.fontSize, 12, 'empty drop box font-size');
+        if (box.padding !== '0px 8px') throw new Error(`empty drop box padding expected 0 8, got ${box.padding}`);
+        if (!box.label) throw new Error('empty drop box label must not be empty');
+        if (!box.plus) throw new Error('empty drop box must render the plus glyph');
+        near(box.plus.width, 14, 'empty drop box plus width');
+        near(box.plus.height, 14, 'empty drop box plus height');
+        if (box.active !== 'false') throw new Error(`resting empty drop box must not be drop-active, got ${box.active}`);
+
+        // (4) A body placeholder replaces the box (no simultaneous surfaces).
+        const dragSession = (await ui.sessions()).find((row) => row.archived !== true && row.groupId !== emptyGroupId)?.sid;
+        if (!dragSession) throw new Error('step 21 needs a session outside the empty group');
+        await ui.beginSessionDrag(dragSession);
+        await ui.dragHover(emptyRow, 0.5);
+        const appendPlaceholder = await ui.placeholderInfo();
+        if (!appendPlaceholder || appendPlaceholder.kind !== 'group-append') {
+          throw new Error(`empty group append should render the row placeholder, got ${JSON.stringify(appendPlaceholder)}`);
+        }
+        const duringAppend = await boxState();
+        if (!duringAppend.missing) throw new Error('empty drop box must not render while a body placeholder is visible');
+        await ui.dragLeave(emptyRow);
+        await ui.waitNoPlaceholder('empty group append placeholder cleared');
+        await ui.endDrag();
+        await sleep(150);
+        box = await boxState();
+        if (box.missing) throw new Error('empty drop box must return after the body placeholder clears');
+
+        // (5) A boundary target keeps the box and gives it the accent surface
+        // (the group-before placeholder paints outside the group body).
+        const roots = await ui.rootGroupIds();
+        const dragGroupId = roots.find((gid) => gid !== emptyGroupId);
+        if (!dragGroupId) throw new Error('step 21 needs a second root group for the boundary drop');
+        await ui.beginGroupDrag(dragGroupId);
+        await ui.dragHover(emptyRow, 0.2);
+        const beforePlaceholder = await ui.placeholderInfo();
+        if (!beforePlaceholder || beforePlaceholder.kind !== 'group-before') {
+          throw new Error(`empty group boundary should render group-before, got ${JSON.stringify(beforePlaceholder)}`);
+        }
+        const activeBox = await boxState();
+        if (activeBox.missing) throw new Error('empty drop box must stay visible for a boundary target');
+        if (activeBox.active !== 'true') throw new Error(`boundary drop must mark the empty box active, got ${activeBox.active}`);
+        if (activeBox.borderColor !== beforePlaceholder.borderColor) {
+          throw new Error(`active empty box border must match the placeholder accent: ${activeBox.borderColor} vs ${beforePlaceholder.borderColor}`);
+        }
+        if (activeBox.background !== beforePlaceholder.background) {
+          throw new Error(`active empty box background must match the placeholder surface: ${activeBox.background} vs ${beforePlaceholder.background}`);
+        }
+        if (activeBox.color !== beforePlaceholder.color) {
+          throw new Error(`active empty box color must match the placeholder accent: ${activeBox.color} vs ${beforePlaceholder.color}`);
+        }
+        await ui.dragLeave(emptyRow);
+        await ui.waitNoPlaceholder('empty group boundary placeholder cleared');
+        await ui.endDrag();
+        await sleep(150);
+        box = await boxState();
+        if (box.active !== 'false') throw new Error('empty drop box must return to its resting surface after the drag');
+
+        // (6) The floating drag label is a single instance across many dragovers.
+        await ui.beginSessionDrag(dragSession);
+        for (const ratio of [0.2, 0.8, 0.2, 0.8]) await ui.dragHover(`${SESSION}[data-session-id="${dragSession}"]`, ratio);
+        const labelState = await driver.evaluate(`(() => {
+          const nodes = Array.from(document.querySelectorAll('[data-testid="session-groups-floating-label"]'));
+          const visible = nodes.filter((node) => getComputedStyle(node).display !== 'none');
+          const node = visible[0] ?? nodes[0] ?? null;
+          const rect = node ? node.getBoundingClientRect() : null;
+          const style = node ? getComputedStyle(node) : null;
+          return {
+            count: nodes.length,
+            visible: visible.length,
+            text: node ? (node.textContent ?? '').trim() : '',
+            display: style ? style.display : null,
+            position: style ? style.position : null,
+            left: style ? style.left : null,
+            top: style ? style.top : null,
+            inTree: node ? Boolean(node.closest('.dsg-tree')) : null,
+            width: rect ? rect.width : 0,
+          };
+        })()`);
+        if (labelState.count !== 1) throw new Error(`drag must keep exactly one floating label, got ${labelState.count}`);
+        if (labelState.visible !== 1) throw new Error(`exactly one floating label must be visible, got ${labelState.visible}`);
+        if (!labelState.text) throw new Error('floating drag label text must not be empty');
+        if (labelState.display !== 'block') throw new Error(`floating label display expected block, got ${labelState.display}`);
+        if (labelState.position !== 'fixed') throw new Error(`floating label must stay document-fixed, got ${labelState.position}`);
+        if (labelState.left !== '24px' || labelState.top !== '120px') {
+          throw new Error(`floating label position changed: ${labelState.left}/${labelState.top}`);
+        }
+        if (labelState.inTree) throw new Error('floating label must live at document level, not inside the tree');
+        if (!(labelState.width > 0)) throw new Error('floating label must have a visible width');
+        await ui.dragLeave(`${SESSION}[data-session-id="${dragSession}"]`);
+        await ui.endDrag();
+        await sleep(150);
+        const labelAfter = await driver.evaluate(`(() => {
+          const nodes = Array.from(document.querySelectorAll('[data-testid="session-groups-floating-label"]'));
+          return { count: nodes.length, visible: nodes.filter((node) => getComputedStyle(node).display !== 'none').length };
+        })()`);
+        if (labelAfter.count !== 1 || labelAfter.visible !== 0) {
+          throw new Error(`drag end must hide the single floating label: ${JSON.stringify(labelAfter)}`);
+        }
+
+        // (7) 264px minimum: the drop box and tree never overflow horizontally.
+        const widthBefore = await ui.sidebarWidth();
+        const waitWidth = async (expected, label, waitMs = 8000) => {
+          const end = Date.now() + waitMs;
+          let last = -1;
+          while (Date.now() < end) {
+            last = await ui.sidebarWidth();
+            if (Number.isFinite(last) && Math.abs(last - expected) <= 2) return last;
+            await sleep(120);
+          }
+          throw new Error(`${label}: expected ${expected} ±2px, got ${last}`);
+        };
+        await ui.dragResizeHandle(264);
+        const minimumWidth = await waitWidth(264, 'sidebar width for the 0.2.8 empty-box probe');
+        const narrow = await driver.evaluate(`(() => {
+          const tree = document.querySelector('.dsg-tree');
+          const box = document.querySelector(${JSON.stringify(boxSelector)});
+          if (!tree || !box) return { missing: true, tree: !!tree, box: !!box };
+          const treeRect = tree.getBoundingClientRect();
+          const boxRect = box.getBoundingClientRect();
+          return {
+            missing: false,
+            tree: { clientWidth: tree.clientWidth, scrollWidth: tree.scrollWidth },
+            box: { width: boxRect.width, left: boxRect.left, right: boxRect.right, treeLeft: treeRect.left, treeRight: treeRect.right },
+          };
+        })()`);
+        if (narrow.missing) throw new Error(`264px empty-box probe missing nodes: ${JSON.stringify(narrow)}`);
+        if (narrow.tree.scrollWidth > narrow.tree.clientWidth + 1) {
+          throw new Error(`tree overflows at 264px with the empty box: ${narrow.tree.scrollWidth} > ${narrow.tree.clientWidth}`);
+        }
+        if (narrow.box.left < narrow.box.treeLeft - 1 || narrow.box.right > narrow.box.treeRight + 1) {
+          throw new Error(`empty box escapes the tree at 264px: ${JSON.stringify(narrow.box)}`);
+        }
+        await ui.dragResizeHandle(widthBefore);
+        const widthRestored = await waitWidth(widthBefore, 'sidebar width restored after the 0.2.8 empty-box probe');
+
+        return {
+          status: {
+            rows: statusState.length,
+            states: statusState.reduce((counts, row) => {
+              counts[row.state] = (counts[row.state] ?? 0) + 1;
+              return counts;
+            }, {}),
+          },
+          time: { fontSize: timeState.fontSize, lineHeight: timeState.lineHeight, compact: timeState.compact },
+          emptyBox: {
+            group: emptyGroupId,
+            width: box.width,
+            height: box.height,
+            border: `${box.borderWidth} ${box.borderStyle} ${box.borderColor}`,
+            radius: box.borderRadius,
+            plus: box.plus,
+            placeholderSuppressed: true,
+            activeBorder: activeBox.borderColor,
+            activeBackground: activeBox.background,
+          },
+          label: {
+            count: labelState.count,
+            visible: labelState.visible,
+            text: labelState.text,
+            position: `${labelState.position} ${labelState.left} ${labelState.top}`,
+            hiddenAfterDrag: labelAfter.visible === 0,
+          },
+          narrow: { width: minimumWidth, restored: widthRestored, tree: narrow.tree, box: narrow.box },
+        };
+      },
+    },
   ];
 }
 
@@ -4795,7 +5128,7 @@ async function main() {
 
   console.log('');
   console.log('============================================================');
-  console.log(' V1 E2E - 20-step acceptance (isolated DSH home, CDP)');
+  console.log(' V1 E2E - 21-step acceptance (isolated DSH home, CDP)');
   console.log('============================================================');
 
   let driver = null;
@@ -4857,7 +5190,7 @@ async function main() {
 
     if (!failed && !evidence.blockedReason) {
       // 0.2.5: the diagnostics route + isolated-home NDJSON write must work with
-      // the real drag trace; this is not an acceptance step (still 20/20).
+      // the real drag trace; this is not an acceptance step (still 21/21).
       try {
         const diagnostics = await verifyDiagnostics(driver);
         evidence.diagnostics = diagnostics;

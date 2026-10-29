@@ -281,6 +281,18 @@ test('buildRenderTree applies archive tri-state, hides subagent/blank, keeps emp
     currentSessionId: 's4',
   })
   assert.equal(blankCurrent.ungrouped.some((n) => n.session.id === 's4'), true)
+
+  const counted = buildRenderTree(doc, sessions, workspaces, {
+    archivedSessionIds: [],
+    filter: 'hidden',
+    currentSessionId: null,
+    statuses,
+    subagentCounts: new Map([['s1', 2]]),
+  })
+  const countedNode = counted.groups.find((n) => n.group.id === a).children.find((n) => n.session.id === 's1')
+  assert.equal(countedNode.runningSubagentCount, 2)
+  const plainNode = counted.ungrouped.find((n) => n.session.id === 's5')
+  assert.equal(plainNode.runningSubagentCount, 0)
 })
 
 test('ungrouped derives unseen sessions newest-first before stored order', () => {
