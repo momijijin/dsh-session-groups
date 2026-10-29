@@ -1,17 +1,17 @@
 # V1.1 发布与安装说明（未安装到用户 desktop）
 
-- 版本：`0.2.2`（V1.1 UI layout / 主题感知 patch）
+- 版本：`0.2.3`（V1.1 virtualized ungrouped list + footer/header correction）
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：**V1.1 QA 全绿（17/17 E2E、190/190 tests、audit PASS）**；等待用户验收后才安装到 desktop profile
-- 范围：V1 全部能力 + 左栏宽度 264–760、分组拖拽排序/改父级、会话搜索下拉、官方侧栏排版/间距/图标对齐、footer 两段视图切换、header `+`/搜索/视图选项、归档 popover、深色主题 surfaces
+- 状态：**V1.1 QA 全绿（17/17 E2E、203/203 tests、audit PASS、large-list probe PASS）**；等待用户验收后才安装到 desktop profile
+- 范围：V1 全部能力 + 左栏宽度 264–760、分组拖拽排序/改父级、会话搜索下拉、官方侧栏排版/间距/图标对齐、footer 单按钮视图切换、header `搜索/视图选项/＋`、归档 popover、深色主题 surfaces、未归组列表虚拟化
 
 ## 1. 构建
 
 ```powershell
 cd C:\Users\Momiji\Projects\dsh-session-groups
 pnpm install          # 已安装过可跳过；本版未新增依赖
-npm run build         # 生成 lib/client.js（176,007 bytes）
-npm test              # 190/190
+npm run build         # 生成 lib/client.js（182,529 bytes）
+npm test              # 203/203
 node --check lib/client.js
 ```
 
@@ -19,7 +19,7 @@ node --check lib/client.js
 
 ```powershell
 npm pack
-# dsh-session-groups-0.2.2.tgz（113,452 bytes / 约 110.8 KB；tarball 内 33 files）
+# dsh-session-groups-0.2.3.tgz（大小以实际产物为准）
 ```
 
 包内容固定为 `src/**`、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`。
@@ -27,15 +27,15 @@ npm pack
 
 最终 tarball 记录（以实际产物为准）：
 
-- 文件：`dsh-session-groups-0.2.2.tgz`
-- 大小：**113,452 bytes**（unpacked 447,642 bytes；33 files）
-- SHA256：`3625A5F23968EDB83A79859B442FD1A54A39E220F8153BF60A9E816CA4865DC7`
+- 文件：`dsh-session-groups-0.2.3.tgz`
+- 大小：**119,275 bytes**（unpacked 466.3 kB；34 files）
+- SHA256：`77011E393E4C144006060C60074ECAA6C5B9A12B0AD07AC36981737894F44D5F`
 
 ## 3. 安装
 
 ### Desktop（用户验收后）
 
-设置 → 插件 → 添加插件 → 选择 `dsh-session-groups-0.2.2.tgz`（或本地目录），启用后重启/刷新。
+设置 → 插件 → 添加插件 → 选择 `dsh-session-groups-0.2.3.tgz`（或本地目录），启用后重启/刷新。
 
 不要用 `dsh plugin --profile desktop` 改 App 管理的 profile。
 
@@ -46,7 +46,7 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\releas
 $desktop = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 & $desktop --expose-internals $cli --profile groups-spike --from-default-profile web
-& $desktop --expose-internals $cli plugin --profile groups-spike add "file:C:\...\dsh-session-groups-0.2.2.tgz"
+& $desktop --expose-internals $cli plugin --profile groups-spike add "file:C:\...\dsh-session-groups-0.2.3.tgz"
 & $desktop --expose-internals $cli --profile groups-spike --port 4405 --no-open
 ```
 
@@ -66,10 +66,11 @@ $cli = "C:\Users\Momiji\AppData\Local\Programs\DSH Desktop\resources\app\lib\des
 - 搜索只匹配标题/工作区/组路径，最多 20 条；无全文搜索（P2）。
 - 组拖到折叠组时不给子组落点（需先展开）；组拖不做悬停自动展开。
 - P1 未实现：撤销上次移动、分组颜色、折叠全部、多窗口冲突提示、混合组常显工作区标签、批量移动、折叠组聚合计数。
-- P2：全文搜索、虚拟化、跨设备同步、自定义图标上传、会话删除。
+- P2：全文搜索、跨设备同步、自定义图标上传、会话删除。
+- 未归组列表按 `.dsg-tree` 视口 + overscan=8 窗口化（行 32 / gap 2 / 段头 34）；组树完整渲染。真实 home 的 1,639 个 session 目录中 1,474 个是 subagent（UI 过滤），实际可见未归组约 10 行；1,500+ 行由 QA 大列表 fixture 验证。窗口化不改变逻辑顺序/搜索/拖拽/归档。
 - 分组数据单窗口 V1；多窗口冲突通过 409 提示，不做实时合并。
 
 ## 6. 验证证据
 
-- `docs/TEST-RESULTS.md`：V1.1 0.2.2（npm test 190/190、E2E 17/17、E2E step 12 数据审计、打包 sha256）
-- `scripts/qa/evidence-perf/`：`e2e-20261029-002840.json` + 17 步截图、`setup-20261029-002652.json`、`perf-before-800.json` / `perf-after-800.json`、`ui-perf-report.md`（本地，不随包发布）
+- `docs/TEST-RESULTS.md`：V1.1 0.2.3（npm test 203/203、E2E 17/17、E2E step 12 数据审计、大列表 before/after、打包 sha256）
+- `scripts/qa/evidence-perf/`：`e2e/e2e-20261029-074237.json` + 17 步截图、`e2e-setup/setup-20261029-073936.json`、`large-before.json` / `large-after.json`、`screenshots/large-list-before.png` / `-after.png`、`ui-perf-report.md`（本地，不随包发布）

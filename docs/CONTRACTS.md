@@ -4,6 +4,7 @@
 - V1.1（0.2.0，2026-10-28）：**additive** 扩展——左栏宽度覆盖、分组拖拽排序/改父级、会话搜索下拉；数据模型、Host 路由、存储路径均不变
 - V1.1（0.2.1，2026-10-28）：**typography/spacing-only patch**——分组视图排版/间距/图标对齐官方侧栏，消费宿主继承字体；无契约/数据/路由变化
 - V1.1（0.2.2，2026-10-28）：**UI-layout + drag-perf patch**——footer 两段视图切换、header 加号/搜索/视图选项（搜索行可折叠 + 关闭）、归档三态移入 view-options popover、菜单/对话框/输入主题感知、dragover 目标去重 + 移除未消费的 `saving` 重渲染；无数据模型/Host 路由/存储变化。UI testid additive，旧的 `session-groups-toggle`/`session-groups-archive-filter`/`session-groups-search` 保留。
+- V1.1（0.2.3，2026-10-29）：**virtualization + UI 回退 patch**——footer 恢复为单个切换按钮（图标/文案随目标视图变化，`data-mode`/`title`/`aria-pressed` 反映当前态）；header 右侧顺序改为官方工作区段头 **search → view-options → plus**；未归组列表按 `.dsg-tree` 视口 + overscan 窗口化（顶部/底部 spacer 精确保高，组树保持完整），搜索选中窗口外未归组行会先强制滚入窗口；纯 helper `computeVirtualWindow` + `virtualScrollOffset`。数据模型/Host 路由/存储不变；0.2.2 的 `session-groups-toggle-groups`/`session-groups-toggle-workspace` 删除，新增 `session-groups-virtual-spacer`。
 - 关联：`docs/V1-PLAN.md`、`docs/SPIKE.md`、`docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md`
 - 本稿已吸收架构评审：数据隔离、API 形状、打包格式、运行中归档、组内新建、存储路径、图标、footer 生命周期
 
@@ -66,6 +67,7 @@ Invariants:
    - On first drag/reorder of ungrouped, write the full visible order into `ungrouped`.
    - **Opening the view never writes the doc.** New sessions appear via derivation only.
    - **V1.1 search/reveal**：搜索索引从 `sessionsById` 派生（含归档、未归组、blank；排除 subagent）；选中普通会话只 `openSession` + 展开 `collapsed` 视图态 + 滚动高亮，**不写 `ungrouped`/`groups`**。`revealSession` 仅返回新 `collapsed`；doc 中找不到的会话（宿主派生未归组）统一展开 `__ungrouped__`（视图态容器，不持久化）。
+   - **0.2.3 virtualization**：未归组行只渲染 `.dsg-tree` 视口 + `overscan=8` 的行；`computeVirtualWindow` 按 `scrollTop/clientHeight/listTop/total` 返回 `{start,end,topPad,bottomPad}`，spacer 精确保留 `total*34-2` 的滚动高度。逻辑顺序仍是 `[...derived, ...stored]`，搜索索引/拖拽/归档过滤全部基于完整 `tree.ungrouped`，不因窗口化改变。搜索选中窗口外未归组会话时，先 `scrollToIndex` 再高亮/滚动。组树不虚拟化。
 
 ## 2. Host 路由
 
@@ -201,15 +203,14 @@ V1 client 必须输出这些 `data-testid`，E2E 依赖它们；改名需同步 
 
 V1.1（0.2.0）additive 追加：`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up` / `session-groups-group-move-down`；`session-groups-menu` 为既有菜单根，本批补登记。旧 testid 一律保留。
 
-V1.1（0.2.2）additive 追加：`session-groups-toggle-groups` / `session-groups-toggle-workspace`（footer 两段）、`session-groups-search-toggle`（header 搜索开关）、`session-groups-search-close`（搜索行关闭/收起）、`session-groups-view-options`（header 视图选项按钮）、`session-groups-view-options-popover`（归档三态 popover）。搜索行默认不渲染；搜索图标开合，Escape（无下拉时）与关闭按钮收起整行。`session-groups-archive-filter` 从旧的循环按钮改为 popover 内三行（`data-filter=hidden|all|only` + `data-active`）；`session-groups-return` 只在错误/扁平回退里保留。
+V1.1（0.2.2）additive 追加：`session-groups-search-toggle`（header 搜索开关）、`session-groups-search-close`（搜索行关闭/收起）、`session-groups-view-options`（header 视图选项按钮）、`session-groups-view-options-popover`（归档三态 popover）。搜索行默认不渲染；搜索图标开合，Escape（无下拉时）与关闭按钮收起整行。`session-groups-archive-filter` 从旧的循环按钮改为 popover 内三行（`data-filter=hidden|all|only` + `data-active`）；`session-groups-return` 只在错误/扁平回退里保留。**0.2.3 删除 footer 两段 testid** `session-groups-toggle-groups` / `session-groups-toggle-workspace`；`session-groups-toggle` 恢复为单个按钮（`data-mode`/`data-target`/`data-wide`/`aria-pressed`/`title`），并新增 `session-groups-virtual-spacer`（`data-position=top|bottom`）。未归组头增加 `data-count`（逻辑行数），虚拟列表行容器增加 `data-virtual-start|end|count|total`。
 
 | testid | 位置 | 附加属性 |
 |---|---|---|
-| `session-groups-toggle` | footer 两段切换容器 | `data-mode="workspace|groups"`, `data-wide` |
-| `session-groups-toggle-groups` / `session-groups-toggle-workspace` | footer 两段 | `data-segment`, `data-active`, `aria-pressed` |
+| `session-groups-toggle` | footer 单个视图切换按钮（28px） | `data-mode="workspace|groups"`, `data-target`, `data-wide`, `aria-pressed`, `title`/`aria-label` |
 | `session-groups-view` | 分组视图根 | `data-mode="groups"` |
 | `session-groups-header` | 视图头（36px 单行 + 可选 30px 搜索行） | `data-search-open`, `data-options-open` |
-| `session-groups-header-row` | 视图头标题/操作行（0.2.2 起单行 28px 控件） | — |
+| `session-groups-header-row` | 视图头标题/操作行（0.2.2 起单行 28px 控件；0.2.3 右侧顺序 search → view-options → plus） | — |
 | `session-groups-search-toggle` | header 搜索图标按钮 | `aria-expanded` |
 | `session-groups-search-close` | 搜索行关闭按钮（清空并收起整行） | — |
 | `session-groups-view-options` | header 视图选项图标按钮 | `data-filter`, `aria-expanded`, `aria-haspopup` |
@@ -217,7 +218,8 @@ V1.1（0.2.2）additive 追加：`session-groups-toggle-groups` / `session-group
 | `session-groups-return` | 返回工作区（仅 FlatFallback 错误回退） | — |
 | `session-groups-archive-filter` | 归档三态行（popover 内，共 3 行） | `data-filter`, `data-active`, `aria-checked` |
 | `session-groups-new-group` | header 新建分组 `+`（28×28） | — |
-| `session-groups-ungrouped` | 未归组区块/头 | — |
+| `session-groups-ungrouped` | 未归组区块/头 | `data-count`（逻辑会话数）, `data-drop-kind` |
+| `session-groups-virtual-spacer` | 虚拟未归组列表的 top/bottom 占位 | `data-position="top"|"bottom"` |
 | `session-groups-group` | 组行 | `data-group-id`, `data-depth`, `data-expanded` |
 | `session-groups-group-add` | 组头 `+` | `data-group-id` |
 | `session-groups-group-menu` | 组 `…` | `data-group-id` |

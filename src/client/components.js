@@ -43,6 +43,13 @@ import {
   SIDEBAR_WIDTH_MIN,
 } from './sidebar-width.js'
 import {
+  computeVirtualWindow,
+  virtualScrollOffset,
+  VIRTUAL_HEADER_HEIGHT,
+  VIRTUAL_ROW_GAP,
+  VIRTUAL_ROW_HEIGHT,
+} from './virtual-list.js'
+import {
   displayDepth,
   expandAncestors,
   flattenTree,
@@ -404,14 +411,153 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
 }
 
 // ---------------------------------------------------------------------------
-// Ungrouped section
+// Ungrouped section (virtualized)
 // ---------------------------------------------------------------------------
-const UngroupedSection = ({ node, store, props, handlers }) => {
+/**
+ * Estimated initial viewport for the first render before the real `.dsg-tree`
+ * metrics are measured. The window is recomputed from the DOM immediately after
+ * mount, so this only affects the first paint, never the settled list.
+ */
+const estimatedTreeHeight = () => {
+  const height = Number(globalThis.innerHeight)
+  return Number.isFinite(height) && height > 0 ? Math.max(240, height - 220) : 700
+}
+
+const VirtualSpacer = ({ height, position }) =>
+  h('div', {
+    class: 'dsg-virtual-spacer',
+    'data-testid': 'session-groups-virtual-spacer',
+    'data-position': position,
+    'aria-hidden': 'true',
+    style: { height: `${Math.max(0, Math.round(height))}px` },
+  })
+
+/**
+ * Ungrouped inbox with windowed rows (0.2.3). The section header stays mounted;
+ * only rows intersecting `.dsg-tree` plus overscan are rendered, with exact
+ * top/bottom spacers preserving the full scroll height. Groups below the inbox
+ * stay untouched. `virtualRef` exposes `isVisible`/`scrollToIndex` so search can
+ * reveal a row that is outside the current window (spec §3.3).
+ */
+const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
   const collapsedId = '__ungrouped__'
   const expanded = isExpanded(store.collapsed, collapsedId)
   const dropTarget = store.dropTarget
   const dropKind = dropTarget?.kind === 'ungrouped' ? 'ungrouped' : dropTarget?.kind === 'group-root-end' ? 'group-root-end' : null
   const isDrop = dropKind !== null
+  const bodyRef = useRef(null)
+  const total = node.length
+  const [metrics, setMetrics] = useState(() => ({
+    scrollTop: 0,
+    viewportHeight: estimatedTreeHeight(),
+    listTop: VIRTUAL_HEADER_HEIGHT + 4,
+  }))
+  const win = computeVirtualWindow({
+    scrollTop: metrics.scrollTop,
+    viewportHeight: metrics.viewportHeight,
+    listTop: metrics.listTop,
+    rowCount: total,
+  })
+  const visibleRows = node.slice(win.start, win.end)
+
+  // Track the tree's scroll position/viewport. Only this section re-renders on
+  // scroll; the group rows below stay untouched.
+  useEffect(() => {
+    if (!expanded) {
+      if (virtualRef) virtualRef.current = null
+      return undefined
+    }
+    const body = bodyRef.current
+    const tree = body?.closest?.('.dsg-tree')
+    if (!tree) return undefined
+    let frame = null
+    let disposed = false
+    const measure = () => {
+      frame = null
+      if (disposed) return
+      const current = bodyRef.current
+      if (!current || current.isConnected === false) return
+      const treeRect = tree.getBoundingClientRect()
+      const bodyRect = current.getBoundingClientRect()
+      const next = {
+        scrollTop: tree.scrollTop,
+        viewportHeight: tree.clientHeight,
+        listTop: bodyRect.top - treeRect.top + tree.scrollTop,
+      }
+      setMetrics((previous) =>
+        previous.scrollTop === next.scrollTop &&
+        previous.viewportHeight === next.viewportHeight &&
+        previous.listTop === next.listTop
+          ? previous
+          : next
+      )
+    }
+    const schedule = () => {
+      if (frame === null) frame = requestAnimationFrame(measure)
+    }
+    measure()
+    tree.addEventListener('scroll', schedule, { passive: true })
+    globalThis.addEventListener('resize', schedule)
+    return () => {
+      disposed = true
+      if (frame !== null) cancelAnimationFrame(frame)
+      tree.removeEventListener('scroll', schedule)
+      globalThis.removeEventListener('resize', schedule)
+      if (virtualRef) virtualRef.current = null
+    }
+  }, [expanded, total, virtualRef])
+
+  // Expose the imperative search-reveal hook. The controller is refreshed for
+  // every window so `isVisible` reflects the current rows.
+  useEffect(() => {
+    if (!expanded || !virtualRef) return undefined
+    const body = bodyRef.current
+    const tree = body?.closest?.('.dsg-tree')
+    if (!tree) return undefined
+    const controller = {
+      isVisible: (index) => index >= win.start && index < win.end,
+      scrollToIndex: (index) => {
+        if (!Number.isInteger(index)) return false
+        const currentBody = bodyRef.current
+        const currentTree = currentBody?.closest?.('.dsg-tree')
+        if (!currentBody || !currentTree) return false
+        const treeRect = currentTree.getBoundingClientRect()
+        const bodyRect = currentBody.getBoundingClientRect()
+        const listTop = bodyRect.top - treeRect.top + currentTree.scrollTop
+        const viewportHeight = currentTree.clientHeight
+        const target = virtualScrollOffset(index, {
+          listTop,
+          viewportHeight,
+          rowCount: total,
+          rowHeight: VIRTUAL_ROW_HEIGHT,
+          gap: VIRTUAL_ROW_GAP,
+        })
+        currentTree.scrollTop = target
+        setMetrics({ scrollTop: currentTree.scrollTop, viewportHeight, listTop })
+        return true
+      },
+    }
+    virtualRef.current = controller
+    return () => {
+      if (virtualRef.current === controller) virtualRef.current = null
+    }
+  }, [expanded, virtualRef, total, win.start, win.end])
+
+  const bodyChildren = []
+  if (total === 0) {
+    bodyChildren.push(h('div', { key: 'empty', class: 'dsg-group-empty', 'data-testid': 'session-groups-empty' }, rt()?.t('ungrouped.dropHint')))
+  } else {
+    if (win.topPad > 0) {
+      bodyChildren.push(h(VirtualSpacer, { key: 'pad-top', height: win.topPad, position: 'top' }))
+    }
+    for (const child of visibleRows) {
+      bodyChildren.push(h(SessionRow, { key: child.session.id, sessionNode: child, depth: 0, groupId: null, ungrouped: true, props, handlers }))
+    }
+    if (win.bottomPad > 0) {
+      bodyChildren.push(h(VirtualSpacer, { key: 'pad-bottom', height: win.bottomPad, position: 'bottom' }))
+    }
+  }
+
   return h(
     'div',
     { class: 'dsg-ungrouped' },
@@ -423,6 +569,7 @@ const UngroupedSection = ({ node, store, props, handlers }) => {
         tabindex: '0',
         'aria-expanded': expanded ? 'true' : 'false',
         'data-testid': 'session-groups-ungrouped',
+        'data-count': String(total),
         'data-drop-active': isDrop ? 'true' : 'false',
         'data-drop-kind': dropKind ?? '',
         onClick: () => handlers.toggleGroup(collapsedId),
@@ -437,7 +584,7 @@ const UngroupedSection = ({ node, store, props, handlers }) => {
       },
       h('span', { class: 'dsg-group-caret' }, renderGlyph(h, expanded ? 'chevronDown' : 'chevronRight', 16)),
       h('span', { class: 'dsg-group-name' }, rt()?.t('ungrouped.title')),
-      h('span', { class: 'dsg-ungrouped-count' }, node.length),
+      h('span', { class: 'dsg-ungrouped-count' }, total),
       isDrop
         ? h('div', {
             class: 'dsg-drop-indicator',
@@ -454,14 +601,17 @@ const UngroupedSection = ({ node, store, props, handlers }) => {
           h(
             'div',
             {
-              class: 'dsg-group-line',
-              'data-empty': node.length === 0 ? 'true' : 'false',
+              ref: bodyRef,
+              class: 'dsg-group-line dsg-virtual-list',
+              'data-empty': total === 0 ? 'true' : 'false',
+              'data-virtual-start': String(win.start),
+              'data-virtual-end': String(win.end),
+              'data-virtual-count': String(win.count),
+              'data-virtual-total': String(total),
               onDragOver: (event) => handlers.onDragOverUngrouped(event),
               onDrop: (event) => handlers.onDropUngrouped(event),
             },
-            node.length === 0
-              ? h('div', { class: 'dsg-group-empty', 'data-testid': 'session-groups-empty' }, rt()?.t('ungrouped.dropHint'))
-              : node.map((child) => h(SessionRow, { key: child.session.id, sessionNode: child, depth: 0, groupId: null, ungrouped: true, props, handlers }))
+            ...bodyChildren
           )
         )
       : null
@@ -927,12 +1077,7 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds 
       h(
         'div',
         { class: 'dsg-header-actions' },
-        IconButton({
-          label: t('view.newGroup'),
-          glyph: 'plus',
-          testId: 'session-groups-new-group',
-          onClick: (event) => handlers.openNewGroup(event, null),
-        }),
+        // Official workspace-section order: search → view options → new group.
         IconButton({
           label: t('search.label'),
           glyph: 'search',
@@ -967,7 +1112,13 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds 
                 },
               })
             : null
-        )
+        ),
+        IconButton({
+          label: t('view.newGroup'),
+          glyph: 'plus',
+          testId: 'session-groups-new-group',
+          onClick: (event) => handlers.openNewGroup(event, null),
+        })
       )
     ),
     searchOpen
@@ -1233,51 +1384,38 @@ const Rail = ({ props }) => {
 }
 
 /**
- * Footer action: always registered. The wide sidebar shows the two-segment
- * switch with both labels; the rail fallback keeps both icon segments stacked
- * (labels hidden by CSS). Each segment targets its own mode explicitly — this
- * is not a blind toggle, so repeated clicks on the active segment are no-ops.
+ * Footer action: one 28px button that toggles between the groups and official
+ * workspace sidebar. The icon/label describe the target view (and therefore
+ * change after every click); the active mode is reflected in `data-mode`,
+ * `title`/`aria-label` and `aria-pressed`. The rail fallback keeps the icon only.
  */
 export const FooterAction = (props) => {
   const store = useViewStore()
   const wide = props?.wide !== false
   const mode = store?.viewMode ?? 'workspace'
   const t = rt()?.t ?? ((key) => key)
-  const segment = (value, glyph, labelKey, testId) => {
-    const label = t(labelKey)
-    const active = mode === value
-    return h(
-      'button',
-      {
-        type: 'button',
-        class: 'dsg-footer-segment',
-        'data-testid': testId,
-        'data-segment': value,
-        'data-active': active ? 'true' : 'false',
-        'aria-pressed': active ? 'true' : 'false',
-        title: label,
-        'aria-label': label,
-        onClick: (event) => {
-          event.stopPropagation()
-          rt()?.setMode(value)
-        },
-      },
-      renderGlyph(h, glyph, 16),
-      h('span', { class: 'dsg-footer-segment-label' }, label)
-    )
-  }
+  const target = mode === 'groups' ? 'workspace' : 'groups'
+  const label = t(target === 'groups' ? 'footer.toGroups' : 'footer.toWorkspace')
+  const glyph = target === 'groups' ? 'folderAdjust' : 'grid'
   return h(
-    'div',
+    'button',
     {
-      class: 'dsg-footer-switch',
+      type: 'button',
+      class: 'dsg-footer-toggle',
       'data-testid': 'session-groups-toggle',
       'data-mode': mode,
+      'data-target': target,
       'data-wide': wide ? 'true' : 'false',
-      role: 'group',
-      'aria-label': t('footer.switchLabel'),
+      'aria-pressed': mode === 'groups' ? 'true' : 'false',
+      title: label,
+      'aria-label': label,
+      onClick: (event) => {
+        event.stopPropagation()
+        rt()?.toggleMode()
+      },
     },
-    segment('groups', 'folderAdjust', 'footer.toGroups', 'session-groups-toggle-groups'),
-    segment('workspace', 'grid', 'footer.toWorkspace', 'session-groups-toggle-workspace')
+    renderGlyph(h, glyph, 16),
+    wide ? h('span', { class: 'dsg-footer-label' }, label) : null
   )
 }
 
@@ -1416,6 +1554,8 @@ export const GroupsView = (props) => {
   // the applied width is always its viewport clamp, so a narrow viewport never
   // destroys the stored preference.
   const rootRef = useRef(null)
+  // Imperative bridge to the virtualized ungrouped list (search reveal).
+  const virtualRef = useRef(null)
   const widthControllerRef = useRef(null)
   const preferredWidthRef = useRef(0)
   const [preferredWidth, setPreferredWidth] = useState(() => readSidebarWidth())
@@ -1748,23 +1888,32 @@ export const GroupsView = (props) => {
 
   /**
    * Highlight + scroll the revealed row (spec §4.4). The row may not exist on
-   * the first frame after the collapsed update, so retry for up to two frames;
+   * the first frame after the collapsed update, so retry for up to eight frames;
    * add `dsg-search-hit` for 1.5 s; scroll with
    * `scrollTop + (row.top - tree.top) - 0.3 * tree.clientHeight`, clamped to the
-   * scrollable range. A row that never appears (orphan / filtered out) is a
-   * no-op: no scroll, no highlight, no throw.
+   * scrollable range. When the target is an ungrouped row outside the current
+   * virtual window, the window is forced forward first so the row can mount.
+   * A row that never appears (orphan / filtered out) is a no-op: no scroll, no
+   * highlight, no throw.
    */
   const revealSearchRow = (sessionId) => {
     const root = rootRef.current
+    const ungroupedIndex = tree.ungrouped.findIndex((child) => child.session.id === sessionId)
     let attempts = 0
     const tick = () => {
-      const tree = root?.querySelector?.('.dsg-tree')
-      const row = tree
-        ? Array.from(tree.querySelectorAll('[data-session-id]')).find((element) => element.getAttribute('data-session-id') === sessionId)
+      // The section may mount one frame after the collapsed update (search on a
+      // collapsed ungrouped inbox), so re-check the controller every retry.
+      if (ungroupedIndex >= 0) {
+        const controller = virtualRef.current
+        if (controller && !controller.isVisible(ungroupedIndex)) controller.scrollToIndex(ungroupedIndex)
+      }
+      const treeElement = root?.querySelector?.('.dsg-tree')
+      const row = treeElement
+        ? Array.from(treeElement.querySelectorAll('[data-session-id]')).find((element) => element.getAttribute('data-session-id') === sessionId)
         : null
-      if (!tree || !row) {
+      if (!treeElement || !row) {
         attempts += 1
-        if (attempts <= 2) requestAnimationFrame(tick)
+        if (attempts <= 8) requestAnimationFrame(tick)
         return
       }
       clearSearchHit()
@@ -1776,10 +1925,10 @@ export const GroupsView = (props) => {
         if (searchHitRowRef.current === row) searchHitRowRef.current = null
       }, 1500)
       const rowRect = row.getBoundingClientRect()
-      const treeRect = tree.getBoundingClientRect()
-      const maxScroll = Math.max(0, tree.scrollHeight - tree.clientHeight)
-      const next = Math.min(Math.max(0, tree.scrollTop + (rowRect.top - treeRect.top) - tree.clientHeight * 0.3), maxScroll)
-      tree.scrollTop = next
+      const treeRect = treeElement.getBoundingClientRect()
+      const maxScroll = Math.max(0, treeElement.scrollHeight - treeElement.clientHeight)
+      const next = Math.min(Math.max(0, treeElement.scrollTop + (rowRect.top - treeRect.top) - treeElement.clientHeight * 0.3), maxScroll)
+      treeElement.scrollTop = next
     }
     requestAnimationFrame(tick)
   }
@@ -2111,7 +2260,7 @@ export const GroupsView = (props) => {
       : h(
           'div',
           { class: 'dsg-tree', role: 'tree', 'aria-label': t('view.title') },
-          h(UngroupedSection, { node: tree.ungrouped, store: viewState, props, handlers }),
+          h(UngroupedSection, { node: tree.ungrouped, store: viewState, props, handlers, virtualRef }),
           ...tree.groups.map((node) => h(GroupNode, { key: node.group.id, node, depth: 0, props, handlers, store: viewState }))
         ),
     h(Toast, { store }),

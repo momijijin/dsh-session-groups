@@ -13,9 +13,10 @@
 | Host 集成 | Node `node --test` + 临时目录 | 存储、原子写、revision、路由围栏 | Host | 每次提交 |
 | Client 逻辑 | Node `node --test` | 可见性、筛选、工作区映射、拖拽 hit-test | Client | 每次提交 |
 | E2E | Playwright（Chromium/CDP） | 真实 DSH web profile：建组/拖拽/归档/新建/重启 + V1.1 宽度/组拖/搜索/排版/深色主题（17 步） | QA | 每日/合并前 |
+| 大列表 probe | Node CDP 脚本 | 1,500+ 未归组行：DOM 行数、初始/滚动/hover/dragOver/search/drop 耗时 | QA | 0.2.3 及后续性能改动 |
 | 人工验收 | 清单 + 截图 | desktop profile 9 步 | QA + 用户 | 发布前 |
 | 回归审计 | 脚本 + hash | 只写记录文件 | QA | 每次 E2E |
-| 性能 | 合成数据/手工 | 200/1000 会话 | QA | P1 |
+| 性能 | 合成大列表 QA home + CDP probe | 1,500+ 未归组行 | QA | 0.2.3 起每次性能相关提交 |
 
 ## 2. 单元测试矩阵（shared model）
 
@@ -75,6 +76,7 @@
 | C11 | 左栏宽度（V1.1） | `clampSidebarWidth` min−1/min/max/max+1/窗口过小（返回 null）；存储键/默认 420/非法值回退/存储抛错不崩；覆盖只在 groups+wide，卸载/rail/官方恢复；**窄视口双击复位持久化 420（非 clamp 值），放宽后恢复 420；快速释放时 applied=stored** |
 | C12 | 分组拖拽（V1.1） | `resolveGroupDrop` 同父前/后、跨父 child、有会话但 0 子组/空组=0 号槽、根末尾；同父移除后下标 −1；自身/后代 invalid；最新 `childrenOf` 重算锚点；no-op 不提交；**组 `+` 的 pointerdown 起点守卫（真实指针拖拽不产生 drag/drop 提交）；中间 50% invalid；同位置 after no-op；组菜单 move-up 启用路径** |
 | C13 | 会话搜索（V1.1） | `buildSearchIndex` 排除 subagent、标题/工作区/组路径、归档标记；`matchSessions` 前缀优先/大小写/空查询/20 上限/稳定排序；`revealSession` 展开所在组+全部祖先、未归组 `__ungrouped__`、已展开同引用；**`buildSearchIndex(null)` 容忍；仅 `collapsed[id] === true` 视为折叠；blank/untitled 的英文别名匹配（显示仍本地化）** |
+| C14 | 未归组虚拟化（0.2.3） | `computeVirtualWindow` 空列表/顶部/中部/底部/小列表/overscan/自定义行高 gap/非法输入；**top+bottom spacer 精确等于 `total*34-2`**；1,500 行窗口 <80；`virtualScrollOffset` 居中且 clamp 到最大滚动；`isVirtualIndexVisible` 边界 |
 
 ## 5. E2E（Playwright/CDP，17 步）
 
@@ -91,8 +93,8 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 
 用例：
 
-1. 打开 4402，侧栏默认官方工作区视图；用只读夹具复制真实 `sessions/` + `storages/workspace.json`，得到 3 工作区/约 30 会话/2 归档；footer 两段（分组视图/工作区视图）两标签可见、16px 图标、13px 文本、28px 高，工作区段 active。
-2. 点底部「分组视图」段（不是盲切换），出现分组视图；header 右侧顺序为 `+`/搜索/视图选项（各 28×28、16px glyph），搜索字段初始收起，正常 header 无「返回工作区」。
+1. 打开 4402，侧栏默认官方工作区视图；用只读夹具复制真实 `sessions/` + `storages/workspace.json`，得到 3 工作区/约 30 会话/2 归档；footer 为**单个 28px 按钮**：初始 `data-mode=workspace`、`aria-pressed=false`、文案/图标指向「分组视图」、13px 文本/16px 图标；点击后 `data-mode=groups`、`aria-pressed=true`、文案/图标变为「工作区视图」；再次点击恢复；0.2.2 的两个段 testid 必须不存在。
+2. 点底部单按钮进入分组视图；header 右侧顺序为 **搜索 → 视图选项 → `+`**（各 28×28、16px glyph），搜索字段初始收起，正常 header 无「返回工作区」。
 3. 新建 3 组（1 个二级嵌套），刷新后仍在。
 4. 从 3 个不同工作区拖 10 个会话进组；每次检查插入线/高亮/浮动标签。
 5. 组内/跨组拖拽排序；刷新后顺序保持。
@@ -103,7 +105,7 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
 10. 重启 profile → 结构/顺序/筛选保持。
 11. 切回工作区视图 → 官方浏览器原样；搜索/添加工作区可用。
 12. 数据审计：`workspace.json` 与一个 sample session 目录 hash 不变；只新增/修改 `dsh-session-groups.json`。
-13. **V1.1 宽度**：记录官方宽度 → 分组视图在 1024px 挂载（存储 620 → clamp 544）→ 1440px 恢复 620 → 拖到 760/620 → reload 保持 → 700px rail 不覆盖且无把手 → 双击复位 420 → 拖到 264 头部无水平溢出且 header 高 36px、footer 两段标签仍可见 → 折叠/展开保持 → **快速释放（move 后立即 up）断言 applied=stored** → **800px 双击复位持久化 420、applied=320；回 1440px 恢复 420** → 切回官方宽度恢复、官方把手回来。
+13. **V1.1 宽度**：记录官方宽度 → 分组视图在 1024px 挂载（存储 620 → clamp 544）→ 1440px 恢复 620 → 拖到 760/620 → reload 保持 → 700px rail 不覆盖且无把手 → 双击复位 420 → 拖到 264 头部无水平溢出且 header 高 36px、**单 footer 按钮标签仍可见（28px 高/16px 图标）** → 折叠/展开保持 → **快速释放（move 后立即 up）断言 applied=stored** → **800px 双击复位持久化 420、applied=320；回 1440px 恢复 420** → 切回官方宽度恢复、官方把手回来。
 14. **V1.1 组拖**：组 c → 有会话但 0 子组的组 b 体槽（index 0）；组 a（带子树）→ 空组 e；组 c → 未归组头（根末尾）；a → b 上缘；快速双拖 before/child 锚点按最新 doc 重算；自身/末位 no-op 不涨 revision；**同位置 after no-op**；**组头中间 50% 无效（toast、不提交）**；组菜单上移/下移首尾禁用 + **启用 move-up 实际生效**；全树 n+1 槽审计；**真实 CDP 指针从组 `+` 按钮拖向另一组：dragstart 被 preventDefault，根顺序/parent/revision 不变**。
 15. **V1.1 搜索**：先断言搜索字段未渲染 → 点 header 搜索图标展开并聚焦 → 折叠组 a → 输入唯一标题 → ArrowDown/Enter → 组展开、行高亮、树滚动；**目标移入嵌套子组并折叠子组+祖先 a、筛选切 `only` 后选中：only→all、两级同时展开**；归档结果 `aria-disabled=true`、Enter 不改当前会话；**宽查询结果 >12，连按 ArrowDown 后 active option 保持在 320px listbox 可视 rect 内（listbox scrollTop>0）**；无结果空态；Esc/点击外部关闭；**无下拉时 Escape 收起搜索整行、header 关闭按钮收起整行**；搜索前后 `groups`/`ungrouped` 字节一致。
 16. **V1.1 排版+间距对齐（0.2.1/0.2.2）**：step 15 结束时分组视图仍激活；先收起搜索字段，再用 `getComputedStyle`/`getBoundingClientRect` 断言（不依赖截图）：
@@ -111,16 +113,21 @@ $env:DSH_HOME = "C:\Users\Momiji\Projects\dsh-session-groups\.spike-homes\qa"
     - `.dsg-group-row` 高 34px、`.dsg-session-row` 高 32px（±1）；
     - `.dsg-group-name`/`.dsg-session-title` 14px/20px、`.dsg-workspace-badge` 12px、header 标题 14px/20px 且为 primary 文本 + accent 图标 16px；
     - `.dsg-group-icon svg`、group caret、group action glyph、header accent 均 16×16，组操作按钮 16×16，根内所有 `.dsg-glyph`/`.dsg-icon` 均 16px；
-    - **footer**：容器/段高 28px、两段标签（分组视图/工作区视图）可见、13px 文本、16px 图标、active 段使用 accent；header 三个 action 均 28×28、16px glyph、顺序 `+`/搜索/视图选项；
+    - **footer**：单个按钮，`BUTTON` 标签、28px 高、13px 文本、16px 图标，`data-mode=groups`/`aria-pressed=true`、文案/标题为「工作区视图」；header 三个 action 均 28×28、16px glyph、顺序 **搜索/视图选项/`+`**；
     - **间距**：组行/会话行 computed `padding-left/right` 8px、column-gap 6px；`.dsg-tree` row-gap 2px；组体/组线 row-gap 2px、组缩进 margin/padding 10px；header `padding: 4px 4px 4px 2px`、row-gap 8px、单行标题 28px、收起总高 36px、展开搜索后总高 74px + 搜索行 30px；搜索输入 13px/30px；搜索结果 padding ≥6px/10px、结果 column-gap 8px、下拉 row-gap 2px（全部 ±1px 容差）；
     - **264px 最小宽度**：临时拖到 264px 断言 header/tree `scrollWidth ≤ clientWidth+1` 后恢复原宽度；再展开搜索断言 header/search row/input 仍无横向溢出并收起；
+    - **虚拟窗口**：`.dsg-virtual-list` 的 `data-virtual-total` 等于未归组头 `data-count`；`end-start === renderedUngrouped`；rendered ≤80；rail footer 为 28×28 图标按钮（文本为空）；
     - `--dsg-font-14` 解析为 14px（官方 token 生效）。
     - 反例约束：不存在插件专属 font-size 设置/配置；宿主继承值变化时根字号随动；字号/行高/图标尺寸/行高不变。
 17. **0.2.2 深色主题 surfaces**：`document.body.setAttribute('data-ds-dark-theme','')` 后打开搜索输入/搜索结果、会话菜单、新建分组对话框，断言 computed 背景不是白色（含半透明 token 与 body base 合成后）、text/背景对比度 ≥4.5:1；结束后恢复原 theme 属性。覆盖 `--dsw-specific-menu`（菜单/搜索下拉）、`--dsw-alias-bg-layer-2`（对话框）、`--dsw-alias-bg-layer-1`（输入）。
+18. **0.2.3 大列表 probe（独立 QA home，不并入日常 17 步）**：
+    - 环境：`scripts/qa/setup.ps1 -QaHome .spike-homes/qa-0.2.3-large` → `node scripts/qa/make-large-list-fixture.mjs --home ... --extra 1500` → `start-web.ps1 -Port 4407`；
+    - 断言 1,500+ 逻辑未归组行下 `domUngroupedRows` 在 20–30（<80），`treeScrollHeight` 与全量渲染一致（spacers 精确）；
+    - 记录初始渲染、滚动两帧、hover、dragover 指示、窗口外搜索 reveal/scroll、可见行拖入组耗时；before(0.2.2)/after(0.2.3) 同 fixture 对比，写入 `docs/TEST-RESULTS.md` 与 `.superpowers/sdd/.../virtualization-report.md`。
 
 V1.1 新增/相关 stable testids（详见 `docs/CONTRACTS.md §4.1`）：
 
-`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle-groups`、`session-groups-toggle-workspace`、`session-groups-search-toggle`、`session-groups-search-close`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`。
+`session-groups-resize-handle`、`session-groups-header-row`、`session-groups-toggle`（0.2.3 单按钮）、`session-groups-search-toggle`、`session-groups-search-close`、`session-groups-view-options`、`session-groups-view-options-popover`、`session-groups-search`、`session-groups-search-results`、`session-groups-search-result`、`session-groups-search-empty`、`session-groups-group-drop`、`session-groups-group-move-up`、`session-groups-group-move-down`、`session-groups-menu`、`session-groups-group-add`、`session-groups-virtual-spacer`（0.2.3）。
 
 Playwright 拖拽注意：
 
@@ -165,9 +172,10 @@ V1.1 回归注意：
 
 ## 8. 性能
 
-- 合成 doc：3 工作区、200/1000 sessions、30 组、4 层。
-- 指标：打开视图 <200ms；拖拽反馈 <100ms；筛选 <100ms；无长任务 >50ms。
-- 超过 200 会话若卡顿，记录并转 P2 虚拟化，不阻塞 V1。
+- 0.2.3 大列表 fixture：1,510 逻辑未归组行（2 组/4 会话种子，真实 root 会话 + 1,500 synthetic clones）。
+- before（0.2.2，DOM 全量 1,510 行）与 after（0.2.3，窗口 20–30 行）同 fixture 对比；指标：初始渲染、滚动两帧、hover 反馈、dragover 指示、窗口外搜索 reveal、可见行拖放。目标：DOM 行数 <80；hover/dragOver <100ms；搜索 reveal <1s；滚动高度不跳。
+- 实测（2026-10-29，详见 `docs/TEST-RESULTS.md`）：DOM 1,510→20；初始 191→169ms；滚动 18→10ms；hover 12.2→3.8ms；dragOver 48→20ms；窗口外 search reveal 266→193ms；drop 85→60ms；scrollHeight 51,616 不变。
+- 真实 home 的实际可见未归组约 22 行（1,639 个 session 目录中 1,474 个 subagent 被过滤，workspace.json 只登记 85 个，59 归档），远低于压力夹具；虚拟化仍按 1,500+ 设计。
 
 ## 9. 缺陷与门禁
 

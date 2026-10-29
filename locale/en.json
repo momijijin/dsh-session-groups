@@ -6,7 +6,6 @@
   "view.options": "View options",
   "footer.toGroups": "Group view",
   "footer.toWorkspace": "Workspace view",
-  "footer.switchLabel": "Switch view",
   "archive.hidden": "Hide archived",
   "archive.all": "All conversations (archived shown)",
   "archive.only": "Archived only",

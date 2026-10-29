@@ -5,7 +5,57 @@
 > 真实 `~/.dsh` **只读**（fixture 来源 + 前后 fingerprint），不复制 credentials；
 > Host/Client 实现（`src/**`）不由 QA 修改；缺陷开给 owner。
 
-## 0. V1.1 patch 0.2.2 最终结论（2026-10-29 00:28，UI layout + 主题感知 + drag perf）
+## 0. V1.1 patch 0.2.3 最终结论（2026-10-29，footer/header 回退 + 未归组虚拟化）
+
+**V1.1 patch 0.2.3 QA 验证线全绿 PASS（隔离 home `.spike-homes/qa-0.2.3-e2e` + 4408；大列表 `.spike-homes/qa-0.2.3-large` + 4407）：**
+
+| 层 | 结果 | 证据 |
+|---|---|---|
+| `npm test`（仓库全量） | **203/203 PASS**（0 fail / 0 skip，~3.9s；新增 `tests/client/virtual-list.test.js` 12 条窗口/占位/边界单测） | 控制台输出 |
+| E2E 17 步（`e2e/groups.spec.mjs`，零依赖 CDP） | **17/17 PASS**（step 时间和 **82,357 ms**，~82s）；`consoleErrors=[]`、`pageErrors=[]` | `scripts/qa/evidence-perf/e2e/e2e-20261029-074237.json` + 17 张截图 |
+| step 1 footer 单按钮 | **PASS**：初始 `BUTTON`/`data-mode=workspace`/`aria-pressed=false`/「分组视图」/28px/13px/16px；点击后 `groups`/`true`/「工作区视图」/图标变化；再次点击完全恢复；0.2.2 两段 testid 不存在 | 同上 step 1 detail |
+| step 2/16 header 顺序 | **PASS**：`search-toggle → view-options → new-group`（28×28、16px glyph） | 同上 step 2/16 detail |
+| step 9 rail footer | **PASS**：28×28、`data-wide=false`、文本为空、16px 图标、`data-mode=groups` | 同上 step 9 detail |
+| step 13/16 footer | **PASS**：264px 下标签仍可见、无横向溢出；footer 28px/13px/16px；264px header/tree 252/252 | 同上 step 13/16 detail |
+| step 16 虚拟窗口 | **PASS**：`data-virtual-total == data-count`（14）、`end-start == rendered`（8）、rendered ≤80；组树 2 组完整 | 同上 step 16 detail |
+| setup（0.2.3 全新隔离 home） | **PASS 18/18**；`HOME-0 removed=0`；真实 home 前后 fingerprint 一致；client build **182,529 bytes** / sha256 `774d8fc036cbe5c3987b2ce543b1e7e3ee59d0f26e753ed658dfe08211c738ed`；package version `0.2.3` | `scripts/qa/evidence-perf/e2e-setup/setup-20261029-073936.json` |
+| 大列表 probe（同 fixture before/after） | **PASS**：1,510 逻辑未归组行；DOM 未归组行 **1,510 → 20**（总 session 行 1,514 → 24）；`scrollHeight` 51,616 不变；搜索窗口外 reveal、可见行拖放均 PASS | `scripts/qa/evidence-perf/large-before.json` / `large-after.json` |
+| 真实 home 数据测量（只读） | 1,639 session 目录 / 3 工作区；`workspace.json` 85 ids（59 归档、12 blank）、当前记录 2 组 4 会话；QA 同源 fixture 全目录扫描 1,474 subagent + 96 root；登记的 85 个均为 root → **实际可见未归组 10 行**（非 1,500；1,500 用 QA 大列表 fixture 压测） | 只读扫描 + workspace/record JSON |
+| 打包 | `npm pack` → `dsh-session-groups-0.2.3.tgz`（**119,275 bytes**；unpacked **466.3 kB**；**34 files**；sha256 `77011E393E4C144006060C60074ECAA6C5B9A12B0AD07AC36981737894F44D5F`） | 本文件 §0.2 |
+
+### 0.1 0.2.3 修复/变更明细（本次 patch）
+
+- **footer**：删除 0.2.2 两段切换及 `.dsg-footer-switch`/`.dsg-footer-segment` CSS、`footer.switchLabel` locale、两个 segment testid；恢复单个 `session-groups-toggle` `BUTTON`：图标/标签描述目标视图并随点击变化（folderAdjust「分组视图」⇄ grid「工作区视图」），保持 28px 高/16px glyph/13px 文本，`data-mode`/`title`/`aria-pressed` 反映当前态；rail 为 28px 图标按钮（标签隐藏）。
+- **header**：右侧顺序改为官方工作区段头 **search → view-options → plus**；保留 0.2.2 的 28×28/16px、搜索切换、view-options 三行归档 popover。
+- **未归组虚拟化**：`src/client/virtual-list.js` 纯 helper（`computeVirtualWindow`/`virtualScrollOffset`/常量）；`UngroupedSection` 监听 `.dsg-tree` scroll/resize，只渲染视口 + overscan=8，top/bottom spacer 精确保留 `total*34-2` 滚动高度；组树完整。拖拽/归档/工作区徽标/当前会话仍基于完整逻辑列表。
+- **搜索 reveal**：窗口外未归组目标先 `scrollToIndex` 再走 rect 滚动 + 1.5s 高亮；未归组折叠时等段体挂载后重试（最多 8 帧）。
+- **不变**：数据模型/Host 路由/存储/宽度/组拖/搜索索引/排版间距/深色 surfaces；无新增依赖/配置。
+
+### 0.2 0.2.3 打包记录
+
+- 命令：`npm pack`（最终 `npm run build` 后；`files` 只含发布文件）。
+- 产物：`dsh-session-groups-0.2.3.tgz`；**119,275 bytes**；unpacked **466.3 kB**；**34 files**。
+- sha256：`77011E393E4C144006060C60074ECAA6C5B9A12B0AD07AC36981737894F44D5F`；npm shasum `b0078c85e179874685c643dc843ca5d9e431e1b4`。
+- 内容：`src/**`（含新增 `src/client/virtual-list.js`，27 files）、`lib/client.js`、`locale/{zh,en}.json`、`package.json`、`dsh.plugin.json`、`cordis.patch.yml`、`README.md`（共 34）。
+- **不含**：`docs/`、`tests/`、`e2e/`、`scripts/`、`node_modules/`、`.spike-homes/`、`.superpowers/`、`pnpm-lock.yaml`、旧 `*.tgz`。
+
+### 0.3 大列表 before/after 实测（同 fixture，1,510 逻辑未归组）
+
+| 指标 | 0.2.2（DOM 全量） | 0.2.3（窗口化） | 变化 |
+|---|---|---|---|
+| DOM 未归组行 | 1,510 | 20–30 | **−98.5%+** |
+| DOM session 行（含 2 组 4 行） | 1,514 | 24 | −98.4% |
+| 初始渲染（click → 首行） | 191.2ms | 168.5ms | −12% |
+| 滚动两帧 | 18.0ms | 10.3ms | −43% |
+| hover 反馈（真实指针） | 12.2ms | 3.8ms | −69% |
+| dragover 指示 | 48.0ms | 19.9ms | −59% |
+| 窗口外搜索 reveal | 265.5ms | 192.9ms | −27% |
+| 可见行拖入组 | 84.8ms | 59.6ms | −30% |
+| `tree.scrollHeight` | 51,616 | 51,616 | 不变（spacer 精确） |
+
+搜索目标为记录尾部 `ungrouped` 的真实 root 会话（`session-14168603…`）：before 全量 DOM 中已存在；after 初始窗口 `targetRendered=false`，选中后 `scrollTop=51,158`、行渲染并高亮、下拉关闭。拖放目标为种子组 `g-large-a`，行落组成功。
+
+## 0-0.2.2. V1.1 patch 0.2.2 最终结论（2026-10-29 00:28，UI layout + 主题感知 + drag perf，历史）
 
 **V1.1 patch 0.2.2 UI layout + 拖拽性能 QA 验证线全绿 PASS（最终复跑隔离 home `.spike-homes/qa-0.2.2-e2e-4` + 4405）：**
 
@@ -234,6 +284,7 @@ E2E 期间 4402 为 QA 独占；client 用复制 home + 4403，互不干扰。
 
 ## 7. 更新记录
 
+- 2026-10-29 08:07：**0.2.3 虚拟化 + footer/header 回退 patch** —— `npm test` **203/203**；E2E **17/17 PASS**（82,357ms；step 1 单按钮三态/rail 28px；step 2/16 header 顺序 search→view-options→plus；step 9 rail footer 28×28 图标；step 13/16 footer 28/13/16 + 264px 无溢出；step 16 虚拟窗口 total/end-start/rendered；`console/pageErrors=[]`）；大列表 probe **PASS**（1,510 逻辑行：DOM 1,510→20、hover 12.2→3.8ms、dragover 48→20ms、search 266→193ms、drop 85→60ms、scrollHeight 51,616 不变）；setup 18/18（`removed=0`、client build 182,529 bytes / sha `774d8fc0…`）；`npm pack` 34 files / 119,275 bytes / sha256 `77011E39…`；`.spike-homes/qa-0.2.3-e2e` + `qa-0.2.3-large` 保留，真实 home 零写入。
 - 2026-10-29 00:28：**0.2.2 UI layout + 主题感知 + drag perf patch（最终复跑）** —— `npm test` 190/190；E2E **17/17 PASS**（step 时间和 72,511ms；step 1 footer 两段标签/active/显式 setMode 往返；step 2 header 顺序/搜索收起/view-options 三行 30px + Escape/点外关闭；step 13/16 header 36px + 264px 展开搜索无溢出；step 14 中间 50% 无效 toast 改为等待旧 toast 过期后再断言（去 flake）；step 15 无下拉 Escape/关闭按钮收起搜索行；step 16 footer/header 度量；step 17 深色 surfaces 对比度 13.3–17.4；`console/pageErrors=[]`；step 10 PASS 15.6s）；setup 18/18（`removed=0`、client build 176,007 bytes / sha `59f45afa…`）；`npm pack` 33 files / 113,452 bytes / sha256 `3625A5F2…`；`.spike-homes/qa-0.2.2-e2e-4` 保留，真实 home 零写入。
 - 2026-10-28 21:50：**0.2.1 间距对齐 patch** —— `npm test` 183/183；E2E **16/16 PASS**（step 16 扩充间距断言：行 padding 8/8 + gap 6、tree/组体/组线 row-gap 2、组缩进 10/10、header 4/6/8/2 + row-gap 8 + 78px、搜索 6/10 + gap 8/2、264px header/tree 252/252 无溢出；`console/pageErrors=[]`；step 10 PASS 19.1s）；setup 18/18（`removed=0`、client sha `cef4fb47…`）；`npm pack` 32 files / 103,874 bytes / sha256 `4ED5DE48…`；`.spike-homes/qa-0.2.1-spacing` 保留。
 - 2026-10-28 21:24：**0.2.1 排版对齐 patch** —— `npm test` 183/183；E2E **16/16 PASS**（新增 step 16：root 继承宿主 14px、组行 34/会话行 32、标题 14/20、workspace 徽标 12、搜索框 13/30、48 个图标全 16px；`console/pageErrors=[]`；step 10 PASS 17.2s）；setup 18/18（`removed=0`）；`npm pack` 32 files / 103,391 bytes；`.spike-homes/qa-0.2.1-final` 保留待最终清理。

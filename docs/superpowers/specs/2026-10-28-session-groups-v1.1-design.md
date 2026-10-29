@@ -250,3 +250,10 @@
 - 409：沿用 V1 队列/冲突 UI，不新增合并。
 
 **回退**：宽度模块可整体不挂载（把手不渲染）即恢复官方；搜索组件可隐藏；组拖可通过不设置 `draggable` 关闭。三项均不改变分组数据格式。
+
+## 9. 0.2.3 patch addendum（2026-10-29，实现期用户反馈）
+
+- **footer 回退**：§3.1/§4 的视图切换恢复为单按钮；0.2.2 两段（分组视图/工作区视图）删除。单按钮点击调用 `toggleMode()`，图标/文案描述目标视图并随点击变化（folderAdjust ⇄ grid；分组视图 ⇄ 工作区视图），28px 高/16px glyph/13px 文本，当前态写入 `data-mode`/`title`/`aria-pressed`；rail 为 28px 图标按钮。
+- **header 顺序**：右侧对齐官方工作区段头 **search → view-options → plus**；0.2.2 的 `+`/搜索/视图选项顺序作废。搜索仍按需展开 30px 行，view-options 仍三行归档。
+- **未归组虚拟化**：新增 `src/client/virtual-list.js` 纯函数；`UngroupedSection` 以 `.dsg-tree` 的 `scrollTop/clientHeight` + `listTop` + overscan=8 计算窗口，行高 32/gap 2/段头 34，top/bottom spacer 精确保留总高。逻辑顺序/搜索索引/拖拽/归档过滤仍用完整 `tree.ungrouped`；组树不虚拟化。搜索选中窗口外未归组行先 `scrollToIndex`，折叠未归组时等挂载后重试。
+- **验收**：单测 203/203；E2E 17/17（footer/header 更新）；大列表 probe 1,510 行 DOM 1,510→20，hover 12.2→3.8ms、dragover 48→20ms、search 266→193ms、drop 85→60ms（详见 `docs/TEST-RESULTS.md §0`）。

@@ -31,8 +31,6 @@ let QA_HOME = join(REPO_ROOT, '.spike-homes', 'qa');
 const SCRIPTS_QA = join(REPO_ROOT, 'scripts', 'qa');
 const DEFAULT_EVIDENCE = join(SCRIPTS_QA, 'evidence');
 const TOGGLE = '[data-testid="session-groups-toggle"]';
-const TOGGLE_GROUPS = '[data-testid="session-groups-toggle-groups"]';
-const TOGGLE_WORKSPACE = '[data-testid="session-groups-toggle-workspace"]';
 const VIEW = '[data-testid="session-groups-view"]';
 const GROUP = '[data-testid="session-groups-group"]';
 const GROUP_ADD = '[data-testid="session-groups-group-add"]';
@@ -312,6 +310,11 @@ function makeUi(driver, helpers) {
     async ungroupedSessionIds() {
       return await evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(SESSION)} + '[data-ungrouped="true"]'), (el) => el.getAttribute('data-session-id'))`);
     },
+    /** Logical ungrouped count from the section header (virtualization-safe). */
+    async ungroupedCount() {
+      const value = await evaluate(`Number(document.querySelector(${JSON.stringify(UNGROUPED)})?.getAttribute('data-count') ?? NaN)`);
+      return Number.isFinite(value) ? value : null;
+    },
     async dialogOpen() {
       return ui.exists(DIALOG);
     },
@@ -343,11 +346,8 @@ function makeUi(driver, helpers) {
       return ui.groupIdByName(name);
     },
     async toggleMode() {
-      // The footer is a two-segment switch: click the target segment explicitly.
-      const mode = (await ui.attrs(TOGGLE, 'data-mode'))[0] ?? 'workspace';
-      const target = mode === 'groups' ? TOGGLE_WORKSPACE : TOGGLE_GROUPS;
-      if (await ui.exists(target)) await ui.click(target);
-      else await ui.click(TOGGLE);
+      // Single footer button: clicking it toggles groups <-> official workspace.
+      await ui.click(TOGGLE);
       await sleep(300);
     },
     async waitGroupsView() {
@@ -1067,51 +1067,68 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (await ui.exists('[data-testid="session-groups-return"]')) {
           throw new Error('the normal header must not render a 返回工作区 button (error fallback only)');
         }
-        // Two-segment footer switch: both labels visible, active segment accent,
-        // 16px icons and 13px text inside a 28px control (feedback item 1).
-        const segments = await driver.evaluate(`Array.from(document.querySelectorAll('[data-testid^="session-groups-toggle-"]'), (el) => {
+        // Single 28px footer button (0.2.3): icon + label describe the target
+        // view, so both change after the click; the active mode lives in
+        // data-mode / aria-pressed. The removed 0.2.2 segments must not exist.
+        const readToggle = () => driver.evaluate(`(() => {
+          const el = document.querySelector(${JSON.stringify(TOGGLE)});
+          if (!el) return null;
           const style = getComputedStyle(el);
           const svg = el.querySelector('svg');
           const rect = svg ? svg.getBoundingClientRect() : null;
           return {
-            id: el.getAttribute('data-testid'),
+            tag: el.tagName,
             text: (el.textContent ?? '').trim(),
+            title: el.getAttribute('title'),
+            label: el.getAttribute('aria-label'),
             pressed: el.getAttribute('aria-pressed'),
+            mode: el.getAttribute('data-mode'),
+            target: el.getAttribute('data-target'),
             height: el.getBoundingClientRect().height,
             fontSize: Number.parseFloat(style.fontSize),
             iconWidth: rect ? rect.width : null,
             iconHeight: rect ? rect.height : null,
-            color: style.color,
+            glyphPath: svg ? (svg.innerHTML ?? '').slice(0, 160) : null,
           };
-        })`);
-        const groupsSegment = segments.find((segment) => segment.id === 'session-groups-toggle-groups');
-        const workspaceSegment = segments.find((segment) => segment.id === 'session-groups-toggle-workspace');
-        if (!groupsSegment || !workspaceSegment) {
-          throw new Error(`footer switch must expose both segments, got ${JSON.stringify(segments)}`);
+        })()`);
+        const toggle = await readToggle();
+        if (!toggle) throw new Error(`footer toggle ${TOGGLE} missing`);
+        if (toggle.tag !== 'BUTTON') throw new Error(`footer toggle must be a single button, got ${toggle.tag}`);
+        if (toggle.mode !== 'workspace' || toggle.pressed !== 'false') {
+          throw new Error(`footer initial state expected workspace/unpressed, got ${toggle.mode}/${toggle.pressed}`);
         }
-        if (!/分组视图|Group view/.test(groupsSegment.text)) throw new Error(`groups segment label missing: ${JSON.stringify(groupsSegment.text)}`);
-        if (!/工作区视图|Workspace view/.test(workspaceSegment.text)) throw new Error(`workspace segment label missing: ${JSON.stringify(workspaceSegment.text)}`);
-        if (groupsSegment.pressed !== 'false' || workspaceSegment.pressed !== 'true') {
-          throw new Error(`active segment must be workspace (groups=${groupsSegment.pressed}, workspace=${workspaceSegment.pressed})`);
+        if (!/分组视图|Group view/.test(toggle.text) || !/分组视图|Group view/.test(toggle.title ?? '')) {
+          throw new Error(`footer initial label/title must target the groups view: ${JSON.stringify(toggle)}`);
         }
-        for (const segment of [groupsSegment, workspaceSegment]) {
-          if (Math.abs(segment.height - 28) > 1) throw new Error(`${segment.id} height expected 28 ±1, got ${segment.height}`);
-          if (Math.abs(segment.fontSize - 13) > 0.6) throw new Error(`${segment.id} font-size expected 13px, got ${segment.fontSize}`);
-          if (Math.abs(segment.iconWidth - 16) > 0.6 || Math.abs(segment.iconHeight - 16) > 0.6) {
-            throw new Error(`${segment.id} icon expected 16x16, got ${segment.iconWidth}x${segment.iconHeight}`);
-          }
+        if (Math.abs(toggle.height - 28) > 1) throw new Error(`footer toggle height expected 28 ±1, got ${toggle.height}`);
+        if (Math.abs(toggle.fontSize - 13) > 0.6) throw new Error(`footer toggle font-size expected 13px, got ${toggle.fontSize}`);
+        if (Math.abs(toggle.iconWidth - 16) > 0.6 || Math.abs(toggle.iconHeight - 16) > 0.6) {
+          throw new Error(`footer toggle icon expected 16x16, got ${toggle.iconWidth}x${toggle.iconHeight}`);
         }
-        // Each segment targets its own mode (no blind toggle): groups -> groups,
-        // workspace -> official workspace. Return to the default workspace view
-        // so the rest of step 1 still asserts first-load behaviour.
-        await ui.click(TOGGLE_GROUPS);
+        if (await ui.exists('[data-testid="session-groups-toggle-groups"]') || await ui.exists('[data-testid="session-groups-toggle-workspace"]')) {
+          throw new Error('the 0.2.2 two-segment footer must be gone');
+        }
+        // Click -> groups: every visible facet flips.
+        await ui.click(TOGGLE);
         await ui.waitGroupsView();
-        if ((await ui.attrs(TOGGLE, 'data-mode'))[0] !== 'groups') throw new Error('clicking the groups segment did not call setMode("groups")');
-        if ((await ui.attrs(TOGGLE_GROUPS, 'aria-pressed'))[0] !== 'true') throw new Error('groups segment must become active after the click');
-        await ui.click(TOGGLE_WORKSPACE);
+        const groupsToggle = await readToggle();
+        if (groupsToggle.mode !== 'groups' || groupsToggle.pressed !== 'true') {
+          throw new Error(`footer after click expected groups/pressed, got ${groupsToggle.mode}/${groupsToggle.pressed}`);
+        }
+        if (!/工作区视图|Workspace view/.test(groupsToggle.text) || !/工作区视图|Workspace view/.test(groupsToggle.title ?? '')) {
+          throw new Error(`footer label/title must target the workspace view after the click: ${JSON.stringify(groupsToggle)}`);
+        }
+        if (groupsToggle.glyphPath === toggle.glyphPath) throw new Error('footer glyph must change with the target view');
+        // Click again -> official workspace, label/icon back to the groups target.
+        await ui.click(TOGGLE);
         await ui.waitWorkspaceView();
-        if ((await ui.attrs(TOGGLE, 'data-mode'))[0] !== 'workspace') throw new Error('clicking the workspace segment did not call setMode("workspace")');
-        if ((await ui.attrs(TOGGLE_WORKSPACE, 'aria-pressed'))[0] !== 'true') throw new Error('workspace segment must become active after the click');
+        const backToggle = await readToggle();
+        if (backToggle.mode !== 'workspace' || backToggle.pressed !== 'false') {
+          throw new Error(`footer after second click expected workspace/unpressed, got ${backToggle.mode}/${backToggle.pressed}`);
+        }
+        if (backToggle.text !== toggle.text || backToggle.glyphPath !== toggle.glyphPath) {
+          throw new Error(`footer did not restore its initial label/icon: ${JSON.stringify(backToggle)}`);
+        }
         const titles = workspaceTitles();
         // The official workspace browser hydrates asynchronously after boot.
         await driver.waitFor(
@@ -1122,7 +1139,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (titles.length && !titles.some((title) => body.includes(title))) {
           throw new Error(`official workspace browser did not render any fixture workspace title (${titles.join(', ')})`);
         }
-        return { mode: mode[0], workspaceTitles: titles, segments };
+        return { mode: mode[0], workspaceTitles: titles, footer: { initial: toggle, groups: groupsToggle, back: backToggle } };
       },
     },
     {
@@ -1145,9 +1162,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (sessions.length === 0) throw new Error('groups view rendered zero session rows');
         const groups = await ui.groups();
         if (groups.length > 0) throw new Error('fresh isolated home should start with zero groups');
-        // Header right side: plus, search, view-options (in this order, 28x28,
-        // 16px glyphs); search fields stay collapsed until the search icon opens
-        // them, and the old 返回工作区 button is gone from the normal header.
+        // Header right side: search, view-options, plus (official workspace
+        // section order), 28x28 with 16px glyphs; search fields stay collapsed
+        // until the search icon opens them, and the old 返回工作区 button is gone.
         const header = await driver.evaluate(`(() => {
           const root = document.querySelector(${JSON.stringify(HEADER)});
           const buttons = Array.from(root?.querySelectorAll('button') ?? [], (el) => ({
@@ -1163,7 +1180,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             returnVisible: !!root?.querySelector('[data-testid="session-groups-return"]'),
           };
         })()`);
-        const expectedOrder = ['session-groups-new-group', 'session-groups-search-toggle', 'session-groups-view-options'];
+        const expectedOrder = ['session-groups-search-toggle', 'session-groups-view-options', 'session-groups-new-group'];
         const actualOrder = header.buttons.map((button) => button.id);
         if (JSON.stringify(actualOrder) !== JSON.stringify(expectedOrder)) {
           throw new Error(`groups header actions expected ${JSON.stringify(expectedOrder)}, got ${JSON.stringify(actualOrder)}`);
@@ -1241,8 +1258,12 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
       name: 'drag-ten-cross-workspace-sessions',
       async run() {
         await ui.dismissOverlay();
+        const logicalBefore = await ui.ungroupedCount();
+        if (!(logicalBefore >= 10)) throw new Error(`fixtures expose only ${logicalBefore} logical ungrouped sessions; need >=10 for the 10-session drag step`);
+        // Virtualization renders the viewport + overscan only; the logical count
+        // comes from the section header, while the drag sources are visible rows.
         const before = await ui.ungroupedSessionIds();
-        if (before.length < 10) throw new Error(`fixtures expose only ${before.length} ungrouped session rows; need >=10 for the 10-session drag step`);
+        if (before.length < 10) throw new Error(`fixtures expose only ${before.length} rendered ungrouped session rows; need >=10 for the 10-session drag step`);
         const picks = before.slice(0, 10);
         const { a, child, b } = state.groups;
         const plan = [
@@ -1260,12 +1281,19 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           if (!row) throw new Error(`dragged session ${sid} disappeared`);
           if (row.groupId !== gid) throw new Error(`session ${sid} expected in group ${gid}, got ${row.groupId}`);
         }
-        const ungroupedAfter = await ui.ungroupedSessionIds();
-        if (ungroupedAfter.length !== before.length - 10) {
-          throw new Error(`ungrouped count ${before.length} -> ${ungroupedAfter.length}, expected -10`);
+        const logicalAfter = await ui.ungroupedCount();
+        if (logicalAfter !== logicalBefore - 10) {
+          throw new Error(`logical ungrouped count ${logicalBefore} -> ${logicalAfter}, expected -10`);
         }
+        const ungroupedAfter = await ui.ungroupedSessionIds();
         state.dragged = plan;
-        return { moved: plan.length, ungroupedBefore: before.length, ungroupedAfter: ungroupedAfter.length };
+        return {
+          moved: plan.length,
+          ungroupedBefore: logicalBefore,
+          ungroupedAfter: logicalAfter,
+          renderedBefore: before.length,
+          renderedAfter: ungroupedAfter.length,
+        };
       },
     },
     {
@@ -1470,12 +1498,40 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const hasRail = await ui.exists(RAIL);
         const hasExpand = await ui.exists(RAIL_EXPAND);
         if (!hasRail && !hasExpand) throw new Error('neither the rail placeholder nor the expand button rendered in 56px mode');
+        const railFooter = await driver.evaluate(`(() => {
+          const el = document.querySelector(${JSON.stringify(TOGGLE)});
+          if (!el) return null;
+          const rect = el.getBoundingClientRect();
+          const svg = el.querySelector('svg');
+          const svgRect = svg ? svg.getBoundingClientRect() : null;
+          return {
+            width: rect.width,
+            height: rect.height,
+            text: (el.textContent ?? '').trim(),
+            wide: el.getAttribute('data-wide'),
+            mode: el.getAttribute('data-mode'),
+            title: el.getAttribute('title'),
+            icon: svgRect ? { width: svgRect.width, height: svgRect.height } : null,
+          };
+        })()`);
+        if (railFooter) {
+          if (Math.abs(railFooter.width - 28) > 1 || Math.abs(railFooter.height - 28) > 1) {
+            throw new Error(`rail footer must be a 28x28 icon-only button, got ${JSON.stringify(railFooter)}`);
+          }
+          if (railFooter.text !== '') throw new Error(`rail footer must hide its label, got ${JSON.stringify(railFooter.text)}`);
+          if (railFooter.wide !== 'false') throw new Error(`rail footer must report data-wide="false", got ${railFooter.wide}`);
+          if (Math.abs(railFooter.icon?.width - 16) > 0.6 || Math.abs(railFooter.icon?.height - 16) > 0.6) {
+            throw new Error(`rail footer icon expected 16x16, got ${JSON.stringify(railFooter.icon)}`);
+          }
+        } else {
+          throw new Error(`footer toggle missing in rail mode`);
+        }
         if (hasExpand) {
           await ui.click(RAIL_EXPAND);
           await sleep(500);
           if (!(await ui.exists(VIEW))) throw new Error('rail expand did not restore the groups view');
         }
-        return { rail: hasRail, expand: hasExpand };
+        return { rail: hasRail, expand: hasExpand, footer: railFooter };
       },
     },
     {
@@ -1705,18 +1761,25 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         const header = await driver.evaluate(`(() => {
           const el = document.querySelector(${JSON.stringify(HEADER)});
           if (!el) return null;
-          const switchEl = document.querySelector(${JSON.stringify(TOGGLE)});
-          const segments = Array.from(document.querySelectorAll('[data-testid^="session-groups-toggle-"]'), (node) => {
-            const rect = node.getBoundingClientRect();
-            return { id: node.getAttribute('data-testid'), width: rect.width, height: rect.height, text: (node.textContent ?? '').trim() };
-          });
+          const toggle = document.querySelector(${JSON.stringify(TOGGLE)});
+          const toggleRect = toggle ? toggle.getBoundingClientRect() : null;
+          const svg = toggle ? toggle.querySelector('svg') : null;
+          const svgRect = svg ? svg.getBoundingClientRect() : null;
           return {
             clientWidth: el.clientWidth,
             scrollWidth: el.scrollWidth,
             height: el.getBoundingClientRect().height,
             searchOpen: el.getAttribute('data-search-open'),
-            switchWidth: switchEl ? switchEl.getBoundingClientRect().width : null,
-            segments,
+            footer: toggle ? {
+              mode: toggle.getAttribute('data-mode'),
+              pressed: toggle.getAttribute('aria-pressed'),
+              text: (toggle.textContent ?? '').trim(),
+              title: toggle.getAttribute('title'),
+              width: toggleRect.width,
+              height: toggleRect.height,
+              wide: toggle.getAttribute('data-wide'),
+              icon: svgRect ? { width: svgRect.width, height: svgRect.height } : null,
+            } : null,
           };
         })()`);
         if (!header) throw new Error('groups header is missing at 264px');
@@ -1725,8 +1788,11 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         }
         if (Math.abs(header.height - 36) > 1) throw new Error(`groups header height expected 36 ±1 at 264px, got ${header.height}`);
         if (header.searchOpen !== 'false') throw new Error(`search must start collapsed at 264px, got data-search-open=${header.searchOpen}`);
-        if (header.segments.length !== 2 || header.segments.some((segment) => !(segment.width > 0) || !segment.text)) {
-          throw new Error(`two labelled footer segments must stay visible at 264px, got ${JSON.stringify(header.segments)}`);
+        if (!header.footer || !(header.footer.width > 0) || !header.footer.text) {
+          throw new Error(`the single labelled footer button must stay visible at 264px, got ${JSON.stringify(header.footer)}`);
+        }
+        if (Math.abs(header.footer.height - 28) > 1 || Math.abs(header.footer.icon?.width - 16) > 0.6 || Math.abs(header.footer.icon?.height - 16) > 0.6) {
+          throw new Error(`footer metrics at 264px expected 28px high / 16px icon, got ${JSON.stringify(header.footer)}`);
         }
 
         // Rail round-trip with the existing official collapse control: the override
@@ -2490,23 +2556,28 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
               glyph: svgRect ? { width: svgRect.width, height: svgRect.height } : null,
             };
           });
-          const footerSwitch = document.querySelector('.dsg-footer-switch');
-          const footerSegments = Array.from(document.querySelectorAll('[data-testid^="session-groups-toggle-"]'), (segment) => {
-            const style = getComputedStyle(segment);
-            const rect = segment.getBoundingClientRect();
-            const svg = segment.querySelector('svg');
+          const footerToggle = document.querySelector(${JSON.stringify(TOGGLE)});
+          const footer = footerToggle ? (() => {
+            const style = getComputedStyle(footerToggle);
+            const rect = footerToggle.getBoundingClientRect();
+            const svg = footerToggle.querySelector('svg');
             const svgRect = svg ? svg.getBoundingClientRect() : null;
             return {
-              id: segment.getAttribute('data-testid'),
-              text: (segment.textContent ?? '').trim(),
-              pressed: segment.getAttribute('aria-pressed'),
+              tag: footerToggle.tagName,
+              text: (footerToggle.textContent ?? '').trim(),
+              title: footerToggle.getAttribute('title'),
+              pressed: footerToggle.getAttribute('aria-pressed'),
+              mode: footerToggle.getAttribute('data-mode'),
+              wide: footerToggle.getAttribute('data-wide'),
+              width: rect.width,
               height: rect.height,
               fontSize: px(style.fontSize),
               lineHeight: px(style.lineHeight),
               color: style.color,
               icon: svgRect ? { width: svgRect.width, height: svgRect.height } : null,
             };
-          });
+          })() : null;
+          const virtualLine = document.querySelector('.dsg-virtual-list');
           // Resolve official theme tokens through a throw-away probe so the
           // assertions compare the real host values instead of hard-coded hex.
           const tokenColor = (name) => {
@@ -2553,11 +2624,14 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             buttons: {
               header: headerButtons,
             },
-            footer: {
-              width: rectOf(footerSwitch)?.width ?? null,
-              height: rectOf(footerSwitch)?.height ?? null,
-              mode: footerSwitch?.getAttribute('data-mode') ?? null,
-              segments: footerSegments,
+            footer,
+            virtual: {
+              total: Number(virtualLine?.getAttribute('data-virtual-total') ?? NaN),
+              start: Number(virtualLine?.getAttribute('data-virtual-start') ?? NaN),
+              end: Number(virtualLine?.getAttribute('data-virtual-end') ?? NaN),
+              renderedUngrouped: document.querySelectorAll('[data-testid="session-groups-session"][data-ungrouped="true"]').length,
+              spacers: document.querySelectorAll('[data-testid="session-groups-virtual-spacer"]').length,
+              logicalCount: Number(document.querySelector('[data-testid="session-groups-ungrouped"]')?.getAttribute('data-count') ?? NaN),
             },
             tokens: {
               primary: tokenColor('--dsw-alias-label-primary'),
@@ -2644,9 +2718,9 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         if (metrics.text.headerAccentColor !== metrics.tokens.accent) {
           throw new Error(`header accent icon must use the primary accent (${metrics.tokens.accent}), got ${metrics.text.headerAccentColor}`);
         }
-        // (3b) Header actions: plus, search, view-options — each 28x28 with a
-        // 16px glyph, in that order.
-        const expectedHeaderOrder = ['session-groups-new-group', 'session-groups-search-toggle', 'session-groups-view-options'];
+        // (3b) Header actions: search, view-options, plus — each 28x28 with a
+        // 16px glyph, in the official workspace-section order.
+        const expectedHeaderOrder = ['session-groups-search-toggle', 'session-groups-view-options', 'session-groups-new-group'];
         const actualHeaderOrder = metrics.buttons.header.map((button) => button.id);
         if (JSON.stringify(actualHeaderOrder) !== JSON.stringify(expectedHeaderOrder)) {
           throw new Error(`header action order expected ${JSON.stringify(expectedHeaderOrder)}, got ${JSON.stringify(actualHeaderOrder)}`);
@@ -2658,31 +2732,40 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
           near(button.glyph.width, 16, `${button.id} glyph width`);
           near(button.glyph.height, 16, `${button.id} glyph height`);
         }
-        // (3c) Footer two-segment switch: both labels visible, 28px segment,
-        // 13px text, 16px icons, active segment accent, explicit group mode.
-        if (metrics.footer.mode !== 'groups') throw new Error(`footer data-mode expected groups, got ${metrics.footer.mode}`);
-        near(metrics.footer.height, 28, 'footer switch height', 1);
-        if (metrics.footer.segments.length !== 2) {
-          throw new Error(`footer switch must expose two segments, got ${JSON.stringify(metrics.footer.segments)}`);
+        // (3c) Footer single button: 28px high, 13px text, 16px icon; the active
+        // mode is groups and the label/icon target the workspace view.
+        if (!metrics.footer) throw new Error('footer toggle is missing');
+        if (metrics.footer.tag !== 'BUTTON') throw new Error(`footer toggle must be a button, got ${metrics.footer.tag}`);
+        if (metrics.footer.mode !== 'groups' || metrics.footer.pressed !== 'true') {
+          throw new Error(`footer expected groups/pressed, got ${metrics.footer.mode}/${metrics.footer.pressed}`);
         }
-        const groupsSegment = metrics.footer.segments.find((segment) => segment.id === 'session-groups-toggle-groups');
-        const workspaceSegment = metrics.footer.segments.find((segment) => segment.id === 'session-groups-toggle-workspace');
-        if (!groupsSegment || !workspaceSegment) throw new Error('footer switch segments are incomplete');
-        if (!/分组视图|Group view/.test(groupsSegment.text) || !/工作区视图|Workspace view/.test(workspaceSegment.text)) {
-          throw new Error(`footer labels missing (${JSON.stringify(groupsSegment.text)}, ${JSON.stringify(workspaceSegment.text)})`);
+        if (metrics.footer.wide !== 'true') throw new Error(`wide footer expected data-wide="true", got ${metrics.footer.wide}`);
+        near(metrics.footer.height, 28, 'footer height', 1);
+        near(metrics.footer.fontSize, 13, 'footer font-size');
+        near(metrics.footer.icon.width, 16, 'footer icon width');
+        near(metrics.footer.icon.height, 16, 'footer icon height');
+        if (!/工作区视图|Workspace view/.test(metrics.footer.text)) {
+          throw new Error(`footer label must target the workspace view while groups are active, got ${JSON.stringify(metrics.footer.text)}`);
         }
-        if (groupsSegment.pressed !== 'true' || workspaceSegment.pressed !== 'false') {
-          throw new Error(`active footer segment expected groups (groups=${groupsSegment.pressed}, workspace=${workspaceSegment.pressed})`);
+        if (!/工作区视图|Workspace view/.test(metrics.footer.title ?? '')) {
+          throw new Error(`footer title must match the label, got ${JSON.stringify(metrics.footer.title)}`);
         }
-        for (const segment of metrics.footer.segments) {
-          near(segment.height, 28, `${segment.id} height`, 1);
-          near(segment.fontSize, 13, `${segment.id} font-size`);
-          if (!segment.icon) throw new Error(`${segment.id} has no icon`);
-          near(segment.icon.width, 16, `${segment.id} icon width`);
-          near(segment.icon.height, 16, `${segment.id} icon height`);
+        // (3d) Virtualized ungrouped list: the rendered rows stay within the
+        // logical count and the window bookkeeping is coherent. The normal QA
+        // fixture is small enough that every row fits; the large-list probe
+        // asserts the bounded-DOM case with ~1,500 rows.
+        const virtual = metrics.virtual;
+        if (!Number.isFinite(virtual.total) || virtual.total !== virtual.logicalCount) {
+          throw new Error(`virtual ungrouped total ${virtual.total} must equal the header logical count ${virtual.logicalCount}`);
         }
-        if (groupsSegment.color !== metrics.tokens.accent) {
-          throw new Error(`active footer segment must use the accent color (${metrics.tokens.accent}), got ${groupsSegment.color}`);
+        if (!(virtual.renderedUngrouped <= virtual.total)) {
+          throw new Error(`virtual ungrouped rendered ${virtual.renderedUngrouped} must not exceed the logical total ${virtual.total}`);
+        }
+        if (virtual.end - virtual.start !== virtual.renderedUngrouped) {
+          throw new Error(`virtual window bookkeeping mismatch: end-start=${virtual.end - virtual.start}, rendered=${virtual.renderedUngrouped}`);
+        }
+        if (virtual.renderedUngrouped > 80) {
+          throw new Error(`virtual ungrouped list rendered ${virtual.renderedUngrouped} rows (>80); windowing is not active`);
         }
         // (4) Official 16px glyphs (group icon, caret, group action glyph, and
         // every icon rendered inside the groups root).
@@ -2872,7 +2955,8 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
             meta: { workspaceBadge: 12, searchInput: 13 },
             icons: 16,
             header: { height: 36, expandedHeight: 74, actions: expectedHeaderOrder },
-            footer: { height: 28, segments: metrics.footer.segments.map((segment) => ({ id: segment.id, text: segment.text, pressed: segment.pressed })) },
+            footer: { height: 28, mode: metrics.footer.mode, text: metrics.footer.text, pressed: metrics.footer.pressed },
+            virtual: metrics.virtual,
             spacing: {
               rowPadding: '0 8px',
               rowGap: 6,

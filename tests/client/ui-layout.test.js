@@ -67,26 +67,43 @@ test('header is a 36px official section row: title 14/20 primary + accent icon, 
   ]) {
     assert.equal(components.includes(testId), true, `components must render ${testId}`)
   }
-  const plus = components.indexOf("testId: 'session-groups-new-group'")
   const search = components.indexOf("testId: 'session-groups-search-toggle'")
   const options = components.indexOf("testId: 'session-groups-view-options'")
-  assert.ok(plus !== -1 && plus < search && search < options, 'header action order must be plus, search, view-options')
+  const plus = components.indexOf("testId: 'session-groups-new-group'")
+  assert.ok(search !== -1 && search < options && options < plus, 'header action order must be search, view-options, plus (official workspace section order)')
 })
 
-test('footer is a two-segment 28px switch with both labels and explicit setMode targets', () => {
-  const track = block('.dsg-footer-switch {')
-  assert.match(track, /height:\s*28px/)
-  const segment = block('.dsg-footer-segment {')
-  assert.match(segment, /height:\s*28px/)
-  assert.match(segment, /font-size:\s*var\(--dsg-font-13,\s*13px\)/)
-  assert.match(segment, /gap:\s*6px/)
+test('footer is one 28px toggle button whose icon/label target the other view', () => {
+  const toggle = block('.dsg-footer-toggle {')
+  assert.match(toggle, /height:\s*28px/)
+  assert.match(toggle, /font-size:\s*var\(--dsg-font-13,\s*13px\)/)
+  assert.match(toggle, /gap:\s*6px/)
 
-  assert.match(components, /segment\('groups', 'folderAdjust', 'footer\.toGroups', 'session-groups-toggle-groups'\)/)
-  assert.match(components, /segment\('workspace', 'grid', 'footer\.toWorkspace', 'session-groups-toggle-workspace'\)/)
-  assert.match(components, /rt\(\)\?\.setMode\(value\)/)
-  assert.equal(components.includes('toggleMode()'), false, 'footer segments must not blind-toggle')
-  assert.equal(components.includes('returnToWorkspace'), false, 'header return button handler must be removed')
+  assert.match(components, /class: 'dsg-footer-toggle'/)
+  assert.match(components, /'data-testid': 'session-groups-toggle'/)
+  assert.match(components, /'data-mode': mode/)
+  assert.match(components, /'aria-pressed': mode === 'groups' \? 'true' : 'false'/)
+  assert.match(components, /const target = mode === 'groups' \? 'workspace' : 'groups'/)
+  assert.match(components, /const glyph = target === 'groups' \? 'folderAdjust' : 'grid'/)
+  assert.match(components, /rt\(\)\?\.toggleMode\(\)/)
+  assert.equal(components.includes('dsg-footer-segment'), false, 'the 0.2.2 two-segment switch must be gone')
+  assert.equal(components.includes('dsg-footer-switch'), false, 'the 0.2.2 switch track must be gone')
+  assert.equal(CSS.includes('.dsg-footer-segment'), false, 'no segment CSS remains')
+  assert.equal(CSS.includes('.dsg-footer-switch'), false, 'no switch-track CSS remains')
   assert.equal(UI_GLYPHS.grid.length > 0, true)
+  assert.equal(UI_GLYPHS.folderAdjust.length > 0, true)
+})
+
+test('ungrouped inbox is windowed with exact spacers and bounded DOM rows', () => {
+  assert.match(components, /computeVirtualWindow/)
+  assert.match(components, /session-groups-virtual-spacer/)
+  assert.match(components, /'data-virtual-start'/)
+  assert.match(components, /'data-virtual-end'/)
+  assert.match(components, /virtualRef/)
+  assert.match(components, /scrollToIndex/)
+  const line = block('.dsg-virtual-list {')
+  assert.match(line, /gap:\s*2px/)
+  assert.match(block('.dsg-virtual-spacer {'), /flex:\s*none/)
 })
 
 test('archive tri-state lives in the view-options popover with 30px rows and a check', () => {
@@ -101,7 +118,7 @@ test('archive tri-state lives in the view-options popover with 30px rows and a c
   assert.match(block('.dsg-view-options-popover {'), /position:\s*absolute/)
 })
 
-test('archive labels and switch labels match the 0.2.2 copy', () => {
+test('archive labels and footer action labels match the 0.2.3 copy', () => {
   assert.equal(zh['archive.hidden'], '隐藏已归档')
   assert.equal(zh['archive.all'], '全部对话（显示已归档）')
   assert.equal(zh['archive.only'], '仅显示已归档')
@@ -110,6 +127,6 @@ test('archive labels and switch labels match the 0.2.2 copy', () => {
   assert.equal(en['archive.only'], 'Archived only')
   assert.equal(zh['footer.toGroups'], '分组视图')
   assert.equal(zh['footer.toWorkspace'], '工作区视图')
-  assert.equal(zh['footer.switchLabel'], '视图切换')
-  assert.equal(en['footer.switchLabel'], 'Switch view')
+  assert.equal(Object.hasOwn(zh, 'footer.switchLabel'), false, 'unused 0.2.2 switch label must be removed')
+  assert.equal(Object.hasOwn(en, 'footer.switchLabel'), false, 'unused 0.2.2 switch label must be removed')
 })

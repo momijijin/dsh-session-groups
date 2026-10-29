@@ -242,6 +242,11 @@ export const CSS = `
 .dsg-group-actions .dsg-icon-button, .dsg-session-actions .dsg-icon-button { width: 16px; height: 16px; }
 .dsg-group-body { display: flex; flex-direction: column; gap: 2px; }
 .dsg-group-line { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.28)); display: flex; flex-direction: column; gap: 2px; min-height: 24px; }
+/* Windowed ungrouped rows: only the visible slice + overscan is in the DOM;
+ * the 2px gaps stay identical to a full list (top/bottom spacers preserve the
+ * exact scroll height, see virtual-list.js). */
+.dsg-virtual-list { gap: 2px; }
+.dsg-virtual-spacer { flex: none; width: 100%; pointer-events: none; }
 .dsg-group-line[data-empty="true"] { min-height: 24px; }
 .dsg-group-empty { padding: 4px 8px; font-size: var(--dsg-font-13, 13px); color: var(--dsw-alias-label-tertiary, CanvasText); font-style: italic; }
 .dsg-session-row { height: 32px; padding: 0 8px; }
@@ -322,29 +327,20 @@ export const CSS = `
 .dsg-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; }
 .dsg-rail-button { width: 36px; height: 36px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.08)); color: var(--dsw-alias-label-secondary, CanvasText); border-radius: var(--dsw-radius-md, 8px); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .dsg-rail-label { font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-label-tertiary, CanvasText); }
-/* Bottom two-segment view switch (feedback item 1). */
-.dsg-footer-switch {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  width: 100%;
-  height: 28px;
-  padding: 0;
-  border-radius: var(--dsw-radius-sm, 6px);
-  background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 10%, transparent));
-}
-.dsg-footer-segment {
+/* Bottom single-button view toggle (0.2.3): icon + label describe the target,
+ * active mode lives in data-mode / aria-pressed. */
+.dsg-footer-toggle {
   appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  flex: 1 1 0;
-  min-width: 0;
+  box-sizing: border-box;
+  width: 100%;
   height: 28px;
-  padding: 0 6px;
-  border: none;
+  padding: 0 8px;
+  margin: 0;
+  border: 0.5px solid var(--dsw-alias-border-l3, rgba(128, 128, 128, 0.35));
   border-radius: var(--dsw-radius-sm, 6px);
   background: transparent;
   color: var(--dsw-alias-label-secondary, CanvasText);
@@ -352,33 +348,25 @@ export const CSS = `
   font-size: var(--dsg-font-13, 13px);
   line-height: 20px;
   cursor: pointer;
-}
-.dsg-footer-segment:hover { color: var(--dsw-alias-label-primary, CanvasText); }
-.dsg-footer-segment[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, CanvasText) 14%, transparent);
-  color: var(--dsw-alias-state-business-primary, CanvasText);
-  font-weight: 500;
-}
-.dsg-footer-segment:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, CanvasText); outline-offset: -2px; }
-.dsg-footer-segment-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Rail/no-wide fallback: icon-only 36px controls (stacked), still one switch. */
-.dsg-footer-switch[data-wide="false"] {
-  flex-direction: column;
-  width: 36px;
-  height: auto;
-  padding: 0;
-  background: transparent;
-  gap: 6px;
-}
-.dsg-footer-switch[data-wide="false"] .dsg-footer-segment {
-  width: 36px;
-  height: 36px;
   flex: none;
-  padding: 0;
-  border-radius: var(--dsw-radius-md, 12px);
 }
-.dsg-footer-switch[data-wide="false"] .dsg-footer-segment-label { display: none; }
-.dsg-footer-switch[data-wide="false"] .dsg-footer-segment:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 10%, transparent)); }
+.dsg-footer-toggle:hover {
+  background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 10%, transparent));
+  color: var(--dsw-alias-label-primary, CanvasText);
+}
+.dsg-footer-toggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, CanvasText); outline-offset: -2px; }
+.dsg-footer-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Rail/no-wide fallback: icon-only 28px control (label hidden). */
+.dsg-footer-toggle[data-wide="false"] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.dsg-footer-toggle[data-wide="false"]:hover {
+  background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 10%, transparent));
+}
 .dsg-flat { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 1; padding: 2px 4px 8px 2px; }
 .dsg-flat-workspace { padding: 6px 6px 2px; font-size: var(--dsg-font-13, 13px); font-weight: 600; color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-nowrap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
