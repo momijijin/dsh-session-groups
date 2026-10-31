@@ -42,7 +42,7 @@ import {
   ARCHIVE_FILTERS,
   ARCHIVE_FILTER_LABEL_KEYS,
 } from './filter.js'
-import { applyDrop, hitTest, sameDropTarget } from './drag.js'
+import { applyDrop, hitTest, sameDropTarget, stickyDropTarget } from './drag.js'
 import {
   diagContext,
   diagDragEnd,
@@ -2216,6 +2216,7 @@ export const GroupsView = (props) => {
    * the ones that actually changed the rendered target.
    */
   const setDropTargetTracked = (next) => {
+    if (next === null) dragTargetLockRef.current = null
     if (sameDropTarget(dropTargetRef.current, next)) {
       if (perfEnabled()) perfDropTarget(false)
       return
@@ -2239,12 +2240,21 @@ export const GroupsView = (props) => {
   const searchHitRowRef = useRef(null)
   const autoExpandRef = useRef({ groupId: null, timer: null })
   const dragRef = useRef(null)
+  const dragTargetLockRef = useRef(null)
   const suppressedClickRef = useRef(null)
   // Pointerdown origin for the group row: a dragstart always targets the
   // draggable row, so the button check must be captured on pointerdown (where the
   // target really is the `+`/`…` button) and consumed by onGroupDragStart.
   const buttonPointerRef = useRef(null)
   dragRef.current = dragState
+
+  /** Locked target for the current resting pointer position (0.2.21). */
+  const stickyTargetFor = (event) =>
+    stickyDropTarget(dragTargetLockRef.current, event?.clientX, event?.clientY)
+  const lockTargetAt = (event, target) => {
+    if (!target || !event || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return
+    dragTargetLockRef.current = { x: event.clientX, y: event.clientY, target }
+  }
 
   // Sidebar width override state. `preferredWidth` is the persisted preference;
   // the applied width is always its viewport clamp, so a narrow viewport never
@@ -2550,10 +2560,20 @@ export const GroupsView = (props) => {
   const rowDragOver = (event, target) => {
     const drag = dragRef.current
     if (!drag) return
+    const sticky = stickyTargetFor(event)
+    if (sticky) {
+      // The placeholder itself moved the row under the pointer. Keep the
+      // already-rendered target until the pointer deliberately moves.
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+      return
+    }
     event.preventDefault()
     event.stopPropagation()
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
     setDropTargetTracked(target)
+    lockTargetAt(event, target)
   }
 
   const groupOwnedIds = (groupId) => {
@@ -2586,6 +2606,12 @@ export const GroupsView = (props) => {
   const previewGroupDrop = (event, viewTarget, label) => {
     const draggedId = groupDragId()
     if (!draggedId) return
+    if (stickyTargetFor(event)) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+      return
+    }
     const resolved = resolveGroupDrop({ doc: store.doc, draggedId, target: resolveTargetFor(viewTarget) })
     if (resolved.invalid) {
       setDropTargetTracked({ ...viewTarget, kind: 'group-forbidden' })
@@ -2837,6 +2863,7 @@ export const GroupsView = (props) => {
       // the diagnostics file (privacy rule in diagnostics.js).
       if (diagEnabled()) diagDragStart('session', { sessionId })
       suppressedClickRef.current = null
+      dragTargetLockRef.current = null
       setDragState(dragRef.current)
       rt()?.startDragLabel?.(dragRef.current.label)
     },
@@ -2882,6 +2909,7 @@ export const GroupsView = (props) => {
       dragRef.current = drag
       if (diagEnabled()) diagDragStart('group', { groupId: group.id, name: group.name })
       suppressedClickRef.current = { groupId: group.id, at: Date.now() }
+      dragTargetLockRef.current = null
       setDragState(drag)
       setDropTargetTracked(null)
       rt()?.startDragLabel?.(group.name)
@@ -2902,6 +2930,9 @@ export const GroupsView = (props) => {
      */
     onDragLeave: (event) => {
       if (!dragRef.current) return
+      // Layout shift can fire dragleave on the row that just moved; a stationary
+      // pointer must not tear down the locked placeholder.
+      if (stickyTargetFor(event)) return
       const current = event?.currentTarget
       const next = event?.relatedTarget
       if (current && next && typeof current.contains === 'function' && current.contains(next)) return
@@ -2935,6 +2966,12 @@ export const GroupsView = (props) => {
     onDragOverSession: (event, sessionId, groupId, ungrouped) => {
       const drag = dragRef.current
       if (!drag || drag.kind !== 'session') return
+      if (stickyTargetFor(event)) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+        return
+      }
       const rect = event.currentTarget.getBoundingClientRect()
       const target = hitTest({
         source: drag,
@@ -2958,6 +2995,12 @@ export const GroupsView = (props) => {
       if (!drag || drag.kind !== 'session') return
       event.preventDefault()
       event.stopPropagation()
+      const sticky = stickyTargetFor(event)
+      if (sticky) {
+        clearAutoExpand()
+        rt()?.setFloatingLabel?.(null)
+        return commitDrop(drag, sticky)
+      }
       clearAutoExpand()
       rt()?.setFloatingLabel?.(null)
       // Resolve from this drop event instead of the react state mirror: a
@@ -2979,6 +3022,13 @@ export const GroupsView = (props) => {
     onDragOverGroup: (event, groupId) => {
       const drag = dragRef.current
       if (!drag) return
+      const sticky = stickyTargetFor(event)
+      if (sticky) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.dataTransfer) event.dataTransfer.dropEffect = sticky.kind === 'group-forbidden' ? 'none' : 'move'
+        return
+      }
       if (drag.kind === 'group') {
         const name = findGroup(store.doc, groupId)?.name ?? ''
         const zone = groupHeaderZone(event.currentTarget, event.clientY)

@@ -18,6 +18,28 @@ export const DROP_KINDS = Object.freeze([
   'invalid',
 ])
 
+/**
+ * 0.2.21: insertion placeholders move rows under a resting pointer. Recomputing
+ * the hit target from the shifted row makes the placeholder jump a row (or two)
+ * back and forth. Keep the current target while the pointer stays inside this
+ * small radius; a deliberate move releases the lock.
+ */
+export const DRAG_TARGET_STICKY_PX = 4
+
+/**
+ * Return the locked target while the pointer is within the sticky radius.
+ * @param {{x:number,y:number,target:object}|null} lock
+ * @param {number} x
+ * @param {number} y
+ * @param {number} [radius]
+ * @returns {object|null}
+ */
+export const stickyDropTarget = (lock, x, y, radius = DRAG_TARGET_STICKY_PX) => {
+  if (!lock || !lock.target) return null
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+  return Math.hypot(x - lock.x, y - lock.y) <= radius ? lock.target : null
+}
+
 /** Rows shorter than this still split into before/after halves. */
 const MIN_ROW_HEIGHT = 8
 
