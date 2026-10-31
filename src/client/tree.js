@@ -143,6 +143,48 @@ export const blockedSessionsByGroup = (...args) =>
 export const unreadSessionsByGroup = (...args) =>
   sessionsByGroupMatching(...args, (primary) => primary?.kind === 'completed')
 
+/**
+ * One traversal for all three header counters. The three independent scans were
+ * O(3n) on every stream snapshot; this returns the same grouped shape in O(n).
+ */
+export const statusSectionsByGroup = (doc, sessionsById = {}, statuses = null, archivedSessionIds = [], subagentCounts = new Map()) => {
+  const buckets = {
+    running: { sections: [], count: 0 },
+    blocked: { sections: [], count: 0 },
+    unread: { sections: [], count: 0 },
+  }
+  const archived = new Set(Array.isArray(archivedSessionIds) ? archivedSessionIds : [])
+  const seen = new Set()
+  const add = (sessionId, groupId, groupName) => {
+    if (typeof sessionId !== 'string' || seen.has(sessionId)) return
+    const row = sessionsById?.[sessionId]
+    if (!row || row.origin === 'subagent') return
+    const status = typeof statuses?.get === 'function' ? statuses.get(sessionId) : null
+    const projected = typeof subagentCounts?.get === 'function' ? subagentCounts.get(sessionId) : 0
+    const primary = sessionStatuses(status, { runningSubagentCount: projected })[0]
+    const bucket = primary?.state === 'ongoing' ? 'running' : primary?.state === 'warning' ? 'blocked' : primary?.kind === 'completed' ? 'unread' : null
+    if (bucket === null) return
+    seen.add(sessionId)
+    const target = buckets[bucket]
+    let section = target.sections.find((item) => item.groupId === groupId)
+    if (!section) {
+      section = { groupId, groupName: groupName ?? '', sessions: [] }
+      target.sections.push(section)
+    }
+    section.sessions.push({ sessionId, archived: archived.has(sessionId) })
+    target.count += 1
+  }
+  const walk = (parentId) => {
+    for (const group of childrenOf(doc, parentId)) {
+      for (const sessionId of group.sessionIds ?? []) add(sessionId, group.id, group.name ?? '')
+      walk(group.id)
+    }
+  }
+  walk(null)
+  for (const sessionId of doc?.ungrouped ?? []) add(sessionId, null, '')
+  return buckets
+}
+
 /** Ancestor group ids from nearest to root. */
 export const groupAncestors = (doc, groupId) => {
   const out = []

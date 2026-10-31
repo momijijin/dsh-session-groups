@@ -267,7 +267,6 @@ export const applyWidthOverride = (nodes, width, viewportWidth, { onLost } = {})
 
   const observer = new MutationObserver(refresh)
   observer.observe(frame, { attributes: true, attributeFilter: ['style'] })
-  if (doc.body) observer.observe(doc.body, { childList: true })
 
   applyAttrs()
   writeStyle()

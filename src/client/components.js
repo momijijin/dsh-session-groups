@@ -33,6 +33,7 @@ import {
   selectionIsValid,
 } from './dialog-selection.js'
 import { createActions, formatActivity, workspaceChoices, workspaceLabel } from './actions.js'
+import { sessionViewEqual, statusMapEqual, workspaceViewEqual } from './session-equality.js'
 import {
   buildVisibleTree,
   countTreeSessions,
@@ -92,9 +93,7 @@ import {
   groupPath,
   isExpanded,
   runningSubagentCounts,
-  runningSessionsByGroup,
-  blockedSessionsByGroup,
-  unreadSessionsByGroup,
+  statusSectionsByGroup,
   sessionStatuses,
   siblingNeighbors,
 } from './tree.js'
@@ -2323,31 +2322,24 @@ export const GroupsView = (props) => {
   diagRender('GroupsView')
 
   // Framework standard hooks: always called (rules of hooks), feature-detected.
-  const sessions = typeof props?.useSessions === 'function' ? props.useSessions((snapshot) => snapshot) : null
-  const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot) : null
-  const statuses = typeof props?.useSessionStatus === 'function' ? props.useSessionStatus((snapshot) => snapshot) : null
-  const subagentCounts = runningSubagentCounts(sessions, statuses)
-  const runningSessions = runningSessionsByGroup(
-    store?.doc,
-    sessions?.byId ?? {},
-    statuses,
-    workspaces?.archivedSessionIds ?? [],
-    subagentCounts
+  const sessions = typeof props?.useSessions === 'function' ? props.useSessions((snapshot) => snapshot, sessionViewEqual) : null
+  const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot, workspaceViewEqual) : null
+  const statuses = typeof props?.useSessionStatus === 'function' ? props.useSessionStatus((snapshot) => snapshot, statusMapEqual) : null
+  const subagentCounts = useMemo(() => runningSubagentCounts(sessions, statuses), [sessions, statuses])
+  const statusBuckets = useMemo(
+    () =>
+      statusSectionsByGroup(
+        store?.doc,
+        sessions?.byId ?? {},
+        statuses,
+        workspaces?.archivedSessionIds ?? [],
+        subagentCounts
+      ),
+    [store?.doc, sessions?.byId, statuses, workspaces?.archivedSessionIds, subagentCounts]
   )
-  const blockedSessions = blockedSessionsByGroup(
-    store?.doc,
-    sessions?.byId ?? {},
-    statuses,
-    workspaces?.archivedSessionIds ?? [],
-    subagentCounts
-  )
-  const unreadSessions = unreadSessionsByGroup(
-    store?.doc,
-    sessions?.byId ?? {},
-    statuses,
-    workspaces?.archivedSessionIds ?? [],
-    subagentCounts
-  )
+  const runningSessions = statusBuckets.running
+  const blockedSessions = statusBuckets.blocked
+  const unreadSessions = statusBuckets.unread
 
   const byId = sessions?.byId ?? {}
   const workspaceItems = workspaces?.items ?? []

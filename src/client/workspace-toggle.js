@@ -113,7 +113,26 @@ export const installWorkspaceToggle = ({ doc = globalThis.document, label = '', 
   // once its actions appear without polling.
   const MutationObserverCtor = doc.defaultView?.MutationObserver ?? globalThis.MutationObserver
   if (typeof MutationObserverCtor === 'function' && doc.body) {
-    mutation = new MutationObserverCtor(schedule)
+    mutation = new MutationObserverCtor((records) => {
+      for (const record of records) {
+        const target = record.target
+        if (target?.closest?.('[class*="sectionHeader"], [class*="headerActions"]')) {
+          schedule()
+          return
+        }
+        for (const node of record.addedNodes ?? []) {
+          if (node?.nodeType !== 1) continue
+          if (node.matches?.('[class*="sectionHeader"], [class*="headerActions"]')) {
+            schedule()
+            return
+          }
+          if (node.querySelector?.('[class*="headerActions"]')) {
+            schedule()
+            return
+          }
+        }
+      }
+    })
     mutation.observe(doc.body, { childList: true, subtree: true })
   }
 
