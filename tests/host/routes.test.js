@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import {
   COMMIT_PATH,
+  DEBUG_PATH,
   DIAGNOSTICS_PATH,
   LOAD_PATH,
   MAX_BODY_BYTES,
@@ -40,14 +41,14 @@ const allowedHeaders = { cookie: 'token=ok', 'content-type': 'application/json',
 
 const commitBody = (baseRevision, doc) => JSON.stringify({ baseRevision, doc })
 
-test('route registration mounts the two frozen paths plus the diagnostics route', async (t) => {
+test('route registration mounts the frozen paths, diagnostics and debug probe', async (t) => {
   const mounted = await mountRoutes()
   t.after(() => mounted.cleanup())
   assert.deepEqual(
     mounted.routes.map((route) => `${route.kind}:${route.path}`).sort(),
-    [`exact:${COMMIT_PATH}`, `exact:${DIAGNOSTICS_PATH}`, `exact:${LOAD_PATH}`].sort(),
+    [`exact:${COMMIT_PATH}`, `exact:${DEBUG_PATH}`, `exact:${DIAGNOSTICS_PATH}`, `exact:${LOAD_PATH}`].sort(),
   )
-  assert.deepEqual(mounted.mounted.routes, [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH])
+  assert.deepEqual(mounted.mounted.routes, [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH, DEBUG_PATH])
 })
 
 test('the fence runs first: no connection -> 503 fence-unavailable on both routes', async (t) => {
@@ -106,6 +107,7 @@ test('GET load returns 200 JSON, no CORS, no-store, and the empty document', asy
     ok: true,
     revision: 0,
     doc: { version: 1, revision: 0, groups: [], ungrouped: [] },
+    diagnostics: true,
   })
 })
 
@@ -215,7 +217,7 @@ test('POST commit rejects unknown palette ids with 422 group-color', async (t) =
   t.after(() => mounted.cleanup())
 
   const doc = sampleDoc()
-  doc.groups[0] = { ...doc.groups[0], color: 'pink' }
+  doc.groups[0] = { ...doc.groups[0], color: 'chartreuse' }
   const { res, json } = await mounted.call(
     COMMIT_PATH,
     makeRequest({ method: 'POST', headers: allowedHeaders, body: commitBody(0, doc) }),
@@ -235,7 +237,7 @@ test('POST commit rejects malformed bodies with 422 invalid', async (t) => {
     { name: 'missing baseRevision', body: JSON.stringify({ doc: sampleDoc() }), expected: /baseRevision/ },
     { name: 'invalid doc', body: commitBody(0, { version: 1, groups: [{ id: 'g-a', name: 'A', parentId: null, sessionIds: ['s1'] }], ungrouped: ['s1'] }), expected: /duplicate-session:s1/ },
     { name: 'wrong version', body: commitBody(0, { ...sampleDoc(), version: 2 }), expected: /version must be 1/ },
-    { name: 'unknown group color', body: commitBody(0, { ...sampleDoc(), groups: [{ ...sampleDoc().groups[0], color: 'pink' }] }), expected: /group-color/ },
+    { name: 'unknown group color', body: commitBody(0, { ...sampleDoc(), groups: [{ ...sampleDoc().groups[0], color: 'chartreuse' }] }), expected: /group-color/ },
   ]
   for (const item of cases) {
     const { res, json } = await mounted.call(
@@ -499,4 +501,22 @@ test('parseDiagnosticsBody keeps the client runId/schemaVersion and bounds the b
   assert.equal(unbounded.ok, true)
   assert.equal(unbounded.runId.length, 128)
   assert.equal(unbounded.schemaVersion, null)
+})
+
+test('0.2.18 diagnostics disabled: load advertises off and ingest is refused', async (t) => {
+  const mounted = await mountRoutes({ connection: cookieConnection(), diagnosticsEnabled: false })
+  t.after(() => mounted.cleanup())
+  const loaded = await mounted.call(LOAD_PATH, makeRequest({ headers: { cookie: 'token=ok' } }))
+  assert.equal(loaded.res.statusCode, 200)
+  assert.equal(loaded.json.diagnostics, false)
+  const posted = await mounted.call(
+    DIAGNOSTICS_PATH,
+    makeRequest({
+      method: 'POST',
+      headers: allowedHeaders,
+      body: JSON.stringify({ runId: 'r', schemaVersion: 1, events: [{ type: 'x' }] }),
+    }),
+  )
+  assert.equal(posted.res.statusCode, 403)
+  assert.equal(posted.json.code, 'diagnostics-disabled')
 })

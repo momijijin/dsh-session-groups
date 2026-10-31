@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { apply, inject, name } from '../../src/index.js'
+import { apply, Config, inject, name } from '../../src/index.js'
 import { makeContext, makeTempStore } from './helpers.js'
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
@@ -24,6 +24,13 @@ test('the entry exports the Cordis row name and injects webServer', () => {
   assert.deepEqual(inject, ['webServer'])
 })
 
+test('0.2.18 exposes a plugin-manager Config with diagnostics default off', () => {
+  assert.equal(Config?.[Symbol.for('schemastery')], true)
+  assert.equal(Config.type, 'object')
+  assert.equal(Config.dict.diagnostics.type, 'boolean')
+  assert.equal(Config.dict.diagnostics.meta.default, false)
+})
+
 test('apply() returns void synchronously and mounts the three routes inside ctx.effect', async (t) => {
   const temp = await makeTempStore()
   t.after(temp.cleanup)
@@ -38,9 +45,10 @@ test('apply() returns void synchronously and mounts the three routes inside ctx.
 
   // Cordis 4.0.5 treats the return value as the plugin effect list.
   assert.equal(returned, undefined)
-  assert.equal(routes.length, 3)
+  assert.equal(routes.length, 4)
   assert.equal(ready.filePath, temp.filePath)
   assert.equal(ready.diagnosticsFilePath, join(temp.storages, 'dsh-session-groups.diagnostics.ndjson'))
+  assert.equal(ready.debugFilePath, join(temp.storages, 'dsh-session-groups.debug.ndjson'))
   assert.equal(ready.mounted.registered, true)
   assert.equal(typeof ready.store.load, 'function')
   assert.equal(typeof ready.storageSource, 'string')

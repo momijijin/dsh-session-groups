@@ -7,7 +7,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
-import { DIAGNOSTICS_FILE_NAME } from '../../src/host/constants.js'
+import { DEBUG_FILE_NAME, DIAGNOSTICS_FILE_NAME } from '../../src/host/constants.js'
 import { registerRoutes } from '../../src/host/routes.js'
 import { createStore } from '../../src/host/store.js'
 
@@ -149,7 +149,12 @@ export const mountRoutes = async (options = {}) => {
   const diagnosticsFilePath =
     options.diagnosticsFilePath ??
     (temp.dir === undefined ? null : join(temp.dir, 'storages', DIAGNOSTICS_FILE_NAME))
-  const mounted = registerRoutes(context.ctx, temp.store, { diagnosticsFilePath })
+  const mounted = registerRoutes(context.ctx, temp.store, {
+    diagnosticsFilePath,
+    debugFilePath:
+      options.debugFilePath ?? (temp.dir === undefined ? null : join(temp.dir, 'storages', DEBUG_FILE_NAME)),
+    diagnosticsEnabled: options.diagnosticsEnabled,
+  })
   return {
     ...temp,
     ...context,
