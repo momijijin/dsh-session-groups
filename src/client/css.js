@@ -580,13 +580,13 @@ export const CSS = `
 .dsg-dialog[data-positioned="true"] { transform: none; max-width: none; max-height: none; }
 .dsg-dialog-titlebar { flex: none; display: flex; align-items: center; min-height: 20px; cursor: move; user-select: none; touch-action: none; }
 .dsg-dialog-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-14, 14px); line-height: 20px; font-weight: 600; color: var(--dsw-alias-label-primary, CanvasText); pointer-events: none; }
-.dsg-dialog-content { flex: 0 0 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 0; scrollbar-width: thin; scrollbar-color: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))) transparent; }
+.dsg-dialog-content { flex: 0 0 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 0; }
 .dsg-dialog[data-positioned="true"] .dsg-dialog-content { flex: 1 1 auto; }
 .dsg-dialog-content::-webkit-scrollbar, .dsg-icon-sections::-webkit-scrollbar, .dsg-dialog-list::-webkit-scrollbar { width: 10px; height: 10px; }
 .dsg-dialog-content::-webkit-scrollbar-track, .dsg-icon-sections::-webkit-scrollbar-track, .dsg-dialog-list::-webkit-scrollbar-track { background: transparent; }
 .dsg-dialog-content::-webkit-scrollbar-thumb, .dsg-icon-sections::-webkit-scrollbar-thumb, .dsg-dialog-list::-webkit-scrollbar-thumb { background: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))); border: 2px solid transparent; border-radius: 999px; background-clip: padding-box; min-height: 28px; }
 .dsg-dialog-content:hover::-webkit-scrollbar-thumb, .dsg-icon-sections:hover::-webkit-scrollbar-thumb, .dsg-dialog-list:hover::-webkit-scrollbar-thumb { background: var(--dsh-scrollbar-thumb-hover, var(--dsw-alias-scrollbar-hover-l2, color-mix(in srgb, CanvasText 32%, transparent))); background-clip: padding-box; }
-.dsg-icon-sections, .dsg-dialog-list { scrollbar-width: thin; scrollbar-color: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))) transparent; }
+.dsg-icon-sections, .dsg-dialog-list { scrollbar-gutter: stable; }
 .dsg-dialog-body { font-size: var(--dsg-font-13, 13px); line-height: 20px; color: var(--dsw-alias-label-secondary, CanvasText); white-space: pre-wrap; }
 .dsg-dialog-input { flex: none; width: 100%; box-sizing: border-box; height: 32px; min-height: 32px; padding: 0 10px; font-size: var(--dsg-font-13, 13px); line-height: 18px; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, CanvasText 22%, transparent)); background: var(--dsw-alias-bg-layer-1, Canvas); color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-dialog-input::placeholder { color: var(--dsw-alias-label-secondary, CanvasText); }
@@ -600,8 +600,8 @@ export const CSS = `
 .dsg-dialog-resizer[data-dir="w"] { left: -3px; top: 12px; bottom: 12px; width: 8px; cursor: ew-resize; }
 .dsg-dialog-resizer[data-dir="ne"] { right: -3px; top: -3px; width: 14px; height: 14px; cursor: nesw-resize; }
 .dsg-dialog-resizer[data-dir="nw"] { left: -3px; top: -3px; width: 14px; height: 14px; cursor: nwse-resize; }
-.dsg-dialog-resizer[data-dir="se"] { right: -3px; bottom: -3px; width: 14px; height: 14px; cursor: nwse-resize; }
-.dsg-dialog-resizer[data-dir="se"]::after { content: ''; position: absolute; right: 3px; bottom: 3px; width: 7px; height: 7px; border-right: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); border-bottom: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); border-radius: 0 0 2px 0; opacity: .55; pointer-events: none; }
+.dsg-dialog-resizer[data-dir="se"] { right: 0; bottom: 0; width: 20px; height: 20px; cursor: nwse-resize; }
+.dsg-dialog-resizer[data-dir="se"]::after { content: ''; position: absolute; right: 7px; bottom: 7px; width: 7px; height: 7px; border-right: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); border-bottom: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); border-radius: 0 0 2px 0; opacity: .55; pointer-events: none; }
 .dsg-dialog-resizer[data-dir="se"]:hover::after { opacity: .95; }
 .dsg-dialog-resizer[data-dir="sw"] { left: -3px; bottom: -3px; width: 14px; height: 14px; cursor: nesw-resize; }
 .dsg-dialog-confirm { appearance: none; border: none; height: 32px; padding: 0 16px; border-radius: 6px; font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; background: var(--dsw-alias-button-primary-fill, var(--dsw-alias-state-business-primary, #4d6bfe)); color: var(--dsw-alias-label-primary-foreground, Canvas); }
