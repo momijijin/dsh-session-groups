@@ -15,6 +15,7 @@
  */
 
 import { dirname, join } from 'node:path'
+import z from '@deepseek-ai/schemastery'
 import { probeConnection } from './host/fence.js'
 import { resolveRecordPath } from './host/home.js'
 import { logInfo } from './host/log.js'
@@ -24,6 +25,14 @@ import { createStore } from './host/store.js'
 
 /** Cordis function-plugin name (matches the bundle patch row id). */
 export const name = 'dsh-session-groups'
+
+/**
+ * Plugin-manager configuration schema (Settings → Plugins → this plugin).
+ * Diagnostics are off by default; the form switch turns the local trace/HUD on.
+ */
+export const Config = z.object({
+  diagnostics: z.boolean().default(false).description('Enable local drag diagnostics (HUD + NDJSON trace)'),
+})
 
 /**
  * The route carrier is required. `connection` is feature-detected per request
@@ -43,7 +52,10 @@ export const apply = (ctx, config = {}) => {
         // `dshHomePath('storages')`, and a test seam that overrides `filePath`
         // can never point diagnostics at the real home.
         join(dirname(record.filePath), DIAGNOSTICS_FILE_NAME)
-  const mounted = registerRoutes(ctx, store, { diagnosticsFilePath })
+  const mounted = registerRoutes(ctx, store, {
+    diagnosticsFilePath,
+    diagnosticsEnabled: config?.diagnostics === true,
+  })
   const probe = probeConnection(ctx)
 
   logInfo(

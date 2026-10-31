@@ -19,6 +19,7 @@ import {
   diagEnabled,
   diagLabel,
   diagTrace,
+  diagnosticsEnabled,
   getDiagnostics,
   initDiagnostics,
 } from './diagnostics.js'
@@ -60,6 +61,7 @@ export const createPlugin = () => {
   let footerDisposer = null
   let styleDisposer = null
   let localeDisposer = null
+  let perfDisposer = null
   let loadPromise = null
   let commitTail = Promise.resolve()
   let queue = null
@@ -156,6 +158,7 @@ export const createPlugin = () => {
       try {
         const result = await api.load()
         if (result.ok === true) {
+          if (result.diagnostics === true && !diagEnabled()) initDiagnostics({ enabled: true })
           store.dispatch('load-success', { doc: result.doc, revision: result.revision, warning: result.warning })
           return
         }
@@ -397,10 +400,10 @@ export const createPlugin = () => {
     mounted = true
     ctxRef = ctx
     store = createStore({ storage: safeStorage() })
-    if (perfEnabled()) store.subscribe(() => perfCount('store:publish'))
-    // Drag diagnostics are enabled by default in 0.2.5; localStorage
-    // `dsh-session-groups.diagnostics='0'` opts out without a rebuild.
-    initDiagnostics()
+    if (perfEnabled()) perfDisposer = store.subscribe(() => perfCount('store:publish'))
+    // Diagnostics are opt-in (0.2.18): either the generic plugin-config switch
+    // arrives in the load response, or a developer/localStorage override is set.
+    if (diagnosticsEnabled()) initDiagnostics()
     api = createApi({ documentRef: globalThis.document, trace: (type, detail) => diagTrace(type, detail) })
     if (diagEnabled()) diagContext({ mode: store.getSnapshot().viewMode })
     localeService = safeGet(ctx, 'locale')
@@ -503,6 +506,8 @@ export const createPlugin = () => {
         footerDisposer = null
         if (typeof localeDisposer === 'function') localeDisposer()
         localeDisposer = null
+        if (typeof perfDisposer === 'function') perfDisposer()
+        perfDisposer = null
         if (typeof styleDisposer === 'function') styleDisposer()
         styleDisposer = null
         doc?.removeEventListener?.('pointerdown', onPointerDown, true)

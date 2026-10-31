@@ -28,3 +28,6 @@ export const MAX_BODY_BYTES = 256 * 1024
 /** Diagnostics batch ceiling: bounded body and bounded event count. */
 export const MAX_DIAGNOSTICS_BODY_BYTES = 256 * 1024
 export const MAX_DIAGNOSTICS_EVENTS = 500
+
+/** 0.2.18: keep the local trace bounded; truncate before appending past 8 MiB. */
+export const MAX_DIAGNOSTICS_FILE_BYTES = 8 * 1024 * 1024

@@ -13,7 +13,7 @@
  * dedicated `.ndjson` file under `storages/`, never the official host data.
  */
 
-import { appendFile, mkdir } from 'node:fs/promises'
+import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname } from 'node:path'
 import { DOC_VERSION } from '../shared/constants.js'
 import { normalizeColor, normalizeColorHex, validateDoc } from '../shared/model.js'
@@ -24,6 +24,7 @@ import {
   MAX_BODY_BYTES,
   MAX_DIAGNOSTICS_BODY_BYTES,
   MAX_DIAGNOSTICS_EVENTS,
+  MAX_DIAGNOSTICS_FILE_BYTES,
 } from './constants.js'
 import { fenceRequest, probeConnection } from './fence.js'
 import { logInfo, logWarn } from './log.js'
@@ -199,8 +200,9 @@ export const parseDiagnosticsBody = (body) => {
  *
  * @param {object} ctx Cordis context.
  * @param {object} store group document store.
- * @param {{ diagnosticsFilePath?: string | null }} [options] host-half options
- *   (`diagnosticsFilePath` is resolved from `dshHomePath('storages')`).
+ * @param {{ diagnosticsFilePath?: string | null, diagnosticsEnabled?: boolean }} [options] host-half options
+ *   (`diagnosticsFilePath` is resolved from `dshHomePath('storages')`; diagnostics default true for direct route
+ *   tests, while the Cordis entry passes the plugin config flag).
  * @returns {{ registered: boolean, routes: string[] }}
  */
 export const registerRoutes = (ctx, store, options = {}) => {
@@ -212,6 +214,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
     typeof options.diagnosticsFilePath === 'string' && options.diagnosticsFilePath.length > 0
       ? options.diagnosticsFilePath
       : null
+  const diagnosticsEnabled = options.diagnosticsEnabled !== false
 
   // The composition's `connection` service may arrive through a sibling row
   // after this plugin activates, so the fence is resolved per request and the
@@ -276,7 +279,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
           )
         }
         const { status, body } = loadResponse(result)
-        sendJson(res, status, body)
+        sendJson(res, status, { ...body, diagnostics: diagnosticsEnabled })
       } catch (error) {
         logWarn(ctx, `dsh-session-groups: load failed: ${error instanceof Error ? error.message : String(error)}`)
         sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
@@ -353,6 +356,10 @@ export const registerRoutes = (ctx, store, options = {}) => {
         sendMethodNotAllowed(res, 'POST')
         return
       }
+      if (!diagnosticsEnabled) {
+        sendJson(res, 403, { ok: false, code: 'diagnostics-disabled', message: 'diagnostics are disabled' })
+        return
+      }
       if (contentTypeOf(req) !== 'application/json') {
         sendJson(res, 415, {
           ok: false,
@@ -410,6 +417,15 @@ export const registerRoutes = (ctx, store, options = {}) => {
         .join('\n')
       try {
         await mkdir(dirname(diagnosticsFilePath), { recursive: true })
+        try {
+          const info = await stat(diagnosticsFilePath)
+          if (info.size + Buffer.byteLength(`${lines}\n`, 'utf8') > MAX_DIAGNOSTICS_FILE_BYTES) {
+            // Bounded local trace: truncate rather than grow without limit.
+            await writeFile(diagnosticsFilePath, '', 'utf8')
+          }
+        } catch (error) {
+          if (error?.code !== 'ENOENT') throw error
+        }
         await appendFile(diagnosticsFilePath, `${lines}\n`, 'utf8')
         sendJson(res, 200, { ok: true, appended: parsed.events.length })
       } catch (error) {

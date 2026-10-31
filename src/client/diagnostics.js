@@ -68,20 +68,24 @@ const defaultRandom = () => Math.random().toString(36).slice(2, 8)
 
 const defaultRunId = (random) => `dsg-${Date.now().toString(36)}-${random()}`
 
-/** Whether diagnostics are enabled for this page load (default: yes). */
+/** Whether diagnostics are enabled for this page load (default: no). */
 export const diagnosticsEnabled = (storage = null) => {
   try {
     if (globalThis.__DSG_DIAGNOSTICS__ === false) return false
+    if (globalThis.__DSG_DIAGNOSTICS__ === true) return true
   } catch {
     /* hostile global object */
   }
   try {
     const target = storage ?? globalThis.localStorage
-    if (target && typeof target.getItem === 'function') return target.getItem(DIAGNOSTICS_STORAGE_KEY) !== '0'
+    if (target && typeof target.getItem === 'function') {
+      const value = target.getItem(DIAGNOSTICS_STORAGE_KEY)
+      return value === '1' || value === 'true'
+    }
   } catch {
-    /* blocked storage: default stays on */
+    /* blocked storage: default stays off */
   }
-  return true
+  return false
 }
 
 /** Classify a DOM event target into the stable trace vocabulary. */
@@ -97,30 +101,15 @@ export const describeEventTarget = (event) => {
       return null
     }
   }
-  // Bounding rect lets the analyzer correlate pointer coordinates with the row
-  // the browser actually hit, without any title/text. Guarded: getBoundingClientRect
-  // is absent on fakes and may throw on a detached node.
-  let rect = null
-  try {
-    const box = typeof element?.getBoundingClientRect === 'function' ? element.getBoundingClientRect() : null
-    if (box && Number.isFinite(box.top)) {
-      rect = {
-        x: Math.round(box.left * 10) / 10,
-        y: Math.round(box.top * 10) / 10,
-        w: Math.round(box.width * 10) / 10,
-        h: Math.round(box.height * 10) / 10,
-      }
-    }
-  } catch {
-    rect = null
-  }
+  // 0.2.18: no getBoundingClientRect here. The native dragover path runs at up
+  // to 60 Hz (twice per event); forcing layout in the tracer was the dominant
+  // diagnostic cost. Pointer coordinates plus the stable testid/ids are enough.
   return {
     tag: typeof element?.tagName === 'string' ? element.tagName.toLowerCase() : null,
     testid: attr('data-testid'),
     sessionId: attr('data-session-id'),
     groupId: attr('data-group-id'),
     ungrouped: attr('data-ungrouped') === 'true' ? true : null,
-    rect,
   }
 }
 
@@ -486,7 +475,6 @@ export const createDiagnostics = (options = {}) => {
       /* detached window */
     }
     frameRequest = null
-    frameHandle = null
   }
 
   const sendBatch = async (events, { beacon = false, keepalive = false } = {}) => {
@@ -650,11 +638,17 @@ export const createDiagnostics = (options = {}) => {
         }
       }
       const capture = handlerFor('capture')
-      const bubble = handlerFor('bubble')
       try {
         documentRef.addEventListener(type, capture, true)
-        documentRef.addEventListener(type, bubble, false)
-        nativeHandlers.push([type, capture, true], [type, bubble, false])
+        nativeHandlers.push([type, capture, true])
+        // 0.2.18: capture is enough for the pre-dispatch view. Bubble is only
+        // needed to observe post-handler defaultPrevented on the terminal events,
+        // cutting the per-dragover listener/trace work roughly in half.
+        if (type === 'drop' || type === 'dragend') {
+          const bubble = handlerFor('bubble')
+          documentRef.addEventListener(type, bubble, false)
+          nativeHandlers.push([type, bubble, false])
+        }
       } catch {
         /* detached document */
       }
