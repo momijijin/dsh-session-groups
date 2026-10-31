@@ -165,6 +165,8 @@ const ScrollFade = ({ className, tone = 'layer1', children, ...rest }) => {
     const element = scrollerRef.current
     if (!element) return undefined
     update()
+    const frame = globalThis.requestAnimationFrame?.(update)
+    const timer = globalThis.setTimeout?.(update, 50)
     element.addEventListener('scroll', update, { passive: true })
     globalThis.addEventListener?.('resize', update)
     let observer = null
@@ -173,6 +175,8 @@ const ScrollFade = ({ className, tone = 'layer1', children, ...rest }) => {
       observer.observe(element)
     }
     return () => {
+      globalThis.cancelAnimationFrame?.(frame)
+      globalThis.clearTimeout?.(timer)
       element.removeEventListener('scroll', update)
       globalThis.removeEventListener?.('resize', update)
       observer?.disconnect()
@@ -2090,6 +2094,17 @@ const DialogHost = ({ store, props }) => {
                 height: confirmStyle?.height,
               }
             : null,
+          scrollFades: [...element.querySelectorAll('.dsg-scroll-fade')].map((fade) => {
+            const scroller = fade.firstElementChild
+            return {
+              className: scroller?.className ?? '',
+              clientHeight: scroller?.clientHeight ?? null,
+              scrollHeight: scroller?.scrollHeight ?? null,
+              max: scroller ? scroller.scrollHeight - scroller.clientHeight : null,
+              fadeTop: Boolean(fade.querySelector('.dsg-scroll-fade-top')),
+              fadeBottom: Boolean(fade.querySelector('.dsg-scroll-fade-bottom')),
+            }
+          }),
           tokens,
         }
         void globalThis.fetch?.('/dsh-session-groups/debug', {

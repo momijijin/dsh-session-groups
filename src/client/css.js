@@ -584,10 +584,10 @@ export const CSS = `
 .dsg-dialog[data-positioned="true"] .dsg-dialog-content { flex: 1 1 auto; }
 .dsg-dialog > .dsg-scroll-fade { flex: 0 0 auto; }
 .dsg-dialog[data-positioned="true"] > .dsg-scroll-fade { flex: 1 1 auto; min-height: 0; }
-.dsg-scroll-fade { position: relative; display: flex; flex-direction: column; min-height: 0; }
+.dsg-scroll-fade { position: relative; display: flex; flex-direction: column; min-height: 0; isolation: isolate; }
 .dsg-scroll-fade[data-tone="layer1"] { --dsg-scroll-fade-bg: var(--dsw-alias-bg-layer-1, Canvas); }
 .dsg-scroll-fade[data-tone="layer2"] { --dsg-scroll-fade-bg: var(--dsw-alias-bg-layer-2, Canvas); }
-.dsg-scroll-fade-top, .dsg-scroll-fade-bottom { position: absolute; left: 0; right: 0; height: 22px; pointer-events: none; z-index: 2; }
+.dsg-scroll-fade-top, .dsg-scroll-fade-bottom { position: absolute; left: 0; right: 0; height: 22px; pointer-events: none; z-index: 10; }
 .dsg-scroll-fade-top { top: 0; background: linear-gradient(to bottom, var(--dsg-scroll-fade-bg) 0%, color-mix(in srgb, var(--dsg-scroll-fade-bg) 78%, transparent) 55%, transparent 100%); }
 .dsg-scroll-fade-bottom { bottom: 0; background: linear-gradient(to top, var(--dsg-scroll-fade-bg) 0%, color-mix(in srgb, var(--dsg-scroll-fade-bg) 78%, transparent) 55%, transparent 100%); }
 .dsg-scroll-fade-top::after, .dsg-scroll-fade-bottom::after { content: ''; position: absolute; right: 10px; width: 6px; height: 6px; border-right: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); border-bottom: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); opacity: .55; }
