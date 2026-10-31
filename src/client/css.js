@@ -517,7 +517,9 @@ export const CSS = `
   flex-wrap: wrap;
   box-shadow: none;
 }
-.dsg-icon-option { width: auto; flex: 1 1 104px; }
+/* 0.2.12: more common glyphs; a slightly wider 4-column icon picker. */
+.dsg-dialog[data-kind="icon"] { width: min(420px, calc(100vw - 32px)); }
+.dsg-icon-option { width: auto; flex: 1 1 88px; }
 /* 0.2.7 color dialog: six presets in a fixed 3x2 grid with 32px cells, plus a
  * custom native-swatch/hex row. Every cell reserves a 16px check slot (hidden,
  * not removed) so labels do not shift between selected/unselected states. */

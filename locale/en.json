@@ -10,7 +10,7 @@
   "archive.all": "All conversations (archived shown)",
   "archive.only": "Archived only",
   "archive.label": "Archive filter",
-  "group.empty": "Empty group — drop sessions here",
+  "group.empty": "Empty group — drop sessions or groups here",
   "group.addSession": "New session in this group",
   "group.menu": "Group actions",
   "group.rename": "Rename group",
@@ -135,6 +135,17 @@
   "time.minutes": "{n} min ago",
   "time.hours": "{n} hr ago",
   "time.days": "{n} d ago",
-  "time.years": "{n} yr ago"
+  "time.years": "{n} yr ago",
+  "icon.briefcase": "Briefcase",
+  "icon.book": "Book",
+  "icon.code": "Code",
+  "icon.database": "Database",
+  "icon.terminal": "Terminal",
+  "icon.globe": "Globe",
+  "icon.heart": "Heart",
+  "icon.home": "Home",
+  "icon.layers": "Layers",
+  "icon.calendar": "Calendar",
+  "icon.chart": "Chart",
+  "icon.target": "Target"
 }
-

@@ -10,7 +10,7 @@
   "archive.all": "全部对话（显示已归档）",
   "archive.only": "仅显示已归档",
   "archive.label": "归档筛选",
-  "group.empty": "空分组，拖入会话",
+  "group.empty": "空分组，拖入会话或分组",
   "group.addSession": "在分组内新建会话",
   "group.menu": "分组操作",
   "group.rename": "重命名分组",
@@ -135,6 +135,17 @@
   "time.minutes": "{n} 分钟前",
   "time.hours": "{n} 小时前",
   "time.days": "{n} 天前",
-  "time.years": "{n} 年前"
+  "time.years": "{n} 年前",
+  "icon.briefcase": "公文包",
+  "icon.book": "书",
+  "icon.code": "代码",
+  "icon.database": "数据库",
+  "icon.terminal": "终端",
+  "icon.globe": "地球",
+  "icon.heart": "心形",
+  "icon.home": "主页",
+  "icon.layers": "图层",
+  "icon.calendar": "日历",
+  "icon.chart": "图表",
+  "icon.target": "目标"
 }
-

@@ -475,6 +475,19 @@ const SessionRow = ({
     },
     h(SessionStatusCell, { statuses, hidden: hiddenStatus }),
     h('span', { class: 'dsg-session-title' }, title),
+    h('span', { class: 'dsg-workspace-badge', 'data-testid': 'session-groups-workspace-badge', title: sessionNode.workspace?.path ?? '' }, workspaceName),
+    h(
+      'span',
+      { class: 'dsg-session-actions' },
+      IconButton({
+        label: rt()?.t('session.menu'),
+        glyph: 'more',
+        testId: 'session-groups-session-menu',
+        haspopup: 'menu',
+        data: { 'data-session-id': sessionId },
+        onClick: (event) => handlers.openSessionMenu(event, sessionNode),
+      })
+    ),
     archived ? h('span', { class: 'dsg-session-badge' }, rt()?.t('session.archivedBadge')) : null,
     compactStatusT
       ? h(
@@ -497,20 +510,7 @@ const SessionRow = ({
             },
             time.label
           )
-        : null,
-    h(
-      'span',
-      { class: 'dsg-session-actions' },
-      IconButton({
-        label: rt()?.t('session.menu'),
-        glyph: 'more',
-        testId: 'session-groups-session-menu',
-        haspopup: 'menu',
-        data: { 'data-session-id': sessionId },
-        onClick: (event) => handlers.openSessionMenu(event, sessionNode),
-      })
-    ),
-    h('span', { class: 'dsg-workspace-badge', 'data-testid': 'session-groups-workspace-badge', title: sessionNode.workspace?.path ?? '' }, workspaceName)
+        : null
   )
 }
 
@@ -618,7 +618,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
   )
   const lineChildren = [...bodyChildren]
   if (headPlaceholder) lineChildren.push(headPlaceholder)
-  if (node.visibleCount === 0 && !bodyPlaceholderVisible) {
+  if (node.visibleCount === 0 && childGroups.length === 0 && !bodyPlaceholderVisible) {
     lineChildren.push(
       h(EmptyDropBox, {
         key: 'empty',
@@ -712,7 +712,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
             'div',
             {
               class: 'dsg-group-line',
-              'data-empty': node.visibleCount === 0 ? 'true' : 'false',
+              'data-empty': node.visibleCount === 0 && childGroups.length === 0 ? 'true' : 'false',
               onDragOver: (event) => handlers.onDragOverGroupHead(event, group.id),
               onDragLeave: handlers.onDragLeave,
               onDrop: (event) => handlers.onDropGroupHead(event, group.id),

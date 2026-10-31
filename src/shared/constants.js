@@ -1,7 +1,7 @@
 export const DOC_VERSION = 1
 
 /** Plugin version shipped in this build (also stamped into diagnostics traces). */
-export const PLUGIN_VERSION = '0.2.11'
+export const PLUGIN_VERSION = '0.2.12'
 
 export const GROUP_ICONS = Object.freeze([
   'folder',
@@ -13,6 +13,18 @@ export const GROUP_ICONS = Object.freeze([
   'bulb',
   'rocket',
   'hash',
+  'briefcase',
+  'book',
+  'code',
+  'database',
+  'terminal',
+  'globe',
+  'heart',
+  'home',
+  'layers',
+  'calendar',
+  'chart',
+  'target',
 ])
 
 /** Normalization fallback for legacy/invalid icons (docs without an icon). */
