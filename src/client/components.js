@@ -2260,6 +2260,16 @@ export const GroupsView = (props) => {
   // the applied width is always its viewport clamp, so a narrow viewport never
   // destroys the stored preference.
   const rootRef = useRef(null)
+  /** True only when the drag pointer is definitely outside the sidebar root. */
+  const pointerOutsideRoot = (event) => {
+    const root = rootRef.current
+    const rect = root?.getBoundingClientRect?.()
+    if (!rect) return false
+    const x = event?.clientX
+    const y = event?.clientY
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return false
+    return x < rect.left || x > rect.right || y < rect.top || y > rect.bottom
+  }
   // Imperative bridge to the virtualized ungrouped list (search reveal).
   const virtualRef = useRef(null)
   const widthControllerRef = useRef(null)
@@ -2940,6 +2950,10 @@ export const GroupsView = (props) => {
       // Moving between rows/gaps inside one group body must not remove the
       // placeholder; the next row's dragover will retarget it.
       if (next && typeof next.closest === 'function' && next.closest('.dsg-group-line')) return
+      // A dragleave between rows/gaps is a transient boundary, not leaving the
+      // sidebar. Clearing here removed the placeholder for one frame and the
+      // next dragover reinserted it at the same place (visible flicker).
+      if (!pointerOutsideRoot(event)) return
       clearAutoExpand()
       setDropTargetTracked(null)
       rt()?.setFloatingLabel?.(null)
