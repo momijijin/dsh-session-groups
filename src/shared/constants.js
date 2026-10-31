@@ -1,7 +1,7 @@
 export const DOC_VERSION = 1
 
 /** Plugin version shipped in this build (also stamped into diagnostics traces). */
-export const PLUGIN_VERSION = '0.2.12'
+export const PLUGIN_VERSION = '0.2.13'
 
 export const GROUP_ICONS = Object.freeze([
   'folder',
@@ -25,12 +25,32 @@ export const GROUP_ICONS = Object.freeze([
   'calendar',
   'chart',
   'target',
+  'check-circle',
+  'check',
+  'x-circle',
+  'ban',
+  'pause',
+  'play',
+  'stop',
+  'clock',
+  'hourglass',
+  'wrench',
+  'bug',
 ])
 
 /** Normalization fallback for legacy/invalid icons (docs without an icon). */
 export const DEFAULT_ICON = 'folder'
 /** 0.2.7: newly created groups start with the hash glyph (colored by the group). */
 export const DEFAULT_NEW_GROUP_ICON = 'hash'
+
+/**
+ * Official workspace "Show more" watermark (DSH Desktop 2.0.18):
+ * 5 non-blank session rows per group by default; attention/current rows may
+ * raise the automatic watermark up to 50. Kept as plugin constants because the
+ * host module does not export them.
+ */
+export const SESSION_WATERMARK_BASE = 5
+export const SESSION_WATERMARK_AUTO_MAX = 50
 
 /** Preset group palette (0.2.6, additive): stable ids persisted in the doc. */
 export const GROUP_COLORS = Object.freeze(['blue', 'green', 'orange', 'red', 'purple', 'gray'])

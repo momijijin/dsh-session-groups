@@ -30,10 +30,43 @@ export const ICON_PATHS = Object.freeze({
   calendar: ['M2.8 4.1h10.4v9.2H2.8z', 'M5.2 2.6v3', 'M10.8 2.6v3', 'M2.8 7.1h10.4'],
   chart: ['M2.7 2.8v10.5h10.6', 'M5.1 10.8V7.6', 'M8 10.8V5.3', 'M10.9 10.8V8.6'],
   target: ['M8 2.4a5.6 5.6 0 1 0 0 11.2A5.6 5.6 0 0 0 8 2.4z', 'M8 5.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z', 'M8 7.5v1'],
+  'check-circle': ['M8 2.4a5.6 5.6 0 1 0 0 11.2A5.6 5.6 0 0 0 8 2.4z', 'M5.2 8.1l1.9 1.9 3.8-4'],
+  check: ['M3.2 8.3l3 3 6.6-6.8'],
+  'x-circle': ['M8 2.4a5.6 5.6 0 1 0 0 11.2A5.6 5.6 0 0 0 8 2.4z', 'M5.8 5.8l4.4 4.4', 'M10.2 5.8l-4.4 4.4'],
+  ban: ['M8 2.4a5.6 5.6 0 1 0 0 11.2A5.6 5.6 0 0 0 8 2.4z', 'M4.3 4.3l7.4 7.4'],
+  pause: ['M5.5 3.5v9', 'M10.5 3.5v9'],
+  play: ['M5.2 3.4l6.8 4.6-6.8 4.6z'],
+  stop: ['M4.2 4.2h7.6v7.6H4.2z'],
+  clock: ['M8 2.4a5.6 5.6 0 1 0 0 11.2A5.6 5.6 0 0 0 8 2.4z', 'M8 4.8V8l2.2 1.4'],
+  hourglass: ['M4.2 2.7h7.6', 'M4.2 13.3h7.6', 'M5.1 2.7c0 3 2.9 3.4 2.9 5.3s-2.9 2.3-2.9 5.3', 'M10.9 2.7c0 3-2.9 3.4-2.9 5.3s2.9 2.3 2.9 5.3'],
+  wrench: ['M9.7 2.8a3 3 0 0 0-3.9 3.9L2.8 9.7l3.5 3.5 3-3a3 3 0 0 0 3.9-3.9l-2.2 2.2-2.2-2.2z'],
+  bug: ['M5.2 5.2h5.6v4.2a2.8 2.8 0 0 1-5.6 0z', 'M6.2 5.2V4.1a1.8 1.8 0 0 1 3.6 0v1.1', 'M5.2 7.2H2.8', 'M10.8 7.2h2.4', 'M5.2 10.4l-1.8 1.5', 'M10.8 10.4l1.8 1.5'],
 })
 
 /** All icon names the plugin accepts (contract set). */
 export const ICON_NAMES = GROUP_ICONS
+
+/**
+ * 0.2.13 semantic sections for the icon picker. Every section is rendered with
+ * a heading and a divider; names not listed here fall into the general group.
+ */
+export const ICON_GROUPS = Object.freeze([
+  {
+    key: 'status',
+    labelKey: 'iconGroup.status',
+    icons: ['check-circle', 'check', 'x-circle', 'ban', 'pause', 'play', 'stop', 'clock', 'hourglass'],
+  },
+  {
+    key: 'work',
+    labelKey: 'iconGroup.work',
+    icons: ['code', 'terminal', 'wrench', 'bug', 'database', 'chart', 'target', 'rocket', 'briefcase', 'layers', 'book'],
+  },
+  {
+    key: 'general',
+    labelKey: 'iconGroup.general',
+    icons: ['folder', 'folder-open', 'star', 'flag', 'bookmark', 'tag', 'bulb', 'globe', 'heart', 'home', 'calendar', 'hash'],
+  },
+])
 
 /** Resolve a possibly-invalid icon name to the default folder. */
 export const iconName = (name) => (GROUP_ICONS.includes(name) ? name : DEFAULT_ICON)

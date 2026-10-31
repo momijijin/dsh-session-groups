@@ -147,5 +147,21 @@
   "icon.layers": "图层",
   "icon.calendar": "日历",
   "icon.chart": "图表",
-  "icon.target": "目标"
+  "icon.target": "目标",
+  "icon.check-circle": "已完成",
+  "icon.check": "勾选",
+  "icon.x-circle": "已取消",
+  "icon.ban": "禁止",
+  "icon.pause": "已挂起",
+  "icon.play": "进行中",
+  "icon.stop": "停止",
+  "icon.clock": "等待中",
+  "icon.hourglass": "计时中",
+  "icon.wrench": "开发中",
+  "icon.bug": "缺陷",
+  "iconGroup.status": "状态",
+  "iconGroup.work": "开发与工作",
+  "iconGroup.general": "通用",
+  "sessions.expand": "展开其余 {n} 个会话",
+  "sessions.collapse": "收起"
 }

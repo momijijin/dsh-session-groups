@@ -203,7 +203,9 @@ export const CSS = `
   flex: none;
 }
 .dsg-text-button:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
-.dsg-tree { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; padding: 2px 4px 8px 2px; /* Inserting the placeholder must push the following rows down instead of scroll-anchoring them back into place. */ overflow-anchor: none; }
+/* 0.2.13: match the official workspace top rhythm: a 36px section header,
+ * 4px header bottom, and 6px before the first group row instead of 2px. */
+.dsg-tree { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; padding: 6px 4px 8px 2px; /* Inserting the placeholder must push the following rows down instead of scroll-anchoring them back into place. */ overflow-anchor: none; }
 .dsg-group-row, .dsg-session-row {
   display: flex;
   align-items: center;
@@ -331,7 +333,8 @@ export const CSS = `
 .dsg-empty-dropbox-plus { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; flex: none; }
 .dsg-empty-dropbox-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dsg-session-row { height: 32px; padding: 0 8px; }
-.dsg-session-row[data-current="true"] { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.16)); }
+.dsg-session-row[data-current="true"] { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.16)); box-shadow: inset 2px 0 0 var(--dsw-alias-state-business-primary, #4d6bfe); }
+.dsg-session-row[data-current="true"] .dsg-session-title { color: var(--dsw-alias-state-business-primary, #4d6bfe); font-weight: 500; }
 .dsg-session-row[data-archived="true"] { opacity: .62; }
 /* Search reveal highlight (1.5 s, class removed by the component timer). */
 .dsg-session-row.dsg-search-hit { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.3)); animation: dsg-search-hit 1.5s ease-out; }
@@ -520,6 +523,16 @@ export const CSS = `
 /* 0.2.12: more common glyphs; a slightly wider 4-column icon picker. */
 .dsg-dialog[data-kind="icon"] { width: min(420px, calc(100vw - 32px)); }
 .dsg-icon-option { width: auto; flex: 1 1 88px; }
+.dsg-icon-sections { display: flex; flex-direction: column; gap: 0; max-height: min(56vh, 430px); overflow-y: auto; }
+.dsg-icon-section { padding: 0; }
+.dsg-icon-section + .dsg-icon-section { border-top: 0.5px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 18%, transparent)); margin-top: 8px; padding-top: 8px; }
+.dsg-icon-section-title { padding: 2px 4px 4px; font-size: var(--dsg-font-11, 11px); line-height: 16px; font-weight: 500; color: var(--dsw-alias-label-tertiary, CanvasText); }
+.dsg-icon-section .dsg-dialog-icon-grid { max-height: none; overflow: visible; padding: 0; border: 0; box-shadow: none; background: transparent; }
+/* Official workspace-style overflow row: quiet left-aligned 12px text, no
+ * background until hover, 28px row height. */
+.dsg-session-overflow { box-sizing: border-box; width: 100%; height: 28px; padding: 0 12px 0 28px; border: 0; border-radius: var(--dsw-radius-sm, 6px); background: transparent; color: var(--dsw-alias-label-tertiary, CanvasText); font-family: inherit; font-size: var(--dsg-font-12, 12px); line-height: 16px; text-align: left; cursor: pointer; }
+.dsg-session-overflow:hover { color: var(--dsw-alias-label-secondary, CanvasText); background: transparent; }
+.dsg-session-overflow:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); outline-offset: -2px; }
 /* 0.2.7 color dialog: six presets in a fixed 3x2 grid with 32px cells, plus a
  * custom native-swatch/hex row. Every cell reserves a 16px check slot (hidden,
  * not removed) so labels do not shift between selected/unselected states. */

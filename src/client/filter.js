@@ -42,6 +42,31 @@ export const currentSessionIdOf = (sessionsSnapshot) => {
   return null
 }
 
+/**
+ * 0.2.13: the main-body session to highlight. When the main body is showing a
+ * subagent, the host's `mainView` retention points at the subagent; walk the
+ * parentSessionId chain so the left sidebar highlights its owning main session,
+ * never a subagent row (subagents are filtered out of this tree anyway).
+ */
+export const mainSessionIdOf = (sessionsSnapshot) => {
+  const current = currentSessionIdOf(sessionsSnapshot)
+  if (!current) return null
+  const byId = sessionsSnapshot?.byId ?? {}
+  let id = current
+  let row = byId[id]
+  let guard = 0
+  while (row && guard < 32) {
+    const parentId = typeof row.parentSessionId === 'string' && row.parentSessionId !== '' ? row.parentSessionId : null
+    if (!parentId) break
+    const parent = byId[parentId]
+    if (!parent) break
+    id = parentId
+    row = parent
+    guard += 1
+  }
+  return id
+}
+
 /** Display title per CONTRACTS §4: displayTitle/title, blank -> "新会话". */
 export const sessionTitle = (row, { blankLabel = '新会话', untitledLabel = '未命名' } = {}) => {
   if (!row || typeof row !== 'object') return untitledLabel

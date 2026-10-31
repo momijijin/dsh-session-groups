@@ -147,5 +147,21 @@
   "icon.layers": "Layers",
   "icon.calendar": "Calendar",
   "icon.chart": "Chart",
-  "icon.target": "Target"
+  "icon.target": "Target",
+  "icon.check-circle": "Completed",
+  "icon.check": "Check",
+  "icon.x-circle": "Cancelled",
+  "icon.ban": "Blocked",
+  "icon.pause": "Paused",
+  "icon.play": "In progress",
+  "icon.stop": "Stopped",
+  "icon.clock": "Waiting",
+  "icon.hourglass": "Pending",
+  "icon.wrench": "In development",
+  "icon.bug": "Bug",
+  "iconGroup.status": "Status",
+  "iconGroup.work": "Development",
+  "iconGroup.general": "General",
+  "sessions.expand": "Show {n} more sessions",
+  "sessions.collapse": "Show less"
 }

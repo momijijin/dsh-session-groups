@@ -7,7 +7,7 @@
  * from those hooks; the only local state is this plugin's view store.
  */
 import { Component, createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME } from '../shared/constants.js'
+import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME, SESSION_WATERMARK_BASE, SESSION_WATERMARK_AUTO_MAX } from '../shared/constants.js'
 import {
   childrenOf,
   findGroup,
@@ -36,7 +36,7 @@ import { createActions, formatActivity, workspaceChoices, workspaceLabel } from 
 import {
   buildVisibleTree,
   countTreeSessions,
-  currentSessionIdOf,
+  mainSessionIdOf,
   isArchived,
   sessionTitle,
   ARCHIVE_FILTERS,
@@ -55,7 +55,7 @@ import {
   diagTrace,
 } from './diagnostics.js'
 import { GROUP_DRAG_MIME, resolveGroupDrop } from './group-drag.js'
-import { renderGlyph, renderHeaderIcon, renderIcon } from './icons.js'
+import { ICON_GROUPS, renderGlyph, renderHeaderIcon, renderIcon } from './icons.js'
 import { clampMenuPosition, isMenuKey, menuAnchorFromEvent, menuAnchorFromRow } from './menu-position.js'
 import {
   perfDragOver,
@@ -569,6 +569,35 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
   const dragging = store.draggedGroupId === group.id
   const visibleSessions = node.children.filter((child) => child.kind === 'session')
   const childGroups = node.children.filter((child) => child.kind === 'group')
+  // Official 0.2.13 watermark: 5 direct sessions by default; a current /
+  // running / pending / unread-complete row raises the baseline (max 50).
+  // "Show more" is a local expansion of +5 (or all remaining); collapsing the
+  // group resets to the official default.
+  const [sessionWatermark, setSessionWatermark] = useState(0)
+  useEffect(() => {
+    if (!expanded) setSessionWatermark(0)
+  }, [expanded])
+  const currentSessionId = store.currentSessionId ?? null
+  let requiredWatermark = 0
+  for (let index = 0; index < visibleSessions.length; index += 1) {
+    if (index + 1 > SESSION_WATERMARK_AUTO_MAX) break
+    const child = visibleSessions[index]
+    const status = child.status
+    const attention =
+      child.session?.id === currentSessionId ||
+      status?.running === true ||
+      status?.completionUnread === true ||
+      (status?.pendingInteraction && typeof status.pendingInteraction.kind === 'string') ||
+      (child.runningSubagentCount ?? 0) > 0
+    if (attention) requiredWatermark = index + 1
+  }
+  const baselineWatermark = Math.max(SESSION_WATERMARK_BASE, requiredWatermark)
+  const effectiveWatermark = Math.max(baselineWatermark, sessionWatermark)
+  const visibleSessionRows = visibleSessions.slice(0, effectiveWatermark)
+  const hiddenSessionCount = visibleSessions.length - visibleSessionRows.length
+  const baselineHiddenCount = visibleSessions.length - visibleSessions.slice(0, baselineWatermark).length
+  const showSessionOverflow = baselineHiddenCount > 0
+  const sessionsExpanded = hiddenSessionCount === 0
   const notFound = rt()?.t('group.empty')
   // n child groups => n+1 slots; every slot and child group renders before the
   // session rows so slots never sit between sessions. Collapsed groups render no
@@ -586,7 +615,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
   // Session insertion uses a real placeholder row before/after the target row
   // (not a 2px border) so the rows around the insertion point physically move.
   const sessionChildren = []
-  for (const child of visibleSessions) {
+  for (const child of visibleSessionRows) {
     const sessionId = child.session.id
     if (dropTarget?.kind === 'session-before' && dropTarget.sessionId === sessionId) {
       sessionChildren.push(h(DropPlaceholder, { key: `ph-b-${sessionId}`, target: dropTarget, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT }))
@@ -629,6 +658,34 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
     )
   }
   lineChildren.push(...sessionChildren)
+  if (showSessionOverflow) {
+    lineChildren.push(
+      h(
+        'button',
+        {
+          key: 'session-overflow',
+          type: 'button',
+          class: 'dsg-session-overflow',
+          'data-testid': 'session-groups-session-overflow',
+          'data-group-id': group.id,
+          'aria-expanded': sessionsExpanded ? 'true' : 'false',
+          onClick: (event) => {
+            event.stopPropagation()
+            if (sessionsExpanded) {
+              setSessionWatermark(0)
+              return
+            }
+            setSessionWatermark(
+              hiddenSessionCount <= SESSION_WATERMARK_BASE ? Infinity : effectiveWatermark + SESSION_WATERMARK_BASE
+            )
+          },
+        },
+        sessionsExpanded
+          ? rt()?.t('sessions.collapse')
+          : rt()?.t('sessions.expand', { n: hiddenSessionCount })
+      )
+    )
+  }
   // group-append: placeholder at the end of the group body when expanded.
   if (appendPlaceholder) lineChildren.push(appendPlaceholder)
 
@@ -1731,38 +1788,73 @@ const DialogHost = ({ store, props }) => {
   }
   if (dialog.kind === 'icon') {
     const icons = Array.isArray(dialog.icons) ? dialog.icons : []
+    const available = new Set(icons)
+    const sections = ICON_GROUPS.map((section) => ({
+      ...section,
+      icons: section.icons.filter((icon) => available.has(icon)),
+    })).filter((section) => section.icons.length > 0)
+    const grouped = new Set(sections.flatMap((section) => section.icons))
+    const leftovers = icons.filter((icon) => !grouped.has(icon))
+    if (leftovers.length > 0) {
+      const general = sections.find((section) => section.key === 'general')
+      if (general) general.icons.push(...leftovers)
+      else sections.push({ key: 'general', labelKey: 'iconGroup.general', icons: leftovers })
+    }
+    const iconButton = (icon) => {
+      const active = selection === icon
+      return h(
+        'button',
+        {
+          key: icon,
+          type: 'button',
+          role: 'radio',
+          'aria-checked': active ? 'true' : 'false',
+          class: 'dsg-menu-item dsg-dialog-option dsg-icon-option',
+          'data-testid': 'session-groups-dialog-icon',
+          'data-icon': icon,
+          'data-selected': active ? 'true' : 'false',
+          title: t(`icon.${icon}`),
+          onClick: (event) => {
+            event.stopPropagation()
+            setSelection(icon)
+          },
+        },
+        renderIcon(h, icon, 16),
+        h('span', { class: 'dsg-dialog-option-label' }, t(`icon.${icon}`))
+      )
+    }
     bodyNodes.push(
       h(
         'div',
         {
-          class: 'dsg-menu dsg-dialog-icon-grid',
-          role: 'radiogroup',
+          class: 'dsg-icon-sections',
           'data-testid': 'session-groups-dialog-options',
-          'aria-label': title,
         },
-        ...icons.map((icon) => {
-          const active = selection === icon
-          return h(
-            'button',
+        ...sections.map((section, index) =>
+          h(
+            'section',
             {
-              key: icon,
-              type: 'button',
-              role: 'radio',
-              'aria-checked': active ? 'true' : 'false',
-              class: 'dsg-menu-item dsg-dialog-option dsg-icon-option',
-              'data-testid': 'session-groups-dialog-icon',
-              'data-icon': icon,
-              'data-selected': active ? 'true' : 'false',
-              title: t(`icon.${icon}`),
-              onClick: (event) => {
-                event.stopPropagation()
-                setSelection(icon)
-              },
+              key: section.key,
+              class: 'dsg-icon-section',
+              'data-icon-group': section.key,
+              'aria-label': t(section.labelKey),
             },
-            renderIcon(h, icon, 16),
-            h('span', { class: 'dsg-dialog-option-label' }, t(`icon.${icon}`))
+            h(
+              'div',
+              { class: 'dsg-icon-section-title' },
+              t(section.labelKey)
+            ),
+            h(
+              'div',
+              {
+                class: 'dsg-menu dsg-dialog-icon-grid',
+                role: 'radiogroup',
+                'aria-label': t(section.labelKey),
+              },
+              ...section.icons.map(iconButton)
+            )
           )
-        })
+        )
       )
     )
   }
@@ -2071,14 +2163,12 @@ export const GroupsView = (props) => {
   const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot) : null
   const statuses = typeof props?.useSessionStatus === 'function' ? props.useSessionStatus((snapshot) => snapshot) : null
   const subagentCounts = runningSubagentCounts(sessions, statuses)
-  const panelInfo = typeof props?.usePanelInfo === 'function' ? props.usePanelInfo((snapshot) => snapshot) : null
 
   const byId = sessions?.byId ?? {}
   const workspaceItems = workspaces?.items ?? []
   const archivedSessionIds = Array.isArray(workspaces?.archivedSessionIds) ? workspaces.archivedSessionIds : []
-  const currentId = currentSessionIdOf(sessions)
-  const panelActive = panelInfo?.activePanelId !== null && panelInfo?.activePanelId !== undefined
-  const highlightCurrent = panelActive ? null : currentId
+  const currentId = mainSessionIdOf(sessions)
+  const highlightCurrent = currentId
 
   const [dragState, setDragState] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
