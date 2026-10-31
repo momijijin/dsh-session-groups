@@ -6,7 +6,7 @@
  * `usePanelInfo`, `…`) plus the slot owner share. Everything host-derived is read
  * from those hooks; the only local state is this plugin's view store.
  */
-import { Component, createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { Component, createElement, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME, SESSION_WATERMARK_BASE, SESSION_WATERMARK_AUTO_MAX } from '../shared/constants.js'
 import {
   childrenOf,
@@ -405,7 +405,36 @@ const EmptyDropBox = ({ label, active = false, testId = 'session-groups-empty', 
 // ---------------------------------------------------------------------------
 // Session row
 // ---------------------------------------------------------------------------
-const SessionRow = ({
+/**
+ * 0.2.20: a stream/frame snapshot rebuilds the whole tree. The row only needs
+ * to repaint when display data, status, workspace, archive flag or active
+ * highlight changes; handlers are the stable proxy supplied by GroupsView.
+ */
+const sessionRowPropsEqual = (prev, next) => {
+  const a = prev.sessionNode
+  const b = next.sessionNode
+  if (a.session.id !== b.session.id) return false
+  if (prev.depth !== next.depth || prev.groupId !== next.groupId || prev.ungrouped !== next.ungrouped) return false
+  if (a.archived !== b.archived || a.runningSubagentCount !== b.runningSubagentCount) return false
+  if ((prev.store?.currentSessionId === a.session.id) !== (next.store?.currentSessionId === b.session.id)) return false
+  const ar = a.session
+  const br = b.session
+  if (ar.title !== br.title || ar.displayTitle !== br.displayTitle || ar.updatedAt !== br.updatedAt || ar.blank !== br.blank) return false
+  const aw = a.workspace
+  const bw = b.workspace
+  if (aw?.workspaceId !== bw?.workspaceId || aw?.title !== bw?.title || aw?.path !== bw?.path) return false
+  const as = a.status
+  const bs = b.status
+  if (as === bs) return true
+  if (!as || !bs) return false
+  return (
+    as.running === bs.running &&
+    as.completionUnread === bs.completionUnread &&
+    as.pendingInteraction?.kind === bs.pendingInteraction?.kind
+  )
+}
+
+const SessionRowImpl = ({
   sessionNode,
   depth,
   groupId,
@@ -513,6 +542,8 @@ const SessionRow = ({
         : null
   )
 }
+
+const SessionRow = memo(SessionRowImpl, sessionRowPropsEqual)
 
 // ---------------------------------------------------------------------------
 // Group tree node
@@ -3075,10 +3106,22 @@ export const GroupsView = (props) => {
     }
   }
 
+  // 0.2.20: stable handler facade for memoized rows. Every call reads the
+  // latest render's closure, so memoization cannot dispatch stale drag/doc data.
+  const handlersRef = useRef(handlers)
+  handlersRef.current = handlers
+  const stableHandlers = useMemo(() => {
+    const proxy = {}
+    for (const handlerName of Object.keys(handlersRef.current)) {
+      proxy[handlerName] = (...args) => handlersRef.current[handlerName]?.(...args)
+    }
+    return proxy
+  }, [])
+
   return h(
     'div',
     { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true', 'data-narrow': appliedWidth !== null && appliedWidth <= 320 ? 'true' : 'false', 'data-optimistic': store.optimistic ? 'true' : 'false' },
-    h(Header, { store: viewState, handlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds }),
+    h(Header, { store: viewState, handlers: stableHandlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds }),
     wide && widthSupported && appliedWidth !== null
       ? h(ResizeHandle, {
           width: appliedWidth,
@@ -3089,22 +3132,22 @@ export const GroupsView = (props) => {
           onReset: handleWidthReset,
         })
       : null,
-    h(Banner, { store, handlers }),
+    h(Banner, { store, handlers: stableHandlers }),
     store.docState === 'loading'
       ? h('div', { class: 'dsg-empty' }, t('flat.title'))
       : h(
           'div',
           { class: 'dsg-tree', role: 'tree', 'aria-label': t('view.title') },
-          h(UngroupedSection, { node: tree.ungrouped, store: viewState, props, handlers, virtualRef }),
-          ...tree.groups.map((node) => h(GroupNode, { key: node.group.id, node, depth: 0, props, handlers, store: viewState })),
+          h(UngroupedSection, { node: tree.ungrouped, store: viewState, props, handlers: stableHandlers, virtualRef }),
+          ...tree.groups.map((node) => h(GroupNode, { key: node.group.id, node, depth: 0, props, handlers: stableHandlers, store: viewState })),
           // Group dragged to the root end: a group-row-height placeholder after
           // the last group makes the insertion point unmistakable.
           dropTarget?.kind === 'group-root-end'
-            ? h(DropPlaceholder, { target: dropTarget, store: viewState, handlers, height: GROUP_PLACEHOLDER_HEIGHT })
+            ? h(DropPlaceholder, { target: dropTarget, store: viewState, handlers: stableHandlers, height: GROUP_PLACEHOLDER_HEIGHT })
             : null
         ),
     h(Toast, { store }),
-    h(MenuPopover, { store, handlers }),
+    h(MenuPopover, { store, handlers: stableHandlers }),
     h(DialogHost, { store, props })
   )
 }
