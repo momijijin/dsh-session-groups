@@ -1925,12 +1925,16 @@ const DialogHost = ({ store, props }) => {
     const titlebar = element.querySelector('.dsg-dialog-titlebar')
     const content = element.querySelector('.dsg-dialog-content')
     const actions = element.querySelector('.dsg-dialog-actions')
-    const naturalHeight =
-      (titlebar?.offsetHeight ?? 0) + (content?.scrollHeight ?? 0) + (actions?.offsetHeight ?? 0)
+    // The dialog is a column flex with gap:20px and padding-bottom:24px, so
+    // summing only its three children clips the content to 0 height. Include
+    // the two gaps + bottom padding and never go below the auto-layout box.
+    const laidOutHeight =
+      (titlebar?.offsetHeight ?? 0) + (content?.scrollHeight ?? 0) + (actions?.offsetHeight ?? 0) + 64
+    const naturalHeight = Math.max(Math.ceil(box.height), laidOutHeight)
     setDialogRect(
       centeredDialogRect(
         box.width || (dialog.kind === 'icon' ? 440 : 400),
-        naturalHeight || box.height || 320,
+        naturalHeight || 320,
         globalThis.innerWidth,
         globalThis.innerHeight
       )
