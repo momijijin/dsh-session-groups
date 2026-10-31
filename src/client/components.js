@@ -2346,6 +2346,19 @@ export const GroupsView = (props) => {
   const archivedSessionIds = Array.isArray(workspaces?.archivedSessionIds) ? workspaces.archivedSessionIds : []
   const currentId = mainSessionIdOf(sessions)
   const highlightCurrent = currentId
+  const tree = useMemo(
+    () =>
+      store
+        ? buildVisibleTree(store.doc, byId, workspaceItems, {
+            archivedSessionIds,
+            filter: store.archiveFilter,
+            currentSessionId: highlightCurrent,
+            statuses: statuses instanceof Map ? statuses : null,
+            subagentCounts,
+          })
+        : { groups: [], ungrouped: [] },
+    [store?.doc, store?.archiveFilter, byId, workspaceItems, archivedSessionIds, highlightCurrent, statuses, subagentCounts]
+  )
 
   const [dragState, setDragState] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
@@ -2562,13 +2575,6 @@ export const GroupsView = (props) => {
   // Flat fallback for load/route/commit failures (CONTRACTS §6).
   if (store.docState === 'error') return h(FlatFallback, { props, store, reason: store.banner?.code === 'route-unavailable' ? 'route-unavailable' : 'error' })
 
-  const tree = buildVisibleTree(store.doc, byId, workspaceItems, {
-    archivedSessionIds,
-    filter: store.archiveFilter,
-    currentSessionId: highlightCurrent,
-    statuses: statuses instanceof Map ? statuses : null,
-    subagentCounts,
-  })
   const ungroupedCount = tree.ungrouped.length
   // Diagnostics run context: every traced event carries the current revision,
   // optimistic flag, tree counts, viewport and applied sidebar width. Building
