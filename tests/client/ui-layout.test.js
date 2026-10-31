@@ -104,10 +104,14 @@ test('0.2.39 dialog restores the compact 0.2.30 chrome with theme tokens', () =>
   assert.match(CSS, /\.dsg-dialog-actions \{[^}]*gap:\s*10px/s)
   assert.equal(CSS.includes('.dsg-dialog-close'), false)
   assert.equal(block('.dsg-dialog-backdrop {').includes('backdrop-filter'), false)
+  assert.match(CSS, /\.dsg-dialog-resizer\[data-dir="se"\]::after/)
 })
 
 test('dialog natural height uses the complete flex layout', () => {
-  assert.match(components, /\+ 56/)
+  assert.match(components, /56 \+/)
+  assert.match(components, /borderHeight/)
+  assert.match(components, /Math\.ceil\(borderHeight\)/)
+  assert.match(components, /Math\.ceil\(content\?\.scrollHeight/)
   assert.match(components, /laidOutHeight \|\| Math\.ceil\(box\.height\)/)
 })
 
@@ -509,6 +513,9 @@ test('0.2.14 color dialog: 2x3 roomy grid, fixed check slot, custom native+hex r
   const grid = block('.dsg-color-grid {')
   assert.match(grid, /display:\s*grid/)
   assert.match(grid, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(grid, /padding:\s*8px/)
+  assert.match(grid, /background:\s*var\(--dsw-alias-bg-layer-1/)
+  assert.match(grid, /border:[^;]*var\(--dsw-alias-border-l3/)
   const option = block('.dsg-color-option {')
   assert.match(option, /height:\s*36px/)
   assert.match(option, /width:\s*100%/)

@@ -1926,9 +1926,17 @@ const DialogHost = ({ store, props }) => {
     const content = element.querySelector('.dsg-dialog-content')
     const actions = element.querySelector('.dsg-dialog-actions')
     // The dialog is a column flex with gap:12px and 16px vertical padding, so
-    // include the two gaps + padding; summing only the children clips content.
+    // include the two gaps + padding + the 0.5px top/bottom border (which
+    // becomes fractional at non-1 DPR) or the content bottom is clipped.
+    const borderHeight =
+      (Number.parseFloat(globalThis.getComputedStyle(element).borderTopWidth) || 0) +
+      (Number.parseFloat(globalThis.getComputedStyle(element).borderBottomWidth) || 0)
     const laidOutHeight =
-      (titlebar?.offsetHeight ?? 0) + (content?.scrollHeight ?? 0) + (actions?.offsetHeight ?? 0) + 56
+      (titlebar?.offsetHeight ?? 0) +
+      Math.ceil(content?.scrollHeight ?? 0) +
+      (actions?.offsetHeight ?? 0) +
+      56 +
+      Math.ceil(borderHeight)
     const naturalHeight = laidOutHeight || Math.ceil(box.height) || 320
     setDialogRect(
       centeredDialogRect(

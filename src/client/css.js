@@ -601,6 +601,8 @@ export const CSS = `
 .dsg-dialog-resizer[data-dir="ne"] { right: -3px; top: -3px; width: 14px; height: 14px; cursor: nesw-resize; }
 .dsg-dialog-resizer[data-dir="nw"] { left: -3px; top: -3px; width: 14px; height: 14px; cursor: nwse-resize; }
 .dsg-dialog-resizer[data-dir="se"] { right: -3px; bottom: -3px; width: 14px; height: 14px; cursor: nwse-resize; }
+.dsg-dialog-resizer[data-dir="se"]::after { content: ''; position: absolute; right: 3px; bottom: 3px; width: 7px; height: 7px; border-right: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); border-bottom: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); border-radius: 0 0 2px 0; opacity: .55; pointer-events: none; }
+.dsg-dialog-resizer[data-dir="se"]:hover::after { opacity: .95; }
 .dsg-dialog-resizer[data-dir="sw"] { left: -3px; bottom: -3px; width: 14px; height: 14px; cursor: nesw-resize; }
 .dsg-dialog-confirm { appearance: none; border: none; height: 32px; padding: 0 16px; border-radius: 6px; font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; background: var(--dsw-alias-button-primary-fill, var(--dsw-alias-state-business-primary, #4d6bfe)); color: var(--dsw-alias-label-primary-foreground, Canvas); }
 .dsg-dialog-confirm[data-variant="danger"] { background: var(--dsw-alias-state-error-primary, #f85149); }
@@ -644,7 +646,7 @@ export const CSS = `
 }
 /* 0.2.12: more common glyphs; a slightly wider 4-column icon picker. */
 .dsg-icon-option { width: auto; flex: 1 1 88px; min-height: 36px; }
-.dsg-icon-sections { display: flex; flex-direction: column; gap: 0; max-height: min(56vh, 430px); overflow-y: auto; }
+.dsg-icon-sections { box-sizing: border-box; display: flex; flex-direction: column; gap: 0; max-height: min(56vh, 430px); overflow-y: auto; padding: 8px; border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, CanvasText 18%, transparent)); border-radius: var(--dsw-radius-md, 8px); background: var(--dsw-alias-bg-layer-1, Canvas); }
 .dsg-icon-section { padding: 0; }
 .dsg-icon-section + .dsg-icon-section { border-top: 0.5px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 18%, transparent)); margin-top: 8px; padding-top: 8px; }
 .dsg-icon-section-title { padding: 2px 4px 4px; font-size: var(--dsg-font-11, 11px); line-height: 16px; font-weight: 500; color: var(--dsw-alias-label-tertiary, CanvasText); }
@@ -657,7 +659,7 @@ export const CSS = `
 /* 0.2.7 color dialog: six presets in a fixed 3x2 grid with 32px cells, plus a
  * custom native-swatch/hex row. Every cell reserves a 16px check slot (hidden,
  * not removed) so labels do not shift between selected/unselected states. */
-.dsg-color-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
+.dsg-color-grid { box-sizing: border-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; padding: 8px; border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, CanvasText 18%, transparent)); border-radius: var(--dsw-radius-md, 8px); background: var(--dsw-alias-bg-layer-1, Canvas); }
 .dsg-color-option {
   appearance: none;
   box-sizing: border-box;
@@ -700,8 +702,8 @@ export const CSS = `
   border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35));
 }
 .dsg-color-custom-row[data-selected="true"] {
-  border-color: var(--dsw-alias-state-business-primary, #4d6bfe);
-  background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14));
+  border-color: var(--dsw-alias-label-primary, CanvasText);
+  background: var(--dsw-alias-interactive-bg-active, var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)));
 }
 .dsg-color-custom-label { flex: none; font-size: var(--dsg-font-12, 12px); color: var(--dsw-alias-label-secondary, CanvasText); }
 .dsg-color-native {
