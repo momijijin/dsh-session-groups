@@ -580,7 +580,7 @@ export const CSS = `
 .dsg-dialog[data-positioned="true"] { transform: none; max-width: none; max-height: none; }
 .dsg-dialog-titlebar { flex: none; display: flex; align-items: center; min-height: 58px; padding: 22px 14px 12px 24px; cursor: move; user-select: none; touch-action: none; }
 .dsg-dialog-title { font-size: 16px; line-height: 24px; font-weight: 500; color: var(--dsw-alias-label-primary, CanvasText); pointer-events: none; }
-.dsg-dialog-content { flex: 0 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 0 24px; scrollbar-width: thin; scrollbar-color: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))) transparent; }
+.dsg-dialog-content { flex: 0 0 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 0 24px; scrollbar-width: thin; scrollbar-color: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))) transparent; }
 .dsg-dialog[data-positioned="true"] .dsg-dialog-content { flex: 1 1 auto; }
 .dsg-dialog-content::-webkit-scrollbar, .dsg-icon-sections::-webkit-scrollbar, .dsg-dialog-list::-webkit-scrollbar { width: 10px; height: 10px; }
 .dsg-dialog-content::-webkit-scrollbar-track, .dsg-icon-sections::-webkit-scrollbar-track, .dsg-dialog-list::-webkit-scrollbar-track { background: transparent; }
@@ -588,7 +588,7 @@ export const CSS = `
 .dsg-dialog-content:hover::-webkit-scrollbar-thumb, .dsg-icon-sections:hover::-webkit-scrollbar-thumb, .dsg-dialog-list:hover::-webkit-scrollbar-thumb { background: var(--dsh-scrollbar-thumb-hover, var(--dsw-alias-scrollbar-hover-l2, color-mix(in srgb, CanvasText 32%, transparent))); background-clip: padding-box; }
 .dsg-icon-sections, .dsg-dialog-list { scrollbar-width: thin; scrollbar-color: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))) transparent; }
 .dsg-dialog-body { font-size: var(--dsg-font-13, 13px); line-height: 20px; color: var(--dsw-alias-label-secondary, CanvasText); white-space: pre-wrap; }
-.dsg-dialog-input { width: 100%; box-sizing: border-box; height: 44px; padding: 7px 14px; font-size: var(--dsg-font-14, 14px); line-height: 22px; border-radius: var(--dsw-radius-lg, 12px); border: 0.5px solid var(--dsw-alias-border-l4, color-mix(in srgb, CanvasText 18%, transparent)); background: transparent; color: var(--dsw-alias-label-primary, CanvasText); }
+.dsg-dialog-input { flex: none; width: 100%; box-sizing: border-box; height: 44px; min-height: 44px; padding: 7px 14px; font-size: var(--dsg-font-14, 14px); line-height: 22px; border-radius: var(--dsw-radius-lg, 12px); border: 0.5px solid var(--dsw-alias-border-l4, color-mix(in srgb, CanvasText 18%, transparent)); background: var(--dsw-alias-bg-layer-1, Canvas); color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-dialog-input::placeholder { color: var(--dsw-alias-label-caption, var(--dsw-alias-label-secondary, CanvasText)); }
 .dsg-dialog-input:focus { outline: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); outline-offset: -1px; }
 .dsg-dialog-error { font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-state-danger, #f85149); }
