@@ -10,11 +10,19 @@ node_modules/
 
 # Test runtime evidence that may contain real session content / paths
 scripts/qa/evidence/
+scripts/qa/evidence-perf/
+scripts/qa/evidence-0.2.4-manual/
 tests/**/evidence/
 spike/**/evidence/
 spike/**/evidence/*.png
 spike/**/evidence/*.webm
 spike/**/evidence/*.zip
+
+# Local SDD/review artifacts (kept outside the release history)
+.superpowers/
+
+# Stray npm lockfile; this repo uses pnpm-lock.yaml
+package-lock.json
 
 # OS
 Thumbs.db
