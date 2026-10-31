@@ -2937,6 +2937,9 @@ export const GroupsView = (props) => {
       const next = event?.relatedTarget
       if (current && next && typeof current.contains === 'function' && current.contains(next)) return
       if (next && typeof next.closest === 'function' && next.closest('.dsg-drop-placeholder')) return
+      // Moving between rows/gaps inside one group body must not remove the
+      // placeholder; the next row's dragover will retarget it.
+      if (next && typeof next.closest === 'function' && next.closest('.dsg-group-line')) return
       clearAutoExpand()
       setDropTargetTracked(null)
       rt()?.setFloatingLabel?.(null)
@@ -3070,6 +3073,18 @@ export const GroupsView = (props) => {
     onDragOverGroupHead: (event, groupId) => {
       const drag = dragRef.current
       if (!drag || drag.kind !== 'session') return
+      // The line also owns the tiny gaps between session rows. A gap is not a
+      // "group head" drop zone: treating it as one made the placeholder jump to
+      // the group top while the pointer slowly crossed a 2px gap. Only the area
+      // above the first visible session is the group-head zone.
+      const firstRow = event.currentTarget?.querySelector?.('[data-session-id]')
+      const firstRect = firstRow?.getBoundingClientRect?.()
+      if (firstRect && Number.isFinite(firstRect.top) && event.clientY >= firstRect.top) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+        return
+      }
       rowDragOver(event, { kind: 'group-head', groupId })
       scheduleAutoExpand(groupId)
     },
