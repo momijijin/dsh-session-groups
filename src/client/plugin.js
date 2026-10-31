@@ -24,13 +24,18 @@ import {
   initDiagnostics,
 } from './diagnostics.js'
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
-import { FooterAction, GroupsViewBoundary, setRuntime } from './components.js'
+import { GroupsViewBoundary, setRuntime } from './components.js'
+import {
+  applyManagedWidth,
+  clearManagedWidth,
+  findLayoutNodes,
+  readSidebarWidth,
+  updateManagedWidth,
+} from './sidebar-width.js'
+import { installWorkspaceToggle } from './workspace-toggle.js'
 
 /** Single sidebar slot taken over while the groups view is active. */
 export const VIEW_SLOT = 'sidebar.workspaces'
-/** Workspace-mode return action: the groups header owns the forward toggle. */
-export const FOOTER_SLOT = 'sidebar.footer.action'
-export const FOOTER_ID = 'dsh-session-groups.toggle'
 /** Takeover priority: the shipped browser registers at 0, lowest renders. */
 export const VIEW_PRIORITY = -1
 
@@ -58,8 +63,9 @@ export const createPlugin = () => {
   let toastTimer = null
   let floatingLabel = null
   let occupantDisposer = null
-  let footerDisposer = null
   let styleDisposer = null
+  let workspaceToggle = null
+  let widthRetryTimer = null
   let localeDisposer = null
   let perfDisposer = null
   let loadPromise = null
@@ -208,21 +214,47 @@ export const createPlugin = () => {
     }
   }
 
+  /** Locate the host layout from whichever view currently owns the sidebar. */
+  const findLiveLayoutNodes = () => {
+    const doc = globalThis.document
+    const groupsRoot = doc?.querySelector?.('.dsg-root')
+    if (groupsRoot) return findLayoutNodes(groupsRoot)
+    const officialHandle = doc?.querySelector?.('[data-side="sidebar"]')
+    return officialHandle ? findLayoutNodes(officialHandle) : null
+  }
+
+  const syncSidebarWidth = () => {
+    const nodes = findLiveLayoutNodes()
+    if (!nodes?.supported) return false
+    return applyManagedWidth(nodes, readSidebarWidth(), globalThis.innerWidth || 1440) !== null
+  }
+
   /**
-   * The groups header owns the forward switch. In workspace mode that header is
-   * gone, so the old footer action stays as the only way back; it is not mounted
-   * while groups are visible.
+   * Official workspace mode has no plugin slot in its header, so render one
+   * overlay action just left of the shipped search control. The same controller
+   * clears automatically when the groups header returns.
    */
-  const syncFooter = () => {
-    const needReturn = store?.getSnapshot().viewMode !== 'groups'
-    if (needReturn && footerDisposer === null && ctxRef !== null) {
-      footerDisposer = ctxRef.slots.inject(FOOTER_SLOT, () =>
-        ctxRef.slots.register({ name: FOOTER_SLOT, id: FOOTER_ID, order: 100 }, FooterAction)
-      )
+  const syncWorkspaceChrome = () => {
+    const mode = store?.getSnapshot().viewMode
+    if (mode === 'workspace') {
+      if (workspaceToggle === null) {
+        workspaceToggle = installWorkspaceToggle({
+          doc: globalThis.document,
+          label: t('footer.toGroups'),
+          onToggle: () => toggleMode(),
+        })
+      } else {
+        workspaceToggle.update()
+      }
+    } else {
+      workspaceToggle?.dispose()
+      workspaceToggle = null
     }
-    if (!needReturn && footerDisposer !== null) {
-      footerDisposer()
-      footerDisposer = null
+    if (!syncSidebarWidth() && widthRetryTimer === null) {
+      widthRetryTimer = setTimeout(() => {
+        widthRetryTimer = null
+        if (mounted) syncWorkspaceChrome()
+      }, 50)
     }
   }
 
@@ -230,7 +262,7 @@ export const createPlugin = () => {
     if (!store) return
     const next = mode === 'groups' ? 'groups' : 'workspace'
     store.dispatch('view-mode', { mode: next })
-    syncFooter()
+    syncWorkspaceChrome()
     if (diagEnabled()) {
       diagContext({ mode: next })
       diagTrace('mode.change', { mode: next })
@@ -419,7 +451,6 @@ export const createPlugin = () => {
     mounted = true
     ctxRef = ctx
     store = createStore({ storage: safeStorage() })
-    syncFooter()
     if (perfEnabled()) perfDisposer = store.subscribe(() => perfCount('store:publish'))
     // Diagnostics are opt-in (0.2.18): either the generic plugin-config switch
     // arrives in the load response, or a developer/localStorage override is set.
@@ -480,6 +511,13 @@ export const createPlugin = () => {
     }
     setRuntime(bridge)
 
+    const onWindowResize = () => {
+      if (updateManagedWidth(readSidebarWidth(), globalThis.innerWidth || 1440) === null) syncSidebarWidth()
+      workspaceToggle?.update()
+    }
+    globalThis.addEventListener?.('resize', onWindowResize)
+    syncWorkspaceChrome()
+
     // Outside click / Escape close transient UI.
     const doc = globalThis.document
     const onPointerDown = (event) => {
@@ -517,8 +555,12 @@ export const createPlugin = () => {
       }
       return () => {
         disposeOccupant()
-        if (typeof footerDisposer === 'function') footerDisposer()
-        footerDisposer = null
+        if (widthRetryTimer !== null) clearTimeout(widthRetryTimer)
+        widthRetryTimer = null
+        workspaceToggle?.dispose()
+        workspaceToggle = null
+        globalThis.removeEventListener?.('resize', onWindowResize)
+        clearManagedWidth()
         if (typeof localeDisposer === 'function') localeDisposer()
         localeDisposer = null
         if (typeof perfDisposer === 'function') perfDisposer()

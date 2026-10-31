@@ -619,41 +619,6 @@ export const CSS = `
 .dsg-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; }
 .dsg-rail-button { width: 36px; height: 36px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.08)); color: var(--dsw-alias-label-secondary, CanvasText); border-radius: var(--dsw-radius-md, 8px); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .dsg-rail-label { font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-label-tertiary, CanvasText); }
-/* Workspace-mode return action (the groups header owns the forward switch). */
-.dsg-footer-toggle {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-sizing: border-box;
-  width: 100%;
-  height: 32px;
-  padding: 0 10px;
-  margin: 0;
-  border: 0.5px solid var(--dsw-alias-border-l3, rgba(128, 128, 128, 0.35));
-  border-radius: var(--dsw-radius-sm, 6px);
-  background: transparent;
-  color: var(--dsw-alias-label-secondary, CanvasText);
-  font: inherit;
-  font-size: var(--dsg-font-14, 14px);
-  line-height: 20px;
-  cursor: pointer;
-  flex: none;
-}
-.dsg-footer-toggle:hover {
-  background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 10%, transparent));
-  color: var(--dsw-alias-label-primary, CanvasText);
-}
-.dsg-footer-toggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, CanvasText); outline-offset: -2px; }
-.dsg-footer-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dsg-footer-toggle[data-wide="false"] {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-color: transparent;
-  background: transparent;
-}
 .dsg-flat { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 1; padding: 2px 4px 8px 2px; }
 .dsg-flat-workspace { padding: 6px 6px 2px; font-size: var(--dsg-font-13, 13px); font-weight: 600; color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-nowrap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

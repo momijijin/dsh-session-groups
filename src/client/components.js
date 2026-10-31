@@ -68,7 +68,7 @@ import {
 } from './perf.js'
 import { buildSearchIndex, matchSessions, revealSession } from './search.js'
 import {
-  applyWidthOverride,
+  applyManagedWidth,
   clampSidebarWidth,
   findLayoutNodes,
   readSidebarWidth,
@@ -2085,36 +2085,6 @@ const Rail = ({ props }) => {
   )
 }
 
-/**
- * Workspace-mode return action. The groups header owns the forward switch, but
- * that header disappears with the takeover; the footer remains the only way
- * back from the official browser.
- */
-export const FooterAction = (props) => {
-  const store = useViewStore()
-  const wide = props?.wide !== false
-  const t = rt()?.t ?? ((key) => key)
-  const label = t('footer.toGroups')
-  return h(
-    'button',
-    {
-      type: 'button',
-      class: 'dsg-footer-toggle',
-      'data-testid': 'session-groups-toggle',
-      'data-target': 'groups',
-      'data-wide': wide ? 'true' : 'false',
-      title: label,
-      'aria-label': label,
-      onClick: (event) => {
-        event.stopPropagation()
-        rt()?.toggleMode()
-      },
-    },
-    renderGlyph(h, 'folderAdjust', 16),
-    wide ? h('span', { class: 'dsg-footer-label' }, label) : null
-  )
-}
-
 // ---------------------------------------------------------------------------
 // Flat fallback / error boundary
 // ---------------------------------------------------------------------------
@@ -2321,7 +2291,7 @@ export const GroupsView = (props) => {
         return
       }
       if (widthControllerRef.current === null) {
-        const controller = applyWidthOverride(nodes, clamped, viewport, { onLost })
+        const controller = applyManagedWidth(nodes, clamped, viewport)
         if (!controller) {
           setWidthSupported(false)
           return
@@ -2356,7 +2326,9 @@ export const GroupsView = (props) => {
     return () => {
       disposed = true
       globalThis.removeEventListener('resize', onResize)
-      clearController()
+      // Keep the managed override alive across a groups -> workspace switch;
+      // the plugin shell owns its final release.
+      widthControllerRef.current = null
       setWidthSupported(false)
     }
   }, [wide, store?.docState])

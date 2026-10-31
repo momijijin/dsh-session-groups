@@ -292,3 +292,48 @@ export const applyWidthOverride = (nodes, width, viewportWidth, { onLost } = {})
     clear,
   }
 }
+
+// ---------------------------------------------------------------------------
+// Cross-view width ownership
+// ---------------------------------------------------------------------------
+// The groups view can be unmounted while the official workspace browser is
+// shown. Keep one override alive for the shell so switching views never snaps
+// the sidebar back to the shipped 264..420px cap; the plugin shell releases it
+// on unload.
+let managedWidth = null
+let managedNodes = null
+
+/**
+ * Apply or retune the single cross-view width override.
+ * @param {ReturnType<typeof findLayoutNodes>} nodes
+ * @param {number} width
+ * @param {number} viewportWidth
+ * @returns {ReturnType<typeof applyWidthOverride>}
+ */
+export const applyManagedWidth = (nodes, width, viewportWidth) => {
+  const sameHost = managedWidth !== null && managedNodes?.frame === nodes?.frame && managedNodes?.sidebarRoot === nodes?.sidebarRoot
+  if (managedWidth !== null && !sameHost) {
+    managedWidth.clear()
+    managedWidth = null
+    managedNodes = null
+  }
+  if (managedWidth !== null) {
+    const next = managedWidth.update(width, viewportWidth)
+    if (next !== null) return managedWidth
+    managedWidth = null
+    managedNodes = null
+  }
+  managedWidth = applyWidthOverride(nodes, width, viewportWidth)
+  if (managedWidth !== null) managedNodes = nodes
+  return managedWidth
+}
+
+/** Retune the existing cross-view override; no-op when it was not installed. */
+export const updateManagedWidth = (width, viewportWidth) => managedWidth?.update(width, viewportWidth) ?? null
+
+/** Remove the cross-view override (plugin unload / unsupported layout). */
+export const clearManagedWidth = () => {
+  managedWidth?.clear()
+  managedWidth = null
+  managedNodes = null
+}
