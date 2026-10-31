@@ -35,6 +35,14 @@ import {
 import { createActions, formatActivity, workspaceChoices, workspaceLabel } from './actions.js'
 import { sessionViewEqual, statusMapEqual, workspaceViewEqual } from './session-equality.js'
 import {
+  centeredDialogRect,
+  clampDialogRect,
+  dragDialogRect,
+  readDialogGeometries,
+  resizeDialogRect,
+  saveDialogGeometry,
+} from './dialog-geometry.js'
+import {
   buildVisibleTree,
   countTreeSessions,
   mainSessionIdOf,
@@ -1891,6 +1899,97 @@ const DialogHost = ({ store, props }) => {
   const [selection, setSelection] = useState(undefined)
   const [hexInput, setHexInput] = useState('')
   const inputRef = useRef(null)
+  const dialogRef = useRef(null)
+  const [dialogRect, setDialogRect] = useState(null)
+  const dialogRectRef = useRef(null)
+  const gestureRef = useRef(null)
+  const gestureCleanupRef = useRef(null)
+  dialogRectRef.current = dialogRect
+  useEffect(() => {
+    if (!dialog) {
+      setDialogRect(null)
+      return
+    }
+    const saved = readDialogGeometries()[dialog.kind]
+    setDialogRect(saved ? clampDialogRect(saved, globalThis.innerWidth, globalThis.innerHeight) : null)
+  }, [dialog?.kind])
+
+  // Measure the natural dialog once when there is no saved geometry; after that
+  // the explicit rect is the single source of truth for drag/resize.
+  useLayoutEffect(() => {
+    if (!dialog || dialogRect !== null) return
+    const element = dialogRef.current
+    if (!element) return
+    const box = element.getBoundingClientRect()
+    setDialogRect(
+      centeredDialogRect(
+        box.width || (dialog.kind === 'icon' ? 420 : 360),
+        box.height || 320,
+        globalThis.innerWidth,
+        globalThis.innerHeight
+      )
+    )
+  }, [dialog, dialogRect])
+
+  useEffect(() => {
+    if (!dialog || dialogRect === null) return undefined
+    const onResize = () => {
+      const next = clampDialogRect(dialogRectRef.current ?? dialogRect, globalThis.innerWidth, globalThis.innerHeight)
+      setDialogRect(next)
+      saveDialogGeometry(dialog.kind, next)
+    }
+    globalThis.addEventListener('resize', onResize)
+    return () => globalThis.removeEventListener('resize', onResize)
+  }, [dialog?.kind, dialogRect === null])
+
+  const beginDialogGesture = (event, dir = null) => {
+    if (!dialog || event.button !== 0) return
+    if (dir === null && event.target?.closest?.('button, input, textarea, select, a')) return
+    const start = dialogRectRef.current
+    if (!start) return
+    event.preventDefault()
+    event.stopPropagation()
+    const doc = event.currentTarget?.ownerDocument ?? globalThis.document
+    const gesture = { start, x: event.clientX, y: event.clientY, dir }
+    gestureRef.current = gesture
+    const onMove = (moveEvent) => {
+      const current = gestureRef.current
+      if (!current) return
+      const dx = moveEvent.clientX - current.x
+      const dy = moveEvent.clientY - current.y
+      const next = current.dir
+        ? resizeDialogRect(current.start, current.dir, dx, dy, globalThis.innerWidth, globalThis.innerHeight)
+        : dragDialogRect(current.start, dx, dy, globalThis.innerWidth, globalThis.innerHeight)
+      setDialogRect(next)
+    }
+    const onEnd = () => {
+      const current = gestureRef.current
+      gestureRef.current = null
+      doc?.removeEventListener?.('pointermove', onMove)
+      doc?.removeEventListener?.('pointerup', onEnd)
+      doc?.removeEventListener?.('pointercancel', onEnd)
+      gestureCleanupRef.current = null
+      if (current && dialogRectRef.current) saveDialogGeometry(dialog.kind, dialogRectRef.current)
+    }
+    doc?.addEventListener?.('pointermove', onMove)
+    doc?.addEventListener?.('pointerup', onEnd)
+    doc?.addEventListener?.('pointercancel', onEnd)
+    gestureCleanupRef.current = () => {
+      doc?.removeEventListener?.('pointermove', onMove)
+      doc?.removeEventListener?.('pointerup', onEnd)
+      doc?.removeEventListener?.('pointercancel', onEnd)
+    }
+  }
+
+  // A dialog can unmount mid-gesture; release its window listeners.
+  useEffect(
+    () => () => {
+      gestureRef.current = null
+      gestureCleanupRef.current?.()
+      gestureCleanupRef.current = null
+    },
+    []
+  )
   useEffect(() => {
     setValue(dialog?.value ?? '')
     // Every selection dialog opens with a visible current/inferred highlight;
@@ -2175,31 +2274,57 @@ const DialogHost = ({ store, props }) => {
     'div',
     {
       class: 'dsg-dialog-backdrop',
-      onClick: (event) => {
-        if (event.target === event.currentTarget) close()
-      },
+      // Backdrop click deliberately does not close independent dialogs. The
+      // user closes via Cancel/Escape or the explicit action.
     },
     h(
       'div',
-      { class: 'dsg-dialog', role: 'dialog', 'aria-modal': 'true', 'data-testid': 'session-groups-dialog', 'data-kind': dialog.kind },
-      h('div', { class: 'dsg-dialog-title' }, title),
-      ...bodyNodes,
-      needsInput
-        ? h('input', {
-            ref: inputRef,
-            class: 'dsg-dialog-input',
-            'data-testid': 'session-groups-dialog-input',
-            value,
-            maxlength: String(MAX_GROUP_NAME),
-            placeholder: t('dialog.namePlaceholder'),
-            onChange: (event) => setValue(event.target.value),
-            onKeyDown: (event) => {
-              if (event.key === 'Enter' && canConfirm) confirm({ value: value.trim() })
-              if (event.key === 'Escape') close()
-            },
-          })
-        : null,
-      errorText ? h('div', { class: 'dsg-dialog-error' }, errorText) : null,
+      {
+        ref: dialogRef,
+        class: 'dsg-dialog',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'data-testid': 'session-groups-dialog',
+        'data-kind': dialog.kind,
+        'data-positioned': dialogRect ? 'true' : 'false',
+        style: dialogRect
+          ? {
+              left: `${dialogRect.x}px`,
+              top: `${dialogRect.y}px`,
+              width: `${dialogRect.width}px`,
+              height: `${dialogRect.height}px`,
+            }
+          : undefined,
+      },
+      h(
+        'div',
+        {
+          class: 'dsg-dialog-titlebar',
+          onPointerDown: (event) => beginDialogGesture(event),
+        },
+        h('div', { class: 'dsg-dialog-title' }, title)
+      ),
+      h(
+        'div',
+        { class: 'dsg-dialog-content' },
+        ...bodyNodes,
+        needsInput
+          ? h('input', {
+              ref: inputRef,
+              class: 'dsg-dialog-input',
+              'data-testid': 'session-groups-dialog-input',
+              value,
+              maxlength: String(MAX_GROUP_NAME),
+              placeholder: t('dialog.namePlaceholder'),
+              onChange: (event) => setValue(event.target.value),
+              onKeyDown: (event) => {
+                if (event.key === 'Enter' && canConfirm) confirm({ value: value.trim() })
+                if (event.key === 'Escape') close()
+              },
+            })
+          : null,
+        errorText ? h('div', { class: 'dsg-dialog-error' }, errorText) : null
+      ),
       h(
         'div',
         { class: 'dsg-dialog-actions' },
@@ -2217,6 +2342,15 @@ const DialogHost = ({ store, props }) => {
           },
           danger ? (dialog.kind === 'delete-group' ? t('dialog.moveAndDelete') : t('dialog.stopAndArchive')) : t('dialog.confirm')
         )
+      ),
+      ...['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'].map((dir) =>
+        h('div', {
+          key: dir,
+          class: 'dsg-dialog-resizer',
+          'data-dir': dir,
+          'aria-hidden': 'true',
+          onPointerDown: (event) => beginDialogGesture(event, dir),
+        })
       )
     )
   )
