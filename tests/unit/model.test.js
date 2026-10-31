@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { DEFAULT_GROUP_COLOR, DEFAULT_NEW_GROUP_ICON, GROUP_COLORS } from '../../src/shared/constants.js'
+import { DEFAULT_GROUP_COLOR, DEFAULT_NEW_GROUP_ICON, GROUP_COLORS, GROUP_ICONS } from '../../src/shared/constants.js'
 import {
   assignSession,
   buildRenderTree,
@@ -71,12 +71,14 @@ test('renameGroup and setGroupIcon update only the target', () => {
 })
 
 test('group palette: default blue, known colors, setGroupColor, unknown -> blue', () => {
-  assert.deepEqual([...GROUP_COLORS], ['blue', 'green', 'orange', 'red', 'purple', 'gray'])
+  assert.deepEqual([...GROUP_COLORS], ['blue', 'green', 'orange', 'red', 'purple', 'gray', 'teal', 'pink', 'brown', 'cyan', 'navy', 'magenta'])
   assert.equal(DEFAULT_GROUP_COLOR, 'blue')
   assert.equal(isKnownColor('purple'), true)
-  assert.equal(isKnownColor('pink'), false)
+  assert.equal(isKnownColor('pink'), true)
+  assert.equal(isKnownColor('chartreuse'), false)
   assert.equal(normalizeColor(undefined), 'blue')
-  assert.equal(normalizeColor('pink'), 'blue')
+  assert.equal(normalizeColor('chartreuse'), 'blue')
+  assert.equal(normalizeColor('pink'), 'pink')
   assert.equal(normalizeColor('gray'), 'gray')
 
   let doc = createGroup(emptyDoc(), { name: 'A' })
@@ -147,7 +149,7 @@ test('validateDoc: color is optional but must be a known palette id when present
   const legacyGroup = { ...group }
   delete legacyGroup.color
   assert.equal(validateDoc({ ...doc, groups: [legacyGroup] }).ok, true, 'legacy groups without color stay valid')
-  for (const color of ['pink', '', 7, null, true]) {
+  for (const color of ['chartreuse', '', 7, null, true]) {
     const verdict = validateDoc({ ...doc, groups: [{ ...group, color }] })
     assert.equal(verdict.ok, false, `color ${JSON.stringify(color)} must be rejected`)
     assert.match(verdict.errors.join(';'), /group-color/)
@@ -433,11 +435,18 @@ test('normalizeDoc drops duplicates and repairs bad parents', () => {
     revision: 0,
     groups: [
       { id: 'g1', name: 'A', icon: 'folder', color: 'purple', parentId: null, sessionIds: [] },
-      { id: 'g2', name: 'B', icon: 'folder', color: 'pink', parentId: null, sessionIds: [] },
+      { id: 'g2', name: 'B', icon: 'folder', color: 'chartreuse', parentId: null, sessionIds: [] },
     ],
     ungrouped: [],
   })
   assert.equal(colored.groups[0].color, 'purple')
   assert.equal(colored.groups[1].color, 'blue')
   assert.equal(validateDoc(colored).ok, true)
+})
+
+test('0.2.12 group icon palette is expanded with common glyphs', () => {
+  assert.ok(GROUP_ICONS.length >= 20)
+  for (const icon of ['briefcase', 'book', 'code', 'database', 'terminal', 'globe', 'heart', 'home', 'layers', 'calendar', 'chart', 'target']) {
+    assert.ok(GROUP_ICONS.includes(icon), `missing icon ${icon}`)
+  }
 })

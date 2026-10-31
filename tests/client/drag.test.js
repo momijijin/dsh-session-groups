@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyDrop, canDropGroupInto, hitTest, sameDropTarget, sessionLocation } from '../../src/client/drag.js'
+import { applyDrop, canDropGroupInto, hitTest, sameDropTarget, sessionLocation, stickyDropTarget } from '../../src/client/drag.js'
 import { assignSession, createGroup, emptyDoc, findGroup } from '../../src/shared/model.js'
 
 const docWithTwoGroups = () => {
@@ -134,4 +134,14 @@ test('sameDropTarget distinguishes every semantic target change', () => {
   assert.equal(sameDropTarget({ kind: 'group-append', groupId: 'g1' }, null), false)
   // No target -> a target is always a change; the ref starts at null.
   assert.equal(sameDropTarget(null, { kind: 'ungrouped' }), false)
+})
+
+test('0.2.21 sticky target holds while the pointer rests inside the radius', () => {
+  const target = { kind: 'session-before', sessionId: 's1' }
+  const lock = { x: 100, y: 200, target }
+  assert.equal(stickyDropTarget(lock, 100, 200), target)
+  assert.equal(stickyDropTarget(lock, 103, 201), target)
+  assert.equal(stickyDropTarget(lock, 105, 200), null)
+  assert.equal(stickyDropTarget(lock, Number.NaN, 200), null)
+  assert.equal(stickyDropTarget(null, 100, 200), null)
 })

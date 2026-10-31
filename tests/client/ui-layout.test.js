@@ -9,11 +9,15 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import { CSS } from '../../src/client/css.js'
+import { ICON_GROUPS } from '../../src/client/icons.js'
+import { SESSION_WATERMARK_AUTO_MAX, SESSION_WATERMARK_BASE } from '../../src/shared/constants.js'
 import { en, zh } from '../../src/client/locale.js'
 import { UI_GLYPHS, ICON_PATHS } from '../../src/client/icons.js'
 import { GROUP_COLORS, GROUP_ICONS } from '../../src/shared/constants.js'
 
 const components = readFileSync(new URL('../../src/client/components.js', import.meta.url), 'utf8')
+const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
+const workspaceToggle = readFileSync(new URL('../../src/client/workspace-toggle.js', import.meta.url), 'utf8')
 
 /** Source block for one CSS selector (compiled stylesheet is flat). */
 const block = (selector) => {
@@ -32,19 +36,19 @@ test('0.2.2 surfaces use official theme tokens and never hard-code white', () =>
   assert.match(block('.dsg-menu {'), /background:\s*var\(--dsw-specific-menu/)
   assert.match(block('.dsg-search-results {'), /background:\s*var\(--dsw-specific-menu/)
   assert.match(block('.dsg-dialog {'), /background:\s*var\(--dsw-alias-bg-layer-2/)
-  assert.match(block('.dsg-dialog-input {'), /background:\s*var\(--dsw-alias-bg-layer-1/)
+  assert.match(block('.dsg-dialog-input {'), /background:\s*transparent/)
   assert.match(block('.dsg-search-input {'), /background:\s*var\(--dsw-alias-bg-layer-1/)
 
   // Text/borders ride the official aliases; Canvas/CanvasText are the last
   // fallback only.
   assert.match(block('.dsg-menu {'), /color:\s*var\(--dsw-alias-label-primary,\s*CanvasText\)/)
-  assert.match(block('.dsg-dialog {'), /border:[^;]*var\(--dsw-alias-border-l2/)
+  assert.match(block('.dsg-dialog {'), /border:\s*0/)
   assert.match(block('.dsg-search-input {'), /border:[^;]*var\(--dsw-alias-border-l3/)
 })
 
-test('header is a 36px official section row: title 14/20 weight 400 + accent icon, three 28px actions', () => {
+test('header is a 36px official section row: neutral 自由分组 title and 28px actions', () => {
   const header = block('.dsg-header {')
-  assert.match(header, /padding:\s*4px 4px 4px 2px/)
+  assert.match(header, /padding:\s*4px 8px/)
   const row = block('.dsg-header-row {')
   assert.match(row, /height:\s*28px/)
 
@@ -52,17 +56,15 @@ test('header is a 36px official section row: title 14/20 weight 400 + accent ico
   assert.match(title, /font-size:\s*var\(--dsg-font-14,\s*14px\)/)
   assert.match(title, /line-height:\s*20px/)
   assert.match(title, /font-weight:\s*400/)
-  // 0.2.6 (feedback item 1): the title text and its icon share the primary accent.
-  assert.match(title, /color:\s*var\(--dsw-alias-state-business-primary/)
-
-  const accent = block('.dsg-header-accent {')
-  assert.match(accent, /width:\s*16px/)
-  assert.match(accent, /height:\s*16px/)
-  assert.match(accent, /color:\s*var\(--dsw-alias-state-business-primary/)
+  // Align with the shipped workspace section label; no plugin accent.
+  assert.match(title, /color:\s*var\(--dsw-alias-label-tertiary/)
+  assert.equal(components.includes('dsg-header-accent'), false)
+  assert.equal(CSS.includes('.dsg-header-accent'), false)
 
   const actions = block('.dsg-header-actions {')
   assert.match(actions, /gap:\s*4px/)
   for (const testId of [
+    'session-groups-running-button',
     'session-groups-new-group',
     'session-groups-search-toggle',
     'session-groups-view-options',
@@ -83,25 +85,133 @@ test('header is a 36px official section row: title 14/20 weight 400 + accent ico
   assert.equal(components.includes("glyph: 'sliders'"), false)
 })
 
-test('footer is one 28px toggle button whose icon/label target the other view', () => {
-  const toggle = block('.dsg-footer-toggle {')
-  assert.match(toggle, /height:\s*28px/)
-  assert.match(toggle, /font-size:\s*var\(--dsg-font-13,\s*13px\)/)
-  assert.match(toggle, /gap:\s*6px/)
+test('0.2.33 dialog controls consume the shipped theme tokens directly', () => {
+  const dialog = block('.dsg-dialog {')
+  assert.match(dialog, /background:\s*var\(--dsw-alias-bg-layer-2/)
+  assert.match(dialog, /border:\s*0/)
+  assert.match(dialog, /border-radius:\s*var\(--dsw-radius-panel/)
+  const confirm = block('.dsg-dialog-confirm {')
+  assert.match(confirm, /background:\s*var\(--dsw-alias-button-primary-fill/)
+  assert.match(confirm, /color:\s*var\(--dsw-alias-label-primary-foreground/)
+  assert.match(confirm, /height:\s*36px/)
+  assert.match(CSS, /\.dsg-dialog-confirm:hover:not\(:disabled\) \{ background:\s*var\(--dsw-alias-button-primary-hover/s)
+  const cancel = block('.dsg-dialog-cancel {')
+  assert.match(cancel, /border:[^;]*var\(--dsw-alias-border-l3/)
+  assert.match(cancel, /height:\s*36px/)
+  assert.match(CSS, /\.dsg-dialog-title \{[^}]*font-size:\s*16px/s)
+  assert.match(CSS, /\.dsg-dialog-actions \{[^}]*padding:\s*0 24px/s)
+  assert.match(CSS, /\.dsg-dialog-close \{[^}]*width:\s*28px/s)
+  assert.match(CSS, /\.dsg-dialog-backdrop \{[^}]*backdrop-filter/s)
+  assert.match(components, /class: 'dsg-dialog-close'/)
+  assert.match(components, /renderGlyph\(h, 'close', 14\)/)
+})
 
-  assert.match(components, /class: 'dsg-footer-toggle'/)
-  assert.match(components, /'data-testid': 'session-groups-toggle'/)
-  assert.match(components, /'data-mode': mode/)
-  assert.match(components, /'aria-pressed': mode === 'groups' \? 'true' : 'false'/)
-  assert.match(components, /const target = mode === 'groups' \? 'workspace' : 'groups'/)
-  assert.match(components, /const glyph = target === 'groups' \? 'folderAdjust' : 'grid'/)
+test('dialog natural height uses the complete flex layout', () => {
+  assert.match(components, /\+ 64/)
+  assert.match(components, /laidOutHeight \|\| Math\.ceil\(box\.height\)/)
+})
+
+test('0.2.32 dialog defaults stay compact and scrollbars are visible', () => {
+  assert.match(CSS, /\.dsg-dialog-content \{[^}]*flex:\s*0 0 auto/s)
+  assert.match(CSS, /\.dsg-dialog\[data-positioned="true"\] \.dsg-dialog-content \{ flex:\s*1 1 auto/)
+  assert.match(CSS, /\.dsg-dialog-content::-webkit-scrollbar-thumb/)
+  assert.match(CSS, /scrollbar-color:\s*var\(--dsh-scrollbar-thumb/)
+  assert.match(CSS, /\.dsg-dialog-input \{[^}]*height:\s*44px/s)
+  assert.match(CSS, /\.dsg-dialog-input \{[^}]*flex:\s*none/s)
+  assert.match(components, /naturalHeight/)
+  assert.match(components, /content\?\.scrollHeight/)
+})
+
+test('0.2.31 dialogs are draggable/resizable and backdrop clicks do not close', () => {
+  assert.match(components, /dsg-dialog-titlebar/)
+  assert.match(components, /dsg-dialog-resizer/)
+  assert.match(components, /beginDialogGesture/)
+  assert.match(components, /saveDialogGeometry/)
+  assert.equal(components.includes('if (event.target === event.currentTarget) close()'), false)
+  assert.match(CSS, /\.dsg-dialog\[data-positioned="true"\]/)
+  assert.match(CSS, /\.dsg-dialog-titlebar \{[^}]*cursor:\s*move/s)
+  assert.match(CSS, /\.dsg-dialog-resizer\[data-dir="se"\]/)
+})
+
+test('0.2.30 visible tree is memoized behind the narrow snapshot compare', () => {
+  assert.match(components, /const tree = useMemo/)
+  assert.match(components, /buildVisibleTree\(store\.doc, byId, workspaceItems/)
+  assert.match(components, /\[store\?\.doc, store\?\.archiveFilter, byId, workspaceItems, archivedSessionIds, highlightCurrent, statuses, subagentCounts\]/)
+})
+
+test('0.2.29 status aggregation is one pass and subscriptions compare visible fields', () => {
+  assert.match(components, /statusSectionsByGroup\(/)
+  assert.match(components, /sessionViewEqual/)
+  assert.match(components, /statusMapEqual/)
+  assert.match(components, /workspaceViewEqual/)
+  assert.match(components, /useMemo\(/)
+  assert.equal(components.includes('runningSessionsByGroup('), false)
+  assert.equal(components.includes('blockedSessionsByGroup('), false)
+  assert.equal(components.includes('unreadSessionsByGroup('), false)
+})
+
+test('0.2.28 blocked and unread counters reuse the grouped dropdown contract', () => {
+  assert.match(components, /statusSectionsByGroup/)
+  assert.match(components, /blockedSessions/)
+  assert.match(components, /unreadSessions/)
+  assert.match(components, /session-groups-blocked-button/)
+  assert.match(components, /session-groups-unread-button/)
+  assert.match(components, /icon: 'pause'/)
+  assert.match(components, /icon: 'mail'/)
+  assert.match(components, /icon: 'activity'/)
+  assert.match(CSS, /\.dsg-status-actions \{[^}]*margin-right:\s*28px/s)
+  assert.equal(zh['blocked.empty'], '没有等待用户介入的会话')
+  assert.equal(zh['unread.empty'], '没有未读会话')
+})
+
+test('0.2.27 ungrouped inbox is session-only for drops and group move menus', () => {
+  assert.match(components, /ungrouped\.sessionsOnly/)
+  assert.match(components, /if \(drag\.kind === 'group'\)/)
+  assert.match(components, /allowRoot: dialog\.kind !== 'move-group'/)
+  assert.equal(components.includes("previewGroupDrop(event, { kind: 'group-root-end' }"), false)
+  assert.equal(components.includes("commitGroupDrop(drag.groupId, { kind: 'root-end' })"), false)
+})
+
+test('0.2.26 running-session action counts all spinners and groups its menu by parent', () => {
+  const runningAt = components.indexOf('session-groups-running-button')
+  const toggleAt = components.indexOf("testId: 'session-groups-toggle'")
+  assert.ok(runningAt > 0 && runningAt < toggleAt, 'running action must be left of the view toggle')
+  assert.match(components, /statusSectionsByGroup\(/)
+  assert.match(components, /session-groups-running-popover/)
+  assert.match(components, /-item/)
+  assert.match(components, /handlers\.openRunningSession/)
+  assert.match(components, /running\.group\.ungrouped/)
+  assert.match(CSS, /\.dsg-running-section \+ \.dsg-running-section[^}]*border-top/s)
+  assert.match(CSS, /\.dsg-status-action \{[^}]*min-width:\s*28px/s)
+  assert.equal(zh['view.title'], '自由分组')
+  assert.equal(zh['running.group.ungrouped'], '未分组')
+})
+
+test('0.2.24 both views expose the header switch and share one width override', () => {
+  const actionsStart = components.indexOf("class: 'dsg-header-actions'")
+  const toggleAt = components.indexOf("testId: 'session-groups-toggle'", actionsStart)
+  const searchAt = components.indexOf("testId: 'session-groups-search-toggle'", actionsStart)
+  assert.ok(toggleAt > actionsStart)
+  assert.ok(searchAt > toggleAt, 'view toggle must sit left of search')
+
+  assert.match(components, /glyph: 'grid'/)
+  assert.match(components, /data: \{ 'data-mode': store\.viewMode, 'data-target': 'workspace' \}/)
   assert.match(components, /rt\(\)\?\.toggleMode\(\)/)
-  assert.equal(components.includes('dsg-footer-segment'), false, 'the 0.2.2 two-segment switch must be gone')
-  assert.equal(components.includes('dsg-footer-switch'), false, 'the 0.2.2 switch track must be gone')
-  assert.equal(CSS.includes('.dsg-footer-segment'), false, 'no segment CSS remains')
-  assert.equal(CSS.includes('.dsg-footer-switch'), false, 'no switch-track CSS remains')
+  assert.match(workspaceToggle, /session-groups-workspace-toggle/)
+  assert.match(workspaceToggle, /searchButton/)
+  assert.match(plugin, /installWorkspaceToggle/)
+  assert.match(plugin, /syncWorkspaceChrome/)
+  assert.match(plugin, /applyManagedWidth/)
+  assert.match(plugin, /\[data-side="sidebar"\]/)
+  assert.match(components, /applyManagedWidth/)
+  assert.equal(components.includes('dsg-footer-toggle'), false)
+  assert.equal(CSS.includes('.dsg-footer-toggle'), false)
+  assert.equal(plugin.includes('FOOTER_SLOT'), false)
+
+  const actionButton = block('.dsg-icon-button {')
+  assert.match(actionButton, /width:\s*28px/)
+  assert.match(actionButton, /height:\s*28px/)
   assert.equal(UI_GLYPHS.grid.length > 0, true)
-  assert.equal(UI_GLYPHS.folderAdjust.length > 0, true)
 })
 
 test('ungrouped inbox is windowed with exact spacers and bounded DOM rows', () => {
@@ -152,6 +262,7 @@ test('drag insertion uses a row-height theme-aware placeholder, not a 2px border
   assert.match(placeholder, /color:\s*var\(--dsw-alias-state-business-primary/)
   assert.match(placeholder, /pointer-events:\s*auto/)
   assert.match(block('.dsg-tree {'), /overflow-anchor:\s*none/, 'scroll anchoring must not cancel the placeholder gap')
+  assert.match(block('.dsg-tree {'), /padding:\s*6px 8px 8px/, 'top-level left/right inset must be symmetric')
   assert.equal(CSS.includes('.dsg-drop-indicator'), false, 'the old 2px indicator must be gone')
   assert.equal(CSS.includes('.dsg-insert-before'), false, 'the old 2px before-border must be gone')
   assert.equal(CSS.includes('.dsg-insert-after'), false, 'the old 2px after-border must be gone')
@@ -222,8 +333,8 @@ test('0.2.7 unified guide: 16/4 content, 2px line at x=16, 60% group / 45% ungro
   assert.match(block('.dsg-group-icon {'), /color:\s*var\(--dsg-group-color/)
 })
 
-test('0.2.6 group palette: six ids, color-token rules and a menu color dialog', () => {
-  assert.deepEqual([...GROUP_COLORS], ['blue', 'green', 'orange', 'red', 'purple', 'gray'])
+test('0.2.15 group palette: twelve distinct ids, color-token rules and a menu color dialog', () => {
+  assert.deepEqual([...GROUP_COLORS], ['blue', 'green', 'orange', 'red', 'purple', 'gray', 'teal', 'pink', 'brown', 'cyan', 'navy', 'magenta'])
   for (const color of GROUP_COLORS) {
     assert.match(CSS, new RegExp(`\\.dsg-group\\[data-color="${color}"\\]`))
     assert.equal(typeof zh[`color.${color}`], 'string', `zh color.${color}`)
@@ -242,7 +353,7 @@ test('0.2.6 group palette: six ids, color-token rules and a menu color dialog', 
   assert.match(components, /role: 'radiogroup'/)
   assert.match(components, /dsg-color-swatch/)
   assert.match(block('.dsg-color-swatch {'), /background:|width:\s*16px/)
-  assert.match(block('.dsg-color-option[data-selected="true"] {'), /border-color:\s*var\(--dsw-alias-state-business-primary/)
+  assert.match(block('.dsg-color-option[data-selected="true"] {'), /border-color:\s*var\(--dsw-alias-label-primary/)
   // The plugin applies the choice through the shared model setter.
   const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
   assert.match(plugin, /case 'group-color'/)
@@ -279,15 +390,19 @@ test('0.2.6 selection dialogs only highlight; Confirm applies, Cancel closes unc
   assert.match(components, /t\('dialog\.stopAndArchive'\)/)
 })
 
-test('0.2.7 row order: group count far right, session time far right, hidden action hit areas', () => {
+test('0.2.11 row order: title → workspace → actions → archived → time', () => {
   const name = components.indexOf("class: 'dsg-group-name'")
   const actions = components.indexOf("class: 'dsg-group-actions'", name)
   const count = components.indexOf("class: 'dsg-group-count'", actions)
   assert.ok(name !== -1 && actions !== -1 && count !== -1 && name < actions && actions < count)
   assert.ok(components.includes("'data-testid': 'session-groups-group-count'"))
-  const sessionActions = components.indexOf("class: 'dsg-session-actions'")
-  const sessionTime = components.indexOf("class: 'dsg-session-time'", sessionActions)
-  assert.ok(sessionActions !== -1 && sessionTime !== -1 && sessionActions < sessionTime)
+  const title = components.indexOf("class: 'dsg-session-title'")
+  const workspace = components.indexOf("class: 'dsg-workspace-badge'", title)
+  const sessionActions = components.indexOf("class: 'dsg-session-actions'", workspace)
+  const badge = components.indexOf("class: 'dsg-session-badge'", sessionActions)
+  const time = components.indexOf("class: 'dsg-session-time'", badge)
+  assert.ok(title !== -1 && workspace !== -1 && sessionActions !== -1 && badge !== -1 && time !== -1)
+  assert.ok(title < workspace && workspace < sessionActions && sessionActions < badge && badge < time)
   assert.ok(components.includes("'data-testid': 'session-groups-session-time'"))
 
   // Count always visible, tabular 12/16, right-aligned at the 8px row padding.
@@ -386,17 +501,16 @@ test('0.2.8 empty drop box matches DropPlaceholder and never doubles a body plac
   assert.equal(CSS.includes('.dsg-group-empty'), false)
   // Body placeholders suppress the hint; boundary targets keep its accent state.
   assert.match(components, /bodyPlaceholderVisible/)
-  assert.match(components, /node\.visibleCount === 0 && !bodyPlaceholderVisible/)
+  assert.match(components, /node\.visibleCount === 0 && childGroups\.length === 0 && !bodyPlaceholderVisible/)
   assert.match(components, /dropKind !== 'ungrouped'/)
-  assert.match(components, /active: dropKind === 'group-root-end'/)
 })
 
-test('0.2.7 color dialog: 2x3 32px grid, fixed check slot, custom native+hex row', () => {
+test('0.2.14 color dialog: 2x3 roomy grid, fixed check slot, custom native+hex row', () => {
   const grid = block('.dsg-color-grid {')
   assert.match(grid, /display:\s*grid/)
   assert.match(grid, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/)
   const option = block('.dsg-color-option {')
-  assert.match(option, /height:\s*32px/)
+  assert.match(option, /height:\s*36px/)
   assert.match(option, /width:\s*100%/)
   // Every preset cell renders a check node; unselected cells hide (not remove) it.
   assert.match(components, /'data-testid': 'session-groups-dialog-color-check'/)
@@ -473,4 +587,85 @@ test('0.2.9 delete group: destination picker, empty direct path and move-and-del
   assert.match(plugin, /deleteGroupDirect,/)
   // A destination is mandatory before Confirm: no initial highlight for delete.
   assert.equal(components.includes("t('dialog.deleteBody'"), false)
+})
+
+test('0.2.11 dialog hover/focus affordances', () => {
+  assert.match(CSS, /\.dsg-dialog-option:hover\s*\{/)
+  assert.match(CSS, /\.dsg-dialog-option\[aria-selected="true"\]:hover/)
+  assert.match(CSS, /\.dsg-dialog-cancel:hover\s*\{/)
+  assert.match(CSS, /\.dsg-dialog-confirm:hover:not\(:disabled\)/)
+  assert.match(CSS, /\.dsg-dialog-confirm\[data-variant="danger"\]:hover:not\(:disabled\)/)
+  assert.match(CSS, /\.dsg-color-option:hover\s*\{/)
+  assert.match(CSS, /\.dsg-color-option\[data-selected="true"\]:hover/)
+  assert.match(CSS, /\.dsg-dialog-option:focus-visible/)
+})
+
+test('0.2.13 active row, official session watermark and semantic icon sections', () => {
+  assert.equal(SESSION_WATERMARK_BASE, 5)
+  assert.equal(SESSION_WATERMARK_AUTO_MAX, 50)
+  assert.match(components, /mainSessionIdOf\(sessions\)/)
+  assert.match(CSS, /\.dsg-session-row\[data-current="true"\][^}]*inset 2px 0 0/)
+  assert.match(CSS, /\.dsg-session-row\[data-current="true"\] \.dsg-session-title/)
+  assert.match(components, /showSessionOverflow/)
+  assert.match(components, /setSessionWatermark/)
+  assert.match(components, /session-groups-session-overflow/)
+  assert.match(CSS, /\.dsg-session-overflow\s*\{/)
+  assert.match(CSS, /\.dsg-session-overflow:hover/)
+  assert.equal(zh['sessions.expand'], '展开其余 {n} 个会话')
+  assert.equal(zh['sessions.collapse'], '收起')
+  const icons = ICON_GROUPS.flatMap((group) => group.icons)
+  for (const icon of ['check-circle', 'check', 'x-circle', 'x', 'pause-circle', 'pause', 'play-circle', 'play', 'stop-circle', 'stop', 'ban']) {
+    assert.ok(icons.includes(icon), `missing semantic icon ${icon}`)
+  }
+  assert.ok(ICON_GROUPS.length >= 6)
+  assert.ok(GROUP_ICONS.length >= 70)
+  assert.match(CSS, /\.dsg-icon-section-title/)
+  assert.match(CSS, /\.dsg-icon-section \+ \.dsg-icon-section/)
+})
+
+test('0.2.14 dialog options use roomy padding and standard depth indent', () => {
+  const option = CSS.slice(CSS.indexOf('.dsg-dialog-option {'), CSS.indexOf('.dsg-dialog-option {') + 260)
+  assert.match(option, /min-height:\s*36px/)
+  assert.match(option, /padding:\s*6px 12px/)
+  const footer = CSS.slice(CSS.indexOf('.dsg-dialog-confirm {'), CSS.indexOf('.dsg-dialog-confirm {') + 260)
+  assert.match(footer, /height:\s*36px/)
+  assert.match(footer, /padding:\s*0 14px/)
+  assert.match(components, /paddingLeft:\s*`\$\{12 \+ depth \* 16\}px`/)
+  assert.match(CSS, /\.dsg-dialog-list \{[^}]*padding:\s*8px/s)
+  assert.match(CSS, /\.dsg-color-option \{[^}]*height:\s*36px/s)
+})
+
+test('0.2.23 row-boundary dragleave keeps the placeholder while inside the sidebar', () => {
+  assert.match(components, /const pointerOutsideRoot = \(event\) =>/)
+  assert.match(components, /if \(!pointerOutsideRoot\(event\)\) return/)
+  assert.match(components, /visible flicker/)
+})
+
+test('0.2.22 group-body gaps do not become group-head drop targets', () => {
+  assert.match(components, /querySelector\?\.\('\[data-session-id\]'\)/)
+  assert.match(components, /event\.clientY >= firstRect\.top/)
+  assert.match(components, /next\.closest\('\.dsg-group-line'\)/)
+})
+
+test('0.2.20 session rows are memoized behind a stable handler facade', () => {
+  assert.match(components, /const SessionRow = memo\(SessionRowImpl, sessionRowPropsEqual\)/)
+  assert.match(components, /const stableHandlers = useMemo\(\(\) => \{/)
+  assert.match(components, /handlers: stableHandlers, sessionsById: byId/)
+  assert.match(components, /handlers: stableHandlers, virtualRef/)
+})
+
+test('0.2.19 active-session highlight receives the live view store', () => {
+  const calls = components.split('\n').filter((line) => line.includes('h(SessionRow, {'))
+  assert.equal(calls.length, 2)
+  for (const call of calls) assert.match(call, /\bstore\b/)
+})
+
+test('0.2.16 icon set covers devices/actions', () => {
+  for (const icon of ['computer', 'phone', 'mail', 'log', 'cpu', 'memory', 'hard-drive', 'server', 'network', 'camera', 'music', 'video', 'wifi', 'map', 'gift']) {
+    assert.ok(GROUP_ICONS.includes(icon), `missing icon ${icon}`)
+  }
+  assert.equal(zh['icon.computer'], '电脑')
+  assert.equal(zh['icon.phone'], '手机')
+  assert.equal(zh['icon.mail'], '邮箱')
+  assert.equal(zh['iconGroup.devices'], '设备')
 })

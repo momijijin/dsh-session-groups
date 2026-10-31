@@ -24,13 +24,13 @@ test('formatMessage substitutes {name} placeholders and falls back to keys', () 
 
 test('createTranslator follows the host locale snapshot', () => {
   const english = createTranslator(() => ({ id: 'en-US' }))
-  assert.equal(english('view.title'), 'Groups')
+  assert.equal(english('view.title'), 'Free groups')
   const chinese = createTranslator(() => ({ id: 'zh-CN' }))
-  assert.equal(chinese('view.title'), '分组')
+  assert.equal(chinese('view.title'), '自由分组')
   const broken = createTranslator(() => {
     throw new Error('boom')
   })
-  assert.equal(broken('view.title'), '分组')
+  assert.equal(broken('view.title'), '自由分组')
 })
 
 test('dictionaryFor handles en prefixes and defaults to zh', () => {
