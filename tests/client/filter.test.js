@@ -4,6 +4,7 @@ import {
   buildVisibleTree,
   countTreeSessions,
   currentSessionIdOf,
+  mainSessionIdOf,
   isArchived,
   isSubagent,
   nextArchiveFilter,
@@ -54,6 +55,20 @@ test('current session derives from retainedBy.mainView > 0', () => {
   }
   assert.equal(currentSessionIdOf(snapshot), 'b')
   assert.equal(currentSessionIdOf({ ids: [], byId: {} }), null)
+})
+
+test('main session maps a subagent mainView back to its parent chain', () => {
+  const snapshot = {
+    ids: ['root', 'child', 'grandchild'],
+    byId: {
+      root: { retainedBy: {} },
+      child: { parentSessionId: 'root', origin: 'subagent', retainedBy: {} },
+      grandchild: { parentSessionId: 'child', origin: 'subagent', retainedBy: { mainView: 1 } },
+    },
+  }
+  assert.equal(currentSessionIdOf(snapshot), 'grandchild')
+  assert.equal(mainSessionIdOf(snapshot), 'root')
+  assert.equal(mainSessionIdOf({ ids: [], byId: {} }), null)
 })
 
 test('archive tri-state includes/excludes rows and keeps groups', () => {
