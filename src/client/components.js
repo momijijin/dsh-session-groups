@@ -476,19 +476,6 @@ const SessionRow = ({
     h(SessionStatusCell, { statuses, hidden: hiddenStatus }),
     h('span', { class: 'dsg-session-title' }, title),
     archived ? h('span', { class: 'dsg-session-badge' }, rt()?.t('session.archivedBadge')) : null,
-    h('span', { class: 'dsg-workspace-badge', 'data-testid': 'session-groups-workspace-badge', title: sessionNode.workspace?.path ?? '' }, workspaceName),
-    h(
-      'span',
-      { class: 'dsg-session-actions' },
-      IconButton({
-        label: rt()?.t('session.menu'),
-        glyph: 'more',
-        testId: 'session-groups-session-menu',
-        haspopup: 'menu',
-        data: { 'data-session-id': sessionId },
-        onClick: (event) => handlers.openSessionMenu(event, sessionNode),
-      })
-    ),
     compactStatusT
       ? h(
           'span',
@@ -510,7 +497,20 @@ const SessionRow = ({
             },
             time.label
           )
-        : null
+        : null,
+    h(
+      'span',
+      { class: 'dsg-session-actions' },
+      IconButton({
+        label: rt()?.t('session.menu'),
+        glyph: 'more',
+        testId: 'session-groups-session-menu',
+        haspopup: 'menu',
+        data: { 'data-session-id': sessionId },
+        onClick: (event) => handlers.openSessionMenu(event, sessionNode),
+      })
+    ),
+    h('span', { class: 'dsg-workspace-badge', 'data-testid': 'session-groups-workspace-badge', title: sessionNode.workspace?.path ?? '' }, workspaceName)
   )
 }
 

@@ -482,7 +482,11 @@ export const CSS = `
 .dsg-dialog-confirm { appearance: none; border: none; height: 28px; padding: 0 14px; border-radius: 6px; font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; background: var(--dsw-alias-state-business-primary, #4d6bfe); color: var(--dsw-alias-label-inverse, Canvas); }
 .dsg-dialog-confirm[data-variant="danger"] { background: var(--dsw-alias-state-danger, #f85149); }
 .dsg-dialog-confirm:disabled { opacity: .5; cursor: default; }
+.dsg-dialog-confirm:hover:not(:disabled) { filter: brightness(1.1); }
+.dsg-dialog-confirm[data-variant="danger"]:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-state-danger, #f85149) 86%, black); }
 .dsg-dialog-cancel { appearance: none; height: 28px; padding: 0 14px; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: transparent; color: var(--dsw-alias-label-primary, CanvasText); font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; }
+.dsg-dialog-cancel:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); }
+.dsg-dialog-confirm:focus-visible, .dsg-dialog-cancel:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); outline-offset: 2px; }
 /* 0.2.6 selection dialogs (icon / move-to / new-session / group-color): options
  * only highlight; the shared footer owns Confirm/Cancel. */
 .dsg-dialog-list {
@@ -491,13 +495,20 @@ export const CSS = `
   box-shadow: none;
   background: var(--dsw-alias-bg-layer-1, Canvas);
 }
-.dsg-dialog-option { width: 100%; }
+.dsg-dialog-option { width: 100%; transition: background .12s ease, color .12s ease; }
+.dsg-dialog-option:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); }
 .dsg-dialog-option[data-selected="true"],
 .dsg-dialog-option[aria-selected="true"],
 .dsg-dialog-option[aria-checked="true"] {
   background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14));
   color: var(--dsw-alias-label-primary, CanvasText);
 }
+.dsg-dialog-option[data-selected="true"]:hover,
+.dsg-dialog-option[aria-selected="true"]:hover,
+.dsg-dialog-option[aria-checked="true"]:hover {
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4d6bfe) 24%, transparent);
+}
+.dsg-dialog-option:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); outline-offset: -1px; }
 .dsg-dialog-option-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dsg-dialog-option-check { display: inline-flex; flex: none; width: 16px; height: 16px; align-items: center; justify-content: center; color: var(--dsw-alias-state-business-primary, CanvasText); }
 .dsg-dialog-icon-grid {
@@ -532,6 +543,9 @@ export const CSS = `
 .dsg-color-option[data-selected="true"] {
   border-color: var(--dsw-alias-state-business-primary, #4d6bfe);
   background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14));
+}
+.dsg-color-option[data-selected="true"]:hover {
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4d6bfe) 24%, transparent);
 }
 .dsg-color-swatch {
   width: 16px;
