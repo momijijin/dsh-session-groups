@@ -11,6 +11,10 @@ import {
   isExpanded,
   runningSubagentCount,
   runningSubagentCounts,
+  runningSessionsByGroup,
+  blockedSessionsByGroup,
+  unreadSessionsByGroup,
+  statusSectionsByGroup,
   sessionStatuses,
   siblingNeighbors,
 } from '../../src/client/tree.js'
@@ -183,4 +187,67 @@ test('siblingNeighbors reports previous/next ids in display order', () => {
   const b = rootIds.find((id) => id !== a)
   assert.deepEqual(siblingNeighbors(doc, a), { previous: null, next: b })
   assert.deepEqual(siblingNeighbors(doc, b), { previous: a, next: null })
+})
+
+test('runningSessionsByGroup counts spinner sessions by direct parent group', () => {
+  let doc = emptyDoc()
+  doc = createGroup(doc, { name: 'Alpha' })
+  const alpha = doc.groups[0].id
+  doc = createGroup(doc, { name: 'Beta' })
+  const beta = doc.groups[1].id
+  doc = assignSession(doc, 'a1', alpha)
+  doc = assignSession(doc, 'a2', alpha)
+  doc = assignSession(doc, 'b1', beta)
+  doc = assignSession(doc, 'u1', null)
+  doc = assignSession(doc, 'sub', alpha)
+  const byId = {
+    a1: { id: 'a1', origin: 'main', title: 'A1' },
+    a2: { id: 'a2', origin: 'main', title: 'A2', running: true },
+    b1: { id: 'b1', origin: 'main', title: 'B1' },
+    u1: { id: 'u1', origin: 'main', title: 'U1' },
+    sub: { id: 'sub', origin: 'subagent', title: 'Sub' },
+  }
+  const statuses = new Map([
+    ['a1', { running: true }],
+    ['b1', { running: true }],
+    ['u1', { running: true }],
+    ['sub', { running: true }],
+  ])
+  const result = runningSessionsByGroup(doc, byId, statuses, ['b1'], new Map())
+  assert.equal(result.count, 3)
+  assert.deepEqual(result.sections.map((section) => section.groupName), ['Alpha', 'Beta', ''])
+  assert.deepEqual(result.sections[0].sessions, [{ sessionId: 'a1', archived: false }])
+  assert.deepEqual(result.sections[1].sessions, [{ sessionId: 'b1', archived: true }])
+  assert.deepEqual(result.sections[2].sessions, [{ sessionId: 'u1', archived: false }])
+})
+
+test('blocked and unread status projections use the same grouped shape', () => {
+  let doc = emptyDoc()
+  doc = createGroup(doc, { name: 'Alpha' })
+  const alpha = doc.groups[0].id
+  doc = createGroup(doc, { name: 'Beta' })
+  const beta = doc.groups[1].id
+  doc = assignSession(doc, 'wait', alpha)
+  doc = assignSession(doc, 'unread', beta)
+  doc = assignSession(doc, 'running', beta)
+  const byId = {
+    wait: { id: 'wait', origin: 'main', title: 'Wait' },
+    unread: { id: 'unread', origin: 'main', title: 'Unread' },
+    running: { id: 'running', origin: 'main', title: 'Running' },
+  }
+  const statuses = new Map([
+    ['wait', { pendingInteraction: { kind: 'question' } }],
+    ['unread', { completionUnread: true }],
+    ['running', { running: true, completionUnread: true }],
+  ])
+  const blocked = blockedSessionsByGroup(doc, byId, statuses, [], new Map())
+  assert.equal(blocked.count, 1)
+  assert.deepEqual(blocked.sections[0].sessions, [{ sessionId: 'wait', archived: false }])
+  const unread = unreadSessionsByGroup(doc, byId, statuses, [], new Map())
+  assert.equal(unread.count, 1, 'a running unread session stays in running, not unread')
+  assert.deepEqual(unread.sections[0].sessions, [{ sessionId: 'unread', archived: false }])
+  const all = statusSectionsByGroup(doc, byId, statuses, [], new Map())
+  assert.equal(all.blocked.count, 1)
+  assert.equal(all.unread.count, 1)
+  assert.equal(all.running.count, 1)
 })
