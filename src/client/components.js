@@ -1921,10 +1921,15 @@ const DialogHost = ({ store, props }) => {
     const element = dialogRef.current
     if (!element) return
     const box = element.getBoundingClientRect()
+    const titlebar = element.querySelector('.dsg-dialog-titlebar')
+    const content = element.querySelector('.dsg-dialog-content')
+    const actions = element.querySelector('.dsg-dialog-actions')
+    const naturalHeight =
+      (titlebar?.offsetHeight ?? 0) + (content?.scrollHeight ?? 0) + (actions?.offsetHeight ?? 0)
     setDialogRect(
       centeredDialogRect(
-        box.width || (dialog.kind === 'icon' ? 420 : 360),
-        box.height || 320,
+        box.width || (dialog.kind === 'icon' ? 440 : 400),
+        naturalHeight || box.height || 320,
         globalThis.innerWidth,
         globalThis.innerHeight
       )
