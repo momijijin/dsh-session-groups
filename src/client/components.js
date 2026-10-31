@@ -1502,6 +1502,15 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds 
       h(
         'div',
         { class: 'dsg-header-actions' },
+        // 0.2.24: view switch moved from the footer to the header's leading slot.
+        // The grid glyph means "go to the workspace browser".
+        IconButton({
+          label: t('footer.toWorkspace'),
+          glyph: 'grid',
+          testId: 'session-groups-toggle',
+          data: { 'data-mode': store.viewMode, 'data-target': 'workspace' },
+          onClick: () => rt()?.toggleMode(),
+        }),
         // Official workspace-section order: search → view options → new group.
         IconButton({
           label: t('search.label'),
@@ -2077,29 +2086,23 @@ const Rail = ({ props }) => {
 }
 
 /**
- * Footer action: one 28px button that toggles between the groups and official
- * workspace sidebar. The icon/label describe the target view (and therefore
- * change after every click); the active mode is reflected in `data-mode`,
- * `title`/`aria-label` and `aria-pressed`. The rail fallback keeps the icon only.
+ * Workspace-mode return action. The groups header owns the forward switch, but
+ * that header disappears with the takeover; the footer remains the only way
+ * back from the official browser.
  */
 export const FooterAction = (props) => {
   const store = useViewStore()
   const wide = props?.wide !== false
-  const mode = store?.viewMode ?? 'workspace'
   const t = rt()?.t ?? ((key) => key)
-  const target = mode === 'groups' ? 'workspace' : 'groups'
-  const label = t(target === 'groups' ? 'footer.toGroups' : 'footer.toWorkspace')
-  const glyph = target === 'groups' ? 'folderAdjust' : 'grid'
+  const label = t('footer.toGroups')
   return h(
     'button',
     {
       type: 'button',
       class: 'dsg-footer-toggle',
       'data-testid': 'session-groups-toggle',
-      'data-mode': mode,
-      'data-target': target,
+      'data-target': 'groups',
       'data-wide': wide ? 'true' : 'false',
-      'aria-pressed': mode === 'groups' ? 'true' : 'false',
       title: label,
       'aria-label': label,
       onClick: (event) => {
@@ -2107,7 +2110,7 @@ export const FooterAction = (props) => {
         rt()?.toggleMode()
       },
     },
-    renderGlyph(h, glyph, 16),
+    renderGlyph(h, 'folderAdjust', 16),
     wide ? h('span', { class: 'dsg-footer-label' }, label) : null
   )
 }

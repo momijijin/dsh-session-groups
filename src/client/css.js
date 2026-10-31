@@ -619,8 +619,7 @@ export const CSS = `
 .dsg-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; }
 .dsg-rail-button { width: 36px; height: 36px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.08)); color: var(--dsw-alias-label-secondary, CanvasText); border-radius: var(--dsw-radius-md, 8px); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .dsg-rail-label { font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-label-tertiary, CanvasText); }
-/* Bottom single-button view toggle (0.2.3): icon + label describe the target,
- * active mode lives in data-mode / aria-pressed. */
+/* Workspace-mode return action (the groups header owns the forward switch). */
 .dsg-footer-toggle {
   appearance: none;
   display: inline-flex;
@@ -648,16 +647,12 @@ export const CSS = `
 }
 .dsg-footer-toggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, CanvasText); outline-offset: -2px; }
 .dsg-footer-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Rail/no-wide fallback: icon-only 32px control (label hidden). */
 .dsg-footer-toggle[data-wide="false"] {
   width: 32px;
   height: 32px;
   padding: 0;
   border-color: transparent;
   background: transparent;
-}
-.dsg-footer-toggle[data-wide="false"]:hover {
-  background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 10%, transparent));
 }
 .dsg-flat { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 1; padding: 2px 4px 8px 2px; }
 .dsg-flat-workspace { padding: 6px 6px 2px; font-size: var(--dsg-font-13, 13px); font-weight: 600; color: var(--dsw-alias-label-tertiary, CanvasText); }

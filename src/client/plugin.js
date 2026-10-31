@@ -28,7 +28,7 @@ import { FooterAction, GroupsViewBoundary, setRuntime } from './components.js'
 
 /** Single sidebar slot taken over while the groups view is active. */
 export const VIEW_SLOT = 'sidebar.workspaces'
-/** Footer action slot entry id (always registered). */
+/** Workspace-mode return action: the groups header owns the forward toggle. */
 export const FOOTER_SLOT = 'sidebar.footer.action'
 export const FOOTER_ID = 'dsh-session-groups.toggle'
 /** Takeover priority: the shipped browser registers at 0, lowest renders. */
@@ -192,7 +192,7 @@ export const createPlugin = () => {
       try {
         return ctx.slots.register({ name: VIEW_SLOT, priority: VIEW_PRIORITY }, GroupsViewBoundary)
       } catch (error) {
-        // Another priority -1 occupant exists: fail soft to footer-only.
+        // Another priority -1 occupant exists: report the takeover failure.
         reportRegistrationFailure(error)
         return () => {}
       }
@@ -208,10 +208,29 @@ export const createPlugin = () => {
     }
   }
 
+  /**
+   * The groups header owns the forward switch. In workspace mode that header is
+   * gone, so the old footer action stays as the only way back; it is not mounted
+   * while groups are visible.
+   */
+  const syncFooter = () => {
+    const needReturn = store?.getSnapshot().viewMode !== 'groups'
+    if (needReturn && footerDisposer === null && ctxRef !== null) {
+      footerDisposer = ctxRef.slots.inject(FOOTER_SLOT, () =>
+        ctxRef.slots.register({ name: FOOTER_SLOT, id: FOOTER_ID, order: 100 }, FooterAction)
+      )
+    }
+    if (!needReturn && footerDisposer !== null) {
+      footerDisposer()
+      footerDisposer = null
+    }
+  }
+
   const setMode = (mode) => {
     if (!store) return
     const next = mode === 'groups' ? 'groups' : 'workspace'
     store.dispatch('view-mode', { mode: next })
+    syncFooter()
     if (diagEnabled()) {
       diagContext({ mode: next })
       diagTrace('mode.change', { mode: next })
@@ -400,6 +419,7 @@ export const createPlugin = () => {
     mounted = true
     ctxRef = ctx
     store = createStore({ storage: safeStorage() })
+    syncFooter()
     if (perfEnabled()) perfDisposer = store.subscribe(() => perfCount('store:publish'))
     // Diagnostics are opt-in (0.2.18): either the generic plugin-config switch
     // arrives in the load response, or a developer/localStorage override is set.
@@ -459,11 +479,6 @@ export const createPlugin = () => {
       },
     }
     setRuntime(bridge)
-
-    // Footer action is always registered, whatever the view mode.
-    footerDisposer = ctx.slots.inject(FOOTER_SLOT, () =>
-      ctx.slots.register({ name: FOOTER_SLOT, id: FOOTER_ID, order: 100 }, FooterAction)
-    )
 
     // Outside click / Escape close transient UI.
     const doc = globalThis.document
