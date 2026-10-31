@@ -145,6 +145,70 @@ const usePerfCommit = (name, renderStartedAt) => {
   })
 }
 
+/**
+ * Scroll region with an always-visible overlay thumb. Chromium can switch a
+ * nested scroller to overlay scrollbars and auto-hide them after wheel input,
+ * so the picker owns a tiny scroll rail instead of relying on native chrome.
+ */
+const ScrollPane = ({ className, testId, ariaLabel, children }) => {
+  const scrollerRef = useRef(null)
+  const [bar, setBar] = useState(null)
+  const update = useCallback(() => {
+    const element = scrollerRef.current
+    if (!element) {
+      setBar(null)
+      return
+    }
+    const max = element.scrollHeight - element.clientHeight
+    if (max <= 1) {
+      setBar(null)
+      return
+    }
+    const railHeight = Math.max(0, element.clientHeight - 16)
+    const height = Math.max(24, Math.round((railHeight * element.clientHeight) / element.scrollHeight))
+    const top = Math.round((element.scrollTop / max) * Math.max(0, railHeight - height))
+    setBar((previous) => (previous?.height === height && previous?.top === top ? previous : { height, top }))
+  }, [])
+  useLayoutEffect(() => {
+    const element = scrollerRef.current
+    if (!element) return undefined
+    update()
+    element.addEventListener('scroll', update, { passive: true })
+    globalThis.addEventListener?.('resize', update)
+    let observer = null
+    if (typeof globalThis.ResizeObserver === 'function') {
+      observer = new globalThis.ResizeObserver(update)
+      observer.observe(element)
+    }
+    return () => {
+      element.removeEventListener('scroll', update)
+      globalThis.removeEventListener?.('resize', update)
+      observer?.disconnect()
+    }
+  }, [update])
+  return h(
+    'div',
+    { class: 'dsg-scroll-pane' },
+    h(
+      'div',
+      {
+        ref: scrollerRef,
+        class: className,
+        'data-testid': testId,
+        'aria-label': ariaLabel,
+      },
+      children
+    ),
+    bar
+      ? h(
+          'div',
+          { class: 'dsg-scroll-rail', 'aria-hidden': 'true' },
+          h('div', { class: 'dsg-scroll-thumb', style: { height: `${bar.height}px`, top: `${bar.top}px` } })
+        )
+      : null
+  )
+}
+
 /** Dispatch helper bound to the live store. */
 const dispatch = (action, payload) => rt()?.store.dispatch(action, payload)
 
@@ -1888,7 +1952,21 @@ const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaLabel, a
       'aria-label': ariaLabel ?? t('dialog.moveTo'),
     },
     allowRoot ? option('ungrouped', null, rootLabel ?? t('ungrouped.title'), 0) : null,
-    ...options.map((group) => option(group.id, group.id, group.name, group.depth + 1))
+    ...options.flatMap((group, index) => {
+      const nodes = []
+      if (group.depth === 0 && index > 0) {
+        nodes.push(
+          h('div', {
+            key: `separator:${group.id}`,
+            class: 'dsg-dialog-group-separator',
+            role: 'presentation',
+            'aria-hidden': 'true',
+          })
+        )
+      }
+      nodes.push(option(group.id, group.id, group.name, group.depth + 1))
+      return nodes
+    })
   )
 }
 
@@ -2228,10 +2306,11 @@ const DialogHost = ({ store, props }) => {
     }
     bodyNodes.push(
       h(
-        'div',
+        ScrollPane,
         {
-          class: 'dsg-icon-sections',
-          'data-testid': 'session-groups-dialog-options',
+          className: 'dsg-icon-sections',
+          testId: 'session-groups-dialog-options',
+          ariaLabel: t('group.icon'),
         },
         ...sections.map((section, index) =>
           h(

@@ -127,6 +127,17 @@ test('0.2.32 dialog defaults stay compact and scrollbars are visible', () => {
   assert.match(components, /content\?\.scrollHeight/)
 })
 
+test('0.2.42 icon picker owns a persistent scroll rail and top-level separators', () => {
+  assert.match(components, /const ScrollPane =/)
+  assert.match(components, /class: 'dsg-scroll-rail'/)
+  assert.match(components, /class: 'dsg-scroll-thumb'/)
+  assert.match(CSS, /\.dsg-scroll-rail \{/)
+  assert.match(CSS, /\.dsg-scroll-pane > \.dsg-icon-sections \{ padding-right:\s*20px/s)
+  assert.match(CSS, /\.dsg-scroll-pane > \.dsg-icon-sections::-webkit-scrollbar \{ width:\s*0/)
+  assert.match(components, /dsg-dialog-group-separator/)
+  assert.match(CSS, /\.dsg-dialog-group-separator \{[^}]*border-top/s)
+})
+
 test('0.2.31 dialogs are draggable/resizable and backdrop clicks do not close', () => {
   assert.match(components, /dsg-dialog-titlebar/)
   assert.match(components, /dsg-dialog-resizer/)
