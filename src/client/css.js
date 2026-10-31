@@ -624,18 +624,18 @@ export const CSS = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   box-sizing: border-box;
   width: 100%;
-  height: 28px;
-  padding: 0 8px;
+  height: 32px;
+  padding: 0 10px;
   margin: 0;
   border: 0.5px solid var(--dsw-alias-border-l3, rgba(128, 128, 128, 0.35));
   border-radius: var(--dsw-radius-sm, 6px);
   background: transparent;
   color: var(--dsw-alias-label-secondary, CanvasText);
   font: inherit;
-  font-size: var(--dsg-font-13, 13px);
+  font-size: var(--dsg-font-14, 14px);
   line-height: 20px;
   cursor: pointer;
   flex: none;
@@ -646,10 +646,10 @@ export const CSS = `
 }
 .dsg-footer-toggle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, CanvasText); outline-offset: -2px; }
 .dsg-footer-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Rail/no-wide fallback: icon-only 28px control (label hidden). */
+/* Rail/no-wide fallback: icon-only 32px control (label hidden). */
 .dsg-footer-toggle[data-wide="false"] {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border-color: transparent;
   background: transparent;

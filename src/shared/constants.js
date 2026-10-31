@@ -1,7 +1,7 @@
 export const DOC_VERSION = 1
 
 /** Plugin version shipped in this build (also stamped into diagnostics traces). */
-export const PLUGIN_VERSION = '0.2.15'
+export const PLUGIN_VERSION = '0.2.16'
 
 export const GROUP_ICONS = Object.freeze([
   'folder',
@@ -44,6 +44,41 @@ export const GROUP_ICONS = Object.freeze([
   'lock',
   'key',
   'puzzle',
+  'log',
+  'cpu',
+  'memory',
+  'hard-drive',
+  'server',
+  'network',
+  'activity',
+  'gauge',
+  'git-branch',
+  'git-merge',
+  'file',
+  'clipboard',
+  'link',
+  'mail',
+  'message',
+  'users',
+  'settings',
+  'filter',
+  'refresh',
+  'download',
+  'upload',
+  'x',
+  'pause-circle',
+  'play-circle',
+  'stop-circle',
+  'computer',
+  'phone',
+  'tablet',
+  'printer',
+  'camera',
+  'music',
+  'video',
+  'wifi',
+  'map',
+  'gift',
 ])
 
 /** Normalization fallback for legacy/invalid icons (docs without an icon). */
