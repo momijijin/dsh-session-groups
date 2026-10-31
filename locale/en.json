@@ -68,6 +68,7 @@
   "dialog.namePlaceholder": "Group name",
   "dialog.confirm": "Confirm",
   "dialog.cancel": "Cancel",
+  "dialog.close": "Close",
   "dialog.deleteMoveBody": "This group contains {sessions} sessions and {groups} subgroups. Choose where to move them before deleting the group; no session is deleted or archived.",
   "dialog.deleteDestination": "Destination",
   "dialog.rootDestination": "Ungrouped (root)",

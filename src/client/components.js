@@ -1930,7 +1930,7 @@ const DialogHost = ({ store, props }) => {
     // the two gaps + bottom padding and never go below the auto-layout box.
     const laidOutHeight =
       (titlebar?.offsetHeight ?? 0) + (content?.scrollHeight ?? 0) + (actions?.offsetHeight ?? 0) + 64
-    const naturalHeight = Math.max(Math.ceil(box.height), laidOutHeight)
+    const naturalHeight = laidOutHeight || Math.ceil(box.height) || 320
     setDialogRect(
       centeredDialogRect(
         box.width || (dialog.kind === 'icon' ? 440 : 400),
@@ -2400,7 +2400,18 @@ const DialogHost = ({ store, props }) => {
           class: 'dsg-dialog-titlebar',
           onPointerDown: (event) => beginDialogGesture(event),
         },
-        h('div', { class: 'dsg-dialog-title' }, title)
+        h('div', { class: 'dsg-dialog-title' }, title),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'dsg-dialog-close',
+            'aria-label': t('dialog.close'),
+            title: t('dialog.close'),
+            onClick: close,
+          },
+          renderGlyph(h, 'close', 14)
+        )
       ),
       h(
         'div',
