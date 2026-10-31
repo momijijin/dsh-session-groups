@@ -1,5 +1,5 @@
 {
-  "view.title": "分组",
+  "view.title": "自由分组",
   "view.returnWorkspace": "返回工作区",
   "view.newGroup": "新建分组",
   "view.more": "更多",
@@ -215,5 +215,9 @@
   "icon.gift": "礼物",
   "iconGroup.devices": "设备",
   "iconGroup.actions": "操作",
-  "iconGroup.life": "生活"
+  "iconGroup.life": "生活",
+  "running.open": "查看执行中的会话",
+  "running.aria": "执行中的会话，{n} 个",
+  "running.empty": "没有正在执行的会话",
+  "running.group.ungrouped": "未分组"
 }

@@ -95,6 +95,45 @@ export const runningSubagentCounts = (sessions, statuses) => {
   return out
 }
 
+/**
+ * Running (spinner) sessions grouped by their direct parent group, in document
+ * order, plus the ungrouped inbox at the end. `statuses` is the host Map; only
+ * main sessions are listed (subagent rows stay with their parent).
+ *
+ * @returns {{ sections: Array<{ groupId: string|null, groupName: string, sessions: Array<{ sessionId: string, archived: boolean }> }>, count: number }}
+ */
+export const runningSessionsByGroup = (doc, sessionsById = {}, statuses = null, archivedSessionIds = [], subagentCounts = new Map()) => {
+  const archived = new Set(Array.isArray(archivedSessionIds) ? archivedSessionIds : [])
+  const seen = new Set()
+  const sections = []
+  const add = (sessionId, groupId, groupName) => {
+    if (typeof sessionId !== 'string' || seen.has(sessionId)) return
+    const row = sessionsById?.[sessionId]
+    if (!row || row.origin === 'subagent') return
+    const status = typeof statuses?.get === 'function' ? statuses.get(sessionId) : null
+    const projected = typeof subagentCounts?.get === 'function' ? subagentCounts.get(sessionId) : 0
+    const primary = sessionStatuses(status, { runningSubagentCount: projected })[0]
+    if (primary?.state !== 'ongoing') return
+    seen.add(sessionId)
+    let section = sections.find((item) => item.groupId === groupId)
+    if (!section) {
+      section = { groupId, groupName: groupName ?? '', sessions: [] }
+      sections.push(section)
+    }
+    section.sessions.push({ sessionId, archived: archived.has(sessionId) })
+  }
+  const walk = (parentId) => {
+    for (const group of childrenOf(doc, parentId)) {
+      for (const sessionId of group.sessionIds ?? []) add(sessionId, group.id, group.name ?? '')
+      walk(group.id)
+    }
+  }
+  walk(null)
+  for (const sessionId of doc?.ungrouped ?? []) add(sessionId, null, '')
+  const count = sections.reduce((total, section) => total + section.sessions.length, 0)
+  return { sections, count }
+}
+
 /** Ancestor group ids from nearest to root. */
 export const groupAncestors = (doc, groupId) => {
   const out = []

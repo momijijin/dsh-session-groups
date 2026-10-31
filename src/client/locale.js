@@ -13,7 +13,7 @@ export const LOCALE_NS = 'dsh-session-groups'
 
 /** Simplified Chinese dictionary (key-set source of truth). */
 export const zh = {
-  'view.title': '分组',
+  'view.title': '自由分组',
   'view.returnWorkspace': '返回工作区',
   'view.newGroup': '新建分组',
   'view.more': '更多',
@@ -126,6 +126,10 @@ export const zh = {
   'search.placeholder': '搜索会话…',
   'search.results': '搜索结果',
   'search.empty': '没有匹配的会话',
+  'running.open': '查看执行中的会话',
+  'running.aria': '执行中的会话，{n} 个',
+  'running.empty': '没有正在执行的会话',
+  'running.group.ungrouped': '未分组',
   'search.close': '关闭搜索',
   'search.archivedDisabled': '已归档会话不可打开',
   'color.blue': '蓝色',
@@ -234,7 +238,7 @@ export const zh = {
 
 /** English dictionary (complete relative to zh). */
 export const en = {
-  'view.title': 'Groups',
+  'view.title': 'Free groups',
   'view.returnWorkspace': 'Back to workspaces',
   'view.newGroup': 'New group',
   'view.more': 'More',
@@ -347,6 +351,10 @@ export const en = {
   'search.placeholder': 'Search sessions…',
   'search.results': 'Search results',
   'search.empty': 'No matching sessions',
+  'running.open': 'View running sessions',
+  'running.aria': 'Running sessions, {n}',
+  'running.empty': 'No running sessions',
+  'running.group.ungrouped': 'Ungrouped',
   'search.close': 'Close search',
   'search.archivedDisabled': 'Archived sessions cannot be opened',
   'color.blue': 'Blue',

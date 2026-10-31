@@ -71,10 +71,10 @@ import {
   applyManagedWidth,
   clampSidebarWidth,
   findLayoutNodes,
+  maxSidebarWidth,
   readSidebarWidth,
   writeSidebarWidth,
   SIDEBAR_WIDTH_DEFAULT,
-  SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
 } from './sidebar-width.js'
 import { formatAbsoluteTime, relativeTimeParts } from './time.js'
@@ -92,6 +92,7 @@ import {
   groupPath,
   isExpanded,
   runningSubagentCounts,
+  runningSessionsByGroup,
   sessionStatuses,
   siblingNeighbors,
 } from './tree.js'
@@ -1166,7 +1167,7 @@ const ResizeHandle = ({ width, min, max, onChange, onCommit, onReset }) => {
 
   const onKeyDown = (event) => {
     const viewport = globalThis.innerWidth
-    const maxWidth = clampSidebarWidth(SIDEBAR_WIDTH_MAX, viewport) ?? max
+    const maxWidth = maxSidebarWidth(viewport)
     let requested = null
     if (event.key === 'ArrowLeft') requested = width - 16
     else if (event.key === 'ArrowRight') requested = width + 16
@@ -1454,14 +1455,18 @@ const ArchiveFilterPopover = ({ filter, t, onPick }) =>
     })
   )
 
-const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds }) => {
+const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds, runningSessions }) => {
   perfRender('Header')
   diagRender('Header')
   const t = rt()?.t ?? ((key) => key)
   const filter = store.archiveFilter
   const [searchOpen, setSearchOpen] = useState(false)
   const [optionsOpen, setOptionsOpen] = useState(false)
+  const [runningOpen, setRunningOpen] = useState(false)
   const optionsRef = useRef(null)
+  const runningRef = useRef(null)
+  const runningCount = runningSessions?.count ?? 0
+  const runningSections = runningSessions?.sections ?? []
 
   // View-options popover: Escape or an outside pointerdown closes it.
   useEffect(() => {
@@ -1482,6 +1487,25 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds 
     }
   }, [optionsOpen])
 
+  // Running-sessions popover uses the same dismissal contract.
+  useEffect(() => {
+    if (!runningOpen) return undefined
+    const doc = globalThis.document
+    const onPointerDown = (event) => {
+      if (runningRef.current?.contains?.(event?.target)) return
+      setRunningOpen(false)
+    }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setRunningOpen(false)
+    }
+    doc?.addEventListener?.('pointerdown', onPointerDown, true)
+    doc?.addEventListener?.('keydown', onKeyDown, true)
+    return () => {
+      doc?.removeEventListener?.('pointerdown', onPointerDown, true)
+      doc?.removeEventListener?.('keydown', onKeyDown, true)
+    }
+  }, [runningOpen])
+
   return h(
     'div',
     {
@@ -1496,12 +1520,88 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds 
       h(
         'span',
         { class: 'dsg-header-title', title: t('view.title') },
-        h('span', { class: 'dsg-header-accent', 'aria-hidden': 'true' }, renderGlyph(h, 'folderAdjust', 16)),
         h('span', { class: 'dsg-header-label' }, t('view.title'))
       ),
       h(
         'div',
         { class: 'dsg-header-actions' },
+        h(
+          'div',
+          { class: 'dsg-running', ref: runningRef },
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'dsg-running-button',
+              'data-testid': 'session-groups-running-button',
+              'data-count': String(runningCount),
+              title: t('running.open'),
+              'aria-label': t('running.aria', { n: runningCount }),
+              'aria-expanded': runningOpen ? 'true' : 'false',
+              onClick: (event) => {
+                event.stopPropagation()
+                setOptionsOpen(false)
+                setSearchOpen(false)
+                setRunningOpen((open) => !open)
+              },
+            },
+            h('span', { class: 'dsg-running-spinner', 'aria-hidden': 'true' }, h(StatusSpinner)),
+            h('span', { class: 'dsg-running-count' }, String(runningCount))
+          ),
+          runningOpen
+            ? h(
+                'div',
+                { class: 'dsg-running-popover', role: 'menu', 'data-testid': 'session-groups-running-popover' },
+                runningSections.length === 0
+                  ? h('div', { class: 'dsg-running-empty' }, t('running.empty'))
+                  : runningSections.map((section, index) =>
+                      h(
+                        'div',
+                        {
+                          class: 'dsg-running-section',
+                          key: section.groupId ?? `ungrouped-${index}`,
+                          'data-group-id': section.groupId ?? '',
+                        },
+                        h(
+                          'div',
+                          { class: 'dsg-running-group-label' },
+                          section.groupId
+                            ? section.groupName || t('session.untitled')
+                            : t('running.group.ungrouped')
+                        ),
+                        section.sessions.map((entry) =>
+                          h(
+                            'button',
+                            {
+                              type: 'button',
+                              class: 'dsg-running-item',
+                              key: entry.sessionId,
+                              'data-testid': 'session-groups-running-item',
+                              'data-session-id': entry.sessionId,
+                              onClick: (event) => {
+                                event.stopPropagation()
+                                setRunningOpen(false)
+                                handlers.openRunningSession?.(entry.sessionId, entry.archived === true)
+                              },
+                            },
+                            h(
+                              'span',
+                              { class: 'dsg-running-item-title' },
+                              sessionTitle(sessionsById?.[entry.sessionId], {
+                                blankLabel: t('session.blank'),
+                                untitledLabel: t('session.untitled'),
+                              })
+                            ),
+                            entry.archived
+                              ? h('span', { class: 'dsg-running-item-archived' }, t('session.archived'))
+                              : null
+                          )
+                        )
+                      )
+                    )
+              )
+            : null
+        ),
         // 0.2.24: view switch moved from the footer to the header's leading slot.
         // The grid glyph means "go to the workspace browser".
         IconButton({
@@ -2167,6 +2267,13 @@ export const GroupsView = (props) => {
   const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot) : null
   const statuses = typeof props?.useSessionStatus === 'function' ? props.useSessionStatus((snapshot) => snapshot) : null
   const subagentCounts = runningSubagentCounts(sessions, statuses)
+  const runningSessions = runningSessionsByGroup(
+    store?.doc,
+    sessions?.byId ?? {},
+    statuses,
+    workspaces?.archivedSessionIds ?? [],
+    subagentCounts
+  )
 
   const byId = sessions?.byId ?? {}
   const workspaceItems = workspaces?.items ?? []
@@ -2252,7 +2359,7 @@ export const GroupsView = (props) => {
   const [widthSupported, setWidthSupported] = useState(false)
   preferredWidthRef.current = preferredWidth
   const appliedWidth = clampSidebarWidth(preferredWidth, viewportWidth)
-  const maxAppliedWidth = clampSidebarWidth(SIDEBAR_WIDTH_MAX, viewportWidth) ?? SIDEBAR_WIDTH_MIN
+  const maxAppliedWidth = maxSidebarWidth(viewportWidth)
 
   useEffect(() => {
     if (!wide) {
@@ -2714,6 +2821,7 @@ export const GroupsView = (props) => {
     openSession: (id) => rt()?.actions.openSession(id),
     setArchiveFilter: (filter) => dispatch('archive-filter', { filter }),
     searchSelect: (entry) => selectSearchResult(entry),
+    openRunningSession: (sessionId, archived) => selectSearchResult({ sessionId, archived }),
     searchArchived: () => toast('info', t('search.archivedDisabled')),
     openNewGroup: (event, parentId) => rt()?.openDialog({ kind: 'new-group', parentId, titleKey: parentId ? 'dialog.newSubgroup' : 'dialog.newGroup' }),
     openRenameGroup: (groupId) => rt()?.openDialog({ kind: 'rename-group', groupId, titleKey: 'dialog.renameGroup', value: findGroup(store.doc, groupId)?.name ?? '' }),
@@ -3175,7 +3283,7 @@ export const GroupsView = (props) => {
   return h(
     'div',
     { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true', 'data-narrow': appliedWidth !== null && appliedWidth <= 320 ? 'true' : 'false', 'data-optimistic': store.optimistic ? 'true' : 'false' },
-    h(Header, { store: viewState, handlers: stableHandlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds }),
+    h(Header, { store: viewState, handlers: stableHandlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds, runningSessions }),
     wide && widthSupported && appliedWidth !== null
       ? h(ResizeHandle, {
           width: appliedWidth,

@@ -1,5 +1,5 @@
 {
-  "view.title": "Groups",
+  "view.title": "Free groups",
   "view.returnWorkspace": "Back to workspaces",
   "view.newGroup": "New group",
   "view.more": "More",
@@ -215,5 +215,9 @@
   "icon.gift": "Gift",
   "iconGroup.devices": "Devices",
   "iconGroup.actions": "Actions",
-  "iconGroup.life": "Life"
+  "iconGroup.life": "Life",
+  "running.open": "View running sessions",
+  "running.aria": "Running sessions, {n}",
+  "running.empty": "No running sessions",
+  "running.group.ungrouped": "Ungrouped"
 }

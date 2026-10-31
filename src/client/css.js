@@ -94,15 +94,12 @@ export const CSS = `
   overflow: hidden;
   font-size: var(--dsg-font-14, 14px);
   line-height: 20px;
-  /* Official section label weight; 0.2.6 uses the same primary accent as the
-   * icon (feedback item 1) so the title reads as the active section header. */
+  /* Match the shipped workspace section label: neutral, no plugin accent. */
   font-weight: 400;
-  color: var(--dsw-alias-state-business-primary, CanvasText);
+  color: var(--dsw-alias-label-tertiary, CanvasText);
   white-space: nowrap;
 }
 .dsg-header-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Primary-accent folder icon in front of the title (feedback item 4). */
-.dsg-header-accent { display: inline-flex; flex: none; width: 16px; height: 16px; align-items: center; justify-content: center; color: var(--dsw-alias-state-business-primary, CanvasText); }
 .dsg-header-actions { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 /* Optional second row: the existing SearchBox (30px) under the title row. */
 .dsg-header-search-row { align-items: center; gap: 4px; height: 30px; }
@@ -487,6 +484,52 @@ export const CSS = `
 .dsg-view-option[data-active="true"] { color: var(--dsw-alias-label-primary, CanvasText); background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); }
 .dsg-view-option-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dsg-view-option-check { display: inline-flex; flex: none; width: 16px; height: 16px; align-items: center; justify-content: center; color: var(--dsw-alias-state-business-primary, CanvasText); }
+/* Running-sessions action: spinner + count as one 28px-high button. */
+.dsg-running { position: relative; display: inline-flex; flex: none; }
+.dsg-running-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-sizing: border-box;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--dsw-radius-sm, 6px);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, CanvasText);
+  cursor: pointer;
+  font: inherit;
+}
+.dsg-running-button:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 10%, transparent)); color: var(--dsw-alias-label-primary, CanvasText); }
+.dsg-running-button:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, CanvasText); outline-offset: -2px; }
+.dsg-running-button[data-count="0"] { color: var(--dsw-alias-label-caption, color-mix(in srgb, CanvasText 55%, transparent)); }
+.dsg-running-spinner { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.dsg-running-count { min-width: 8px; font-size: var(--dsg-font-12, 12px); line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+.dsg-running-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 72;
+  width: 248px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: var(--dsw-radius-md, 8px);
+  background: var(--dsw-specific-menu, var(--dsw-alias-bg-layer-2, Canvas));
+  color: var(--dsw-alias-label-primary, CanvasText);
+  border: 0.5px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 18%, transparent));
+  box-shadow: var(--dsw-elevation-prominent, 0 8px 24px rgba(0,0,0,.18));
+}
+.dsg-running-section + .dsg-running-section { margin-top: 4px; border-top: 1px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 15%, transparent)); padding-top: 4px; }
+.dsg-running-group-label { padding: 6px 8px 3px; font-size: var(--dsg-font-11, 11px); line-height: 16px; color: var(--dsw-alias-label-tertiary, CanvasText); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsg-running-item { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 28px; padding: 3px 8px; border: 0; border-radius: var(--dsw-radius-sm, 6px); background: transparent; color: var(--dsw-alias-label-primary, CanvasText); text-align: left; cursor: pointer; font: inherit; }
+.dsg-running-item:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); }
+.dsg-running-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-13, 13px); line-height: 18px; }
+.dsg-running-item-archived { flex: none; font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-label-tertiary, CanvasText); }
+.dsg-running-empty { padding: 10px 8px; font-size: var(--dsg-font-13, 13px); color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-dialog-backdrop { position: fixed; inset: 0; z-index: 80; background: var(--dsw-alias-bg-mask-1, color-mix(in srgb, CanvasText 32%, transparent)); display: flex; align-items: center; justify-content: center; }
 .dsg-dialog { width: min(360px, calc(100vw - 32px)); border-radius: var(--dsw-radius-md, 10px); background: var(--dsw-alias-bg-layer-2, Canvas); color: var(--dsw-alias-label-primary, CanvasText); border: 0.5px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 18%, transparent)); padding: 16px; box-shadow: var(--dsw-elevation-prominent, 0 16px 48px rgba(0,0,0,.28)); display: flex; flex-direction: column; gap: 12px; }
 .dsg-dialog-title { font-size: var(--dsg-font-14, 14px); line-height: 20px; font-weight: 600; color: var(--dsw-alias-label-primary, CanvasText); }
