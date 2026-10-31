@@ -482,23 +482,25 @@ export const CSS = `
 .dsg-dialog-input:focus { outline: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); outline-offset: -1px; }
 .dsg-dialog-error { font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-state-danger, #f85149); }
 .dsg-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.dsg-dialog-confirm { appearance: none; border: none; height: 28px; padding: 0 14px; border-radius: 6px; font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; background: var(--dsw-alias-state-business-primary, #4d6bfe); color: var(--dsw-alias-label-inverse, Canvas); }
+.dsg-dialog-confirm { appearance: none; border: none; height: 32px; padding: 0 16px; border-radius: 6px; font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; background: var(--dsw-alias-state-business-primary, #4d6bfe); color: var(--dsw-alias-label-inverse, Canvas); }
 .dsg-dialog-confirm[data-variant="danger"] { background: var(--dsw-alias-state-danger, #f85149); }
 .dsg-dialog-confirm:disabled { opacity: .5; cursor: default; }
 .dsg-dialog-confirm:hover:not(:disabled) { filter: brightness(1.1); }
 .dsg-dialog-confirm[data-variant="danger"]:hover:not(:disabled) { background: color-mix(in srgb, var(--dsw-alias-state-danger, #f85149) 86%, black); }
-.dsg-dialog-cancel { appearance: none; height: 28px; padding: 0 14px; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: transparent; color: var(--dsw-alias-label-primary, CanvasText); font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; }
+.dsg-dialog-cancel { appearance: none; height: 32px; padding: 0 16px; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: transparent; color: var(--dsw-alias-label-primary, CanvasText); font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; }
 .dsg-dialog-cancel:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); }
 .dsg-dialog-confirm:focus-visible, .dsg-dialog-cancel:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4d6bfe); outline-offset: 2px; }
 /* 0.2.6 selection dialogs (icon / move-to / new-session / group-color): options
  * only highlight; the shared footer owns Confirm/Cancel. */
 .dsg-dialog-list {
   position: static;
-  max-height: 260px;
+  max-height: 300px;
+  padding: 8px;
+  gap: 4px;
   box-shadow: none;
   background: var(--dsw-alias-bg-layer-1, Canvas);
 }
-.dsg-dialog-option { width: 100%; transition: background .12s ease, color .12s ease; }
+.dsg-dialog-option { width: 100%; min-height: 36px; height: auto; padding: 6px 12px; gap: 8px; transition: background .12s ease, color .12s ease; }
 .dsg-dialog-option:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); }
 .dsg-dialog-option[data-selected="true"],
 .dsg-dialog-option[aria-selected="true"],
@@ -522,7 +524,7 @@ export const CSS = `
 }
 /* 0.2.12: more common glyphs; a slightly wider 4-column icon picker. */
 .dsg-dialog[data-kind="icon"] { width: min(420px, calc(100vw - 32px)); }
-.dsg-icon-option { width: auto; flex: 1 1 88px; }
+.dsg-icon-option { width: auto; flex: 1 1 88px; min-height: 36px; }
 .dsg-icon-sections { display: flex; flex-direction: column; gap: 0; max-height: min(56vh, 430px); overflow-y: auto; }
 .dsg-icon-section { padding: 0; }
 .dsg-icon-section + .dsg-icon-section { border-top: 0.5px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 18%, transparent)); margin-top: 8px; padding-top: 8px; }
@@ -536,16 +538,16 @@ export const CSS = `
 /* 0.2.7 color dialog: six presets in a fixed 3x2 grid with 32px cells, plus a
  * custom native-swatch/hex row. Every cell reserves a 16px check slot (hidden,
  * not removed) so labels do not shift between selected/unselected states. */
-.dsg-color-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; }
+.dsg-color-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
 .dsg-color-option {
   appearance: none;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  height: 32px;
-  padding: 0 8px;
+  height: 36px;
+  padding: 0 10px;
   border-radius: var(--dsw-radius-sm, 6px);
   border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35));
   background: transparent;
