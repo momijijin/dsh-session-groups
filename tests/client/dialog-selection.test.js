@@ -84,7 +84,7 @@ test('validity: only offered options confirm; move-group rejects self and descen
   assert.equal(selectionIsValid({ kind: 'icon', icons: ['folder', 'star'] }, 'star', doc), true)
   assert.equal(selectionIsValid({ kind: 'icon', icons: ['folder', 'star'] }, 'rocket', doc), false)
   for (const color of GROUP_COLORS) assert.equal(selectionIsValid({ kind: 'group-color' }, color, doc), true)
-  for (const bad of ['pink', '', undefined, null, 3]) {
+  for (const bad of ['chartreuse', '', undefined, null, 3]) {
     assert.equal(selectionIsValid({ kind: 'group-color' }, bad, doc), false, `color ${String(bad)} must be invalid`)
   }
   const choices = [{ workspaceId: 'w1' }, { workspaceId: 'w2' }]
