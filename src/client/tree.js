@@ -102,7 +102,7 @@ export const runningSubagentCounts = (sessions, statuses) => {
  *
  * @returns {{ sections: Array<{ groupId: string|null, groupName: string, sessions: Array<{ sessionId: string, archived: boolean }> }>, count: number }}
  */
-export const runningSessionsByGroup = (doc, sessionsById = {}, statuses = null, archivedSessionIds = [], subagentCounts = new Map()) => {
+export const sessionsByGroupMatching = (doc, sessionsById = {}, statuses = null, archivedSessionIds = [], subagentCounts = new Map(), match = () => false) => {
   const archived = new Set(Array.isArray(archivedSessionIds) ? archivedSessionIds : [])
   const seen = new Set()
   const sections = []
@@ -113,7 +113,7 @@ export const runningSessionsByGroup = (doc, sessionsById = {}, statuses = null, 
     const status = typeof statuses?.get === 'function' ? statuses.get(sessionId) : null
     const projected = typeof subagentCounts?.get === 'function' ? subagentCounts.get(sessionId) : 0
     const primary = sessionStatuses(status, { runningSubagentCount: projected })[0]
-    if (primary?.state !== 'ongoing') return
+    if (!match(primary, status)) return
     seen.add(sessionId)
     let section = sections.find((item) => item.groupId === groupId)
     if (!section) {
@@ -133,6 +133,15 @@ export const runningSessionsByGroup = (doc, sessionsById = {}, statuses = null, 
   const count = sections.reduce((total, section) => total + section.sessions.length, 0)
   return { sections, count }
 }
+
+export const runningSessionsByGroup = (...args) =>
+  sessionsByGroupMatching(...args, (primary) => primary?.state === 'ongoing')
+
+export const blockedSessionsByGroup = (...args) =>
+  sessionsByGroupMatching(...args, (primary) => primary?.state === 'warning')
+
+export const unreadSessionsByGroup = (...args) =>
+  sessionsByGroupMatching(...args, (primary) => primary?.kind === 'completed')
 
 /** Ancestor group ids from nearest to root. */
 export const groupAncestors = (doc, groupId) => {

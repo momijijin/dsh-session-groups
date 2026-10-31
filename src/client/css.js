@@ -101,6 +101,32 @@ export const CSS = `
 }
 .dsg-header-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dsg-header-actions { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+/* Status counters sit left of the view controls, with one empty 28px button of
+ * separation to prevent accidental view switches. */
+.dsg-status-actions { display: inline-flex; align-items: center; gap: 2px; margin-right: 28px; flex: none; }
+.dsg-status-action-wrap { position: relative; display: inline-flex; flex: none; }
+.dsg-status-action {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-sizing: border-box;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: var(--dsw-radius-sm, 6px);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, CanvasText);
+  cursor: pointer;
+  font: inherit;
+}
+.dsg-status-action:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 10%, transparent)); color: var(--dsw-alias-label-primary, CanvasText); }
+.dsg-status-action:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, CanvasText); outline-offset: -2px; }
+.dsg-status-action[data-count="0"] { color: var(--dsw-alias-label-caption, color-mix(in srgb, CanvasText 55%, transparent)); }
+.dsg-status-action-icon { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.dsg-status-action-count { min-width: 8px; font-size: var(--dsg-font-11, 11px); line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
 /* Optional second row: the existing SearchBox (30px) under the title row. */
 .dsg-header-search-row { align-items: center; gap: 4px; height: 30px; }
 .dsg-search { position: relative; display: flex; flex: 1 1 auto; min-width: 0; }

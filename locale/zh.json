@@ -220,5 +220,11 @@
   "running.aria": "执行中的会话，{n} 个",
   "running.empty": "没有正在执行的会话",
   "running.group.ungrouped": "未分组",
-  "ungrouped.sessionsOnly": "未归组只接收会话"
+  "ungrouped.sessionsOnly": "未归组只接收会话",
+  "blocked.open": "查看等待用户介入的会话",
+  "blocked.aria": "等待用户介入的会话，{n} 个",
+  "blocked.empty": "没有等待用户介入的会话",
+  "unread.open": "查看未读会话",
+  "unread.aria": "未读会话，{n} 个",
+  "unread.empty": "没有未读会话"
 }

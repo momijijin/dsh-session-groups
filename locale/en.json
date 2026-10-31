@@ -220,5 +220,11 @@
   "running.aria": "Running sessions, {n}",
   "running.empty": "No running sessions",
   "running.group.ungrouped": "Ungrouped",
-  "ungrouped.sessionsOnly": "Ungrouped accepts sessions only"
+  "ungrouped.sessionsOnly": "Ungrouped accepts sessions only",
+  "blocked.open": "View sessions waiting for you",
+  "blocked.aria": "Sessions waiting for you, {n}",
+  "blocked.empty": "No sessions are waiting for you",
+  "unread.open": "View unread sessions",
+  "unread.aria": "Unread sessions, {n}",
+  "unread.empty": "No unread sessions"
 }
