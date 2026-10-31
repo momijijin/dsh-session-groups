@@ -106,8 +106,8 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 - [V1.1 实施计划](docs/superpowers/plans/2026-10-28-session-groups-v1.1.md)
 - [契约](docs/CONTRACTS.md) — 数据模型、路由、API、testid、生命周期
 - [Gate 0 Spike](docs/SPIKE.md) / [Gate 0 结论](docs/GATE0-SUMMARY.md)
-- [测试计划](docs/TEST-PLAN.md) — 单测/宿主集成/21 步 E2E/数据审计
-- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 21/21 E2E、275/275、诊断 trace/HUD、大列表 before/after、审计与打包证据
+- [测试计划](docs/TEST-PLAN.md) — 单测/宿主集成/22 步 E2E/数据审计
+- [V1/V1.1 测试结果](docs/TEST-RESULTS.md) — 22/22 E2E、283/283、诊断 trace/HUD、大列表 before/after、审计与打包证据
 - [发布说明](docs/RELEASE.md) — 构建/打包/安装/卸载/已知限制
 - [ADR-001 左栏模式切换](docs/adr/0001-sidebar-mode-switch.md) / [ADR-002 分组存储](docs/adr/0002-group-storage.md) / [ADR-003 路由围栏](docs/adr/0003-route-fence.md)
 
@@ -122,7 +122,8 @@ DSH Desktop：设置 → 插件 → 添加插件 → 选择该 `.tgz`（或本�
 ## 当前阶段
 
 - V1 实现完成；V1.1（0.2.9）完成左栏宽度、分组拖拽排序/改父级、会话搜索、官方侧栏排版/间距/图标对齐、单按钮视图切换/header 操作区/主题感知 surfaces、未归组列表虚拟化、拖拽行高占位与乐观提交、官方 header 三图标 + 拖拽诊断 trace/HUD/分析器、分组颜色与统一选择对话框、行 meta 布局/自定义颜色/右键菜单/相对更新时间、**官方会话状态/空组 drop box/单实例拖拽浮层**、**删除分组目的地/空叶直接删除/颜色文案**。
-- 验证：`npm test` 275/275；官方 E2E 21/21（默认诊断开启；含 step 2/16 footer 文案与 header title accent/400、step 16 排版/间距/28px 行操作/2px 组引导线/264px/虚拟窗口、step 17 深色主题、step 18 九类占位 + 乐观 DOM 位移 + HUD、step 19 分组颜色与五类选择对话框、step 20 计数/时间位置、未归组 guide、caret/guide 颜色、2 列颜色对话框 + 自定义 hex、右键/键盘菜单与关闭/焦点契约、step 21 官方状态槽/spinner/dot/时间 10/16、空组 drop box 与 placeholder 抑制/accent、浮层单实例）；E2E runner 另验证 `/dsh-session-groups/diagnostics` 在隔离 home 追加 NDJSON（native/handler/optimistic 齐全）；数据审计只写记录文件、诊断文件按 append-only 单独放行；真实 `~/.dsh` 零写入。
+- 验证：`npm test` 283/283；官方 E2E 22/22（默认诊断开启；含 step 2/16 footer 文案与 header title accent/400、step 16 排版/间距/28px 行操作/2px 组引导线/264px/虚拟窗口、step 17 深色主题、step 18 九类占位 + 乐观 DOM 位移 + HUD、step 19 分组颜色与五类选择对话框、step 20 计数/时间位置、未归组 guide、caret/guide 颜色、2 列颜色对话框 + 自定义 hex、右键/键盘菜单与关闭/焦点契约、step 21 官方状态槽/spinner/dot/时间 10/16、空组 drop box 与 placeholder 抑制/accent、浮层单实例、step 22 空叶删除无对话框/删除目的地循环排除/移动并删除原子提交/「修改颜色」文案）；E2E runner 另验证 `/dsh-session-groups/diagnostics` 在隔离 home 追加 NDJSON（native/handler/optimistic 齐全）；数据审计只写记录文件、诊断文件按 append-only 单独放行；真实 `~/.dsh` 零写入。
 - **尚未安装到用户 desktop profile**；等待用户验收后再安装。
 - 已知限制见 `docs/RELEASE.md` §5（运行中归档 BLOCKED-ENV、宽度 DOM 依赖、搜索范围、诊断文件增长、P1/P2 未实现项）。
+
 

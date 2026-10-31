@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-groups",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "DSH left-sidebar global session groups: organize sessions across workspaces without moving them.",
   "type": "module",
   "main": "src/index.js",
@@ -50,4 +50,3 @@
   },
   "license": "MIT"
 }
-

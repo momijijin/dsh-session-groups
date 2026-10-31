@@ -1,7 +1,7 @@
 export const DOC_VERSION = 1
 
 /** Plugin version shipped in this build (also stamped into diagnostics traces). */
-export const PLUGIN_VERSION = '0.2.10'
+export const PLUGIN_VERSION = '0.2.11'
 
 export const GROUP_ICONS = Object.freeze([
   'folder',
@@ -47,4 +47,3 @@ export const MAX_COLOR_HEX_LENGTH = 7
 export const MAX_DEPTH = 8
 
 export const ARCHIVE_FILTERS = Object.freeze(['hidden', 'all', 'only'])
-
