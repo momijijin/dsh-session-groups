@@ -141,10 +141,11 @@ const makeInstance = (patch = {}) => {
   return { instance, fake, timers, transport }
 }
 
-test('diagnostics are enabled by default and localStorage 0 opts out', () => {
-  assert.equal(diagnosticsEnabled({ getItem: () => null }), true)
+test('diagnostics are off by default; localStorage 1 opts in', () => {
+  assert.equal(diagnosticsEnabled({ getItem: () => null }), false)
   assert.equal(diagnosticsEnabled({ getItem: (key) => (key === DIAGNOSTICS_STORAGE_KEY ? '0' : null) }), false)
-  assert.equal(diagnosticsEnabled({ getItem: () => { throw new Error('blocked') } }), true)
+  assert.equal(diagnosticsEnabled({ getItem: (key) => (key === DIAGNOSTICS_STORAGE_KEY ? '1' : null) }), true)
+  assert.equal(diagnosticsEnabled({ getItem: () => { throw new Error('blocked') } }), false)
 })
 
 test('disabled diagnostics are a zero-side-effect no-op', () => {
@@ -246,14 +247,13 @@ test('native drag events are traced in capture and bubble phase with target ids'
   fake.documentRef.dispatch('dragover', { target, clientX: 12, clientY: 34, defaultPrevented: false, isTrusted: true }, true)
   fake.documentRef.dispatch('dragover', { target, clientX: 12, clientY: 34, defaultPrevented: true, isTrusted: true }, false)
   const events = instance.snapshot().events.filter((event) => event.type === 'native.dragover')
-  assert.equal(events.length, 2)
+  // 0.2.18: dragover is capture-only; bubble listeners are reserved for drop/dragend.
+  assert.equal(events.length, 1)
   assert.equal(events[0].phase, 'capture')
   assert.equal(events[0].target.sessionId, 's-1')
   assert.equal(events[0].target.groupId, 'g-1')
-  assert.deepEqual(events[0].target.rect, { x: 10, y: 20.1, w: 300.2, h: 32.5 })
+  assert.equal(events[0].target.rect, undefined)
   assert.equal(events[0].trusted, true)
-  assert.equal(events[1].phase, 'bubble')
-  assert.equal(events[1].prevented, true)
   assert.equal(instance.snapshot().stats.nativeDragOver, 1)
 })
 
