@@ -219,5 +219,6 @@
   "running.open": "查看执行中的会话",
   "running.aria": "执行中的会话，{n} 个",
   "running.empty": "没有正在执行的会话",
-  "running.group.ungrouped": "未分组"
+  "running.group.ungrouped": "未分组",
+  "ungrouped.sessionsOnly": "未归组只接收会话"
 }

@@ -960,7 +960,6 @@ const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
         h(EmptyDropBox, {
           key: 'empty',
           label: rt()?.t('ungrouped.dropHint'),
-          active: dropKind === 'group-root-end',
           data: { 'data-ungrouped': 'true' },
         })
       )
@@ -1792,7 +1791,7 @@ const MenuPopover = ({ store, handlers }) => {
  * (`aria-selected`); the shared dialog footer owns the actual move, so a stray
  * click can never move a session or group by itself.
  */
-const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaLabel, testId = 'session-groups-dialog-options' }) => {
+const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaLabel, allowRoot = true, testId = 'session-groups-dialog-options' }) => {
   const t = rt()?.t
   const option = (key, value, label, depth) =>
     h(
@@ -1825,7 +1824,7 @@ const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaLabel, t
       'data-testid': testId,
       'aria-label': ariaLabel ?? t('dialog.moveTo'),
     },
-    option('ungrouped', null, rootLabel ?? t('ungrouped.title'), 0),
+    allowRoot ? option('ungrouped', null, rootLabel ?? t('ungrouped.title'), 0) : null,
     ...options.map((group) => option(group.id, group.id, group.name, group.depth + 1))
   )
 }
@@ -1924,7 +1923,12 @@ const DialogHost = ({ store, props }) => {
   }
   if (dialog.kind === 'move-session' || dialog.kind === 'move-group') {
     const options = dialog.kind === 'move-group' ? moveGroupOptions(store.doc, dialog.groupId) : findGroupsFlat(store.doc)
-    bodyNodes.push(h(GroupListPicker, { options, selection, onSelect: setSelection }))
+    bodyNodes.push(h(GroupListPicker, {
+      options,
+      selection,
+      onSelect: setSelection,
+      allowRoot: dialog.kind !== 'move-group',
+    }))
   }
   if (dialog.kind === 'icon') {
     const icons = Array.isArray(dialog.icons) ? dialog.icons : []
@@ -3213,7 +3217,13 @@ export const GroupsView = (props) => {
       const drag = dragRef.current
       if (!drag) return
       if (drag.kind === 'group') {
-        previewGroupDrop(event, { kind: 'group-root-end' }, t('drag.groupRootEnd'))
+        // The implicit ungrouped inbox is session-only. It is not a custom-group
+        // parent, so a group drag never paints an insertion target here.
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
+        setDropTargetTracked(null)
+        rt()?.setFloatingLabel?.(t('ungrouped.sessionsOnly'))
         return
       }
       rowDragOver(event, { kind: 'ungrouped' })
@@ -3224,8 +3234,10 @@ export const GroupsView = (props) => {
       if (drag?.kind === 'group') {
         event.preventDefault()
         event.stopPropagation()
+        setDropTargetTracked(null)
+        clearAutoExpand()
         rt()?.setFloatingLabel?.(null)
-        commitGroupDrop(drag.groupId, { kind: 'root-end' })
+        toast('info', t('ungrouped.sessionsOnly'))
         return
       }
       event.preventDefault()
