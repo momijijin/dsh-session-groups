@@ -152,7 +152,39 @@ const usePerfCommit = (name, renderStartedAt) => {
  */
 const ScrollPane = ({ className, testId, ariaLabel, children }) => {
   const scrollerRef = useRef(null)
+  const railRef = useRef(null)
+  const thumbRef = useRef(null)
+  const lastProbeRef = useRef(0)
   const [bar, setBar] = useState(null)
+  const probe = useCallback(
+    (stage) => {
+      const element = scrollerRef.current
+      if (!element || typeof globalThis.fetch !== 'function') return
+      const rail = railRef.current
+      const thumb = thumbRef.current
+      const rect = (node) => (node ? node.getBoundingClientRect().toJSON?.() ?? null : null)
+      void globalThis
+        .fetch('/dsh-session-groups/debug', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            probe: 'scroll-pane',
+            stage,
+            className,
+            scrollTop: element.scrollTop,
+            scrollHeight: element.scrollHeight,
+            clientHeight: element.clientHeight,
+            max: element.scrollHeight - element.clientHeight,
+            bar,
+            rail: rail ? { rect: rect(rail), display: getComputedStyle(rail).display, opacity: getComputedStyle(rail).opacity } : null,
+            thumb: thumb ? { rect: rect(thumb), display: getComputedStyle(thumb).display } : null,
+          }),
+        })
+        .catch(() => {})
+    },
+    [bar, className]
+  )
   const update = useCallback(() => {
     const element = scrollerRef.current
     if (!element) {
@@ -169,11 +201,20 @@ const ScrollPane = ({ className, testId, ariaLabel, children }) => {
     const top = Math.round((element.scrollTop / max) * Math.max(0, railHeight - height))
     setBar((previous) => (previous?.height === height && previous?.top === top ? previous : { height, top }))
   }, [])
+  const onScroll = useCallback(() => {
+    update()
+    const now = Date.now()
+    if (now - lastProbeRef.current > 200) {
+      lastProbeRef.current = now
+      probe('scroll')
+    }
+  }, [probe, update])
   useLayoutEffect(() => {
     const element = scrollerRef.current
     if (!element) return undefined
     update()
-    element.addEventListener('scroll', update, { passive: true })
+    probe('mount')
+    element.addEventListener('scroll', onScroll, { passive: true })
     globalThis.addEventListener?.('resize', update)
     let observer = null
     if (typeof globalThis.ResizeObserver === 'function') {
@@ -181,11 +222,11 @@ const ScrollPane = ({ className, testId, ariaLabel, children }) => {
       observer.observe(element)
     }
     return () => {
-      element.removeEventListener('scroll', update)
+      element.removeEventListener('scroll', onScroll)
       globalThis.removeEventListener?.('resize', update)
       observer?.disconnect()
     }
-  }, [update])
+  }, [onScroll, probe, update])
   return h(
     'div',
     { class: 'dsg-scroll-pane' },
@@ -202,8 +243,12 @@ const ScrollPane = ({ className, testId, ariaLabel, children }) => {
     bar
       ? h(
           'div',
-          { class: 'dsg-scroll-rail', 'aria-hidden': 'true' },
-          h('div', { class: 'dsg-scroll-thumb', style: { height: `${bar.height}px`, top: `${bar.top}px` } })
+          { ref: railRef, class: 'dsg-scroll-rail', 'aria-hidden': 'true' },
+          h('div', {
+            ref: thumbRef,
+            class: 'dsg-scroll-thumb',
+            style: { height: `${bar.height}px`, top: `${bar.top}px` },
+          })
         )
       : null
   )
