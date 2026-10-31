@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   ARCHIVE_FILTER_KEY,
+  COLLAPSED_KEY,
   VIEW_MODE_KEY,
   createStore,
   readArchiveFilter,
@@ -65,6 +66,21 @@ test('store dispatch toggles expansion and only updates subscribers', () => {
   unsubscribe()
   store.dispatch('toggle-group', { id: 'g3' })
   assert.equal(calls, 3)
+})
+
+test('collapsed groups persist across store recreation (plugin updates/reloads)', () => {
+  const storage = fakeStorage()
+  const first = createStore({ storage })
+  first.dispatch('toggle-group', { id: 'g1' })
+  first.dispatch('collapse-group', { id: 'g2' })
+  first.dispatch('expand-group', { id: 'g1' })
+
+  const second = createStore({ storage })
+  assert.equal(second.getSnapshot().collapsed.g1, undefined)
+  assert.equal(second.getSnapshot().collapsed.g2, true)
+
+  storage.setItem(COLLAPSED_KEY, '{broken')
+  assert.deepEqual(createStore({ storage }).getSnapshot().collapsed, {})
 })
 
 test('load success/error and commit conflict transitions', () => {
