@@ -7,7 +7,7 @@
  * from those hooks; the only local state is this plugin's view store.
  */
 import { Component, createElement, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME, SESSION_WATERMARK_BASE, SESSION_WATERMARK_AUTO_MAX } from '../shared/constants.js'
+import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME, PLUGIN_VERSION, SESSION_WATERMARK_BASE, SESSION_WATERMARK_AUTO_MAX } from '../shared/constants.js'
 import {
   childrenOf,
   findGroup,
@@ -1904,6 +1904,7 @@ const DialogHost = ({ store, props }) => {
   const dialogRectRef = useRef(null)
   const gestureRef = useRef(null)
   const gestureCleanupRef = useRef(null)
+  const debugSentRef = useRef(null)
   dialogRectRef.current = dialogRect
   useEffect(() => {
     if (!dialog) {
@@ -1946,6 +1947,94 @@ const DialogHost = ({ store, props }) => {
     globalThis.addEventListener('resize', onResize)
     return () => globalThis.removeEventListener('resize', onResize)
   }, [dialog?.kind, dialogRect === null])
+
+  useEffect(() => {
+    if (!dialog) {
+      debugSentRef.current = null
+      return undefined
+    }
+    if (debugSentRef.current === dialog.kind) return undefined
+    debugSentRef.current = dialog.kind
+    const timer = setTimeout(() => {
+      const element = dialogRef.current
+      if (!element || typeof globalThis.getComputedStyle !== 'function') return
+      try {
+        const bodyStyle = globalThis.getComputedStyle(globalThis.document.body)
+        const dialogStyle = globalThis.getComputedStyle(element)
+        const content = element.querySelector('.dsg-dialog-content')
+        const input = element.querySelector('.dsg-dialog-input')
+        const confirm = element.querySelector('.dsg-dialog-confirm')
+        const contentStyle = content ? globalThis.getComputedStyle(content) : null
+        const inputStyle = input ? globalThis.getComputedStyle(input) : null
+        const confirmStyle = confirm ? globalThis.getComputedStyle(confirm) : null
+        const tokenNames = [
+          '--dsw-alias-bg-layer-1',
+          '--dsw-alias-bg-layer-2',
+          '--dsw-alias-button-primary-fill',
+          '--dsw-alias-button-primary-hover',
+          '--dsw-alias-label-primary-foreground',
+          '--dsw-alias-border-l3',
+          '--dsw-alias-border-l4',
+          '--dsw-alias-label-primary',
+          '--dsw-alias-label-secondary',
+          '--dsh-scrollbar-thumb',
+          '--dsh-scrollbar-thumb-hover',
+          '--dsw-radius-panel',
+        ]
+        const tokens = Object.fromEntries(tokenNames.map((name) => [name, bodyStyle.getPropertyValue(name).trim()]))
+        const payload = {
+          pluginVersion: PLUGIN_VERSION,
+          kind: dialog.kind,
+          dark: globalThis.document.body?.getAttribute?.('data-ds-dark-theme'),
+          dialog: {
+            rect: element.getBoundingClientRect().toJSON?.() ?? null,
+            background: dialogStyle.backgroundColor,
+            color: dialogStyle.color,
+            border: dialogStyle.border,
+            borderRadius: dialogStyle.borderRadius,
+            padding: dialogStyle.padding,
+          },
+          content: content
+            ? {
+                rect: content.getBoundingClientRect().toJSON?.() ?? null,
+                flex: contentStyle?.flex,
+                height: contentStyle?.height,
+                scrollHeight: content.scrollHeight,
+              }
+            : null,
+          input: input
+            ? {
+                rect: input.getBoundingClientRect().toJSON?.() ?? null,
+                display: inputStyle?.display,
+                height: inputStyle?.height,
+                flex: inputStyle?.flex,
+                opacity: inputStyle?.opacity,
+                background: inputStyle?.backgroundColor,
+                color: inputStyle?.color,
+                border: inputStyle?.border,
+              }
+            : null,
+          confirm: confirm
+            ? {
+                background: confirmStyle?.backgroundColor,
+                color: confirmStyle?.color,
+                height: confirmStyle?.height,
+              }
+            : null,
+          tokens,
+        }
+        void globalThis.fetch?.('/dsh-session-groups/debug', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).catch(() => {})
+      } catch {
+        /* debug probe must never affect the dialog */
+      }
+    }, 50)
+    return () => clearTimeout(timer)
+  }, [dialog?.kind])
 
   const beginDialogGesture = (event, dir = null) => {
     if (!dialog || event.button !== 0) return

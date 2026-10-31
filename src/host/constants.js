@@ -13,8 +13,12 @@ export const COMMIT_PATH = `${BASE_PATH}/commit`
 /** Diagnostics trace ingest route (0.2.5, additive; append-only NDJSON). */
 export const DIAGNOSTICS_PATH = `${BASE_PATH}/diagnostics`
 
+/** Opt-in dialog style probe (0.2.36; separate from drag diagnostics). */
+export const DEBUG_PATH = `${BASE_PATH}/debug`
+
 /** Diagnostics trace file under the Harness `storages` directory. */
 export const DIAGNOSTICS_FILE_NAME = 'dsh-session-groups.diagnostics.ndjson'
+export const DEBUG_FILE_NAME = 'dsh-session-groups.debug.ndjson'
 
 /** Directory under the Harness home that holds the record file. */
 export const STORAGE_DIR_NAME = 'storages'

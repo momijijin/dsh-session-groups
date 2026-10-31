@@ -19,7 +19,7 @@ import z from '@deepseek-ai/schemastery'
 import { probeConnection } from './host/fence.js'
 import { resolveRecordPath } from './host/home.js'
 import { logInfo } from './host/log.js'
-import { DIAGNOSTICS_FILE_NAME } from './host/constants.js'
+import { DEBUG_FILE_NAME, DIAGNOSTICS_FILE_NAME } from './host/constants.js'
 import { registerRoutes } from './host/routes.js'
 import { createStore } from './host/store.js'
 
@@ -54,6 +54,7 @@ export const apply = (ctx, config = {}) => {
         join(dirname(record.filePath), DIAGNOSTICS_FILE_NAME)
   const mounted = registerRoutes(ctx, store, {
     diagnosticsFilePath,
+    debugFilePath: join(dirname(record.filePath), DEBUG_FILE_NAME),
     diagnosticsEnabled: config?.diagnostics === true,
   })
   const probe = probeConnection(ctx)
@@ -75,6 +76,7 @@ export const apply = (ctx, config = {}) => {
       storageDir: record.storageDir,
       storageSource: record.storageSource,
       diagnosticsFilePath,
+      debugFilePath: join(dirname(record.filePath), DEBUG_FILE_NAME),
       mounted,
     })
   }
