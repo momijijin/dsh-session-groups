@@ -146,75 +146,26 @@ const usePerfCommit = (name, renderStartedAt) => {
 }
 
 /**
- * Scroll region with an always-visible overlay thumb. Chromium can switch a
- * nested scroller to overlay scrollbars and auto-hide them after wheel input,
- * so the picker owns a tiny scroll rail instead of relying on native chrome.
+ * Dialog scroll region with native scrollbars hidden and soft top/bottom
+ * fades that appear only when there is content in that direction. This avoids
+ * Chromium's auto-hiding overlay scrollbar entirely.
  */
-const ScrollPane = ({ className, testId, ariaLabel, children }) => {
+const ScrollFade = ({ className, tone = 'layer1', children, ...rest }) => {
   const scrollerRef = useRef(null)
-  const railRef = useRef(null)
-  const thumbRef = useRef(null)
-  const lastProbeRef = useRef(0)
-  const [bar, setBar] = useState(null)
-  const probe = useCallback(
-    (stage) => {
-      const element = scrollerRef.current
-      if (!element || typeof globalThis.fetch !== 'function') return
-      const rail = railRef.current
-      const thumb = thumbRef.current
-      const rect = (node) => (node ? node.getBoundingClientRect().toJSON?.() ?? null : null)
-      void globalThis
-        .fetch('/dsh-session-groups/debug', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            probe: 'scroll-pane',
-            stage,
-            className,
-            scrollTop: element.scrollTop,
-            scrollHeight: element.scrollHeight,
-            clientHeight: element.clientHeight,
-            max: element.scrollHeight - element.clientHeight,
-            bar,
-            rail: rail ? { rect: rect(rail), display: getComputedStyle(rail).display, opacity: getComputedStyle(rail).opacity } : null,
-            thumb: thumb ? { rect: rect(thumb), display: getComputedStyle(thumb).display } : null,
-          }),
-        })
-        .catch(() => {})
-    },
-    [bar, className]
-  )
+  const [edges, setEdges] = useState({ top: false, bottom: false })
   const update = useCallback(() => {
     const element = scrollerRef.current
-    if (!element) {
-      setBar(null)
-      return
-    }
+    if (!element) return
     const max = element.scrollHeight - element.clientHeight
-    if (max <= 1) {
-      setBar(null)
-      return
-    }
-    const railHeight = Math.max(0, element.clientHeight - 16)
-    const height = Math.max(24, Math.round((railHeight * element.clientHeight) / element.scrollHeight))
-    const top = Math.round((element.scrollTop / max) * Math.max(0, railHeight - height))
-    setBar((previous) => (previous?.height === height && previous?.top === top ? previous : { height, top }))
+    const top = element.scrollTop > 1
+    const bottom = max > 1 && element.scrollTop < max - 1
+    setEdges((previous) => (previous.top === top && previous.bottom === bottom ? previous : { top, bottom }))
   }, [])
-  const onScroll = useCallback(() => {
-    update()
-    const now = Date.now()
-    if (now - lastProbeRef.current > 200) {
-      lastProbeRef.current = now
-      probe('scroll')
-    }
-  }, [probe, update])
   useLayoutEffect(() => {
     const element = scrollerRef.current
     if (!element) return undefined
     update()
-    probe('mount')
-    element.addEventListener('scroll', onScroll, { passive: true })
+    element.addEventListener('scroll', update, { passive: true })
     globalThis.addEventListener?.('resize', update)
     let observer = null
     if (typeof globalThis.ResizeObserver === 'function') {
@@ -222,35 +173,17 @@ const ScrollPane = ({ className, testId, ariaLabel, children }) => {
       observer.observe(element)
     }
     return () => {
-      element.removeEventListener('scroll', onScroll)
+      element.removeEventListener('scroll', update)
       globalThis.removeEventListener?.('resize', update)
       observer?.disconnect()
     }
-  }, [onScroll, probe, update])
+  }, [update])
   return h(
     'div',
-    { class: 'dsg-scroll-pane' },
-    h(
-      'div',
-      {
-        ref: scrollerRef,
-        class: className,
-        'data-testid': testId,
-        'aria-label': ariaLabel,
-      },
-      children
-    ),
-    bar
-      ? h(
-          'div',
-          { ref: railRef, class: 'dsg-scroll-rail', 'aria-hidden': 'true' },
-          h('div', {
-            ref: thumbRef,
-            class: 'dsg-scroll-thumb',
-            style: { height: `${bar.height}px`, top: `${bar.top}px` },
-          })
-        )
-      : null
+    { class: 'dsg-scroll-fade', 'data-tone': tone },
+    h('div', { ref: scrollerRef, class: className, ...rest }, children),
+    edges.top ? h('div', { class: 'dsg-scroll-fade-top', 'aria-hidden': 'true' }) : null,
+    edges.bottom ? h('div', { class: 'dsg-scroll-fade-bottom', 'aria-hidden': 'true' }) : null
   )
 }
 
@@ -1989,9 +1922,10 @@ const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaLabel, a
         : null
     )
   return h(
-    'div',
+    ScrollFade,
     {
-      class: 'dsg-menu dsg-dialog-list',
+      className: 'dsg-menu dsg-dialog-list',
+      tone: 'layer1',
       role: 'listbox',
       'data-testid': testId,
       'aria-label': ariaLabel ?? t('dialog.moveTo'),
@@ -2058,7 +1992,7 @@ const DialogHost = ({ store, props }) => {
       (titlebar?.offsetHeight ?? 0) +
         Math.ceil(content?.scrollHeight ?? 0) +
         (actions?.offsetHeight ?? 0) +
-        56 +
+        57 +
         borderHeight
     )
     const naturalHeight = laidOutHeight || Math.ceil(box.height) || 320
@@ -2267,9 +2201,10 @@ const DialogHost = ({ store, props }) => {
       bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.newSessionWorkspace')))
       bodyNodes.push(
         h(
-          'div',
+          ScrollFade,
           {
-            class: 'dsg-menu dsg-dialog-list',
+            className: 'dsg-menu dsg-dialog-list',
+            tone: 'layer1',
             role: 'listbox',
             'data-testid': 'session-groups-dialog-options',
             'aria-label': t('dialog.newSessionWorkspace'),
@@ -2352,11 +2287,12 @@ const DialogHost = ({ store, props }) => {
     }
     bodyNodes.push(
       h(
-        ScrollPane,
+        ScrollFade,
         {
           className: 'dsg-icon-sections',
-          testId: 'session-groups-dialog-options',
-          ariaLabel: t('group.icon'),
+          tone: 'layer1',
+          'data-testid': 'session-groups-dialog-options',
+          'aria-label': t('group.icon'),
         },
         ...sections.map((section, index) =>
           h(
@@ -2535,8 +2471,8 @@ const DialogHost = ({ store, props }) => {
         h('div', { class: 'dsg-dialog-title' }, title)
       ),
       h(
-        'div',
-        { class: 'dsg-dialog-content' },
+        ScrollFade,
+        { className: 'dsg-dialog-content', tone: 'layer2' },
         ...bodyNodes,
         needsInput
           ? h('input', {

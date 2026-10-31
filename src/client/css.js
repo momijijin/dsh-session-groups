@@ -582,11 +582,19 @@ export const CSS = `
 .dsg-dialog-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-14, 14px); line-height: 20px; font-weight: 600; color: var(--dsw-alias-label-primary, CanvasText); pointer-events: none; }
 .dsg-dialog-content { flex: 0 0 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 0; }
 .dsg-dialog[data-positioned="true"] .dsg-dialog-content { flex: 1 1 auto; }
-.dsg-dialog-content::-webkit-scrollbar, .dsg-icon-sections::-webkit-scrollbar, .dsg-dialog-list::-webkit-scrollbar { width: 10px; height: 10px; }
-.dsg-dialog-content::-webkit-scrollbar-track, .dsg-icon-sections::-webkit-scrollbar-track, .dsg-dialog-list::-webkit-scrollbar-track { background: transparent; }
-.dsg-dialog-content::-webkit-scrollbar-thumb, .dsg-icon-sections::-webkit-scrollbar-thumb, .dsg-dialog-list::-webkit-scrollbar-thumb { background: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))); border: 2px solid transparent; border-radius: 999px; background-clip: padding-box; min-height: 28px; }
-.dsg-dialog-content:hover::-webkit-scrollbar-thumb, .dsg-icon-sections:hover::-webkit-scrollbar-thumb, .dsg-dialog-list:hover::-webkit-scrollbar-thumb { background: var(--dsh-scrollbar-thumb-hover, var(--dsw-alias-scrollbar-hover-l2, color-mix(in srgb, CanvasText 32%, transparent))); background-clip: padding-box; }
-.dsg-icon-sections, .dsg-dialog-list { scrollbar-gutter: stable; }
+.dsg-dialog > .dsg-scroll-fade { flex: 0 0 auto; }
+.dsg-dialog[data-positioned="true"] > .dsg-scroll-fade { flex: 1 1 auto; min-height: 0; }
+.dsg-scroll-fade { position: relative; display: flex; flex-direction: column; min-height: 0; }
+.dsg-scroll-fade[data-tone="layer1"] { --dsg-scroll-fade-bg: var(--dsw-alias-bg-layer-1, Canvas); }
+.dsg-scroll-fade[data-tone="layer2"] { --dsg-scroll-fade-bg: var(--dsw-alias-bg-layer-2, Canvas); }
+.dsg-scroll-fade-top, .dsg-scroll-fade-bottom { position: absolute; left: 0; right: 0; height: 22px; pointer-events: none; z-index: 2; }
+.dsg-scroll-fade-top { top: 0; background: linear-gradient(to bottom, var(--dsg-scroll-fade-bg) 0%, color-mix(in srgb, var(--dsg-scroll-fade-bg) 78%, transparent) 55%, transparent 100%); }
+.dsg-scroll-fade-bottom { bottom: 0; background: linear-gradient(to top, var(--dsg-scroll-fade-bg) 0%, color-mix(in srgb, var(--dsg-scroll-fade-bg) 78%, transparent) 55%, transparent 100%); }
+.dsg-scroll-fade-top::after, .dsg-scroll-fade-bottom::after { content: ''; position: absolute; right: 10px; width: 6px; height: 6px; border-right: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); border-bottom: 1.5px solid var(--dsw-alias-label-tertiary, CanvasText); opacity: .55; }
+.dsg-scroll-fade-top::after { top: 6px; transform: rotate(225deg); }
+.dsg-scroll-fade-bottom::after { bottom: 6px; transform: rotate(45deg); }
+.dsg-dialog-content, .dsg-dialog-list, .dsg-icon-sections { scrollbar-width: none; -ms-overflow-style: none; }
+.dsg-dialog-content::-webkit-scrollbar, .dsg-dialog-list::-webkit-scrollbar, .dsg-icon-sections::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .dsg-dialog-body { font-size: var(--dsg-font-13, 13px); line-height: 20px; color: var(--dsw-alias-label-secondary, CanvasText); white-space: pre-wrap; }
 .dsg-dialog-input { flex: none; width: 100%; box-sizing: border-box; height: 32px; min-height: 32px; padding: 0 10px; font-size: var(--dsg-font-13, 13px); line-height: 18px; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, CanvasText 22%, transparent)); background: var(--dsw-alias-bg-layer-1, Canvas); color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-dialog-input::placeholder { color: var(--dsw-alias-label-secondary, CanvasText); }
@@ -648,11 +656,6 @@ export const CSS = `
 /* 0.2.12: more common glyphs; a slightly wider 4-column icon picker. */
 .dsg-icon-option { width: auto; flex: 1 1 88px; min-height: 36px; }
 .dsg-icon-sections { box-sizing: border-box; display: flex; flex-direction: column; gap: 0; max-height: min(56vh, 430px); overflow-y: auto; padding: 8px; border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, CanvasText 18%, transparent)); border-radius: var(--dsw-radius-md, 8px); background: var(--dsw-alias-bg-layer-1, Canvas); }
-.dsg-scroll-pane { position: relative; min-width: 0; }
-.dsg-scroll-pane > .dsg-icon-sections { padding-right: 20px; scrollbar-width: none; -ms-overflow-style: none; }
-.dsg-scroll-pane > .dsg-icon-sections::-webkit-scrollbar { width: 0; height: 0; display: none; }
-.dsg-scroll-rail { position: absolute; top: 8px; right: 3px; bottom: 8px; width: 8px; pointer-events: none; }
-.dsg-scroll-thumb { position: absolute; left: 0; width: 8px; border-radius: 999px; background: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))); opacity: .9; }
 .dsg-icon-section { padding: 0; }
 .dsg-icon-section + .dsg-icon-section { border-top: 0.5px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 18%, transparent)); margin-top: 8px; padding-top: 8px; }
 .dsg-icon-section-title { padding: 2px 4px 4px; font-size: var(--dsg-font-11, 11px); line-height: 16px; font-weight: 500; color: var(--dsw-alias-label-tertiary, CanvasText); }

@@ -108,32 +108,31 @@ test('0.2.39 dialog restores the compact 0.2.30 chrome with theme tokens', () =>
 })
 
 test('dialog natural height uses the complete flex layout', () => {
-  assert.match(components, /56 \+/)
+  assert.match(components, /57 \+/)
   assert.match(components, /borderHeight/)
   assert.match(components, /const laidOutHeight = Math\.ceil\(/)
   assert.match(components, /Math\.ceil\(content\?\.scrollHeight/)
   assert.match(components, /laidOutHeight \|\| Math\.ceil\(box\.height\)/)
 })
 
-test('0.2.32 dialog defaults stay compact and scrollbars are visible', () => {
+test('0.2.45 dialog scroll areas hide native bars and use edge fades', () => {
   assert.match(CSS, /\.dsg-dialog-content \{[^}]*flex:\s*0 0 auto/s)
   assert.match(CSS, /\.dsg-dialog\[data-positioned="true"\] \.dsg-dialog-content \{ flex:\s*1 1 auto/)
-  assert.match(CSS, /\.dsg-dialog-content::-webkit-scrollbar-thumb/)
-  assert.match(CSS, /scrollbar-gutter:\s*stable/)
-  assert.equal(CSS.includes('scrollbar-width: thin'), false)
+  assert.match(CSS, /\.dsg-dialog-content, \.dsg-dialog-list, \.dsg-icon-sections \{ scrollbar-width:\s*none/s)
+  assert.match(CSS, /\.dsg-dialog-content::-webkit-scrollbar,[^{]*\{ width:\s*0; height:\s*0; display:\s*none; \}/s)
+  assert.match(CSS, /\.dsg-scroll-fade-top/)
+  assert.match(CSS, /\.dsg-scroll-fade-bottom/)
+  assert.match(CSS, /\.dsg-scroll-fade\[data-tone="layer2"\]/)
+  assert.match(components, /const ScrollFade =/)
+  assert.match(components, /tone: 'layer2'/)
+  assert.match(components, /tone: 'layer1'/)
   assert.match(CSS, /\.dsg-dialog-input \{[^}]*height:\s*32px/s)
   assert.match(CSS, /\.dsg-dialog-input \{[^}]*flex:\s*none/s)
   assert.match(components, /naturalHeight/)
   assert.match(components, /content\?\.scrollHeight/)
 })
 
-test('0.2.42 icon picker owns a persistent scroll rail and top-level separators', () => {
-  assert.match(components, /const ScrollPane =/)
-  assert.match(components, /class: 'dsg-scroll-rail'/)
-  assert.match(components, /class: 'dsg-scroll-thumb'/)
-  assert.match(CSS, /\.dsg-scroll-rail \{/)
-  assert.match(CSS, /\.dsg-scroll-pane > \.dsg-icon-sections \{ padding-right:\s*20px/s)
-  assert.match(CSS, /\.dsg-scroll-pane > \.dsg-icon-sections::-webkit-scrollbar \{ width:\s*0/)
+test('0.2.42 top-level group destinations keep separators', () => {
   assert.match(components, /dsg-dialog-group-separator/)
   assert.match(CSS, /\.dsg-dialog-group-separator \{[^}]*border-top/s)
 })
