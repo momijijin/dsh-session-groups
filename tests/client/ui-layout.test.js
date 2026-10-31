@@ -110,7 +110,7 @@ test('0.2.39 dialog restores the compact 0.2.30 chrome with theme tokens', () =>
 test('dialog natural height uses the complete flex layout', () => {
   assert.match(components, /56 \+/)
   assert.match(components, /borderHeight/)
-  assert.match(components, /Math\.ceil\(borderHeight\)/)
+  assert.match(components, /const laidOutHeight = Math\.ceil\(/)
   assert.match(components, /Math\.ceil\(content\?\.scrollHeight/)
   assert.match(components, /laidOutHeight \|\| Math\.ceil\(box\.height\)/)
 })

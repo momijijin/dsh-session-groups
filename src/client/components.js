@@ -2054,12 +2054,13 @@ const DialogHost = ({ store, props }) => {
     const borderHeight =
       (Number.parseFloat(globalThis.getComputedStyle(element).borderTopWidth) || 0) +
       (Number.parseFloat(globalThis.getComputedStyle(element).borderBottomWidth) || 0)
-    const laidOutHeight =
+    const laidOutHeight = Math.ceil(
       (titlebar?.offsetHeight ?? 0) +
-      Math.ceil(content?.scrollHeight ?? 0) +
-      (actions?.offsetHeight ?? 0) +
-      56 +
-      Math.ceil(borderHeight)
+        Math.ceil(content?.scrollHeight ?? 0) +
+        (actions?.offsetHeight ?? 0) +
+        56 +
+        borderHeight
+    )
     const naturalHeight = laidOutHeight || Math.ceil(box.height) || 320
     setDialogRect(
       centeredDialogRect(
