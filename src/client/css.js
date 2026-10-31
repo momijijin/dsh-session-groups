@@ -57,6 +57,12 @@ export const CSS = `
   --dsg-color-red: var(--dsw-alias-state-danger, #f85149);
   --dsg-color-purple: var(--dsw-alias-state-purple, #8250df);
   --dsg-color-gray: var(--dsw-alias-label-tertiary, #6e7781);
+  --dsg-color-teal: #14b8a6;
+  --dsg-color-pink: #ec4899;
+  --dsg-color-brown: #8b5e34;
+  --dsg-color-cyan: #0891b2;
+  --dsg-color-navy: #1e40af;
+  --dsg-color-magenta: #d946ef;
 }
 /* Form controls do not inherit the host font family by default. */
 .dsg-root button, .dsg-root input { font-family: inherit; }
@@ -224,6 +230,12 @@ export const CSS = `
 .dsg-group[data-color="red"] { --dsg-group-color: var(--dsg-color-red); }
 .dsg-group[data-color="purple"] { --dsg-group-color: var(--dsg-color-purple); }
 .dsg-group[data-color="gray"] { --dsg-group-color: var(--dsg-color-gray); }
+.dsg-group[data-color="teal"] { --dsg-group-color: var(--dsg-color-teal); }
+.dsg-group[data-color="pink"] { --dsg-group-color: var(--dsg-color-pink); }
+.dsg-group[data-color="brown"] { --dsg-group-color: var(--dsg-color-brown); }
+.dsg-group[data-color="cyan"] { --dsg-group-color: var(--dsg-color-cyan); }
+.dsg-group[data-color="navy"] { --dsg-group-color: var(--dsg-color-navy); }
+.dsg-group[data-color="magenta"] { --dsg-group-color: var(--dsg-color-magenta); }
 .dsg-group-row:hover, .dsg-session-row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.1)); }
 .dsg-group-row[data-drop-active="true"] { background: var(--dsw-alias-state-business-primary-fade, rgba(77,107,254,.14)); }
 .dsg-group-row[draggable="true"] { cursor: grab; }

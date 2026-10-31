@@ -163,5 +163,19 @@
   "iconGroup.work": "Development",
   "iconGroup.general": "General",
   "sessions.expand": "Show {n} more sessions",
-  "sessions.collapse": "Show less"
+  "sessions.collapse": "Show less",
+  "color.teal": "Teal",
+  "color.pink": "Pink",
+  "color.brown": "Brown",
+  "color.magenta": "Magenta",
+  "icon.hammer": "Hammer",
+  "icon.lightning": "Lightning",
+  "icon.fire": "Urgent",
+  "icon.cloud": "Cloud",
+  "icon.shield": "Shield",
+  "icon.lock": "Lock",
+  "icon.key": "Key",
+  "icon.puzzle": "Module",
+  "color.cyan": "Cyan",
+  "color.navy": "Navy"
 }

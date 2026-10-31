@@ -163,5 +163,19 @@
   "iconGroup.work": "开发与工作",
   "iconGroup.general": "通用",
   "sessions.expand": "展开其余 {n} 个会话",
-  "sessions.collapse": "收起"
+  "sessions.collapse": "收起",
+  "color.teal": "青绿",
+  "color.pink": "粉色",
+  "color.brown": "棕色",
+  "color.magenta": "品红",
+  "icon.hammer": "锤子",
+  "icon.lightning": "闪电",
+  "icon.fire": "紧急",
+  "icon.cloud": "云端",
+  "icon.shield": "保护",
+  "icon.lock": "锁定",
+  "icon.key": "密钥",
+  "icon.puzzle": "模块",
+  "color.cyan": "青蓝",
+  "color.navy": "藏蓝"
 }

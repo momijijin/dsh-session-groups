@@ -1,7 +1,7 @@
 export const DOC_VERSION = 1
 
 /** Plugin version shipped in this build (also stamped into diagnostics traces). */
-export const PLUGIN_VERSION = '0.2.13'
+export const PLUGIN_VERSION = '0.2.15'
 
 export const GROUP_ICONS = Object.freeze([
   'folder',
@@ -36,6 +36,14 @@ export const GROUP_ICONS = Object.freeze([
   'hourglass',
   'wrench',
   'bug',
+  'hammer',
+  'lightning',
+  'fire',
+  'cloud',
+  'shield',
+  'lock',
+  'key',
+  'puzzle',
 ])
 
 /** Normalization fallback for legacy/invalid icons (docs without an icon). */
@@ -53,7 +61,7 @@ export const SESSION_WATERMARK_BASE = 5
 export const SESSION_WATERMARK_AUTO_MAX = 50
 
 /** Preset group palette (0.2.6, additive): stable ids persisted in the doc. */
-export const GROUP_COLORS = Object.freeze(['blue', 'green', 'orange', 'red', 'purple', 'gray'])
+export const GROUP_COLORS = Object.freeze(['blue', 'green', 'orange', 'red', 'purple', 'gray', 'teal', 'pink', 'brown', 'cyan', 'navy', 'magenta'])
 /** New groups default to blue; docs without `color` display blue. */
 export const DEFAULT_GROUP_COLOR = 'blue'
 
@@ -69,6 +77,12 @@ export const GROUP_COLOR_HEX = Object.freeze({
   red: '#f85149',
   purple: '#8250df',
   gray: '#6e7781',
+  teal: '#14b8a6',
+  pink: '#ec4899',
+  brown: '#8b5e34',
+  cyan: '#0891b2',
+  navy: '#1e40af',
+  magenta: '#d946ef',
 })
 
 export const MAX_GROUP_NAME = 80

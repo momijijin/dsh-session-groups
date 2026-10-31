@@ -41,6 +41,14 @@ export const ICON_PATHS = Object.freeze({
   hourglass: ['M4.2 2.7h7.6', 'M4.2 13.3h7.6', 'M5.1 2.7c0 3 2.9 3.4 2.9 5.3s-2.9 2.3-2.9 5.3', 'M10.9 2.7c0 3-2.9 3.4-2.9 5.3s2.9 2.3 2.9 5.3'],
   wrench: ['M9.7 2.8a3 3 0 0 0-3.9 3.9L2.8 9.7l3.5 3.5 3-3a3 3 0 0 0 3.9-3.9l-2.2 2.2-2.2-2.2z'],
   bug: ['M5.2 5.2h5.6v4.2a2.8 2.8 0 0 1-5.6 0z', 'M6.2 5.2V4.1a1.8 1.8 0 0 1 3.6 0v1.1', 'M5.2 7.2H2.8', 'M10.8 7.2h2.4', 'M5.2 10.4l-1.8 1.5', 'M10.8 10.4l1.8 1.5'],
+  hammer: ['M9.2 2.8l4 4-2.2 2.2-4-4z', 'M7.1 4.9L2.6 9.4l4 4 4.5-4.5z', 'M6.4 7.8l1.8 1.8'],
+  lightning: ['M9.2 2.4L4.1 8.7h3L6.8 13.6l5.1-6.3h-3z'],
+  fire: ['M8 13.5c2.5 0 4.1-1.5 4.1-3.8 0-2.7-2.4-3.8-3.1-6.2-.8 2-2.1 2.8-2.1 4.4 0 .9.5 1.5 1.1 1.9-.8-.1-1.4-.5-1.8-1.1-.9.8-1.4 1.9-1.4 3.1 0 1 .6 1.7 1.4 1.7z'],
+  cloud: ['M4.7 12.1h6.8a2.7 2.7 0 0 0 .3-5.3A4.2 4.2 0 0 0 4 6.1a3 3 0 0 0 .7 6z'],
+  shield: ['M8 2.4l5 1.9v3.4c0 2.9-2 5-5 6.1-3-1.1-5-3.2-5-6.1V4.3z'],
+  lock: ['M4.2 7.1h7.6v5.8H4.2z', 'M5.5 7.1V5.3a2.5 2.5 0 0 1 5 0v1.8', 'M8 9.2v1.6'],
+  key: ['M9.6 3.1a3.3 3.3 0 1 0-2.1 5.9L3.1 13.4', 'M5.4 11.1l1.4 1.4', 'M7 9.5l1.2 1.2'],
+  puzzle: ['M6.2 2.7h3.6v2a1.5 1.5 0 1 0 0 2.6v2.4H7.4a1.5 1.5 0 1 0-2.6 0H2.7V6.2h2a1.5 1.5 0 1 0 0-2.6z'],
 })
 
 /** All icon names the plugin accepts (contract set). */
@@ -54,17 +62,17 @@ export const ICON_GROUPS = Object.freeze([
   {
     key: 'status',
     labelKey: 'iconGroup.status',
-    icons: ['check-circle', 'check', 'x-circle', 'ban', 'pause', 'play', 'stop', 'clock', 'hourglass'],
+    icons: ['check-circle', 'check', 'x-circle', 'ban', 'pause', 'play', 'stop', 'clock', 'hourglass', 'fire'],
   },
   {
     key: 'work',
     labelKey: 'iconGroup.work',
-    icons: ['code', 'terminal', 'wrench', 'bug', 'database', 'chart', 'target', 'rocket', 'briefcase', 'layers', 'book'],
+    icons: ['code', 'terminal', 'wrench', 'bug', 'hammer', 'lightning', 'database', 'chart', 'target', 'rocket', 'briefcase', 'layers', 'book'],
   },
   {
     key: 'general',
     labelKey: 'iconGroup.general',
-    icons: ['folder', 'folder-open', 'star', 'flag', 'bookmark', 'tag', 'bulb', 'globe', 'heart', 'home', 'calendar', 'hash'],
+    icons: ['folder', 'folder-open', 'star', 'flag', 'bookmark', 'tag', 'bulb', 'globe', 'heart', 'home', 'calendar', 'hash', 'cloud', 'shield', 'lock', 'key', 'puzzle'],
   },
 ])
 
