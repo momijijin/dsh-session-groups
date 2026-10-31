@@ -620,7 +620,7 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
     if (dropTarget?.kind === 'session-before' && dropTarget.sessionId === sessionId) {
       sessionChildren.push(h(DropPlaceholder, { key: `ph-b-${sessionId}`, target: dropTarget, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT }))
     }
-    sessionChildren.push(h(SessionRow, { key: sessionId, sessionNode: child, depth: depth + 1, groupId: group.id, props, handlers }))
+    sessionChildren.push(h(SessionRow, { key: sessionId, sessionNode: child, depth: depth + 1, groupId: group.id, props, handlers, store }))
     if (dropTarget?.kind === 'session-after' && dropTarget.sessionId === sessionId) {
       sessionChildren.push(h(DropPlaceholder, { key: `ph-a-${sessionId}`, target: dropTarget, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT }))
     }
@@ -942,7 +942,7 @@ const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
       if (dropTarget?.kind === 'session-before' && dropTarget.sessionId === sessionId) {
         bodyChildren.push(h(DropPlaceholder, { key: `ph-b-${sessionId}`, target: dropTarget, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT }))
       }
-      bodyChildren.push(h(SessionRow, { key: sessionId, sessionNode: child, depth: 0, groupId: null, ungrouped: true, props, handlers }))
+      bodyChildren.push(h(SessionRow, { key: sessionId, sessionNode: child, depth: 0, groupId: null, ungrouped: true, props, handlers, store }))
       if (dropTarget?.kind === 'session-after' && dropTarget.sessionId === sessionId) {
         bodyChildren.push(h(DropPlaceholder, { key: `ph-a-${sessionId}`, target: dropTarget, store, handlers, height: SESSION_PLACEHOLDER_HEIGHT }))
       }
@@ -1666,7 +1666,7 @@ const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaLabel, t
         'data-testid': 'session-groups-dialog-group',
         'data-group-id': value ?? '',
         'data-selected': selection === value ? 'true' : 'false',
-        style: { paddingLeft: `${10 + depth * 12}px` },
+        style: { paddingLeft: `${12 + depth * 16}px` },
         onClick: (event) => {
           event.stopPropagation()
           onSelect(value)

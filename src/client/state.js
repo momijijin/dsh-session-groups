@@ -13,6 +13,8 @@ import { emptyDoc } from '../shared/model.js'
 export const VIEW_MODE_KEY = 'dsh-session-groups.view.v1'
 /** localStorage key for the archive tri-state filter. */
 export const ARCHIVE_FILTER_KEY = 'dsh-session-groups.archive.v1'
+/** localStorage key for persisted group expansion (collapsed ids only). */
+export const COLLAPSED_KEY = 'dsh-session-groups.collapsed.v1'
 
 /** Modes understood by the sidebar controller. */
 export const VIEW_MODES = Object.freeze(['workspace', 'groups'])
@@ -65,6 +67,36 @@ export const writeArchiveFilter = (filter, storage = safeStorage()) => {
   }
 }
 
+/** Read persisted collapsed group ids; malformed storage falls back to all expanded. */
+export const readCollapsed = (storage = safeStorage()) => {
+  try {
+    const raw = storage?.getItem(COLLAPSED_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    const collapsed = {}
+    for (const [id, value] of Object.entries(parsed)) {
+      if (id && value === true) collapsed[id] = true
+    }
+    return collapsed
+  } catch {
+    return {}
+  }
+}
+
+/** Persist collapsed group ids; best effort, never blocks the tree. */
+export const writeCollapsed = (collapsed, storage = safeStorage()) => {
+  try {
+    const normalized = {}
+    for (const [id, value] of Object.entries(collapsed ?? {})) {
+      if (id && value === true) normalized[id] = true
+    }
+    storage?.setItem(COLLAPSED_KEY, JSON.stringify(normalized))
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Initial snapshot for {@link createStore}. */
 const initialSnapshot = (storage) => ({
   viewMode: readViewMode(storage),
@@ -79,7 +111,7 @@ const initialSnapshot = (storage) => ({
   /** whether `doc` contains optimistic (not yet persisted) mutations */
   optimistic: false,
   /** group ids expanded in the tree (missing = expanded) */
-  collapsed: {},
+  collapsed: readCollapsed(storage),
   /** current popover/menu descriptor, at most one at a time */
   menu: null,
   /** current modal descriptor (rename/new/delete/move/archive-running) */
@@ -117,6 +149,7 @@ export const createStore = ({ storage = safeStorage() } = {}) => {
   }
 
   const publish = (next) => {
+    if (next.collapsed !== snapshot.collapsed) writeCollapsed(next.collapsed, storage)
     snapshot = next
     for (const listener of [...listeners]) {
       try {
