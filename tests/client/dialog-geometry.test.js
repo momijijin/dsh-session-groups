@@ -15,7 +15,7 @@ test('dialog geometry clamps size and keeps the title bar reachable', () => {
   assert.equal(rect.x, 8)
   assert.equal(rect.y, 8)
   assert.equal(rect.width, 320)
-  assert.equal(rect.height, 160)
+  assert.equal(rect.height, 120)
   const huge = clampDialogRect({ x: 2000, y: 2000, width: 2000, height: 2000 }, 1200, 800)
   assert.equal(huge.width, 1080) // 90vw
   assert.equal(huge.height, 680) // 85vh

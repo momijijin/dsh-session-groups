@@ -68,7 +68,6 @@
   "dialog.namePlaceholder": "分组名称",
   "dialog.confirm": "确定",
   "dialog.cancel": "取消",
-  "dialog.close": "关闭",
   "dialog.deleteMoveBody": "该分组包含 {sessions} 个会话、{groups} 个子分组。请选择它们的移动目的地后再删除分组；不会删除或归档任何会话。",
   "dialog.deleteDestination": "移动目的地",
   "dialog.rootDestination": "未归组（根目录）",

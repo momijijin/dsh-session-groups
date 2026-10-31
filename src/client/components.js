@@ -1925,15 +1925,14 @@ const DialogHost = ({ store, props }) => {
     const titlebar = element.querySelector('.dsg-dialog-titlebar')
     const content = element.querySelector('.dsg-dialog-content')
     const actions = element.querySelector('.dsg-dialog-actions')
-    // The dialog is a column flex with gap:20px and padding-bottom:24px, so
-    // summing only its three children clips the content to 0 height. Include
-    // the two gaps + bottom padding and never go below the auto-layout box.
+    // The dialog is a column flex with gap:12px and 16px vertical padding, so
+    // include the two gaps + padding; summing only the children clips content.
     const laidOutHeight =
-      (titlebar?.offsetHeight ?? 0) + (content?.scrollHeight ?? 0) + (actions?.offsetHeight ?? 0) + 64
+      (titlebar?.offsetHeight ?? 0) + (content?.scrollHeight ?? 0) + (actions?.offsetHeight ?? 0) + 56
     const naturalHeight = laidOutHeight || Math.ceil(box.height) || 320
     setDialogRect(
       centeredDialogRect(
-        box.width || (dialog.kind === 'icon' ? 440 : 400),
+        box.width || (dialog.kind === 'icon' ? 420 : 360),
         naturalHeight || 320,
         globalThis.innerWidth,
         globalThis.innerHeight
@@ -2400,18 +2399,7 @@ const DialogHost = ({ store, props }) => {
           class: 'dsg-dialog-titlebar',
           onPointerDown: (event) => beginDialogGesture(event),
         },
-        h('div', { class: 'dsg-dialog-title' }, title),
-        h(
-          'button',
-          {
-            type: 'button',
-            class: 'dsg-dialog-close',
-            'aria-label': t('dialog.close'),
-            title: t('dialog.close'),
-            onClick: close,
-          },
-          renderGlyph(h, 'close', 14)
-        )
+        h('div', { class: 'dsg-dialog-title' }, title)
       ),
       h(
         'div',

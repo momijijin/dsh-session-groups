@@ -7,9 +7,9 @@
  */
 import { safeStorage } from './state.js'
 
-export const DIALOG_GEOMETRY_KEY = 'dsh-session-groups.dialog.geometry.v1'
+export const DIALOG_GEOMETRY_KEY = 'dsh-session-groups.dialog.geometry.v6'
 export const MIN_DIALOG_WIDTH = 320
-export const MIN_DIALOG_HEIGHT = 220
+export const MIN_DIALOG_HEIGHT = 120
 const EDGE_PAD = 8
 const TITLE_VISIBLE = 44
 

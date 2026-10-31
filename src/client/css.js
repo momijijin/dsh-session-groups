@@ -556,34 +556,31 @@ export const CSS = `
 .dsg-running-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-13, 13px); line-height: 18px; }
 .dsg-running-item-archived { flex: none; font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-running-empty { padding: 10px 8px; font-size: var(--dsg-font-13, 13px); color: var(--dsw-alias-label-tertiary, CanvasText); }
-.dsg-dialog-backdrop { position: fixed; inset: 0; z-index: 80; background: var(--dsw-alias-bg-mask-1, color-mix(in srgb, CanvasText 32%, transparent)); -webkit-backdrop-filter: var(--dsw-mask-blur, blur(8px)); backdrop-filter: var(--dsw-mask-blur, blur(8px)); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.dsg-dialog-backdrop { position: fixed; inset: 0; z-index: 80; background: var(--dsw-alias-bg-mask-1, color-mix(in srgb, CanvasText 32%, transparent)); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .dsg-dialog {
   position: fixed;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   box-sizing: border-box;
-  width: min(380px, calc(100vw - 48px));
+  width: min(360px, calc(100vw - 32px));
   max-height: 85vh;
-  border-radius: var(--dsw-radius-panel, 28px);
+  border-radius: var(--dsw-radius-md, 10px);
   background: var(--dsw-alias-bg-layer-2, Canvas);
   color: var(--dsw-alias-label-primary, CanvasText);
-  border: 0;
-  padding: 0 0 24px;
+  border: 0.5px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 18%, transparent));
+  padding: 16px;
   box-shadow: var(--dsw-elevation-prominent, 0 16px 48px rgba(0,0,0,.28));
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   overflow: hidden;
 }
-.dsg-dialog[data-kind="icon"] { width: min(440px, calc(100vw - 48px)); }
+.dsg-dialog[data-kind="icon"] { width: min(420px, calc(100vw - 32px)); }
 .dsg-dialog[data-positioned="true"] { transform: none; max-width: none; max-height: none; }
-.dsg-dialog-titlebar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 58px; padding: 22px 14px 12px 24px; cursor: move; user-select: none; touch-action: none; }
-.dsg-dialog-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; line-height: 24px; font-weight: 500; color: var(--dsw-alias-label-primary, CanvasText); pointer-events: none; }
-.dsg-dialog-close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: none; border-radius: var(--dsw-radius-sm, 8px); background: transparent; cursor: pointer; color: var(--dsw-alias-label-secondary, CanvasText); }
-.dsg-dialog-close:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); color: var(--dsw-alias-label-primary, CanvasText); }
-.dsg-dialog-close:focus-visible { outline: var(--dsw-focus-ring-width, 2px) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, #4d6bfe)); outline-offset: 2px; }
-.dsg-dialog-content { flex: 0 0 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 0 24px; scrollbar-width: thin; scrollbar-color: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))) transparent; }
+.dsg-dialog-titlebar { flex: none; display: flex; align-items: center; min-height: 20px; cursor: move; user-select: none; touch-action: none; }
+.dsg-dialog-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-14, 14px); line-height: 20px; font-weight: 600; color: var(--dsw-alias-label-primary, CanvasText); pointer-events: none; }
+.dsg-dialog-content { flex: 0 0 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 0; scrollbar-width: thin; scrollbar-color: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))) transparent; }
 .dsg-dialog[data-positioned="true"] .dsg-dialog-content { flex: 1 1 auto; }
 .dsg-dialog-content::-webkit-scrollbar, .dsg-icon-sections::-webkit-scrollbar, .dsg-dialog-list::-webkit-scrollbar { width: 10px; height: 10px; }
 .dsg-dialog-content::-webkit-scrollbar-track, .dsg-icon-sections::-webkit-scrollbar-track, .dsg-dialog-list::-webkit-scrollbar-track { background: transparent; }
@@ -591,11 +588,11 @@ export const CSS = `
 .dsg-dialog-content:hover::-webkit-scrollbar-thumb, .dsg-icon-sections:hover::-webkit-scrollbar-thumb, .dsg-dialog-list:hover::-webkit-scrollbar-thumb { background: var(--dsh-scrollbar-thumb-hover, var(--dsw-alias-scrollbar-hover-l2, color-mix(in srgb, CanvasText 32%, transparent))); background-clip: padding-box; }
 .dsg-icon-sections, .dsg-dialog-list { scrollbar-width: thin; scrollbar-color: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2, color-mix(in srgb, CanvasText 22%, transparent))) transparent; }
 .dsg-dialog-body { font-size: var(--dsg-font-13, 13px); line-height: 20px; color: var(--dsw-alias-label-secondary, CanvasText); white-space: pre-wrap; }
-.dsg-dialog-input { flex: none; width: 100%; box-sizing: border-box; height: 44px; min-height: 44px; padding: 7px 14px; font-size: var(--dsg-font-14, 14px); line-height: 22px; border-radius: var(--dsw-radius-lg, 12px); border: 0.5px solid var(--dsw-alias-border-l4, color-mix(in srgb, CanvasText 18%, transparent)); background: transparent; color: var(--dsw-alias-label-primary, CanvasText); }
-.dsg-dialog-input::placeholder { color: var(--dsw-alias-label-caption, var(--dsw-alias-label-secondary, CanvasText)); }
+.dsg-dialog-input { flex: none; width: 100%; box-sizing: border-box; height: 32px; min-height: 32px; padding: 0 10px; font-size: var(--dsg-font-13, 13px); line-height: 18px; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, CanvasText 22%, transparent)); background: var(--dsw-alias-bg-layer-1, Canvas); color: var(--dsw-alias-label-primary, CanvasText); }
+.dsg-dialog-input::placeholder { color: var(--dsw-alias-label-secondary, CanvasText); }
 .dsg-dialog-input:focus { outline: var(--dsw-focus-ring-width, 2px) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, #4d6bfe)); outline-offset: -1px; }
 .dsg-dialog-error { font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-state-error-primary, #f85149); }
-.dsg-dialog-actions { flex: none; display: flex; justify-content: flex-end; gap: 8px; padding: 0 24px; }
+.dsg-dialog-actions { flex: none; display: flex; justify-content: flex-end; gap: 10px; padding: 0; }
 .dsg-dialog-resizer { position: absolute; z-index: 3; touch-action: none; }
 .dsg-dialog-resizer[data-dir="n"] { top: -3px; left: 12px; right: 12px; height: 8px; cursor: ns-resize; }
 .dsg-dialog-resizer[data-dir="s"] { bottom: -3px; left: 12px; right: 12px; height: 8px; cursor: ns-resize; }
@@ -605,12 +602,12 @@ export const CSS = `
 .dsg-dialog-resizer[data-dir="nw"] { left: -3px; top: -3px; width: 14px; height: 14px; cursor: nwse-resize; }
 .dsg-dialog-resizer[data-dir="se"] { right: -3px; bottom: -3px; width: 14px; height: 14px; cursor: nwse-resize; }
 .dsg-dialog-resizer[data-dir="sw"] { left: -3px; bottom: -3px; width: 14px; height: 14px; cursor: nesw-resize; }
-.dsg-dialog-confirm { appearance: none; border: none; min-width: 72px; height: 36px; padding: 0 14px; border-radius: var(--dsw-radius-md, 12px); font-size: 14px; line-height: 22px; cursor: pointer; background: var(--dsw-alias-button-primary-fill, var(--dsw-alias-state-business-primary, #4d6bfe)); color: var(--dsw-alias-label-primary-foreground, Canvas); }
+.dsg-dialog-confirm { appearance: none; border: none; height: 32px; padding: 0 16px; border-radius: 6px; font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; background: var(--dsw-alias-button-primary-fill, var(--dsw-alias-state-business-primary, #4d6bfe)); color: var(--dsw-alias-label-primary-foreground, Canvas); }
 .dsg-dialog-confirm[data-variant="danger"] { background: var(--dsw-alias-state-error-primary, #f85149); }
 .dsg-dialog-confirm:disabled { opacity: .4; cursor: not-allowed; }
 .dsg-dialog-confirm:hover:not(:disabled) { background: var(--dsw-alias-button-primary-hover, var(--dsw-alias-button-primary-fill, var(--dsw-alias-state-business-primary, #4d6bfe))); }
 .dsg-dialog-confirm[data-variant="danger"]:hover:not(:disabled) { background: var(--dsw-alias-state-error-primary, #f85149); }
-.dsg-dialog-cancel { appearance: none; min-width: 72px; height: 36px; padding: 0 14px; border-radius: var(--dsw-radius-md, 12px); border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: transparent; color: var(--dsw-alias-label-primary, CanvasText); font-size: 14px; line-height: 22px; cursor: pointer; }
+.dsg-dialog-cancel { appearance: none; height: 32px; padding: 0 16px; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: transparent; color: var(--dsw-alias-label-primary, CanvasText); font-size: var(--dsg-font-13, 13px); line-height: 20px; cursor: pointer; }
 .dsg-dialog-cancel:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); }
 .dsg-dialog-confirm:focus-visible, .dsg-dialog-cancel:focus-visible { outline: var(--dsw-focus-ring-width, 2px) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, #4d6bfe)); outline-offset: 2px; }
 /* 0.2.6 selection dialogs (icon / move-to / new-session / group-color): options
