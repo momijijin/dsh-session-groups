@@ -75,12 +75,13 @@ export const createPlugin = () => {
 
   const services = () => {
     const ctx = ctxRef
-    if (!ctx) return { sessions: null, workspaces: null, uiWorkspace: null, layout: null }
+    if (!ctx) return { sessions: null, workspaces: null, uiWorkspace: null, layout: null, jobs: null }
     return {
       sessions: safeGet(ctx, 'sessions'),
       workspaces: safeGet(ctx, 'workspaces'),
       uiWorkspace: safeGet(ctx, 'uiWorkspace'),
       layout: safeGet(ctx, 'layout'),
+      jobs: safeGet(ctx, 'jobs'),
     }
   }
 
@@ -488,6 +489,9 @@ export const createPlugin = () => {
       t,
       api,
       actions,
+      get jobs() {
+        return services().jobs
+      },
       notify,
       archiveSession,
       unarchiveSession,

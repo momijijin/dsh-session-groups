@@ -103,7 +103,7 @@ export const CSS = `
 .dsg-header-actions { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 /* Status counters sit left of the view controls, with one empty 28px button of
  * separation to prevent accidental view switches. */
-.dsg-status-actions { display: inline-flex; align-items: center; gap: 2px; margin-right: 28px; flex: none; }
+.dsg-status-actions { display: inline-flex; align-items: center; gap: 2px; margin-right: 4px; flex: none; }
 .dsg-status-action-wrap { position: relative; display: inline-flex; flex: none; }
 .dsg-status-action {
   appearance: none;

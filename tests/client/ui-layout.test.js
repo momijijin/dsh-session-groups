@@ -181,9 +181,25 @@ test('0.2.28 blocked and unread counters reuse the grouped dropdown contract', (
   assert.match(components, /icon: 'pause'/)
   assert.match(components, /icon: 'mail'/)
   assert.match(components, /icon: 'activity'/)
-  assert.match(CSS, /\.dsg-status-actions \{[^}]*margin-right:\s*28px/s)
+  assert.match(CSS, /\.dsg-status-actions \{[^}]*margin-right:\s*4px/s)
   assert.equal(zh['blocked.empty'], '没有等待用户介入的会话')
   assert.equal(zh['unread.empty'], '没有未读会话')
+})
+
+test('0.2.55 background job sessions get a layers status button after running', () => {
+  const runningAt = components.indexOf('session-groups-running-button')
+  const backgroundAt = components.indexOf('session-groups-background-button')
+  const blockedAt = components.indexOf('session-groups-blocked-button')
+  assert.ok(runningAt > 0)
+  assert.ok(backgroundAt > runningAt, 'background jobs button must follow running')
+  assert.ok(blockedAt > backgroundAt, 'blocked must stay after background jobs')
+  assert.match(components, /icon: 'layers'/)
+  assert.match(components, /backgroundSessions/)
+  assert.match(components, /runningJobSessionIds/)
+  assert.match(components, /watchRows/)
+  assert.match(components, /activeJobSessionIds/)
+  assert.equal(zh['background.empty'], '没有正在运行的后台任务')
+  assert.equal(en['background.empty'], 'No background jobs running')
 })
 
 test('0.2.27 ungrouped inbox is session-only for drops and group move menus', () => {

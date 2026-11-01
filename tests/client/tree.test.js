@@ -12,6 +12,7 @@ import {
   runningSubagentCount,
   runningSubagentCounts,
   runningSessionsByGroup,
+  runningJobSessionIds,
   blockedSessionsByGroup,
   unreadSessionsByGroup,
   statusSectionsByGroup,
@@ -250,4 +251,41 @@ test('blocked and unread status projections use the same grouped shape', () => {
   assert.equal(all.blocked.count, 1)
   assert.equal(all.unread.count, 1)
   assert.equal(all.running.count, 1)
+})
+
+test('background jobs bucket counts owning sessions and may overlap running', () => {
+  let doc = emptyDoc()
+  doc = createGroup(doc, { name: 'Alpha' })
+  const alpha = doc.groups[0].id
+  doc = assignSession(doc, 'running', alpha)
+  doc = assignSession(doc, 'idle-job', alpha)
+  doc = assignSession(doc, 'done-job', alpha)
+  const byId = {
+    running: { id: 'running', origin: 'main', title: 'Running' },
+    'idle-job': { id: 'idle-job', origin: 'main', title: 'Idle job' },
+    'done-job': { id: 'done-job', origin: 'main', title: 'Done job' },
+  }
+  const statuses = new Map([
+    ['running', { running: true }],
+    ['idle-job', {}],
+    ['done-job', { completionUnread: true }],
+  ])
+  const jobs = {
+    running: [{ owner: 'running', status: 'running' }],
+    'idle-job': [{ owner: 'idle-job', status: 'running' }],
+    'done-job': [
+      { owner: 'done-job', status: 'completed' },
+      { owner: 'someone-else', status: 'running' },
+    ],
+  }
+  const active = runningJobSessionIds(jobs)
+  assert.deepEqual([...active].sort(), ['idle-job', 'running'])
+  const all = statusSectionsByGroup(doc, byId, statuses, [], new Map(), active)
+  assert.equal(all.running.count, 1)
+  assert.equal(all.unread.count, 1)
+  assert.equal(all.background.count, 2)
+  assert.deepEqual(
+    all.background.sections[0].sessions.map((entry) => entry.sessionId).sort(),
+    ['idle-job', 'running']
+  )
 })

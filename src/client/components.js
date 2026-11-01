@@ -100,6 +100,7 @@ import {
   flattenTree,
   groupPath,
   isExpanded,
+  runningJobSessionIds,
   runningSubagentCounts,
   statusSectionsByGroup,
   sessionStatuses,
@@ -107,6 +108,7 @@ import {
 } from './tree.js'
 
 const h = createElement
+const EMPTY_JOBS_SNAPSHOT = Object.freeze({ rows: Object.freeze({}), observed: Object.freeze({}) })
 
 // ---------------------------------------------------------------------------
 // Runtime bridge (set by plugin.js during apply; module scope = one plugin
@@ -1666,7 +1668,7 @@ const StatusSessionsButton = ({
   )
 }
 
-const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds, runningSessions, blockedSessions, unreadSessions }) => {
+const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds, runningSessions, backgroundSessions, blockedSessions, unreadSessions }) => {
   perfRender('Header')
   diagRender('Header')
   const t = rt()?.t ?? ((key) => key)
@@ -1726,6 +1728,19 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds,
             emptyLabel: t('running.empty'),
             testId: 'session-groups-running-button',
             popoverTestId: 'session-groups-running-popover',
+            sessionsById,
+            onSelect: handlers.openRunningSession,
+          }),
+          h(StatusSessionsButton, {
+            kind: 'background',
+            icon: 'layers',
+            count: backgroundSessions?.count ?? 0,
+            sections: backgroundSessions?.sections ?? [],
+            label: t('background.open'),
+            ariaLabel: t('background.aria', { n: backgroundSessions?.count ?? 0 }),
+            emptyLabel: t('background.empty'),
+            testId: 'session-groups-background-button',
+            popoverTestId: 'session-groups-background-popover',
             sessionsById,
             onSelect: handlers.openRunningSession,
           }),
@@ -2698,6 +2713,52 @@ export const GroupsView = (props) => {
   const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot, workspaceViewEqual) : null
   const statuses = typeof props?.useSessionStatus === 'function' ? props.useSessionStatus((snapshot) => snapshot, statusMapEqual) : null
   const subagentCounts = useMemo(() => runningSubagentCounts(sessions, statuses), [sessions, statuses])
+  const jobsService = rt()?.jobs
+  const subscribeJobs = useCallback(
+    (listener) => (typeof jobsService?.state?.subscribe === 'function' ? jobsService.state.subscribe(listener) : () => {}),
+    [jobsService]
+  )
+  const getJobsSnapshot = useCallback(
+    () => jobsService?.state?.getSnapshot?.() ?? EMPTY_JOBS_SNAPSHOT,
+    [jobsService]
+  )
+  const jobsSnapshot = useSyncExternalStore(subscribeJobs, getJobsSnapshot, getJobsSnapshot)
+  const jobSessionIds = useMemo(() => {
+    const doc = store?.doc
+    if (!doc) return []
+    const ids = []
+    const walk = (parentId) => {
+      for (const group of childrenOf(doc, parentId)) {
+        ids.push(...(Array.isArray(group.sessionIds) ? group.sessionIds : []))
+        walk(group.id)
+      }
+    }
+    walk(null)
+    ids.push(...(Array.isArray(doc.ungrouped) ? doc.ungrouped : []))
+    return [...new Set(ids)]
+  }, [store?.doc])
+  useEffect(() => {
+    if (!jobsService || typeof jobsService.watchRows !== 'function') return undefined
+    const disposers = []
+    for (const sessionId of jobSessionIds) {
+      try {
+        const dispose = jobsService.watchRows(sessionId)
+        if (typeof dispose === 'function') disposers.push(dispose)
+      } catch {
+        /* jobs service is optional; a failed stream must not break the sidebar */
+      }
+    }
+    return () => {
+      for (const dispose of disposers) {
+        try {
+          dispose()
+        } catch {
+          /* best-effort release */
+        }
+      }
+    }
+  }, [jobSessionIds, jobsService])
+  const activeJobSessionIds = useMemo(() => runningJobSessionIds(jobsSnapshot?.rows), [jobsSnapshot])
   const statusBuckets = useMemo(
     () =>
       statusSectionsByGroup(
@@ -2705,11 +2766,13 @@ export const GroupsView = (props) => {
         sessions?.byId ?? {},
         statuses,
         workspaces?.archivedSessionIds ?? [],
-        subagentCounts
+        subagentCounts,
+        activeJobSessionIds
       ),
-    [store?.doc, sessions?.byId, statuses, workspaces?.archivedSessionIds, subagentCounts]
+    [store?.doc, sessions?.byId, statuses, workspaces?.archivedSessionIds, subagentCounts, activeJobSessionIds]
   )
   const runningSessions = statusBuckets.running
+  const backgroundSessions = statusBuckets.background
   const blockedSessions = statusBuckets.blocked
   const unreadSessions = statusBuckets.unread
 
@@ -3795,7 +3858,7 @@ export const GroupsView = (props) => {
   return h(
     'div',
     { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true', 'data-narrow': appliedWidth !== null && appliedWidth <= 320 ? 'true' : 'false', 'data-optimistic': store.optimistic ? 'true' : 'false' },
-    h(Header, { store: viewState, handlers: stableHandlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds, runningSessions, blockedSessions, unreadSessions }),
+    h(Header, { store: viewState, handlers: stableHandlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds, runningSessions, backgroundSessions, blockedSessions, unreadSessions }),
     wide && widthSupported && appliedWidth !== null
       ? h(ResizeHandle, {
           width: appliedWidth,
