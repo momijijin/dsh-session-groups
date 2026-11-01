@@ -3,11 +3,14 @@ import assert from 'node:assert/strict'
 import {
   ARCHIVE_FILTER_KEY,
   COLLAPSED_KEY,
+  ONBOARDING_KEY,
   VIEW_MODE_KEY,
   createStore,
   readArchiveFilter,
+  readOnboardingDone,
   readViewMode,
   writeArchiveFilter,
+  writeOnboardingDone,
   writeViewMode,
 } from '../../src/client/state.js'
 
@@ -40,6 +43,26 @@ test('archive filter defaults to hidden and ignores unknown values', () => {
   assert.equal(readArchiveFilter(storage), 'all')
   writeArchiveFilter('nope', storage)
   assert.equal(readArchiveFilter(storage), 'hidden')
+})
+
+test('onboarding dismissal persists once', () => {
+  const storage = fakeStorage()
+  assert.equal(readOnboardingDone(storage), false)
+  writeOnboardingDone(storage)
+  assert.equal(storage.getItem(ONBOARDING_KEY), '1')
+  assert.equal(readOnboardingDone(storage), true)
+  storage.setItem(ONBOARDING_KEY, 'broken')
+  assert.equal(readOnboardingDone(storage), false)
+})
+
+test('reset-collapsed clears and persists the expansion defaults', () => {
+  const storage = fakeStorage()
+  const store = createStore({ storage })
+  store.dispatch('collapse-group', { id: 'g1' })
+  store.dispatch('collapse-group', { id: 'g2' })
+  store.dispatch('reset-collapsed')
+  assert.deepEqual(store.getSnapshot().collapsed, {})
+  assert.deepEqual(createStore({ storage }).getSnapshot().collapsed, {})
 })
 
 test('store dispatch updates view mode and persists it', () => {

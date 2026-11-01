@@ -15,6 +15,8 @@ export const VIEW_MODE_KEY = 'dsh-session-groups.view.v1'
 export const ARCHIVE_FILTER_KEY = 'dsh-session-groups.archive.v1'
 /** localStorage key for persisted group expansion (collapsed ids only). */
 export const COLLAPSED_KEY = 'dsh-session-groups.collapsed.v1'
+/** localStorage key for the one-time groups-view onboarding card. */
+export const ONBOARDING_KEY = 'dsh-session-groups.onboarded.v1'
 
 /** Modes understood by the sidebar controller. */
 export const VIEW_MODES = Object.freeze(['workspace', 'groups'])
@@ -92,6 +94,24 @@ export const writeCollapsed = (collapsed, storage = safeStorage()) => {
       if (id && value === true) normalized[id] = true
     }
     storage?.setItem(COLLAPSED_KEY, JSON.stringify(normalized))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Whether the user has dismissed the first-run onboarding card. */
+export const readOnboardingDone = (storage = safeStorage()) => {
+  try {
+    return storage?.getItem(ONBOARDING_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** Persist the onboarding dismissal; best effort. */
+export const writeOnboardingDone = (storage = safeStorage()) => {
+  try {
+    storage?.setItem(ONBOARDING_KEY, '1')
   } catch {
     /* ignore */
   }
@@ -259,6 +279,10 @@ export const createStore = ({ storage = safeStorage() } = {}) => {
       case 'collapse-group': {
         if (!payload.id) return snapshot
         return publish({ ...snapshot, collapsed: { ...snapshot.collapsed, [payload.id]: true } })
+      }
+      case 'reset-collapsed': {
+        if (Object.keys(snapshot.collapsed).length === 0) return snapshot
+        return publish({ ...snapshot, collapsed: {} })
       }
       case 'menu':
         return publish({ ...snapshot, menu: payload.menu ?? null })

@@ -32,6 +32,10 @@ export const name = 'dsh-session-groups'
  */
 export const Config = z.object({
   diagnostics: z.boolean().default(false).description('Enable local drag diagnostics (HUD + NDJSON trace)'),
+  debugProbe: z
+    .boolean()
+    .default(false)
+    .description('Enable the temporary dialog layout probe and its local .debug.ndjson route'),
 })
 
 /**
@@ -56,6 +60,7 @@ export const apply = (ctx, config = {}) => {
     diagnosticsFilePath,
     debugFilePath: join(dirname(record.filePath), DEBUG_FILE_NAME),
     diagnosticsEnabled: config?.diagnostics === true,
+    debugProbeEnabled: config?.debugProbe === true,
   })
   const probe = probeConnection(ctx)
 

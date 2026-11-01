@@ -1,7 +1,14 @@
 {
   "name": "dsh-session-groups",
-  "version": "0.2.55",
+  "version": "0.3.0-beta.1",
   "description": "DSH left-sidebar global session groups: organize sessions across workspaces without moving them.",
+  "author": "momiji-gz302ea <2648863351@qq.com>",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "session-groups",
+    "sidebar"
+  ],
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -15,7 +22,11 @@
     "locale",
     "cordis.patch.yml",
     "dsh.plugin.json",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "docs/RELEASE.md",
+    "docs/TEST-RESULTS.md"
   ],
   "dsh": {
     "bundle": {

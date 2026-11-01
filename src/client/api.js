@@ -118,7 +118,7 @@ export const createApi = ({
       return { ok: false, code: body.code ?? classifyStatus(raw.status), status: raw.status, message: body.message }
     }
     if (raw.ok && body && body.ok === true) {
-      return { ok: true, status: raw.status, revision: body.revision, doc: body.doc, warning: body.warning, diagnostics: body.diagnostics === true }
+      return { ok: true, status: raw.status, revision: body.revision, doc: body.doc, warning: body.warning, diagnostics: body.diagnostics === true, debugProbe: body.debugProbe === true }
     }
     if (body === null) {
       // Removed plugin / SPA fallback answers 404 without JSON (CONTRACTS §6).

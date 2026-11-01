@@ -103,7 +103,7 @@ export const CSS = `
 .dsg-header-actions { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 /* Status counters sit left of the view controls, with one empty 28px button of
  * separation to prevent accidental view switches. */
-.dsg-status-actions { display: inline-flex; align-items: center; gap: 2px; margin-right: 4px; flex: none; }
+.dsg-status-actions { display: inline-flex; align-items: center; gap: 2px; margin-right: 28px; flex: none; }
 .dsg-status-action-wrap { position: relative; display: inline-flex; flex: none; }
 .dsg-status-action {
   appearance: none;
@@ -510,6 +510,26 @@ export const CSS = `
 .dsg-view-option[data-active="true"] { color: var(--dsw-alias-label-primary, CanvasText); background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 12%, transparent)); }
 .dsg-view-option-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dsg-view-option-check { display: inline-flex; flex: none; width: 16px; height: 16px; align-items: center; justify-content: center; color: var(--dsw-alias-state-business-primary, CanvasText); }
+.dsg-view-options-divider { height: 0; margin: 4px 6px; border-top: 0.5px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 16%, transparent)); }
+.dsg-view-options-about { display: flex; flex-direction: column; gap: 1px; padding: 5px 8px 2px; font-size: var(--dsg-font-11, 11px); line-height: 16px; color: var(--dsw-alias-label-tertiary, CanvasText); }
+.dsg-view-options-version { color: var(--dsw-alias-label-secondary, CanvasText); font-variant-numeric: tabular-nums; }
+.dsg-view-options-scope { overflow-wrap: anywhere; }
+.dsg-onboarding {
+  flex: none;
+  margin: 4px 8px 8px;
+  padding: 11px 12px;
+  border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, CanvasText 20%, transparent));
+  border-radius: var(--dsw-radius-md, 8px);
+  background: var(--dsw-alias-bg-layer-1, Canvas);
+  color: var(--dsw-alias-label-primary, CanvasText);
+}
+.dsg-onboarding-title { font-size: var(--dsg-font-13, 13px); line-height: 18px; font-weight: 600; }
+.dsg-onboarding-body { margin-top: 3px; font-size: var(--dsg-font-12, 12px); line-height: 17px; color: var(--dsw-alias-label-secondary, CanvasText); }
+.dsg-onboarding-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px; }
+.dsg-empty-state { flex: none; margin: 12px 8px; padding: 12px; border: 0.5px dashed var(--dsw-alias-border-l3, color-mix(in srgb, CanvasText 20%, transparent)); border-radius: var(--dsw-radius-md, 8px); color: var(--dsw-alias-label-tertiary, CanvasText); }
+.dsg-empty-state-title { font-size: var(--dsg-font-13, 13px); line-height: 18px; color: var(--dsw-alias-label-secondary, CanvasText); }
+.dsg-empty-state-body { margin: 3px 0 8px; font-size: var(--dsg-font-12, 12px); line-height: 17px; }
+
 /* Running-sessions action: spinner + count as one 28px-high button. */
 .dsg-running { position: relative; display: inline-flex; flex: none; }
 .dsg-running-button {
@@ -544,7 +564,7 @@ export const CSS = `
   overflow-y: auto;
   padding: 4px;
   border-radius: var(--dsw-radius-md, 8px);
-  background: var(--dsw-specific-menu, var(--dsw-alias-bg-layer-2, Canvas));
+  background: var(--dsw-alias-bg-layer-1, Canvas);
   color: var(--dsw-alias-label-primary, CanvasText);
   border: 0.5px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 18%, transparent));
   box-shadow: var(--dsw-elevation-prominent, 0 8px 24px rgba(0,0,0,.18));

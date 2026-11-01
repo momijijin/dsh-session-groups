@@ -41,13 +41,19 @@ const allowedHeaders = { cookie: 'token=ok', 'content-type': 'application/json',
 
 const commitBody = (baseRevision, doc) => JSON.stringify({ baseRevision, doc })
 
-test('route registration mounts the frozen paths, diagnostics and debug probe', async (t) => {
+test('route registration mounts the frozen paths and diagnostics by default', async (t) => {
   const mounted = await mountRoutes()
   t.after(() => mounted.cleanup())
   assert.deepEqual(
     mounted.routes.map((route) => `${route.kind}:${route.path}`).sort(),
-    [`exact:${COMMIT_PATH}`, `exact:${DEBUG_PATH}`, `exact:${DIAGNOSTICS_PATH}`, `exact:${LOAD_PATH}`].sort(),
+    [`exact:${COMMIT_PATH}`, `exact:${DIAGNOSTICS_PATH}`, `exact:${LOAD_PATH}`].sort(),
   )
+  assert.deepEqual(mounted.mounted.routes, [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH])
+})
+
+test('the debug probe route mounts only when explicitly enabled', async (t) => {
+  const mounted = await mountRoutes({ debugProbeEnabled: true })
+  t.after(() => mounted.cleanup())
   assert.deepEqual(mounted.mounted.routes, [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH, DEBUG_PATH])
 })
 
@@ -108,6 +114,7 @@ test('GET load returns 200 JSON, no CORS, no-store, and the empty document', asy
     revision: 0,
     doc: { version: 1, revision: 0, groups: [], ungrouped: [] },
     diagnostics: true,
+    debugProbe: false,
   })
 })
 

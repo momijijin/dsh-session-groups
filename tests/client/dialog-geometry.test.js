@@ -4,6 +4,7 @@ import {
   DIALOG_GEOMETRY_KEY,
   clampDialogRect,
   centeredDialogRect,
+  clearDialogGeometries,
   dragDialogRect,
   readDialogGeometries,
   resizeDialogRect,
@@ -51,4 +52,19 @@ test('dialog geometry persists per kind without touching other storage', () => {
   assert.ok(map.has(DIALOG_GEOMETRY_KEY))
   map.set(DIALOG_GEOMETRY_KEY, '{broken')
   assert.deepEqual(readDialogGeometries(storage), {})
+})
+
+test('clearDialogGeometries removes only the geometry key', () => {
+  const map = new Map([
+    [DIALOG_GEOMETRY_KEY, JSON.stringify({ icon: { x: 1, y: 2, width: 420, height: 300 } })],
+    ['unrelated', 'keep'],
+  ])
+  const storage = {
+    getItem: (key) => map.get(key) ?? null,
+    setItem: (key, value) => map.set(key, String(value)),
+    removeItem: (key) => map.delete(key),
+  }
+  clearDialogGeometries(storage)
+  assert.equal(map.has(DIALOG_GEOMETRY_KEY), false)
+  assert.equal(map.get('unrelated'), 'keep')
 })

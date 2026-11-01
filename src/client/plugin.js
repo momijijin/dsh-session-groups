@@ -30,8 +30,11 @@ import {
   clearManagedWidth,
   findLayoutNodes,
   readSidebarWidth,
+  SIDEBAR_WIDTH_DEFAULT,
   updateManagedWidth,
+  writeSidebarWidth,
 } from './sidebar-width.js'
+import { clearDialogGeometries } from './dialog-geometry.js'
 import { installWorkspaceToggle } from './workspace-toggle.js'
 
 /** Single sidebar slot taken over while the groups view is active. */
@@ -72,16 +75,16 @@ export const createPlugin = () => {
   let commitTail = Promise.resolve()
   let queue = null
   let bridge = null
+  let debugProbe = false
 
   const services = () => {
     const ctx = ctxRef
-    if (!ctx) return { sessions: null, workspaces: null, uiWorkspace: null, layout: null, jobs: null }
+    if (!ctx) return { sessions: null, workspaces: null, uiWorkspace: null, layout: null }
     return {
       sessions: safeGet(ctx, 'sessions'),
       workspaces: safeGet(ctx, 'workspaces'),
       uiWorkspace: safeGet(ctx, 'uiWorkspace'),
       layout: safeGet(ctx, 'layout'),
-      jobs: safeGet(ctx, 'jobs'),
     }
   }
 
@@ -165,6 +168,7 @@ export const createPlugin = () => {
       try {
         const result = await api.load()
         if (result.ok === true) {
+          debugProbe = result.debugProbe === true
           if (result.diagnostics === true && !diagEnabled()) initDiagnostics({ enabled: true })
           store.dispatch('load-success', { doc: result.doc, revision: result.revision, warning: result.warning })
           return
@@ -228,6 +232,16 @@ export const createPlugin = () => {
     const nodes = findLiveLayoutNodes()
     if (!nodes?.supported) return false
     return applyManagedWidth(nodes, readSidebarWidth(), globalThis.innerWidth || 1440) !== null
+  }
+
+  /** Restore the plugin-owned layout preferences without touching group data. */
+  const resetLayout = () => {
+    writeSidebarWidth(SIDEBAR_WIDTH_DEFAULT)
+    store?.dispatch('reset-collapsed')
+    clearDialogGeometries()
+    syncSidebarWidth()
+    notify({ kind: 'success', message: t('toast.layoutReset') })
+    return true
   }
 
   /**
@@ -489,8 +503,8 @@ export const createPlugin = () => {
       t,
       api,
       actions,
-      get jobs() {
-        return services().jobs
+      get debugProbe() {
+        return debugProbe
       },
       notify,
       archiveSession,
@@ -506,6 +520,7 @@ export const createPlugin = () => {
       confirmDialog,
       deleteGroupDirect,
       setArchiveFilter,
+      resetLayout,
       setFloatingLabel,
       startDragLabel: () => {},
       showToast: (kind, message) => notify({ kind, message }),

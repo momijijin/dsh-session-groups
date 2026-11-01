@@ -76,6 +76,7 @@ import {
   perfSample,
 } from './perf.js'
 import { buildSearchIndex, matchSessions, revealSession } from './search.js'
+import { readOnboardingDone, writeOnboardingDone } from './state.js'
 import {
   applyManagedWidth,
   clampSidebarWidth,
@@ -100,7 +101,6 @@ import {
   flattenTree,
   groupPath,
   isExpanded,
-  runningJobSessionIds,
   runningSubagentCounts,
   statusSectionsByGroup,
   sessionStatuses,
@@ -108,7 +108,6 @@ import {
 } from './tree.js'
 
 const h = createElement
-const EMPTY_JOBS_SNAPSHOT = Object.freeze({ rows: Object.freeze({}), observed: Object.freeze({}) })
 
 // ---------------------------------------------------------------------------
 // Runtime bridge (set by plugin.js during apply; module scope = one plugin
@@ -1522,7 +1521,7 @@ const SearchBox = ({ store, handlers, sessionsById, workspaces, archivedSessionI
  * is 30px, carries the current check and dispatches the existing
  * `archive-filter` action before closing.
  */
-const ArchiveFilterPopover = ({ filter, t, onPick }) =>
+const ArchiveFilterPopover = ({ filter, t, onPick, onResetLayout }) =>
   h(
     'div',
     {
@@ -1553,7 +1552,43 @@ const ArchiveFilterPopover = ({ filter, t, onPick }) =>
         h('span', { class: 'dsg-view-option-label' }, t(ARCHIVE_FILTER_LABEL_KEYS[value])),
         h('span', { class: 'dsg-view-option-check', 'aria-hidden': 'true' }, active ? renderGlyph(h, 'check', 16) : null)
       )
-    })
+    }),
+    h('div', { class: 'dsg-view-options-divider' }),
+    h(
+      'button',
+      {
+        type: 'button',
+        role: 'menuitem',
+        class: 'dsg-menu-item dsg-view-option',
+        'data-testid': 'session-groups-reset-layout',
+        onClick: (event) => {
+          event.stopPropagation()
+          onResetLayout()
+        },
+      },
+      h('span', { class: 'dsg-view-option-label' }, t('about.resetLayout')),
+      h('span', { class: 'dsg-view-option-check', 'aria-hidden': 'true' }, renderGlyph(h, 'refresh', 16))
+    ),
+    h(
+      'div',
+      { class: 'dsg-view-options-about', 'data-testid': 'session-groups-about' },
+      h('span', { class: 'dsg-view-options-version' }, `dsh-session-groups ${PLUGIN_VERSION}`),
+      h('span', { class: 'dsg-view-options-scope' }, t('about.scope'))
+    )
+  )
+
+const OnboardingCard = ({ t, onCreate, onDismiss }) =>
+  h(
+    'div',
+    { class: 'dsg-onboarding', 'data-testid': 'session-groups-onboarding', role: 'note' },
+    h('div', { class: 'dsg-onboarding-title' }, t('onboarding.title')),
+    h('div', { class: 'dsg-onboarding-body' }, t('onboarding.body')),
+    h(
+      'div',
+      { class: 'dsg-onboarding-actions' },
+      TextButton({ label: t('onboarding.create'), testId: 'session-groups-onboarding-create', onClick: onCreate }),
+      TextButton({ label: t('onboarding.dismiss'), testId: 'session-groups-onboarding-dismiss', onClick: onDismiss })
+    )
   )
 
 const StatusSessionsButton = ({
@@ -1668,7 +1703,7 @@ const StatusSessionsButton = ({
   )
 }
 
-const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds, runningSessions, backgroundSessions, blockedSessions, unreadSessions }) => {
+const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds, runningSessions, blockedSessions, unreadSessions }) => {
   perfRender('Header')
   diagRender('Header')
   const t = rt()?.t ?? ((key) => key)
@@ -1728,19 +1763,6 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds,
             emptyLabel: t('running.empty'),
             testId: 'session-groups-running-button',
             popoverTestId: 'session-groups-running-popover',
-            sessionsById,
-            onSelect: handlers.openRunningSession,
-          }),
-          h(StatusSessionsButton, {
-            kind: 'background',
-            icon: 'layers',
-            count: backgroundSessions?.count ?? 0,
-            sections: backgroundSessions?.sections ?? [],
-            label: t('background.open'),
-            ariaLabel: t('background.aria', { n: backgroundSessions?.count ?? 0 }),
-            emptyLabel: t('background.empty'),
-            testId: 'session-groups-background-button',
-            popoverTestId: 'session-groups-background-popover',
             sessionsById,
             onSelect: handlers.openRunningSession,
           }),
@@ -1810,6 +1832,10 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds,
                 t,
                 onPick: (value) => {
                   handlers.setArchiveFilter(value)
+                  setOptionsOpen(false)
+                },
+                onResetLayout: () => {
+                  handlers.resetLayout()
                   setOptionsOpen(false)
                 },
               })
@@ -2081,6 +2107,7 @@ const DialogHost = ({ store, props }) => {
   }, [dialog?.kind, dialogRect === null])
 
   useEffect(() => {
+    if (rt()?.debugProbe !== true) return undefined
     if (!dialog) {
       debugSentRef.current = null
       return undefined
@@ -2713,52 +2740,6 @@ export const GroupsView = (props) => {
   const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot, workspaceViewEqual) : null
   const statuses = typeof props?.useSessionStatus === 'function' ? props.useSessionStatus((snapshot) => snapshot, statusMapEqual) : null
   const subagentCounts = useMemo(() => runningSubagentCounts(sessions, statuses), [sessions, statuses])
-  const jobsService = rt()?.jobs
-  const subscribeJobs = useCallback(
-    (listener) => (typeof jobsService?.state?.subscribe === 'function' ? jobsService.state.subscribe(listener) : () => {}),
-    [jobsService]
-  )
-  const getJobsSnapshot = useCallback(
-    () => jobsService?.state?.getSnapshot?.() ?? EMPTY_JOBS_SNAPSHOT,
-    [jobsService]
-  )
-  const jobsSnapshot = useSyncExternalStore(subscribeJobs, getJobsSnapshot, getJobsSnapshot)
-  const jobSessionIds = useMemo(() => {
-    const doc = store?.doc
-    if (!doc) return []
-    const ids = []
-    const walk = (parentId) => {
-      for (const group of childrenOf(doc, parentId)) {
-        ids.push(...(Array.isArray(group.sessionIds) ? group.sessionIds : []))
-        walk(group.id)
-      }
-    }
-    walk(null)
-    ids.push(...(Array.isArray(doc.ungrouped) ? doc.ungrouped : []))
-    return [...new Set(ids)]
-  }, [store?.doc])
-  useEffect(() => {
-    if (!jobsService || typeof jobsService.watchRows !== 'function') return undefined
-    const disposers = []
-    for (const sessionId of jobSessionIds) {
-      try {
-        const dispose = jobsService.watchRows(sessionId)
-        if (typeof dispose === 'function') disposers.push(dispose)
-      } catch {
-        /* jobs service is optional; a failed stream must not break the sidebar */
-      }
-    }
-    return () => {
-      for (const dispose of disposers) {
-        try {
-          dispose()
-        } catch {
-          /* best-effort release */
-        }
-      }
-    }
-  }, [jobSessionIds, jobsService])
-  const activeJobSessionIds = useMemo(() => runningJobSessionIds(jobsSnapshot?.rows), [jobsSnapshot])
   const statusBuckets = useMemo(
     () =>
       statusSectionsByGroup(
@@ -2766,13 +2747,11 @@ export const GroupsView = (props) => {
         sessions?.byId ?? {},
         statuses,
         workspaces?.archivedSessionIds ?? [],
-        subagentCounts,
-        activeJobSessionIds
+        subagentCounts
       ),
-    [store?.doc, sessions?.byId, statuses, workspaces?.archivedSessionIds, subagentCounts, activeJobSessionIds]
+    [store?.doc, sessions?.byId, statuses, workspaces?.archivedSessionIds, subagentCounts]
   )
   const runningSessions = statusBuckets.running
-  const backgroundSessions = statusBuckets.background
   const blockedSessions = statusBuckets.blocked
   const unreadSessions = statusBuckets.unread
 
@@ -2797,6 +2776,11 @@ export const GroupsView = (props) => {
 
   const [dragState, setDragState] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
+  const [onboardingOpen, setOnboardingOpen] = useState(() => !readOnboardingDone())
+  const dismissOnboarding = () => {
+    writeOnboardingDone()
+    setOnboardingOpen(false)
+  }
   // Latest committed target, compared with stable equality before every React
   // update. Dragover fires continuously while the pointer rests on one row and
   // rebuilds an equivalent object each time; updating state unconditionally
@@ -3033,6 +3017,7 @@ export const GroupsView = (props) => {
     dropTarget,
     draggedGroupId: dragState?.kind === 'group' ? dragState.groupId : null,
   }
+  const treeEmpty = tree.groups.length === 0 && tree.ungrouped.length === 0
 
   const commitDrop = async (source, target) => {
     perfMark('commitDrop:start', { kind: target?.kind ?? null })
@@ -3333,6 +3318,10 @@ export const GroupsView = (props) => {
     retryLoad: () => rt()?.retryLoad(),
     openSession: (id) => rt()?.actions.openSession(id),
     setArchiveFilter: (filter) => dispatch('archive-filter', { filter }),
+    resetLayout: () => {
+      rt()?.resetLayout?.()
+      handleWidthReset()
+    },
     searchSelect: (entry) => selectSearchResult(entry),
     openRunningSession: (sessionId, archived) => selectSearchResult({ sessionId, archived }),
     searchArchived: () => toast('info', t('search.archivedDisabled')),
@@ -3858,7 +3847,7 @@ export const GroupsView = (props) => {
   return h(
     'div',
     { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true', 'data-narrow': appliedWidth !== null && appliedWidth <= 320 ? 'true' : 'false', 'data-optimistic': store.optimistic ? 'true' : 'false' },
-    h(Header, { store: viewState, handlers: stableHandlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds, runningSessions, backgroundSessions, blockedSessions, unreadSessions }),
+    h(Header, { store: viewState, handlers: stableHandlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds, runningSessions, blockedSessions, unreadSessions }),
     wide && widthSupported && appliedWidth !== null
       ? h(ResizeHandle, {
           width: appliedWidth,
@@ -3870,6 +3859,29 @@ export const GroupsView = (props) => {
         })
       : null,
     h(Banner, { store, handlers: stableHandlers }),
+    onboardingOpen
+      ? h(OnboardingCard, {
+          t,
+          onCreate: () => {
+            dismissOnboarding()
+            stableHandlers.openNewGroup(null, null)
+          },
+          onDismiss: dismissOnboarding,
+        })
+      : null,
+    !onboardingOpen && treeEmpty && store.docState !== 'loading'
+      ? h(
+          'div',
+          { class: 'dsg-empty-state', 'data-testid': 'session-groups-empty-state' },
+          h('div', { class: 'dsg-empty-state-title' }, t('empty.groupsTitle')),
+          h('div', { class: 'dsg-empty-state-body' }, t('empty.groupsBody')),
+          TextButton({
+            label: t('empty.createGroup'),
+            testId: 'session-groups-empty-create',
+            onClick: () => stableHandlers.openNewGroup(null, null),
+          })
+        )
+      : null,
     store.docState === 'loading'
       ? h('div', { class: 'dsg-empty' }, t('flat.title'))
       : h(

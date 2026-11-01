@@ -137,17 +137,6 @@ export const sessionsByGroupMatching = (doc, sessionsById = {}, statuses = null,
 export const runningSessionsByGroup = (...args) =>
   sessionsByGroupMatching(...args, (primary) => primary?.state === 'ongoing')
 
-/** Sessions owning at least one currently running DSH background job. */
-export const runningJobSessionIds = (rows = {}) => {
-  const active = new Set()
-  if (!rows || typeof rows !== 'object') return active
-  for (const [sessionId, jobs] of Object.entries(rows)) {
-    if (!Array.isArray(jobs)) continue
-    if (jobs.some((job) => job && job.owner === sessionId && job.status === 'running')) active.add(sessionId)
-  }
-  return active
-}
-
 export const blockedSessionsByGroup = (...args) =>
   sessionsByGroupMatching(...args, (primary) => primary?.state === 'warning')
 
@@ -155,28 +144,27 @@ export const unreadSessionsByGroup = (...args) =>
   sessionsByGroupMatching(...args, (primary) => primary?.kind === 'completed')
 
 /**
- * One traversal for all header counters. Running/blocked/unread are primary
- * status buckets; `background` is an independent set of sessions that own at
- * least one running DSH background job, so it may overlap the other buckets.
+ * One traversal for all three header counters. The three independent scans were
+ * O(3n) on every stream snapshot; this returns the same grouped shape in O(n).
  */
-export const statusSectionsByGroup = (
-  doc,
-  sessionsById = {},
-  statuses = null,
-  archivedSessionIds = [],
-  subagentCounts = new Map(),
-  activeJobSessionIds = new Set()
-) => {
+export const statusSectionsByGroup = (doc, sessionsById = {}, statuses = null, archivedSessionIds = [], subagentCounts = new Map()) => {
   const buckets = {
     running: { sections: [], count: 0 },
-    background: { sections: [], count: 0 },
     blocked: { sections: [], count: 0 },
     unread: { sections: [], count: 0 },
   }
   const archived = new Set(Array.isArray(archivedSessionIds) ? archivedSessionIds : [])
-  const activeJobs = activeJobSessionIds instanceof Set ? activeJobSessionIds : new Set()
   const seen = new Set()
-  const push = (bucket, sessionId, groupId, groupName) => {
+  const add = (sessionId, groupId, groupName) => {
+    if (typeof sessionId !== 'string' || seen.has(sessionId)) return
+    const row = sessionsById?.[sessionId]
+    if (!row || row.origin === 'subagent') return
+    const status = typeof statuses?.get === 'function' ? statuses.get(sessionId) : null
+    const projected = typeof subagentCounts?.get === 'function' ? subagentCounts.get(sessionId) : 0
+    const primary = sessionStatuses(status, { runningSubagentCount: projected })[0]
+    const bucket = primary?.state === 'ongoing' ? 'running' : primary?.state === 'warning' ? 'blocked' : primary?.kind === 'completed' ? 'unread' : null
+    if (bucket === null) return
+    seen.add(sessionId)
     const target = buckets[bucket]
     let section = target.sections.find((item) => item.groupId === groupId)
     if (!section) {
@@ -185,25 +173,6 @@ export const statusSectionsByGroup = (
     }
     section.sessions.push({ sessionId, archived: archived.has(sessionId) })
     target.count += 1
-  }
-  const add = (sessionId, groupId, groupName) => {
-    if (typeof sessionId !== 'string' || seen.has(sessionId)) return
-    const row = sessionsById?.[sessionId]
-    if (!row || row.origin === 'subagent') return
-    seen.add(sessionId)
-    const status = typeof statuses?.get === 'function' ? statuses.get(sessionId) : null
-    const projected = typeof subagentCounts?.get === 'function' ? subagentCounts.get(sessionId) : 0
-    const primary = sessionStatuses(status, { runningSubagentCount: projected })[0]
-    const bucket =
-      primary?.state === 'ongoing'
-        ? 'running'
-        : primary?.state === 'warning'
-          ? 'blocked'
-          : primary?.kind === 'completed'
-            ? 'unread'
-            : null
-    if (bucket !== null) push(bucket, sessionId, groupId, groupName)
-    if (activeJobs.has(sessionId)) push('background', sessionId, groupId, groupName)
   }
   const walk = (parentId) => {
     for (const group of childrenOf(doc, parentId)) {

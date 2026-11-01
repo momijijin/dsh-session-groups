@@ -115,3 +115,12 @@ export const saveDialogGeometry = (kind, rect, storage = safeStorage()) => {
     /* blocked storage keeps the in-memory geometry */
   }
 }
+
+/** Clear all remembered dialog positions/sizes (used by Reset layout). */
+export const clearDialogGeometries = (storage = safeStorage()) => {
+  try {
+    storage?.removeItem(DIALOG_GEOMETRY_KEY)
+  } catch {
+    /* ignore */
+  }
+}

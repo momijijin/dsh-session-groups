@@ -181,25 +181,9 @@ test('0.2.28 blocked and unread counters reuse the grouped dropdown contract', (
   assert.match(components, /icon: 'pause'/)
   assert.match(components, /icon: 'mail'/)
   assert.match(components, /icon: 'activity'/)
-  assert.match(CSS, /\.dsg-status-actions \{[^}]*margin-right:\s*4px/s)
+  assert.match(CSS, /\.dsg-status-actions \{[^}]*margin-right:\s*28px/s)
   assert.equal(zh['blocked.empty'], '没有等待用户介入的会话')
   assert.equal(zh['unread.empty'], '没有未读会话')
-})
-
-test('0.2.55 background job sessions get a layers status button after running', () => {
-  const runningAt = components.indexOf('session-groups-running-button')
-  const backgroundAt = components.indexOf('session-groups-background-button')
-  const blockedAt = components.indexOf('session-groups-blocked-button')
-  assert.ok(runningAt > 0)
-  assert.ok(backgroundAt > runningAt, 'background jobs button must follow running')
-  assert.ok(blockedAt > backgroundAt, 'blocked must stay after background jobs')
-  assert.match(components, /icon: 'layers'/)
-  assert.match(components, /backgroundSessions/)
-  assert.match(components, /runningJobSessionIds/)
-  assert.match(components, /watchRows/)
-  assert.match(components, /activeJobSessionIds/)
-  assert.equal(zh['background.empty'], '没有正在运行的后台任务')
-  assert.equal(en['background.empty'], 'No background jobs running')
 })
 
 test('0.2.27 ungrouped inbox is session-only for drops and group move menus', () => {
@@ -216,6 +200,21 @@ test('0.2.54 ungrouped body drop is position-aware and does not bubble invalid r
   assert.match(components, /ungroupedBodyTarget/)
   assert.match(components, /targetSessionId !== sessionId/)
   assert.match(components, /event\.stopPropagation\(\)/)
+})
+
+test('0.3.0 beta exposes onboarding, reset layout and opaque status popovers', () => {
+  assert.match(components, /session-groups-onboarding/)
+  assert.match(components, /session-groups-empty-state/)
+  assert.match(components, /session-groups-reset-layout/)
+  assert.match(components, /session-groups-about/)
+  assert.match(components, /rt\(\)\?\.debugProbe !== true/)
+  assert.match(components, /readOnboardingDone/)
+  assert.match(CSS, /\.dsg-onboarding \{/)
+  assert.match(CSS, /\.dsg-empty-state \{/)
+  assert.match(CSS, /\.dsg-running-popover \{[^}]*background:\s*var\(--dsw-alias-bg-layer-1/s)
+  assert.equal(zh['onboarding.title'], '欢迎使用自由分组')
+  assert.equal(zh['about.resetLayout'], '恢复默认布局')
+  assert.equal(en['onboarding.title'], 'Welcome to Free groups')
 })
 
 test('0.2.26 running-session action counts all spinners and groups its menu by parent', () => {
