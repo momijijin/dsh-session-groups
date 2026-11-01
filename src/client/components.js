@@ -2102,13 +2102,40 @@ const DialogHost = ({ store, props }) => {
             : null,
           scrollFades: [...element.querySelectorAll('.dsg-scroll-fade')].map((fade) => {
             const scroller = fade.firstElementChild
+            const direct = (edge) =>
+              [...fade.children].find((child) => child.classList?.contains(`dsg-scroll-fade-${edge}`)) ?? null
+            const detail = (edge) => {
+              const node = direct(edge)
+              if (!node) return null
+              const rect = node.getBoundingClientRect()
+              const style = getComputedStyle(node)
+              const pseudo = getComputedStyle(node, '::after')
+              const hit = globalThis.document?.elementFromPoint?.(
+                Math.min(rect.right - 10, globalThis.innerWidth - 1),
+                Math.min(edge === 'bottom' ? rect.bottom - 8 : rect.top + 8, globalThis.innerHeight - 1)
+              )
+              return {
+                rect: rect.toJSON?.() ?? null,
+                display: style.display,
+                opacity: style.opacity,
+                zIndex: style.zIndex,
+                backgroundImage: style.backgroundImage,
+                background: style.backgroundColor,
+                pseudoContent: pseudo.content,
+                pseudoBorderColor: pseudo.borderRightColor,
+                hit: hit ? { tag: hit.tagName, class: hit.className, testid: hit.getAttribute?.('data-testid') } : null,
+              }
+            }
             return {
               className: scroller?.className ?? '',
+              scrollerRect: scroller?.getBoundingClientRect?.().toJSON?.() ?? null,
               clientHeight: scroller?.clientHeight ?? null,
               scrollHeight: scroller?.scrollHeight ?? null,
               max: scroller ? scroller.scrollHeight - scroller.clientHeight : null,
-              fadeTop: Boolean(fade.querySelector('.dsg-scroll-fade-top')),
-              fadeBottom: Boolean(fade.querySelector('.dsg-scroll-fade-bottom')),
+              fadeTop: Boolean(direct('top')),
+              fadeBottom: Boolean(direct('bottom')),
+              top: detail('top'),
+              bottom: detail('bottom'),
             }
           }),
           tokens,
