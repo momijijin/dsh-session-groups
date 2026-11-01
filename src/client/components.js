@@ -146,21 +146,56 @@ const usePerfCommit = (name, renderStartedAt) => {
 }
 
 /**
- * Dialog scroll region with native scrollbars hidden and soft top/bottom
- * fades that appear only when there is content in that direction. This avoids
- * Chromium's auto-hiding overlay scrollbar entirely.
+ * Dialog scroll region with a persistent 5px custom thumb. Native scrollbars
+ * are hidden; the thumb is above the list in the stacking order and can be
+ * dragged to scroll.
  */
-const ScrollFade = ({ className, tone = 'layer1', children, ...rest }) => {
+const ScrollArea = ({ className, children, ...rest }) => {
   const scrollerRef = useRef(null)
-  const [edges, setEdges] = useState({ top: false, bottom: false })
+  const dragCleanupRef = useRef(null)
+  const [bar, setBar] = useState(null)
   const update = useCallback(() => {
     const element = scrollerRef.current
-    if (!element) return
+    if (!element) {
+      setBar(null)
+      return
+    }
     const max = element.scrollHeight - element.clientHeight
-    const top = element.scrollTop > 1
-    const bottom = max > 1 && element.scrollTop < max - 1
-    setEdges((previous) => (previous.top === top && previous.bottom === bottom ? previous : { top, bottom }))
+    if (max <= 1) {
+      setBar(null)
+      return
+    }
+    const railHeight = Math.max(0, element.clientHeight - 12)
+    const height = Math.max(20, Math.round((railHeight * element.clientHeight) / element.scrollHeight))
+    const top = Math.round((element.scrollTop / max) * Math.max(0, railHeight - height))
+    setBar((previous) => (previous?.height === height && previous?.top === top ? previous : { height, top }))
   }, [])
+  const startDrag = (event) => {
+    const element = scrollerRef.current
+    if (!element || !bar || event.button !== 0) return
+    event.preventDefault()
+    event.stopPropagation()
+    const max = element.scrollHeight - element.clientHeight
+    const railHeight = Math.max(1, element.clientHeight - 12)
+    const track = Math.max(1, railHeight - bar.height)
+    const startY = event.clientY
+    const startTop = element.scrollTop
+    const doc = event.currentTarget?.ownerDocument ?? globalThis.document
+    const onMove = (moveEvent) => {
+      element.scrollTop = Math.max(0, Math.min(max, startTop + ((moveEvent.clientY - startY) * max) / track))
+      update()
+    }
+    const onEnd = () => {
+      doc?.removeEventListener?.('pointermove', onMove)
+      doc?.removeEventListener?.('pointerup', onEnd)
+      doc?.removeEventListener?.('pointercancel', onEnd)
+      dragCleanupRef.current = null
+    }
+    doc?.addEventListener?.('pointermove', onMove)
+    doc?.addEventListener?.('pointerup', onEnd)
+    doc?.addEventListener?.('pointercancel', onEnd)
+    dragCleanupRef.current = onEnd
+  }
   useLayoutEffect(() => {
     const element = scrollerRef.current
     if (!element) return undefined
@@ -182,18 +217,25 @@ const ScrollFade = ({ className, tone = 'layer1', children, ...rest }) => {
       observer?.disconnect()
     }
   }, [update])
-  // The parent dialog may set its final explicit height after this child's
-  // layout effect; re-read on every parent-driven render so a stale bottom
-  // fade cannot cover an inner picker's own fade.
   useEffect(() => {
     update()
   })
+  useEffect(() => () => dragCleanupRef.current?.(), [])
   return h(
     'div',
-    { class: 'dsg-scroll-fade', 'data-tone': tone },
+    { class: 'dsg-scroll-area' },
     h('div', { ref: scrollerRef, class: className, ...rest }, children),
-    edges.top ? h('div', { class: 'dsg-scroll-fade-top', 'aria-hidden': 'true' }) : null,
-    edges.bottom ? h('div', { class: 'dsg-scroll-fade-bottom', 'aria-hidden': 'true' }) : null
+    bar
+      ? h(
+          'div',
+          { class: 'dsg-scroll-rail', 'aria-hidden': 'true' },
+          h('div', {
+            class: 'dsg-scroll-thumb',
+            style: { height: `${bar.height}px`, top: `${bar.top}px` },
+            onPointerDown: startDrag,
+          })
+        )
+      : null
   )
 }
 
@@ -1932,10 +1974,9 @@ const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaLabel, a
         : null
     )
   return h(
-    ScrollFade,
+    ScrollArea,
     {
       className: 'dsg-menu dsg-dialog-list',
-      tone: 'layer1',
       role: 'listbox',
       'data-testid': testId,
       'aria-label': ariaLabel ?? t('dialog.moveTo'),
@@ -2100,42 +2141,30 @@ const DialogHost = ({ store, props }) => {
                 height: confirmStyle?.height,
               }
             : null,
-          scrollFades: [...element.querySelectorAll('.dsg-scroll-fade')].map((fade) => {
-            const scroller = fade.firstElementChild
-            const direct = (edge) =>
-              [...fade.children].find((child) => child.classList?.contains(`dsg-scroll-fade-${edge}`)) ?? null
-            const detail = (edge) => {
-              const node = direct(edge)
-              if (!node) return null
-              const rect = node.getBoundingClientRect()
-              const style = getComputedStyle(node)
-              const pseudo = getComputedStyle(node, '::after')
-              const hit = globalThis.document?.elementFromPoint?.(
-                Math.min(rect.right - 10, globalThis.innerWidth - 1),
-                Math.min(edge === 'bottom' ? rect.bottom - 8 : rect.top + 8, globalThis.innerHeight - 1)
-              )
-              return {
-                rect: rect.toJSON?.() ?? null,
-                display: style.display,
-                opacity: style.opacity,
-                zIndex: style.zIndex,
-                backgroundImage: style.backgroundImage,
-                background: style.backgroundColor,
-                pseudoContent: pseudo.content,
-                pseudoBorderColor: pseudo.borderRightColor,
-                hit: hit ? { tag: hit.tagName, class: hit.className, testid: hit.getAttribute?.('data-testid') } : null,
-              }
-            }
+          scrollAreas: [...element.querySelectorAll('.dsg-scroll-area')].map((area) => {
+            const scroller = area.firstElementChild
+            const rail = [...area.children].find((child) => child.classList?.contains('dsg-scroll-rail')) ?? null
+            const thumb = rail ? [...rail.children].find((child) => child.classList?.contains('dsg-scroll-thumb')) ?? null : null
             return {
               className: scroller?.className ?? '',
-              scrollerRect: scroller?.getBoundingClientRect?.().toJSON?.() ?? null,
               clientHeight: scroller?.clientHeight ?? null,
               scrollHeight: scroller?.scrollHeight ?? null,
               max: scroller ? scroller.scrollHeight - scroller.clientHeight : null,
-              fadeTop: Boolean(direct('top')),
-              fadeBottom: Boolean(direct('bottom')),
-              top: detail('top'),
-              bottom: detail('bottom'),
+              rail: rail
+                ? {
+                    rect: rail.getBoundingClientRect().toJSON?.() ?? null,
+                    display: getComputedStyle(rail).display,
+                    opacity: getComputedStyle(rail).opacity,
+                    zIndex: getComputedStyle(rail).zIndex,
+                  }
+                : null,
+              thumb: thumb
+                ? {
+                    rect: thumb.getBoundingClientRect().toJSON?.() ?? null,
+                    display: getComputedStyle(thumb).display,
+                    background: getComputedStyle(thumb).backgroundColor,
+                  }
+                : null,
             }
           }),
           tokens,
@@ -2249,10 +2278,9 @@ const DialogHost = ({ store, props }) => {
       bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.newSessionWorkspace')))
       bodyNodes.push(
         h(
-          ScrollFade,
+          ScrollArea,
           {
             className: 'dsg-menu dsg-dialog-list',
-            tone: 'layer1',
             role: 'listbox',
             'data-testid': 'session-groups-dialog-options',
             'aria-label': t('dialog.newSessionWorkspace'),
@@ -2335,10 +2363,9 @@ const DialogHost = ({ store, props }) => {
     }
     bodyNodes.push(
       h(
-        ScrollFade,
+        ScrollArea,
         {
           className: 'dsg-icon-sections',
-          tone: 'layer1',
           'data-testid': 'session-groups-dialog-options',
           'aria-label': t('group.icon'),
         },
@@ -2519,8 +2546,8 @@ const DialogHost = ({ store, props }) => {
         h('div', { class: 'dsg-dialog-title' }, title)
       ),
       h(
-        ScrollFade,
-        { className: 'dsg-dialog-content', tone: 'layer2' },
+        ScrollArea,
+        { className: 'dsg-dialog-content' },
         ...bodyNodes,
         needsInput
           ? h('input', {

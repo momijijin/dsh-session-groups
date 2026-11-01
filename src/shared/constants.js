@@ -1,7 +1,7 @@
 export const DOC_VERSION = 1
 
 /** Plugin version shipped in this build (also stamped into diagnostics traces). */
-export const PLUGIN_VERSION = '0.2.49'
+export const PLUGIN_VERSION = '0.2.50'
 
 export const GROUP_ICONS = Object.freeze([
   'folder',
