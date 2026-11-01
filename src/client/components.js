@@ -151,10 +151,8 @@ const usePerfCommit = (name, renderStartedAt) => {
  * dragged to scroll.
  */
 const ScrollArea = ({ className, children, ...rest }) => {
-  const areaRef = useRef(null)
   const scrollerRef = useRef(null)
   const dragCleanupRef = useRef(null)
-  const lastProbeRef = useRef(0)
   const [bar, setBar] = useState(null)
   const update = useCallback(() => {
     const element = scrollerRef.current
@@ -172,66 +170,6 @@ const ScrollArea = ({ className, children, ...rest }) => {
     const top = Math.round((element.scrollTop / max) * Math.max(0, railHeight - height))
     setBar((previous) => (previous?.height === height && previous?.top === top ? previous : { height, top }))
   }, [])
-  const probe = useCallback(
-    (stage) => {
-      if (!className?.includes('dsg-dialog-list') && !className?.includes('dsg-icon-sections')) return
-      const area = areaRef.current
-      const element = scrollerRef.current
-      if (!area || !element || typeof globalThis.fetch !== 'function') return
-      const rail = [...area.children].find((child) => child.classList?.contains('dsg-scroll-rail')) ?? null
-      const thumb = rail ? [...rail.children].find((child) => child.classList?.contains('dsg-scroll-thumb')) ?? null : null
-      const rect = thumb?.getBoundingClientRect?.()
-      const hit =
-        rect && globalThis.document?.elementFromPoint
-          ? globalThis.document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
-          : null
-      void globalThis
-        .fetch('/dsh-session-groups/debug', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            probe: 'scroll-area',
-            stage,
-            className,
-            sidebarClass: area.closest('.bJOniG_root')?.className ?? '',
-            thumbToken: getComputedStyle(element).getPropertyValue('--dsh-scrollbar-thumb').trim(),
-            scrollTop: element.scrollTop,
-            clientHeight: element.clientHeight,
-            scrollHeight: element.scrollHeight,
-            max: element.scrollHeight - element.clientHeight,
-            bar,
-            rail: rail
-              ? {
-                  rect: rail.getBoundingClientRect().toJSON?.() ?? null,
-                  display: getComputedStyle(rail).display,
-                  opacity: getComputedStyle(rail).opacity,
-                  zIndex: getComputedStyle(rail).zIndex,
-                }
-              : null,
-            thumb: thumb
-              ? {
-                  rect: rect?.toJSON?.() ?? null,
-                  display: getComputedStyle(thumb).display,
-                  opacity: getComputedStyle(thumb).opacity,
-                  background: getComputedStyle(thumb).backgroundColor,
-                }
-              : null,
-            hit: hit ? { tag: hit.tagName, class: hit.className, testid: hit.getAttribute?.('data-testid') } : null,
-          }),
-        })
-        .catch(() => {})
-    },
-    [bar, className]
-  )
-  const onScroll = useCallback(() => {
-    update()
-    const now = Date.now()
-    if (now - lastProbeRef.current > 250) {
-      lastProbeRef.current = now
-      probe('scroll')
-    }
-  }, [probe, update])
   const startDrag = (event) => {
     const element = scrollerRef.current
     if (!element || !bar || event.button !== 0) return
@@ -264,7 +202,7 @@ const ScrollArea = ({ className, children, ...rest }) => {
     update()
     const frame = globalThis.requestAnimationFrame?.(update)
     const timer = globalThis.setTimeout?.(update, 50)
-    element.addEventListener('scroll', onScroll, { passive: true })
+    element.addEventListener('scroll', update, { passive: true })
     globalThis.addEventListener?.('resize', update)
     let observer = null
     if (typeof globalThis.ResizeObserver === 'function') {
@@ -274,18 +212,15 @@ const ScrollArea = ({ className, children, ...rest }) => {
     return () => {
       globalThis.cancelAnimationFrame?.(frame)
       globalThis.clearTimeout?.(timer)
-      element.removeEventListener('scroll', onScroll)
+      element.removeEventListener('scroll', update)
       globalThis.removeEventListener?.('resize', update)
       observer?.disconnect()
     }
-  }, [onScroll, update])
-  useEffect(() => {
-    update()
-  })
+  }, [update])
   useEffect(() => () => dragCleanupRef.current?.(), [])
   return h(
     'div',
-    { ref: areaRef, class: 'dsg-scroll-area' },
+    { class: 'dsg-scroll-area' },
     h('div', { ref: scrollerRef, class: className, ...rest }, children),
     bar
       ? h(
