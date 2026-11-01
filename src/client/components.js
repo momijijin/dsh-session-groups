@@ -51,7 +51,7 @@ import {
   ARCHIVE_FILTERS,
   ARCHIVE_FILTER_LABEL_KEYS,
 } from './filter.js'
-import { applyDrop, hitTest, sameDropTarget, stickyDropTarget } from './drag.js'
+import { applyDrop, hitTest, sameDropTarget, stickyDropTarget, ungroupedBodyTarget } from './drag.js'
 import {
   diagContext,
   diagDragEnd,
@@ -1131,9 +1131,9 @@ const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
               'data-virtual-end': String(win.end),
               'data-virtual-count': String(win.count),
               'data-virtual-total': String(total),
-              onDragOver: (event) => handlers.onDragOverUngrouped(event),
+              onDragOver: (event) => handlers.onDragOverUngroupedBody(event),
               onDragLeave: handlers.onDragLeave,
-              onDrop: (event) => handlers.onDropUngrouped(event),
+              onDrop: (event) => handlers.onDropUngroupedBody(event),
             },
             ...bodyChildren
           )
@@ -3112,6 +3112,12 @@ export const GroupsView = (props) => {
     lockTargetAt(event, target)
   }
 
+  const ungroupedBodyRows = (container) =>
+    [...(container?.querySelectorAll?.('[data-session-id]') ?? [])].map((row) => {
+      const rect = row.getBoundingClientRect()
+      return { sessionId: row.getAttribute('data-session-id'), top: rect.top, height: rect.height }
+    })
+
   const groupOwnedIds = (groupId) => {
     const group = findGroup(store.doc, groupId)
     return group ? group.sessionIds : []
@@ -3527,7 +3533,15 @@ export const GroupsView = (props) => {
         targetSessionId: sessionId,
       })
       if (target.kind === 'invalid') {
-        setDropTargetTracked(null)
+        // Never let a self-row/unknown-row invalid target fall through to the
+        // wider ungrouped body handler: that handler used to retarget the drop
+        // to the top of the ungrouped list and made the placeholder oscillate.
+        event.preventDefault()
+        event.stopPropagation()
+        if (targetSessionId !== sessionId) {
+          setDropTargetTracked(null)
+        }
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
         return
       }
       rowDragOver(event, target)
@@ -3666,7 +3680,29 @@ export const GroupsView = (props) => {
         rt()?.setFloatingLabel?.(t('ungrouped.sessionsOnly'))
         return
       }
+      // Header only: this is the explicit "top of ungrouped" target.
       rowDragOver(event, { kind: 'ungrouped' })
+      rt()?.setFloatingLabel?.('移出分组')
+    },
+    /**
+     * Body-level fallback for virtual gaps/spacers. A session row owns its own
+     * dragover; this handler only sees gaps and empty body space, so it must
+     * resolve against visible rows rather than jumping to the section top.
+     */
+    onDragOverUngroupedBody: (event) => {
+      const drag = dragRef.current
+      if (!drag) return
+      if (drag.kind === 'group') {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
+        setDropTargetTracked(null)
+        rt()?.setFloatingLabel?.(t('ungrouped.sessionsOnly'))
+        return
+      }
+      if (event.target?.closest?.('[data-session-id], .dsg-drop-placeholder')) return
+      const target = ungroupedBodyTarget(ungroupedBodyRows(event.currentTarget), event.clientY)
+      rowDragOver(event, target)
       rt()?.setFloatingLabel?.('移出分组')
     },
     onDropUngrouped: (event) => {
@@ -3682,8 +3718,32 @@ export const GroupsView = (props) => {
       }
       event.preventDefault()
       event.stopPropagation()
+      clearAutoExpand()
       rt()?.setFloatingLabel?.(null)
+      // Header drop is always the explicit top-of-section target.
       commitDrop(drag, { kind: 'ungrouped' })
+    },
+    onDropUngroupedBody: (event) => {
+      const drag = dragRef.current
+      if (drag?.kind === 'group') {
+        event.preventDefault()
+        event.stopPropagation()
+        setDropTargetTracked(null)
+        clearAutoExpand()
+        rt()?.setFloatingLabel?.(null)
+        toast('info', t('ungrouped.sessionsOnly'))
+        return
+      }
+      event.preventDefault()
+      event.stopPropagation()
+      clearAutoExpand()
+      rt()?.setFloatingLabel?.(null)
+      const current = dropTargetRef.current
+      const target =
+        current && (current.kind === 'session-before' || current.kind === 'session-after' || current.kind === 'ungrouped')
+          ? current
+          : ungroupedBodyTarget(ungroupedBodyRows(event.currentTarget), event.clientY)
+      commitDrop(drag, target)
     },
   }
 

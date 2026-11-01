@@ -106,6 +106,36 @@ export const hitTest = ({ source, rowKind, pointerY, rowTop, rowHeight, targetGr
   }
 }
 
+/**
+ * Resolve a body-level drop in the virtualized ungrouped list.
+ *
+ * The header means "top of the list", but the body must follow the visible
+ * rows: above a row's midpoint -> before it, a gap -> before the next row,
+ * below the last midpoint -> after the last row. An empty body is the only
+ * body-level case that means the ungrouped section itself.
+ *
+ * @param {{sessionId:string, top:number, height:number}[]} rows visible rows in visual order
+ * @param {number} pointerY
+ * @returns {{kind:string, groupId?:null, sessionId?:string}}
+ */
+export const ungroupedBodyTarget = (rows, pointerY) => {
+  const visible = (Array.isArray(rows) ? rows : [])
+    .filter((row) => row && typeof row.sessionId === 'string' && Number.isFinite(row.top))
+    .map((row) => ({
+      sessionId: row.sessionId,
+      top: row.top,
+      height: Number.isFinite(row.height) && row.height > 0 ? Math.max(row.height, MIN_ROW_HEIGHT) : MIN_ROW_HEIGHT,
+    }))
+    .sort((left, right) => left.top - right.top)
+  if (visible.length === 0 || !Number.isFinite(pointerY)) return { kind: 'ungrouped' }
+  for (const row of visible) {
+    if (pointerY < row.top + row.height / 2) {
+      return { kind: 'session-before', groupId: null, sessionId: row.sessionId }
+    }
+  }
+  return { kind: 'session-after', groupId: null, sessionId: visible[visible.length - 1].sessionId }
+}
+
 /** Whether `groupId` is the dragged session's current group (before/after same-group reorder). */
 const sameGroup = (doc, sessionId, groupId) => sessionLocation(doc, sessionId).groupId === groupId
 

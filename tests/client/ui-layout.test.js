@@ -194,6 +194,14 @@ test('0.2.27 ungrouped inbox is session-only for drops and group move menus', ()
   assert.equal(components.includes("commitGroupDrop(drag.groupId, { kind: 'root-end' })"), false)
 })
 
+test('0.2.54 ungrouped body drop is position-aware and does not bubble invalid rows', () => {
+  assert.match(components, /onDragOverUngroupedBody/)
+  assert.match(components, /onDropUngroupedBody/)
+  assert.match(components, /ungroupedBodyTarget/)
+  assert.match(components, /targetSessionId !== sessionId/)
+  assert.match(components, /event\.stopPropagation\(\)/)
+})
+
 test('0.2.26 running-session action counts all spinners and groups its menu by parent', () => {
   const runningAt = components.indexOf('session-groups-running-button')
   const toggleAt = components.indexOf("testId: 'session-groups-toggle'")

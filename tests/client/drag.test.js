@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyDrop, canDropGroupInto, hitTest, sameDropTarget, sessionLocation, stickyDropTarget } from '../../src/client/drag.js'
+import { applyDrop, canDropGroupInto, hitTest, sameDropTarget, sessionLocation, stickyDropTarget, ungroupedBodyTarget } from '../../src/client/drag.js'
 import { assignSession, createGroup, emptyDoc, findGroup } from '../../src/shared/model.js'
 
 const docWithTwoGroups = () => {
@@ -144,4 +144,20 @@ test('0.2.21 sticky target holds while the pointer rests inside the radius', () 
   assert.equal(stickyDropTarget(lock, 105, 200), null)
   assert.equal(stickyDropTarget(lock, Number.NaN, 200), null)
   assert.equal(stickyDropTarget(null, 100, 200), null)
+})
+
+test('0.2.54 ungrouped body fallback follows visible rows, not the section top', () => {
+  const rows = [
+    { sessionId: 's1', top: 100, height: 32 },
+    { sessionId: 's2', top: 134, height: 32 },
+    { sessionId: 's3', top: 168, height: 32 },
+  ]
+  assert.deepEqual(ungroupedBodyTarget(rows, 90), { kind: 'session-before', groupId: null, sessionId: 's1' })
+  assert.deepEqual(ungroupedBodyTarget(rows, 110), { kind: 'session-before', groupId: null, sessionId: 's1' })
+  assert.deepEqual(ungroupedBodyTarget(rows, 130), { kind: 'session-before', groupId: null, sessionId: 's2' })
+  assert.deepEqual(ungroupedBodyTarget(rows, 165), { kind: 'session-before', groupId: null, sessionId: 's3' })
+  assert.deepEqual(ungroupedBodyTarget(rows, 200), { kind: 'session-after', groupId: null, sessionId: 's3' })
+  assert.deepEqual(ungroupedBodyTarget([], 200), { kind: 'ungrouped' })
+  assert.deepEqual(ungroupedBodyTarget(null, 200), { kind: 'ungrouped' })
+  assert.deepEqual(ungroupedBodyTarget(rows, Number.NaN), { kind: 'ungrouped' })
 })
