@@ -135,6 +135,7 @@ test('0.2.45 dialog scroll areas hide native bars and use edge fades', () => {
 test('0.2.42 top-level group destinations keep separators', () => {
   assert.match(components, /dsg-dialog-group-separator/)
   assert.match(CSS, /\.dsg-dialog-group-separator \{[^}]*border-top/s)
+  assert.match(CSS, /\.dsg-dialog-list \{[^}]*z-index:\s*auto/s)
 })
 
 test('0.2.31 dialogs are draggable/resizable and backdrop clicks do not close', () => {

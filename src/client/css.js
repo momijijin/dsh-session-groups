@@ -624,6 +624,9 @@ export const CSS = `
  * only highlight; the shared footer owns Confirm/Cancel. */
 .dsg-dialog-list {
   position: static;
+  /* .dsg-menu normally carries z-index:70 for fixed menus. As a flex item in
+   * ScrollFade it would otherwise paint over the fade/arrow overlay. */
+  z-index: auto;
   max-height: 300px;
   padding: 8px;
   gap: 4px;
