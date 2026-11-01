@@ -182,6 +182,12 @@ const ScrollFade = ({ className, tone = 'layer1', children, ...rest }) => {
       observer?.disconnect()
     }
   }, [update])
+  // The parent dialog may set its final explicit height after this child's
+  // layout effect; re-read on every parent-driven render so a stale bottom
+  // fade cannot cover an inner picker's own fade.
+  useEffect(() => {
+    update()
+  })
   return h(
     'div',
     { class: 'dsg-scroll-fade', 'data-tone': tone },
