@@ -194,6 +194,8 @@ const ScrollArea = ({ className, children, ...rest }) => {
             probe: 'scroll-area',
             stage,
             className,
+            sidebarClass: area.closest('.bJOniG_root')?.className ?? '',
+            thumbToken: getComputedStyle(element).getPropertyValue('--dsh-scrollbar-thumb').trim(),
             scrollTop: element.scrollTop,
             clientHeight: element.clientHeight,
             scrollHeight: element.scrollHeight,

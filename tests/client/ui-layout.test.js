@@ -121,6 +121,8 @@ test('0.2.50 dialog scroll areas use a persistent draggable thin thumb', () => {
   assert.match(CSS, /\.dsg-scroll-area \{[^}]*position:\s*relative/s)
   assert.match(CSS, /\.dsg-scroll-rail \{[^}]*width:\s*5px[^}]*z-index:\s*20/s)
   assert.match(CSS, /\.dsg-scroll-thumb \{[^}]*width:\s*5px/s)
+  assert.match(CSS, /\.dsg-scroll-thumb \{[^}]*background:\s*var\(--dsw-alias-scrollbar-bg-l2/)
+  assert.match(CSS, /\.dsg-scroll-thumb:hover \{[^}]*--dsw-alias-scrollbar-hover-l2/s)
   assert.match(CSS, /\.dsg-scroll-thumb:hover/)
   assert.match(CSS, /\.dsg-dialog-content, \.dsg-dialog-list, \.dsg-icon-sections \{ scrollbar-width:\s*none/s)
   assert.match(CSS, /\.dsg-dialog-content::-webkit-scrollbar,[^{]*\{ width:\s*0; height:\s*0; display:\s*none; \}/s)
