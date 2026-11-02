@@ -31,6 +31,8 @@
   "drag.groupRootEnd": "Move to the root end",
   "drag.dropHere": "Drop here",
   "drag.toUngrouped": "Remove from groups — drop here",
+  "drag.sessionIntoGroup": "Drop into “{name}”",
+  "drag.sessionOut": "Remove from group",
   "drag.groupInvalid": "Cannot drop into the group itself or its descendant",
   "drag.depthExceeded": "Exceeds the maximum group depth (8)",
   "ungrouped.title": "Ungrouped",

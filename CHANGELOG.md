@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0-beta.2 (2026-11-02)
+
+Hardening beta.
+
+- Localized the remaining drag floating labels; English UI no longer shows Chinese “放入『…』/移出分组”.
+- Added `npm run check:all` for all-file syntax checking plus the test suite.
+- Added `scripts/qa/clean-profile.ps1`, which refuses the real `~/.dsh` and never deletes files.
+- Updated docs and test counts (323 tests).
+
 ## 0.3.0-beta.1 (2026-11-02)
 
 First public beta cut.

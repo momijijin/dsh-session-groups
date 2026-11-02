@@ -31,6 +31,8 @@
   "drag.groupRootEnd": "移到根级末尾",
   "drag.dropHere": "放到这里",
   "drag.toUngrouped": "移出分组，放到这里",
+  "drag.sessionIntoGroup": "放入『{name}』",
+  "drag.sessionOut": "移出分组",
   "drag.groupInvalid": "不能放入自身或子分组",
   "drag.depthExceeded": "超过最大分组层级（8 层）",
   "ungrouped.title": "未归组",

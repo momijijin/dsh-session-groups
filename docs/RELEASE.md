@@ -1,10 +1,10 @@
-# 0.3.0-beta.1 发布与安装说明
+# 0.3.0-beta.2 发布与安装说明
 
-- 版本：`0.3.0-beta.1`（首个 beta 发布候选）
+- 版本：`0.3.0-beta.2`（0.3.0-beta 加固版）
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：单元/契约测试 322/322；本轮桌面回归由用户执行
+- 状态：单元/契约测试 323/323；本轮桌面回归由用户执行
 - 范围：自由分组、跨工作区会话、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、弹窗细滚动条
-- 发布包：`dsh-session-groups-0.3.0-beta.1.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.2.tgz`
 
 ## 1. 本轮变化
 
@@ -46,11 +46,11 @@ npm pack
 
 - `npm test`：322/322 PASS
 - 构建：`lib/client.js`
-- 包：`dsh-session-groups-0.3.0-beta.1.tgz`
+- 包：`dsh-session-groups-0.3.0-beta.2.tgz`
 
 ### 发布包信息
 
-- 文件：`dsh-session-groups-0.3.0-beta.1.tgz`
+- 文件：`dsh-session-groups-0.3.0-beta.2.tgz`
 - 大小与 SHA256：以最终 `npm pack` 输出和桌面安装记录为准（不写进包内文档，避免自引用）
 
 ## 3. 安装
@@ -64,7 +64,7 @@ npm pack
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.1.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.2.tgz"
 ```
 
 安装前备份：
@@ -105,14 +105,26 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 - 两个开关默认关闭
 - 诊断/调试文件不写会话 transcript
 
+### 干净 profile 脚本
+
+```powershell
+pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.2.tgz"
+```
+
+- 使用 `%TEMP%` 下的独立 `DSH_HOME`，不会读写真实 `~/.dsh`
+- 自动拒绝指向真实 `.dsh` 的路径
+- 不删除任何文件；测试结束后按输出的 `TEST_HOME` 手工清理
+
 ## 6. 验证清单
 
 发布前必须确认：
 
-- [ ] `npm test` 322/322
+- [ ] `npm test` 323/323
+- [ ] `npm run check:all`
 - [ ] `node --check lib/client.js`
 - [ ] `npm pack` 包含 README、LICENSE、CHANGELOG、locale
-- [ ] 干净 desktop profile 安装
+- [ ] 干净 profile 安装（可用 `scripts/qa/clean-profile.ps1 -Tarball <path>`）
 - [ ] 首次进入显示引导；dismiss 后不再出现
 - [ ] 空分组/空会话显示空状态入口
 - [ ] 三个状态按钮顺序正确
@@ -130,9 +142,10 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 - 搜索最多 20 条
 - 宽度覆盖依赖宿主侧栏 DOM，失败时 fail-soft
 - 对话框拖动/缩放没有键盘操作
-- 0.3.0-beta.1 尚未记录完整 E2E 结果；以单元/契约测试 + 用户桌面回归为准
+- 0.3.0-beta.2 尚未记录完整 E2E 结果；以单元/契约测试 + 用户桌面回归为准
 
 ## 8. 后续
 
-0.3.0-beta.1 用于验证首次引导、状态弹层可读性与发布工程。  
+0.3.0-beta.2 用于验证首次引导、状态弹层可读性与发布工程。  
 用户桌面回归通过后再考虑 0.3.0 正式版和插件市场发布。
+

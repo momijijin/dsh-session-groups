@@ -683,6 +683,17 @@ test('0.2.14 dialog options use roomy padding and standard depth indent', () => 
   assert.match(CSS, /\.dsg-color-option \{[^}]*height:\s*36px/s)
 })
 
+test('0.3.0-beta.2 drag floating labels are localized', () => {
+  assert.match(components, /t\('drag\.sessionIntoGroup'/)
+  assert.match(components, /t\('drag\.sessionOut'\)/)
+  assert.equal(components.includes('放入『'), false)
+  assert.equal(components.includes('移出分组'), false)
+  assert.equal(zh['drag.sessionIntoGroup'], '放入『{name}』')
+  assert.equal(en['drag.sessionIntoGroup'], 'Drop into “{name}”')
+  assert.equal(zh['drag.sessionOut'], '移出分组')
+  assert.equal(en['drag.sessionOut'], 'Remove from group')
+})
+
 test('0.2.23 row-boundary dragleave keeps the placeholder while inside the sidebar', () => {
   assert.match(components, /const pointerOutsideRoot = \(event\) =>/)
   assert.match(components, /if \(!pointerOutsideRoot\(event\)\) return/)

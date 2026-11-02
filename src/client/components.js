@@ -3597,7 +3597,9 @@ export const GroupsView = (props) => {
         return
       }
       rowDragOver(event, target)
-      const label = groupId ? `放入『${findGroup(store.doc, groupId)?.name ?? ''}』` : '移出分组'
+      const label = groupId
+        ? t('drag.sessionIntoGroup', { name: findGroup(store.doc, groupId)?.name ?? '' })
+        : t('drag.sessionOut')
       rt()?.setFloatingLabel?.(label)
     },
     onDropSession: (event, sessionId, groupId, ungrouped) => {
@@ -3653,7 +3655,7 @@ export const GroupsView = (props) => {
       }
       rowDragOver(event, { kind: 'group-append', groupId })
       scheduleAutoExpand(groupId)
-      rt()?.setFloatingLabel?.(`放入『${findGroup(store.doc, groupId)?.name ?? ''}』`)
+      rt()?.setFloatingLabel?.(t('drag.sessionIntoGroup', { name: findGroup(store.doc, groupId)?.name ?? '' }))
     },
     onDropGroup: (event, groupId) => {
       const drag = dragRef.current
@@ -3734,7 +3736,7 @@ export const GroupsView = (props) => {
       }
       // Header only: this is the explicit "top of ungrouped" target.
       rowDragOver(event, { kind: 'ungrouped' })
-      rt()?.setFloatingLabel?.('移出分组')
+      rt()?.setFloatingLabel?.(t('drag.sessionOut'))
     },
     /**
      * Body-level fallback for virtual gaps/spacers. A session row owns its own
@@ -3755,7 +3757,7 @@ export const GroupsView = (props) => {
       if (event.target?.closest?.('[data-session-id], .dsg-drop-placeholder')) return
       const target = ungroupedBodyTarget(ungroupedBodyRows(event.currentTarget), event.clientY)
       rowDragOver(event, target)
-      rt()?.setFloatingLabel?.('移出分组')
+      rt()?.setFloatingLabel?.(t('drag.sessionOut'))
     },
     onDropUngrouped: (event) => {
       const drag = dragRef.current
