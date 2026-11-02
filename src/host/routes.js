@@ -32,6 +32,7 @@ import {
   CONTROL_STATE_PATH,
   DEBUG_PATH,
   DIAGNOSTICS_PATH,
+  EVENTS_PATH,
   LOAD_PATH,
   MAX_BODY_BYTES,
   MAX_CONTROL_BODY_BYTES,
@@ -243,6 +244,14 @@ export const registerRoutes = (ctx, store, options = {}) => {
   const controlDestructiveEnabled = () => (typeof options.controlDestructiveEnabled === 'function' ? options.controlDestructiveEnabled() === true : options.controlDestructiveEnabled === true)
   const controlSessionsEnabled = () => (typeof options.controlSessionsEnabled === 'function' ? options.controlSessionsEnabled() === true : options.controlSessionsEnabled === true)
   const skillDshHome = typeof options.skillDshHome === 'string' && options.skillDshHome.length > 0 ? options.skillDshHome : null
+  const changeHub = options.changeHub ?? null
+  const publishChange = (revision, source) => {
+    try {
+      changeHub?.publish?.(revision, source)
+    } catch {
+      /* notification must never fail a committed write */
+    }
+  }
   const getService = (name) => {
     try {
       return ctx.get?.(name) ?? null
@@ -412,6 +421,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
       try {
         const result = await store.commit(parsed.baseRevision, parsed.doc)
         const { status, body: payload } = commitResponse(result)
+        if (status === 200) publishChange(payload.revision, 'http-commit')
         sendJson(res, status, payload)
       } catch (error) {
         logWarn(ctx, `dsh-session-groups: commit failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -564,6 +574,49 @@ export const registerRoutes = (ctx, store, options = {}) => {
   let sessionRenamePath = null
   let sessionArchivePath = null
   let skillRepairPath = null
+  let eventsPath = null
+  if (changeHub !== null) {
+    eventsPath = register(
+      EVENTS_PATH,
+      async (req, res) => {
+        if (fenceDenied(req, res)) return
+        if (req.method !== 'GET') {
+          sendMethodNotAllowed(res, 'GET')
+          return
+        }
+        res.statusCode = 200
+        res.setHeader('cache-control', 'no-store')
+        res.setHeader('content-type', 'text/event-stream; charset=utf-8')
+        res.setHeader('connection', 'keep-alive')
+        res.writeHead?.(200, {
+          'cache-control': 'no-store',
+          'content-type': 'text/event-stream; charset=utf-8',
+          connection: 'keep-alive',
+        })
+        res.write?.('retry: 10000\n\n')
+        res.write?.('event: ready\ndata: {}\n\n')
+        const unsubscribe = changeHub.subscribe(res)
+        let cleaned = false
+        const cleanup = () => {
+          if (cleaned) return
+          cleaned = true
+          clearInterval(keepalive)
+          unsubscribe?.()
+        }
+        const keepalive = setInterval(() => {
+          try {
+            res.write?.(': keepalive\n\n')
+          } catch {
+            cleanup()
+          }
+        }, 15000)
+        keepalive.unref?.()
+        req.on?.('close', cleanup)
+        res.on?.('close', cleanup)
+      },
+      `dsh-session-groups: GET ${EVENTS_PATH}`,
+    )
+  }
   {
     const idempotency = new Map()
     const remember = (key, value) => {
@@ -856,6 +909,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
               planHash,
               changes: planned.changes,
             }
+            publishChange(committed.revision, 'control-apply')
             if (idempotencyKey !== null) remember(idempotencyKey, { planHash, body: responseBody })
             logInfo(
               ctx,
@@ -1109,6 +1163,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
       loadPath,
       commitPath,
       diagnosticsPath,
+      ...(eventsPath === null ? [] : [eventsPath]),
       ...(debugPath === null ? [] : [debugPath]),
       ...(controlStatePath === null ? [] : [controlStatePath, controlResolvePath, controlPlanPath, controlApplyPath]),
       ...(sessionInspectPath === null ? [] : [sessionInspectPath, sessionRenamePath, sessionArchivePath]),

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.32 (2026-11-02)
+
+- Add the Host SSE revision stream: native-tool and HTTP commits publish the new revision; browser clients refetch and reconcile. Switching back to the groups workspace now always reloads the Host snapshot.
+
 ## 0.3.0-beta.31 (2026-11-02)
 
 - Fix the native tool parameter schema: DSH tools support only a JSON-Schema subset without minimum; validate the schema against dsh-tools before packaging.
@@ -175,6 +179,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

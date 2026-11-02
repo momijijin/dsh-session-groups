@@ -525,7 +525,44 @@ try {
   await page.waitForTimeout(800)
   await groupView.waitFor({ state: 'visible' })
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
+  // Native-tool/HTTP commits are Host-side writes. The sidebar must invalidate
+  // its local snapshot through the revision SSE stream instead of waiting for
+  // a page reload.
+  const externalRename = (name) =>
+    page.evaluate(async (nextName) => {
+      const loaded = await fetch('/dsh-session-groups/load').then((response) => response.json())
+      const doc = loaded.doc
+      if (!Array.isArray(doc?.groups) || doc.groups.length === 0) throw new Error('no group for external commit')
+      doc.groups[0].name = nextName
+      const response = await fetch('/dsh-session-groups/commit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ baseRevision: loaded.revision, doc }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(`external commit failed: ${response.status} ${JSON.stringify(body)}`)
+      return body.revision
+    }, name)
+
+  const liveName = `SSE 外部刷新 ${Date.now()}`
+  await externalRename(liveName)
+  await page.waitForFunction((name) => document.body.innerText.includes(name), liveName, { timeout: 6000 })
+
+  // Switching to the shipped workspace and back must reload the Host snapshot,
+  // even if the SSE event arrived while the groups slot was unmounted.
+  const modeToggle = page.locator('[data-testid="session-groups-toggle"]').first()
+  if ((await modeToggle.count()) !== 1) throw new Error('groups mode toggle missing for workspace round-trip')
+  await page.evaluate(() => document.querySelector('[data-testid="session-groups-toggle"]')?.click())
+  await page.waitForTimeout(600)
+  const hiddenName = `切换刷新 ${Date.now()}`
+  await externalRename(hiddenName)
+  const backToggle = page.locator('[data-testid="session-groups-workspace-toggle"]').first()
+  if ((await backToggle.count()) !== 1) throw new Error('workspace overlay toggle missing for return')
+  await page.evaluate(() => document.querySelector('[data-testid="session-groups-workspace-toggle"]')?.click())
+  await page.waitForTimeout(1000)
+  await page.waitForFunction((name) => document.body.innerText.includes(name), hiddenName, { timeout: 6000 })
+
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)

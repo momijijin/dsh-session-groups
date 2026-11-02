@@ -64,6 +64,7 @@ const toolOutput = (value) => {
  */
 export const createControlTool = (options) => {
   const { store, getService } = options
+  const onCommit = typeof options.onCommit === 'function' ? options.onCommit : () => {}
   const enabled = () => options.controlApiEnabled() === true
   const sessionsEnabled = () => enabled() && options.controlSessionsEnabled() === true
   const destructive = () => options.controlDestructiveEnabled() === true
@@ -151,6 +152,11 @@ export const createControlTool = (options) => {
       }
       const committed = await store.commit(args.baseRevision, planned.doc)
       if (committed.kind === 'ok') {
+        try {
+          onCommit(committed.revision, 'native-tool')
+        } catch {
+          /* notification must never fail a committed write */
+        }
         return {
           ok: true,
           protocol: CONTROL_PROTOCOL,

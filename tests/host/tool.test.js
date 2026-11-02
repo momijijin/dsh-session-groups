@@ -6,6 +6,7 @@ import { sampleDoc } from './helpers.js'
 const setup = (overrides = {}) => {
   let doc = sampleDoc()
   let revision = 2
+  const notifications = []
   const session = { id: 's-current', title: 'old title' }
   const registry = {
     archivedSessionIds: [],
@@ -45,9 +46,10 @@ const setup = (overrides = {}) => {
     controlApiEnabled: () => true,
     controlSessionsEnabled: () => true,
     controlDestructiveEnabled: () => false,
+    onCommit: (nextRevision, source) => notifications.push([nextRevision, source]),
     ...overrides,
   })
-  return { tool, session, registry, getDoc: () => doc, getRevision: () => revision }
+  return { tool, session, registry, notifications, getDoc: () => doc, getRevision: () => revision }
 }
 
 test('native tool exposes a raw registry-ready definition without HTTP', () => {
@@ -98,6 +100,7 @@ test('native tool plans and applies with CAS and stale-plan protection', async (
   assert.equal(applied.ok, true)
   assert.equal(applied.revision, 3)
   assert.equal(state.getDoc().groups[0].name, '改名')
+  assert.deepEqual(state.notifications, [[3, 'native-tool']])
 
   const conflict = await state.tool.execute({
     action: 'apply',

@@ -9,6 +9,7 @@ export const BASE_PATH = '/dsh-session-groups'
 export const LOAD_PATH = `${BASE_PATH}/load`
 
 export const COMMIT_PATH = `${BASE_PATH}/commit`
+export const EVENTS_PATH = `${BASE_PATH}/events`
 
 /** Diagnostics trace ingest route (0.2.5, additive; append-only NDJSON). */
 export const DIAGNOSTICS_PATH = `${BASE_PATH}/diagnostics`

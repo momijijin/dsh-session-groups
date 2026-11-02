@@ -81,6 +81,9 @@ export const createPlugin = () => {
   let queue = null
   let bridge = null
   let debugProbe = false
+  let changeSource = null
+  let pendingExternalReload = false
+  let storeSubscriptionDisposer = null
 
   const services = () => {
     const ctx = ctxRef
@@ -194,6 +197,48 @@ export const createPlugin = () => {
     return load()
   }
 
+  const acceptExternalRevision = (revision) => {
+    if (!Number.isInteger(revision) || revision < 0) return
+    const snapshot = store.getSnapshot()
+    if (revision <= snapshot.revision) return
+    if (snapshot.optimistic) {
+      // A local optimistic write is still pending. Let it settle first; the
+      // store subscription below retries the load once that write is confirmed.
+      pendingExternalReload = true
+      return
+    }
+    if (snapshot.docState !== 'loading') retryLoad()
+  }
+
+  const startChangeStream = () => {
+    const EventSourceImpl = globalThis.EventSource
+    if (typeof EventSourceImpl !== 'function' || changeSource !== null) return
+    try {
+      changeSource = new EventSourceImpl('/dsh-session-groups/events', { withCredentials: true })
+      changeSource.addEventListener?.('revision', (event) => {
+        try {
+          const payload = JSON.parse(event.data)
+          acceptExternalRevision(payload?.revision)
+        } catch {
+          /* ignore malformed invalidation */
+        }
+      })
+      changeSource.onopen = () => {
+        // Reconnect recovery: catch revisions committed while the stream was down.
+        if (store.getSnapshot().docState === 'ready') retryLoad()
+      }
+      storeSubscriptionDisposer = store.subscribe(() => {
+        if (!pendingExternalReload) return
+        const snapshot = store.getSnapshot()
+        if (snapshot.optimistic || snapshot.docState === 'loading') return
+        pendingExternalReload = false
+        retryLoad()
+      })
+    } catch {
+      changeSource = null
+    }
+  }
+
   // --- slot lifecycle -------------------------------------------------------
   const reportRegistrationFailure = (error) => {
     if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] sidebar registration failed', error)
@@ -292,7 +337,10 @@ export const createPlugin = () => {
     }
     if (next === 'groups') {
       registerOccupant()
-      if (store.getSnapshot().docState === 'idle') load()
+      // Re-read the Host document every time the groups view becomes active:
+      // native-tool/HTTP commits may have advanced the revision while the
+      // official workspace view was displayed.
+      retryLoad()
     } else {
       disposeOccupant()
     }
@@ -568,6 +616,7 @@ export const createPlugin = () => {
       },
     }
     installClientRuntime(bridge)
+    startChangeStream()
 
     const onWindowResize = () => {
       if (updateManagedWidth(readSidebarWidth(), globalThis.innerWidth || 1440) === null) syncSidebarWidth()
@@ -625,6 +674,11 @@ export const createPlugin = () => {
         localeSubscriptionDisposer = null
         if (typeof configSlotDisposer === 'function') configSlotDisposer()
         configSlotDisposer = null
+        if (typeof storeSubscriptionDisposer === 'function') storeSubscriptionDisposer()
+        storeSubscriptionDisposer = null
+        changeSource?.close?.()
+        changeSource = null
+        pendingExternalReload = false
         if (typeof perfDisposer === 'function') perfDisposer()
         perfDisposer = null
         if (typeof styleDisposer === 'function') styleDisposer()

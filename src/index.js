@@ -24,6 +24,7 @@ import { logInfo, logWarn } from './host/log.js'
 import { CONTROL_TOKEN_FILE_NAME, DEBUG_FILE_NAME, DIAGNOSTICS_FILE_NAME } from './host/constants.js'
 import { registerRoutes } from './host/routes.js'
 import { createStore } from './host/store.js'
+import { createChangeHub } from './host/change-hub.js'
 import { removeManagedSkill, repairManagedSkill } from './host/skill-install.js'
 import { createControlTool } from './host/tool.js'
 
@@ -74,6 +75,11 @@ export const apply = (ctx, config = {}) => {
   }
   const record = resolveRecordPath(ctx, config)
   const store = createStore({ filePath: record.filePath })
+  const changeHub = createChangeHub()
+  ctx.effect(
+    () => () => changeHub.close(),
+    'dsh-session-groups: close change stream',
+  )
   const diagnosticsFilePath =
     typeof config.diagnosticsFilePath === 'string' && config.diagnosticsFilePath.length > 0
       ? config.diagnosticsFilePath
@@ -133,6 +139,7 @@ export const apply = (ctx, config = {}) => {
     controlSessionsEnabled: () => readFlag('controlSessions'),
     controlToken,
     skillDshHome: dshHome,
+    changeHub,
   })
   const registerControlTool = (toolCtx) => {
     if (toolCtx?.tools === undefined || typeof toolCtx.tools.register !== 'function') return
@@ -152,6 +159,7 @@ export const apply = (ctx, config = {}) => {
             controlApiEnabled: () => readFlag('controlApi'),
             controlSessionsEnabled: () => readFlag('controlSessions'),
             controlDestructiveEnabled: () => readFlag('controlDestructive'),
+            onCommit: (revision, source) => changeHub.publish(revision, source),
           }),
         ),
       'dsh-session-groups: register control tool',
