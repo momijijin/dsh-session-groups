@@ -9,7 +9,7 @@ import {
   isSubagent,
   nextArchiveFilter,
   sessionTitle,
-} from '../../src/client/filter.js'
+} from '../../src/core/filter.js'
 import { assignSession, createGroup, emptyDoc } from '../../src/shared/model.js'
 
 const sessionsById = {

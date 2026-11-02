@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.11 (2026-11-02)
+
+- Moved visibility/archive/title policy into src/core/filter.js; src/client/filter.js is a compatibility re-export.
+
 ## 0.3.0-beta.10 (2026-11-02)
 
 - Moved tree/status aggregation into src/core/tree.js; src/client/tree.js is a compatibility re-export.
@@ -90,6 +94,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

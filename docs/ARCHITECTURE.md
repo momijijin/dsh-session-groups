@@ -36,6 +36,9 @@ src/index.js     Cordis host 入口
 - `src/core/tree.js`
   - 状态聚合、树扁平化、祖先展开、分组路径
   - `src/client/tree.js` 只保留兼容 re-export
+- `src/core/filter.js`
+  - 可见树、归档过滤、标题/子代理判定
+  - `src/client/filter.js` 只保留兼容 re-export
 
 ## 当前适配器
 
@@ -51,7 +54,6 @@ src/index.js     Cordis host 入口
 - `src/client/group-drag.js`
 - `src/client/dialog-selection.js`
 - `src/client/dialog-geometry.js`
-- `src/client/filter.js`
 - `src/client/search.js`
 - `src/client/virtual-list.js`
 
@@ -59,6 +61,7 @@ src/index.js     Cordis host 入口
 
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
+
 
 
 

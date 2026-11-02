@@ -13,7 +13,7 @@
  * confirmed GroupDoc (a flat `groups` array with `parentId`).
  */
 import { workspaceLabel, workspaceOfSession } from '../shared/model.js'
-import { sessionTitle } from './filter.js'
+import { sessionTitle } from '../core/filter.js'
 import { groupAncestors, groupPath } from '../core/tree.js'
 
 /** Collapsed-map sentinel for the "Ungrouped" container. */

@@ -53,7 +53,7 @@ import {
   sessionTitle,
   ARCHIVE_FILTERS,
   ARCHIVE_FILTER_LABEL_KEYS,
-} from './filter.js'
+} from '../core/filter.js'
 import { applyDrop, hitTest, sameDropTarget, stickyDropTarget, ungroupedBodyTarget } from '../core/drag.js'
 import {
   diagContext,
