@@ -161,7 +161,7 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
-- 当前发布验证以 335 项单元/契约测试和用户桌面回归为准；仓库保留 E2E 脚本，但尚未记录 0.3.0-beta.14 的完整 E2E 结果。
+- 当前发布验证以 337 项单元/契约测试和用户桌面回归为准；仓库保留 E2E 脚本，但尚未记录 0.3.0-beta.14 的完整 E2E 结果。
 
 ## 开发
 
@@ -172,9 +172,9 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：335 项单元/契约测试
+- `npm test`：337 项单元/契约测试
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
-- `npm run check:all`：全文件语法检查 + 测试
+- `npm run check:all`：全文件语法检查 + 测试`n- `npm run check:core`：只加载并测试 src/core，不启动 DSH
 - `scripts/qa/clean-profile.ps1`：隔离 profile 安装/卸载验证，不碰真实 `~/.dsh`
 - `scripts/qa/lifecycle-isolated.ps1`：隔离 install → uninstall → reinstall，校验分组记录 hash 不变
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`：A+ 隔离 Playwright 冒烟
@@ -189,6 +189,8 @@ npm pack
 ## 许可
 
 MIT，见 `LICENSE`。
+
+
 
 
 

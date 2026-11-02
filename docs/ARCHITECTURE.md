@@ -25,6 +25,14 @@ src/index.js     Cordis host 入口
   - `document`、`window`、`localStorage`、`globalThis` 等宿主全局
 - 宿主 API 变化时优先改 `src/adapters/**` 或 `src/client/**`；只要插件功能不变，`src/core/**` 不改。
 - 核心函数必须能直接用 Node 测试，不需要浏览器、DSH 窗口或真实 profile。
+- 依赖方向由 `tests/core/dependency-direction.test.js` 强制：
+  - `shared` 只能依赖自己
+  - `core` 只能依赖 `core` / `shared`
+  - `adapters` 只能依赖 `adapters` / `core` / `shared`
+  - `client` 只能依赖 `client` / `core` / `shared` / `adapters`
+  - `host` 只能依赖 `host` / `core` / `shared`
+  - `src/index.js` 只能依赖 `host` / `core` / `shared`
+- `npm run check:core` 独立加载全部核心模块，不启动 DSH。
 
 ## 当前核心
 
