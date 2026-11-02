@@ -35,7 +35,7 @@ const controlParameters = {
   properties: {
     action: { type: 'string', enum: ACTIONS },
     path: { type: 'array', items: { type: 'string' } },
-    baseRevision: { type: 'integer', minimum: 0 },
+    baseRevision: { type: 'integer' },
     operations: { type: 'array', items: { type: 'object', additionalProperties: true } },
     planHash: { type: 'string' },
     sessionId: { type: 'string' },

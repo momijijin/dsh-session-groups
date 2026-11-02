@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.31 (2026-11-02)
+
+- Fix the native tool parameter schema: DSH tools support only a JSON-Schema subset without minimum; validate the schema against dsh-tools before packaging.
+
 ## 0.3.0-beta.30 (2026-11-02)
 
 - Add the native session_groups_control Host tool and make it the AI path; HTTP/CLI remains browser-only because the Host browser-session fence rejects plugin bearer tokens.
@@ -171,6 +175,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 
