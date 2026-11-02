@@ -68,20 +68,52 @@ test('control requires explicit destructive opt-in and validates the result', ()
   assert.deepEqual(allowed.doc.ungrouped.sort(), ['s1', 's2'].sort())
 })
 
+test('control rejects extra and mistyped fields instead of silently coercing them', () => {
+  const { doc, a } = fixture()
+  const extra = applyControlOperations(doc, [
+    { op: 'group.rename', groupId: a, name: 'A2', surprise: true },
+  ])
+  assert.equal(extra.ok, false)
+  assert.equal(extra.code, 'invalid-operation')
+  assert.equal(extra.operationIndex, 0)
+  assert.equal(extra.field, 'surprise')
+
+  const badIndex = applyControlOperations(doc, [
+    { op: 'group.move', groupId: a, parentId: null, index: '0' },
+  ])
+  assert.equal(badIndex.code, 'invalid-operation')
+  assert.equal(badIndex.field, 'index')
+  assert.equal(badIndex.expected, 'non-negative integer')
+
+  const badParent = applyControlOperations(doc, [
+    { op: 'group.create', name: 'C', parentId: 123 },
+  ])
+  assert.equal(badParent.code, 'invalid-operation')
+  assert.equal(badParent.field, 'parentId')
+
+  const noUpdate = applyControlOperations(doc, [{ op: 'group.update', groupId: a }])
+  assert.equal(noUpdate.code, 'invalid-operation')
+  assert.equal(noUpdate.field, 'icon|color|colorHex')
+
+  const nullOperation = applyControlOperations(doc, [null])
+  assert.equal(nullOperation.code, 'invalid-operation')
+  assert.equal(nullOperation.operationIndex, 0)
+})
+
 test('control rejects empty, unknown, oversized and invalid operations', () => {
   const { doc, a } = fixture()
   assert.equal(applyControlOperations(doc, []).code, 'operations-required')
-  assert.equal(applyControlOperations(doc, [{ op: 'raw.commit' }]).code, 'operation-failed')
+  assert.equal(applyControlOperations(doc, [{ op: 'raw.commit' }]).code, 'unknown-operation')
   assert.equal(
     applyControlOperations(doc, Array.from({ length: 65 }, () => ({ op: 'group.rename', groupId: a, name: 'A' }))).code,
     'too-many-operations',
   )
   assert.equal(
     applyControlOperations(doc, [{ op: 'group.rename', groupId: a, name: '' }]).code,
-    'operation-failed',
+    'invalid-operation',
   )
   assert.equal(
     applyControlOperations(doc, [{ op: 'group.update', groupId: a }]).code,
-    'operation-failed',
+    'invalid-operation',
   )
 })

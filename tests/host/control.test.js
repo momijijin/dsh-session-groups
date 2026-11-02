@@ -97,6 +97,39 @@ test('control bearer token bypasses the browser cookie fence only for control ro
   assert.equal(bad.res.statusCode, 401)
 })
 
+test('control rejects extra top-level fields and malformed idempotency keys', async (t) => {
+  const mounted = await mountRoutes({ connection: connection(), controlApiEnabled: true })
+  t.after(() => mounted.cleanup())
+  await mounted.store.save(sampleDoc())
+  const operations = [{ op: 'group.create', name: 'X', parentId: null, index: 0 }]
+
+  const extra = await mounted.call(
+    CONTROL_PLAN_PATH,
+    post({ baseRevision: 1, operations, surprise: true }),
+  )
+  assert.equal(extra.res.statusCode, 422)
+  assert.equal(extra.json.code, 'unexpected-field')
+  assert.equal(extra.json.field, 'surprise')
+
+  const badKey = await mounted.call(
+    CONTROL_APPLY_PATH,
+    post({ baseRevision: 1, operations, planHash: 'x'.repeat(64), idempotencyKey: 42 }),
+  )
+  assert.equal(badKey.res.statusCode, 422)
+  assert.equal(badKey.json.code, 'invalid-idempotency-key')
+
+  const badOperation = await mounted.call(
+    CONTROL_PLAN_PATH,
+    post({ baseRevision: 1, operations: [{ ...operations[0], surprise: true }] }),
+  )
+  assert.equal(badOperation.res.statusCode, 422)
+  assert.equal(badOperation.json.code, 'invalid-operation')
+  assert.equal(badOperation.json.operationIndex, 0)
+
+  const loaded = await mounted.call(LOAD_PATH, makeRequest({ headers }))
+  assert.equal(loaded.json.revision, 1)
+})
+
 test('destructive control operations require the separate switch', async (t) => {
   const guarded = await mountRoutes({ connection: connection(), controlApiEnabled: true })
   t.after(() => guarded.cleanup())

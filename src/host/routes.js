@@ -87,6 +87,11 @@ const readBoundedBody = async (req, limit = MAX_BODY_BYTES) => {
 const controlPlanHash = (baseRevision, operations) =>
   createHash('sha256').update(JSON.stringify({ baseRevision, operations })).digest('hex')
 
+const unexpectedControlField = (body, allowed) => {
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) return null
+  return Object.keys(body).find((key) => !allowed.has(key)) ?? null
+}
+
 /** Map a store load result to the wire response. */
 export const loadResponse = (result) => {  if (result.kind === 'unsupported-version') {
     return {
@@ -565,6 +570,20 @@ export const registerRoutes = (ctx, store, options = {}) => {
           sendJson(res, 422, { ok: false, code: 'invalid', message: 'body is not valid JSON' })
           return
         }
+        if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+          sendJson(res, 422, { ok: false, code: 'invalid-body', message: 'body must be a JSON object' })
+          return
+        }
+        const unexpected = unexpectedControlField(body, new Set(['baseRevision', 'operations']))
+        if (unexpected !== null) {
+          sendJson(res, 422, {
+            ok: false,
+            code: 'unexpected-field',
+            message: `unexpected top-level field "${unexpected}"`,
+            field: unexpected,
+          })
+          return
+        }
         const baseRevision = body?.baseRevision
         const operations = body?.operations
         if (!Number.isInteger(baseRevision) || baseRevision < 0) {
@@ -626,12 +645,39 @@ export const registerRoutes = (ctx, store, options = {}) => {
           sendJson(res, 422, { ok: false, code: 'invalid', message: 'body is not valid JSON' })
           return
         }
+        if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+          sendJson(res, 422, { ok: false, code: 'invalid-body', message: 'body must be a JSON object' })
+          return
+        }
+        const unexpected = unexpectedControlField(
+          body,
+          new Set(['baseRevision', 'operations', 'planHash', 'idempotencyKey']),
+        )
+        if (unexpected !== null) {
+          sendJson(res, 422, {
+            ok: false,
+            code: 'unexpected-field',
+            message: `unexpected top-level field "${unexpected}"`,
+            field: unexpected,
+          })
+          return
+        }
+        if (
+          body.idempotencyKey !== undefined &&
+          (typeof body.idempotencyKey !== 'string' || body.idempotencyKey.length === 0 || body.idempotencyKey.length > 128)
+        ) {
+          sendJson(res, 422, {
+            ok: false,
+            code: 'invalid-idempotency-key',
+            message: 'idempotencyKey must be a non-empty string of at most 128 characters',
+            field: 'idempotencyKey',
+          })
+          return
+        }
         const baseRevision = body?.baseRevision
         const operations = body?.operations
         const planHash = body?.planHash
-        const idempotencyKey = typeof body?.idempotencyKey === 'string' && body.idempotencyKey.length > 0 && body.idempotencyKey.length <= 128
-          ? body.idempotencyKey
-          : null
+        const idempotencyKey = body?.idempotencyKey ?? null
         if (!Number.isInteger(baseRevision) || baseRevision < 0) {
           sendJson(res, 422, { ok: false, code: 'invalid-revision', message: 'baseRevision must be a non-negative integer' })
           return

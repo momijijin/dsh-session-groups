@@ -34,6 +34,121 @@ const fail = (code, message, operationIndex, extra = {}) => ({
   ...extra,
 })
 
+const isPlainRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+
+const OPERATION_SCHEMAS = Object.freeze({
+  'group.create': {
+    name: { type: 'string', required: true, nonEmpty: true },
+    parentId: { type: 'nullableId' },
+    index: { type: 'index' },
+    icon: { type: 'string', nonEmpty: true },
+    color: { type: 'string', nonEmpty: true },
+    colorHex: { type: 'string', nonEmpty: true },
+  },
+  'group.rename': {
+    groupId: { type: 'string', required: true, nonEmpty: true },
+    name: { type: 'string', required: true, nonEmpty: true },
+  },
+  'group.update': {
+    groupId: { type: 'string', required: true, nonEmpty: true },
+    icon: { type: 'string', nonEmpty: true },
+    color: { type: 'string', nonEmpty: true },
+    colorHex: { type: 'string', nonEmpty: true },
+  },
+  'group.move': {
+    groupId: { type: 'string', required: true, nonEmpty: true },
+    parentId: { type: 'nullableId' },
+    index: { type: 'index' },
+  },
+  'group.delete': {
+    groupId: { type: 'string', required: true, nonEmpty: true },
+    destinationId: { type: 'nullableId' },
+  },
+  'session.assign': {
+    sessionId: { type: 'string', required: true, nonEmpty: true },
+    groupId: { type: 'nullableId' },
+    index: { type: 'index' },
+  },
+})
+
+const receivedType = (value) =>
+  value === null ? 'null' : Array.isArray(value) ? 'array' : Number.isInteger(value) ? 'integer' : typeof value
+
+const validateField = (operation, index, field, spec) => {
+  const value = operation[field]
+  if (value === undefined) {
+    if (spec.required === true) {
+      return fail('invalid-operation', `missing required field "${field}"`, index, {
+        field,
+        expected: spec.type,
+      })
+    }
+    return null
+  }
+  if (spec.type === 'string') {
+    if (typeof value !== 'string' || (spec.nonEmpty === true && value.length === 0)) {
+      return fail('invalid-operation', `field "${field}" must be a${spec.nonEmpty === true ? ' non-empty' : ''} string`, index, {
+        field,
+        expected: spec.nonEmpty === true ? 'non-empty string' : 'string',
+        receivedType: receivedType(value),
+      })
+    }
+    return null
+  }
+  if (spec.type === 'nullableId') {
+    if (value !== null && (typeof value !== 'string' || value.length === 0)) {
+      return fail('invalid-operation', `field "${field}" must be a non-empty string or null`, index, {
+        field,
+        expected: 'non-empty string | null',
+        receivedType: receivedType(value),
+      })
+    }
+    return null
+  }
+  if (spec.type === 'index') {
+    if (!Number.isInteger(value) || value < 0) {
+      return fail('invalid-operation', `field "${field}" must be a non-negative integer`, index, {
+        field,
+        expected: 'non-negative integer',
+        receivedType: receivedType(value),
+      })
+    }
+  }
+  return null
+}
+
+const validateOperation = (operation, index) => {
+  if (!isPlainRecord(operation)) {
+    return fail('invalid-operation', 'operation must be an object', index, { expected: 'object' })
+  }
+  const schema = OPERATION_SCHEMAS[operation.op]
+  if (schema === undefined) {
+    return fail('unknown-operation', `unknown operation ${JSON.stringify(operation.op)}`, index, {
+      field: 'op',
+      expected: Object.keys(OPERATION_SCHEMAS),
+    })
+  }
+  const allowed = new Set(['op', ...Object.keys(schema)])
+  const unexpected = Object.keys(operation).find((key) => !allowed.has(key))
+  if (unexpected !== undefined) {
+    return fail('invalid-operation', `unexpected field "${unexpected}"`, index, {
+      field: unexpected,
+      expected: 'no unknown fields',
+    })
+  }
+  for (const [field, spec] of Object.entries(schema)) {
+    const invalid = validateField(operation, index, field, spec)
+    if (invalid !== null) return invalid
+  }
+  if (operation.op === 'group.update' && operation.icon === undefined && operation.color === undefined && operation.colorHex === undefined) {
+    return fail('invalid-operation', 'group.update requires icon, color, or colorHex', index, {
+      field: 'icon|color|colorHex',
+      expected: 'at least one update field',
+    })
+  }
+  return null
+}
+
 /** Read-only state for an AI client; IDs are the stable API surface. */
 export const buildControlState = (doc, revision) => ({
   protocol: CONTROL_PROTOCOL,
@@ -116,6 +231,8 @@ export const applyControlOperations = (doc, operations, options = {}) => {
   let next = cloneDoc(doc)
   const changes = []
   for (let index = 0; index < operations.length; index += 1) {
+    const invalid = validateOperation(operations[index], index)
+    if (invalid !== null) return invalid
     try {
       const result = applyOne(next, operations[index], allowDestructive)
       next = result.doc

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.19 (2026-11-02)
+
+- Harden control inputs: strict operation schemas, unknown-field rejection, typed index/parent/id checks, top-level field rejection, idempotencyKey type validation; no silent coercion or partial writes.
+
 ## 0.3.0-beta.18 (2026-11-02)
 
 - Added a per-run local bearer token for the control API, a state/plan/apply CLI, and the bundled session-groups-control skill.
@@ -123,6 +127,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

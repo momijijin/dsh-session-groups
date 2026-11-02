@@ -74,7 +74,7 @@ src/index.js     Cordis host 入口
 - `src/core/control.js`
   - AI 控制协议：state、结构化 operation、plan/apply 候选 doc
   - 无 HTTP、无设置、无 revision/CAS、无审计；这些在 `src/host/routes.js` 与 `src/index.js`
-  - 删除操作必须显式 `allowDestructive`，无 raw-doc 写入
+  - 删除操作必须显式 `allowDestructive`，无 raw-doc 写入`n  - 严格 operation schema：未知字段、错误类型、负数/非整数 index 一律 422，不做静默降级
 - `src/core/color.js`
   - `groupColorCss` 自定义 hex 优先、palette token 回退
 
@@ -106,6 +106,8 @@ src/index.js     Cordis host 入口
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
 `tests/core/shared-boundary.test.js` 对共享领域内核施加同样的约束。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
+
+
 
 
 
