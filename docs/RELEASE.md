@@ -116,6 +116,20 @@ pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
 - 自动拒绝指向真实 `.dsh` 的路径
 - 不删除任何文件；测试结束后按输出的 `TEST_HOME` 手工清理
 
+### 隔离 install → uninstall → reinstall
+
+```powershell
+pwsh -NoProfile -File .\scripts\qa\lifecycle-isolated.ps1 `
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.3.tgz" `
+  -Port 4417
+```
+
+- 独立 `DSH_HOME` + `sg-life` profile
+- 预置 sentinel 分组记录
+- 卸载后 bundle 移除、记录 hash 不变
+- 重装后 bundle 恢复、记录 hash 仍不变
+- 自动拒绝真实 `.dsh`
+
 ### A+ 隔离 Playwright 冒烟
 
 ```powershell
@@ -130,7 +144,7 @@ npm run test:isolated
 
 - 只访问独立端口和独立 `DSH_HOME`
 - 测试脚本拒绝真实 43120 和真实 `~/.dsh`
-- 当前冒烟覆盖首次引导、三状态按钮、无后台任务按钮
+- 当前冒烟覆盖首次引导、三状态按钮、移动到分组 head、收起/展开顺序
 - 不连接真实 DSH 窗口
 
 ## 6. 验证清单

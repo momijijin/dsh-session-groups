@@ -169,6 +169,7 @@ npm pack
 - `npm test`：325 项单元/契约测试
 - `npm run check:all`：全文件语法检查 + 测试
 - `scripts/qa/clean-profile.ps1`：隔离 profile 安装/卸载验证，不碰真实 `~/.dsh`
+- `scripts/qa/lifecycle-isolated.ps1`：隔离 install → uninstall → reinstall，校验分组记录 hash 不变
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`：A+ 隔离 Playwright 冒烟
   - 覆盖首次引导、三状态按钮、移动到分组 head、收起/展开顺序
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
