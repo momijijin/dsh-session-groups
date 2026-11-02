@@ -291,6 +291,22 @@ try {
   await page.evaluate(() => document.querySelector('[data-testid="session-groups-search-close"]')?.click())
   await page.waitForTimeout(300)
 
+  // View options / archive tri-state: selecting a filter closes the popover and
+  // persists the filter on the header button; restore the default afterwards.
+  const filterButton = page.locator('[data-testid="session-groups-view-options"]').first()
+  const initialFilter = await filterButton.getAttribute('data-filter')
+  for (const filter of ['only', 'all', initialFilter ?? 'hidden']) {
+    await page.evaluate(() => document.querySelector('[data-testid="session-groups-view-options"]')?.click())
+    await page.locator('[data-testid="session-groups-view-options-popover"]').waitFor({ state: 'visible' })
+    await page.evaluate((value) => {
+      document.querySelector(`[data-testid="session-groups-archive-filter"][data-filter="${value}"]`)?.click()
+    }, filter)
+    await page.locator('[data-testid="session-groups-view-options-popover"]').waitFor({ state: 'hidden' })
+    await page.waitForTimeout(250)
+    const currentFilter = await filterButton.getAttribute('data-filter')
+    if (currentFilter !== filter) throw new Error(`archive filter expected ${filter}, got ${currentFilter}`)
+  }
+
   // Narrow sidebar visual gate: the sidebar must not create horizontal overflow.
   await page.evaluate(() => localStorage.setItem('dsh-session-groups.width.v1', '264'))
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -392,7 +408,7 @@ try {
   await page.waitForTimeout(800)
   await groupView.waitFor({ state: 'visible' })
 
-  console.log('PASS: isolated onboarding, search, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
+  console.log('PASS: isolated onboarding, search, archive filter, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
@@ -401,4 +417,5 @@ try {
   await context.close().catch(() => {})
   await browser.close().catch(() => {})
 }
+
 
