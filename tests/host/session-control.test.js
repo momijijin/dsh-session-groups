@@ -130,13 +130,21 @@ test('session control rejects extra or mistyped fields', async (t) => {
   t.after(() => mounted.cleanup())
 
   for (const [path, body] of [
+    [CONTROL_SESSION_INSPECT_PATH, {}],
+    [CONTROL_SESSION_INSPECT_PATH, { sessionId: '' }],
+    [CONTROL_SESSION_INSPECT_PATH, { sessionId: 42 }],
     [CONTROL_SESSION_INSPECT_PATH, { sessionId: 's-1', extra: true }],
     [CONTROL_SESSION_RENAME_PATH, { sessionId: 's-1', title: 42 }],
+    [CONTROL_SESSION_RENAME_PATH, { title: 'no id' }],
     [CONTROL_SESSION_ARCHIVE_PATH, { sessionId: 's-1', archived: 'yes' }],
+    [CONTROL_SESSION_ARCHIVE_PATH, { archived: true }],
     [CONTROL_SESSION_ARCHIVE_PATH, { sessionId: 's-1', archived: true, stopActivity: 'yes' }],
   ]) {
     const response = await mounted.call(path, post(body))
     assert.equal(response.res.statusCode, 422)
+    if (!('sessionId' in body) || typeof body.sessionId !== 'string' || body.sessionId.length === 0) {
+      assert.equal(response.json.code, 'invalid-session-id')
+    }
   }
   assert.equal(state.session.title, 'old title')
   assert.deepEqual(state.registry.archivedSessionIds, [])

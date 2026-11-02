@@ -20,6 +20,10 @@ The current session id is available as:
 $env:DSH_SESSION_ID
 ```
 
+If that value is missing or empty, stop: do not guess, do not use the most
+recent session, and do not use another session's id. A missing `sessionId` is an
+invalid parameter and the host returns 422 `invalid-session-id`.
+
 Inspect it before acting:
 
 ```powershell
