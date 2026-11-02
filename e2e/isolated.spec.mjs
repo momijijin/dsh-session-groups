@@ -306,6 +306,44 @@ try {
   }
   await page.screenshot({ path: `${testHome}/narrow-264.png` })
 
+  const lightContrast = await page.evaluate(() => {
+    const parse = (value) => {
+      const match = value?.match(/rgba?\(([^)]+)\)/)
+      if (!match) return null
+      const [r, g, b, a = 1] = match[1].split(',').map(Number)
+      return { r, g, b, a }
+    }
+    const background = (el) => {
+      let node = el
+      while (node) {
+        const value = getComputedStyle(node).backgroundColor
+        if (value && value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent') return parse(value)
+        node = node.parentElement
+      }
+      return parse(getComputedStyle(document.body).backgroundColor)
+    }
+    const luminance = ({ r, g, b }) => {
+      const channel = (v) => {
+        const n = v / 255
+        return n <= 0.03928 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4
+      }
+      return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+    }
+    const contrast = (el) => {
+      const fg = parse(getComputedStyle(el).color)
+      const bg = background(el)
+      if (!fg || !bg) return null
+      const a = luminance(fg), b = luminance(bg)
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
+    }
+    return {
+      header: contrast(document.querySelector('.dsg-header-label')),
+      status: contrast(document.querySelector('.dsg-status-action')),
+    }
+  })
+  if (!(lightContrast.header >= 4.5)) throw new Error(`header contrast too low: ${JSON.stringify(lightContrast)}`)
+  if (!(lightContrast.status >= 3)) throw new Error(`status contrast too low: ${JSON.stringify(lightContrast)}`)
+
   // Runtime locale/theme gates. The test host boots in English; dark mode is
   // applied through the shipped data-ds-dark-theme attribute and must change
   // theme tokens without introducing overflow.

@@ -96,7 +96,7 @@ export const CSS = `
   line-height: 20px;
   /* Match the shipped workspace section label: neutral, no plugin accent. */
   font-weight: 400;
-  color: var(--dsw-alias-label-tertiary, CanvasText);
+  color: var(--dsw-alias-label-secondary, CanvasText);
   white-space: nowrap;
 }
 .dsg-header-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -124,7 +124,8 @@ export const CSS = `
 }
 .dsg-status-action:hover { background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, CanvasText 10%, transparent)); color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-status-action:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, CanvasText); outline-offset: -2px; }
-.dsg-status-action[data-count="0"] { color: var(--dsw-alias-label-caption, color-mix(in srgb, CanvasText 55%, transparent)); }
+.dsg-status-action[data-count="0"] { color: var(--dsw-alias-label-secondary, color-mix(in srgb, CanvasText 75%, transparent)); }
+.dsg-status-action[data-count="0"] .dsg-status-action-count { color: var(--dsw-alias-label-caption, color-mix(in srgb, CanvasText 55%, transparent)); }
 .dsg-status-action-icon { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .dsg-status-action-count { min-width: 8px; font-size: var(--dsg-font-11, 11px); line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
 /* 264px sidebar: remove the intentional blank separator and compact the

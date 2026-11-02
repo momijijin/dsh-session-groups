@@ -57,7 +57,7 @@ test('header is a 36px official section row: neutral 自由分组 title and 28px
   assert.match(title, /line-height:\s*20px/)
   assert.match(title, /font-weight:\s*400/)
   // Align with the shipped workspace section label; no plugin accent.
-  assert.match(title, /color:\s*var\(--dsw-alias-label-tertiary/)
+  assert.match(title, /color:\s*var\(--dsw-alias-label-secondary/)
   assert.equal(components.includes('dsg-header-accent'), false)
   assert.equal(CSS.includes('.dsg-header-accent'), false)
 
