@@ -2,7 +2,7 @@
 
 - 版本：`0.3.0-beta.14`（0.3.0-beta 加固版）
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：单元/契约测试 334/334；本轮桌面回归由用户执行
+- 状态：单元/契约测试 335/335；本轮桌面回归由用户执行
 - 范围：自由分组、跨工作区会话、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、弹窗细滚动条
 - 发布包：`dsh-session-groups-0.3.0-beta.14.tgz`
 
@@ -44,7 +44,7 @@ npm pack
 
 预期：
 
-- `npm test`：334/334 PASS
+- `npm test`：335/335 PASS
 - 构建：`lib/client.js`
 - 包：`dsh-session-groups-0.3.0-beta.14.tgz`
 
@@ -151,7 +151,7 @@ npm run test:isolated
 
 发布前必须确认：
 
-- [ ] `npm test` 334/334
+- [ ] `npm test` 335/335
 - [ ] `npm run check:all`
 - [ ] `node --check lib/client.js`
 - [ ] `npm pack` 包含 README、LICENSE、CHANGELOG、locale
@@ -180,6 +180,7 @@ npm run test:isolated
 
 0.3.0-beta.14 用于验证首次引导、状态弹层可读性与发布工程。  
 用户桌面回归通过后再考虑 0.3.0 正式版和插件市场发布。
+
 
 
 

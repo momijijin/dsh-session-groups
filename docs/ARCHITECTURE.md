@@ -6,6 +6,7 @@
 
 ```text
 src/core/        纯函数核心：无 React、无 DSH、无 DOM、无存储
+src/shared/      共享领域内核：GroupDoc 模型、常量（host/client 都可依赖）
 src/adapters/    DSH 版本相关适配器：runtime 注入、locale、slot、storage
 src/client/      DSH 客户端 UI 与交互编排
 src/host/        DSH host 路由 / fence / store
@@ -15,6 +16,8 @@ src/index.js     Cordis host 入口
 ## 核心规则
 
 - `src/core/**` 只能依赖自身、`src/shared/**` 中的纯常量/模型，以及标准 JavaScript。
+- `src/shared/**` 是共享领域内核，必须保持纯函数、无 React/DSH/DOM/存储依赖；host 和 client 都允许依赖它。唯一平台能力是 `globalThis.crypto` 用于生成 UUID。
+- 目前不把 `src/shared/model.js` 物理迁入 `src/core`：它是 host/client 共同消费的稳定领域层，迁移只会制造 22 处 import churn，不增加隔离价值。边界测试直接覆盖 `src/shared`。
 - `src/core/**` 不允许 import：
   - `react` / `react-dom`
   - `@deepseek-ai/*`
@@ -72,6 +75,7 @@ src/index.js     Cordis host 入口
 ## 测试边界
 
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
+`tests/core/shared-boundary.test.js` 对共享领域内核施加同样的约束。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
 
 
