@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0-beta.6 (2026-11-02)
+
+- Locale JSON files are now the packaged source of truth; the client bundle imports them instead of duplicating a 500-line JS dictionary.
+- Locale host resolution, subscription and active-locale handling remain covered by the isolated A+ smoke.
+
 ## 0.3.0-beta.5 (2026-11-02)
 
 - Fixed the React #300 crash when collapsing the host sidebar: stable handler hooks now run before the rail/error early returns.
@@ -68,6 +73,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 
