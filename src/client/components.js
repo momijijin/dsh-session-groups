@@ -34,7 +34,7 @@ import {
   isSelectionDialog,
   moveGroupOptions,
   selectionIsValid,
-} from './dialog-selection.js'
+} from '../core/dialog-selection.js'
 import { createActions, formatActivity, workspaceChoices, workspaceLabel } from './actions.js'
 import { sessionViewEqual, statusMapEqual, workspaceViewEqual } from './session-equality.js'
 import {
@@ -66,7 +66,7 @@ import {
   diagTargetChange,
   diagTrace,
 } from './diagnostics.js'
-import { GROUP_DRAG_MIME, resolveGroupDrop } from './group-drag.js'
+import { GROUP_DRAG_MIME, resolveGroupDrop } from '../core/group-drag.js'
 import { ICON_GROUPS, renderGlyph, renderHeaderIcon, renderIcon } from './icons.js'
 import { clampMenuPosition, isMenuKey, menuAnchorFromEvent, menuAnchorFromRow } from './menu-position.js'
 import {

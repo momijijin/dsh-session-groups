@@ -45,26 +45,33 @@ src/index.js     Cordis host 入口
 - `src/core/virtual-list.js`
   - 虚拟列表窗口与 spacer 算术
   - `src/client/virtual-list.js` 只保留兼容 re-export
+- `src/core/group-drag.js`
+  - 分组拖拽目标解析与稳定 anchor
+  - `src/client/group-drag.js` 只保留兼容 re-export
+- `src/core/dialog-selection.js`
+  - 选择弹窗初始值、合法性与 Confirm payload
+  - `src/client/dialog-selection.js` 只保留兼容 re-export
 
 ## 当前适配器
 
 - `src/adapters/client-runtime.js`
   - `installClientRuntime` / `clientRuntime`
   - 由 `plugin.js` 注入，React 组件只读取这个薄桥
+- `src/client/dialog-geometry.js`
+  - 纯矩形数学与 localStorage 持久化仍在同一适配器模块；后续可把纯数学拆到 `src/core`
 
 ## 已有纯模块
 
 这些模块目前仍在原位置，但同样必须保持纯函数性质，后续可按同样方式迁入 `src/core`：
 
 - `src/shared/model.js`
-- `src/client/group-drag.js`
-- `src/client/dialog-selection.js`
 - `src/client/dialog-geometry.js`
 
 ## 测试边界
 
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
+
 
 
 

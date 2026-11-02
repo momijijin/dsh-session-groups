@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.13 (2026-11-02)
+
+- Moved group drop resolution and dialog selection policy into src/core; client paths remain compatibility re-exports.
+
 ## 0.3.0-beta.12 (2026-11-02)
 
 - Moved search index/reveal and virtual-list windowing into src/core; client modules remain compatibility re-exports.
@@ -98,6 +102,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

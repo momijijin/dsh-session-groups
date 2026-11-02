@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { GROUP_DRAG_MIME, resolveGroupDrop } from '../../src/client/group-drag.js'
+import { GROUP_DRAG_MIME, resolveGroupDrop } from '../../src/core/group-drag.js'
 import { assignSession, childrenOf, createGroup, emptyDoc, findGroup, moveGroup } from '../../src/shared/model.js'
 
 const idOf = (doc, name) => {

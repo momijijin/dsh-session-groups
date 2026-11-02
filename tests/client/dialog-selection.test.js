@@ -30,7 +30,7 @@ import {
   moveGroupOptions,
   selectionIsValid,
   SELECTION_DIALOG_KINDS,
-} from '../../src/client/dialog-selection.js'
+} from '../../src/core/dialog-selection.js'
 
 /** Root A -> child B; root C with one session; session s1 in A, s2 ungrouped. */
 const fixture = () => {
