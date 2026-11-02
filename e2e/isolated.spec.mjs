@@ -343,6 +343,40 @@ try {
     window.__dsgTestTransfer = null
   })
 
+  // Group header edge zones: top and bottom must produce the before/after
+  // placeholders and must not commit without a drop.
+  for (const edge of [
+    { ratio: 0.2, kind: 'group-before' },
+    { ratio: 0.8, kind: 'group-after' },
+  ]) {
+    await page.evaluate(({ sourceId, targetId, ratio }) => {
+      const source = document.querySelector(`[data-testid="session-groups-group"][data-group-id="${sourceId}"]`)
+      const target = document.querySelector(`[data-testid="session-groups-group"][data-group-id="${targetId}"]`)
+      if (!source || !target) throw new Error('edge drag rows missing')
+      const dt = new DataTransfer()
+      window.__dsgEdgeTransfer = dt
+      window.__dsgEdgeSource = source
+      source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }))
+      const rect = target.getBoundingClientRect()
+      target.dispatchEvent(new DragEvent('dragover', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: dt,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + Math.max(2, rect.height * ratio),
+      }))
+    }, { sourceId: dragRootId, targetId, ratio: edge.ratio })
+    await page.waitForTimeout(250)
+    const kind = await page.locator('[data-testid="session-groups-drop-indicator"]').getAttribute('data-drop-kind')
+    if (kind !== edge.kind) throw new Error(`edge ${edge.ratio} expected ${edge.kind}, got ${kind}`)
+    await page.evaluate(() => {
+      window.__dsgEdgeSource?.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: window.__dsgEdgeTransfer }))
+      window.__dsgEdgeSource = null
+      window.__dsgEdgeTransfer = null
+    })
+    await page.waitForTimeout(250)
+  }
+
   // Narrow sidebar visual gate: the sidebar must not create horizontal overflow.
   await page.evaluate(() => localStorage.setItem('dsh-session-groups.width.v1', '264'))
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -444,7 +478,7 @@ try {
   await page.waitForTimeout(800)
   await groupView.waitFor({ state: 'visible' })
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
@@ -453,6 +487,7 @@ try {
   await context.close().catch(() => {})
   await browser.close().catch(() => {})
 }
+
 
 
 
