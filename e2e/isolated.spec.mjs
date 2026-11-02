@@ -121,6 +121,38 @@ const closeGetStarted = async () => {
   return false
 }
 
+const groupRows = () => page.locator('[data-testid="session-groups-group"]')
+const groupRow = (name) => groupRows().filter({ hasText: name }).first()
+const groupRowById = (id) => page.locator(`[data-testid="session-groups-group"][data-group-id="${id}"]`)
+const menuItem = (pattern) => page.locator('[role="menuitem"]').filter({ hasText: pattern }).first()
+
+const createGroup = async (name) => {
+  await page.locator('[data-testid="session-groups-new-group"]').click()
+  await page.locator('[data-testid="session-groups-dialog-input"]').fill(name)
+  await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
+  const row = groupRow(name)
+  await row.waitFor({ state: 'visible' })
+  return await row.getAttribute('data-group-id')
+}
+
+const createChildGroup = async (parentId, name) => {
+  const parent = groupRowById(parentId)
+  await parent.locator('[data-testid="session-groups-group-menu"]').click({ force: true })
+  await menuItem(/新建子分组/).click()
+  await page.locator('[data-testid="session-groups-dialog-input"]').fill(name)
+  await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
+  await groupRow(name).waitFor({ state: 'visible' })
+}
+
+const moveGroup = async (sourceId, targetId) => {
+  const source = groupRowById(sourceId)
+  await source.locator('[data-testid="session-groups-group-menu"]').click({ force: true })
+  await menuItem(/移动到分组/).click()
+  await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
+  await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
+  await page.waitForTimeout(500)
+}
+
 try {
   await page.goto(url.toString(), { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3000)
@@ -170,7 +202,24 @@ try {
     throw new Error('background-jobs button must not exist')
   }
 
-  console.log('PASS: isolated onboarding and three status buttons')
+  // Move-to-group must land at the target parent head, above existing children.
+  await closeGetStarted()
+  const suffix = Date.now().toString(36).slice(-6)
+  const targetName = `Target ${suffix}`
+  const childName = `Child ${suffix}`
+  const sourceName = `Source ${suffix}`
+  const targetId = await createGroup(targetName)
+  await createChildGroup(targetId, childName)
+  const sourceId = await createGroup(sourceName)
+  await moveGroup(sourceId, targetId)
+  const ordered = await groupRows().evaluateAll((rows) => rows.map((row) => row.getAttribute('data-group-id')))
+  const targetAt = ordered.indexOf(targetId)
+  const sourceAt = ordered.indexOf(sourceId)
+  if (targetAt < 0 || sourceAt !== targetAt + 1) {
+    throw new Error(`moved group must be the first child of target, order=${JSON.stringify(ordered.slice(targetAt, targetAt + 3))}`)
+  }
+
+  console.log('PASS: isolated onboarding, three status buttons, move-group head insertion')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
