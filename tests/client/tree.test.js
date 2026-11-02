@@ -17,7 +17,7 @@ import {
   statusSectionsByGroup,
   sessionStatuses,
   siblingNeighbors,
-} from '../../src/client/tree.js'
+} from '../../src/core/tree.js'
 import { assignSession, createGroup, emptyDoc } from '../../src/shared/model.js'
 
 const nestedDoc = () => {

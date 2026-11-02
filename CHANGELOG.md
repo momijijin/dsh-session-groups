@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0-beta.10 (2026-11-02)
+
+- Moved tree/status aggregation into src/core/tree.js; src/client/tree.js is a compatibility re-export.
+- Tightened the core boundary scanner to ignore comments.
+
 ## 0.3.0-beta.9 (2026-11-02)
 
 - Moved drag-and-drop policy into src/core/drag.js; the client path remains a one-line compatibility re-export.
@@ -85,6 +90,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

@@ -108,7 +108,7 @@ import {
   statusSectionsByGroup,
   sessionStatuses,
   siblingNeighbors,
-} from './tree.js'
+} from '../core/tree.js'
 
 const h = createElement
 

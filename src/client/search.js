@@ -14,7 +14,7 @@
  */
 import { workspaceLabel, workspaceOfSession } from '../shared/model.js'
 import { sessionTitle } from './filter.js'
-import { groupAncestors, groupPath } from './tree.js'
+import { groupAncestors, groupPath } from '../core/tree.js'
 
 /** Collapsed-map sentinel for the "Ungrouped" container. */
 export const UNGROUPED_ID = '__ungrouped__'
