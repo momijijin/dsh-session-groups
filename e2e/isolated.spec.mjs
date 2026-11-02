@@ -9,7 +9,7 @@
  */
 import { chromium } from 'playwright'
 import { resolve } from 'node:path'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 
 const urlText = process.env.DSH_TEST_URL ?? ''
 const testHome = process.env.DSH_TEST_HOME ?? ''
@@ -153,6 +153,34 @@ const moveGroup = async (sourceId, targetId) => {
   await page.waitForTimeout(500)
 }
 
+const moveSessionToGroup = async (sessionId, targetId) => {
+  const session = page.locator(`[data-testid="session-groups-session"][data-session-id="${sessionId}"]`).first()
+  await session.locator('[data-testid="session-groups-session-menu"]').click({ force: true })
+  await menuItem(/移动到分组/).click()
+  await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
+  await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
+  await page.waitForTimeout(500)
+}
+
+const addSessionToGroup = async (groupId) => {
+  const addButton = groupRowById(groupId).locator('[data-testid="session-groups-group-add"]')
+  await addButton.click({ force: true })
+  await page.locator('[data-testid="session-groups-dialog"]').waitFor({ state: 'visible' })
+  const workspaceOption = page.locator('[data-testid="session-groups-dialog-workspace"]').first()
+  if ((await workspaceOption.count()) > 0) await workspaceOption.click({ force: true })
+  const confirm = page.locator('[data-testid="session-groups-dialog-confirm"]')
+  if (!(await confirm.isEnabled())) throw new Error('new-session dialog has no enabled workspace/confirm')
+  await confirm.click()
+  await page.waitForTimeout(1500)
+}
+
+const readTestDoc = () => JSON.parse(readFileSync(resolve(testHome, 'storages', 'dsh-session-groups.json'), 'utf8'))
+
+const groupSessionIds = (groupId) => {
+  const doc = readTestDoc()
+  return doc.groups.find((group) => group.id === groupId)?.sessionIds ?? []
+}
+
 try {
   await page.goto(url.toString(), { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3000)
@@ -219,7 +247,36 @@ try {
     throw new Error(`moved group must be the first child of target, order=${JSON.stringify(ordered.slice(targetAt, targetAt + 3))}`)
   }
 
-  console.log('PASS: isolated onboarding, three status buttons, move-group head insertion')
+  // Seed one session in the target and one in the source, then move the
+  // source's session through the dialog. Blank sessions are hidden from the
+  // tree, so verify the persisted order for the second one.
+  await addSessionToGroup(targetId)
+  const seededTargetIds = groupSessionIds(targetId)
+  if (seededTargetIds.length === 0) throw new Error('new session did not land in target group')
+  await addSessionToGroup(sourceId)
+  const sourceSessionIds = groupSessionIds(sourceId)
+  if (sourceSessionIds.length === 0) throw new Error('new session did not land in source group')
+  const moved = sourceSessionIds[0]
+  await moveSessionToGroup(moved, targetId)
+  const targetSessionIds = groupSessionIds(targetId)
+  if (targetSessionIds[0] !== moved || targetSessionIds[1] !== seededTargetIds[0]) {
+    throw new Error(`moved session must land at target head, got ${JSON.stringify(targetSessionIds)}`)
+  }
+
+  // Collapse and re-expand the target: the persisted head order must survive.
+  const targetRow = groupRowById(targetId)
+  await targetRow.click({ force: true })
+  await page.waitForTimeout(300)
+  if ((await targetRow.getAttribute('aria-expanded')) !== 'false') throw new Error('target group did not collapse')
+  await targetRow.click({ force: true })
+  await page.waitForTimeout(300)
+  if ((await targetRow.getAttribute('aria-expanded')) !== 'true') throw new Error('target group did not expand')
+  const afterToggle = groupSessionIds(targetId)
+  if (afterToggle[0] !== moved || afterToggle[1] !== seededTargetIds[0]) {
+    throw new Error(`moved session order changed after collapse/expand: ${JSON.stringify(afterToggle)}`)
+  }
+
+  console.log('PASS: isolated onboarding, status buttons, head insertion, collapse/expand')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
