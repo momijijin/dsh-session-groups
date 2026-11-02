@@ -1,0 +1,156 @@
+/**
+ * Pure AI-control protocol core.
+ *
+ * This module owns the stable operation vocabulary and GroupDoc transitions.
+ * It has no HTTP, DSH, React, storage, revision or audit concerns: the outer
+ * adapter is responsible for auth, opt-in gating, CAS, idempotency and logs.
+ *
+ * Operations are deliberately structural. There is no raw-document write:
+ * every mutation goes through the shared GroupDoc mutators and validateDoc.
+ */
+import {
+  assignSession,
+  cloneDoc,
+  createGroup,
+  deleteGroupTo,
+  groupColor,
+  groupColorHex,
+  moveGroup,
+  renameGroup,
+  setGroupColor,
+  setGroupColorHex,
+  setGroupIcon,
+  validateDoc,
+} from '../shared/model.js'
+
+export const CONTROL_PROTOCOL = 1
+export const MAX_CONTROL_OPERATIONS = 64
+
+const fail = (code, message, operationIndex, extra = {}) => ({
+  ok: false,
+  code,
+  message,
+  operationIndex,
+  ...extra,
+})
+
+/** Read-only state for an AI client; IDs are the stable API surface. */
+export const buildControlState = (doc, revision) => ({
+  protocol: CONTROL_PROTOCOL,
+  revision,
+  groups: doc.groups.map((group) => ({
+    id: group.id,
+    name: group.name,
+    parentId: group.parentId,
+    icon: group.icon,
+    color: groupColor(group),
+    ...(groupColorHex(group) ? { colorHex: groupColorHex(group) } : {}),
+    sessionIds: [...group.sessionIds],
+  })),
+  ungrouped: [...doc.ungrouped],
+})
+
+const applyOne = (doc, operation, allowDestructive) => {
+  const beforeIds = new Set(doc.groups.map((group) => group.id))
+  const op = operation?.op
+  switch (op) {
+    case 'group.create': {
+      const next = createGroup(doc, {
+        name: operation.name,
+        parentId: operation.parentId ?? null,
+        index: operation.index,
+        icon: operation.icon,
+        color: operation.color,
+        colorHex: operation.colorHex,
+      })
+      const created = next.groups.find((group) => !beforeIds.has(group.id))
+      return { doc: next, change: { op, groupId: created?.id ?? null } }
+    }
+    case 'group.rename':
+      return { doc: renameGroup(doc, operation.groupId, operation.name), change: { op, groupId: operation.groupId } }
+    case 'group.update': {
+      let next = doc
+      if (operation.icon !== undefined) next = setGroupIcon(next, operation.groupId, operation.icon)
+      if (operation.color !== undefined) next = setGroupColor(next, operation.groupId, operation.color)
+      if (operation.colorHex !== undefined) next = setGroupColorHex(next, operation.groupId, operation.colorHex)
+      if (next === doc) throw new Error('no-update-fields')
+      return { doc: next, change: { op, groupId: operation.groupId } }
+    }
+    case 'group.move':
+      return {
+        doc: moveGroup(doc, operation.groupId, operation.parentId ?? null, operation.index),
+        change: { op, groupId: operation.groupId },
+      }
+    case 'group.delete':
+      if (!allowDestructive) throw new Error('destructive-disabled')
+      return {
+        doc: deleteGroupTo(doc, operation.groupId, operation.destinationId ?? null),
+        change: { op, groupId: operation.groupId },
+      }
+    case 'session.assign':
+      return {
+        doc: assignSession(doc, operation.sessionId, operation.groupId ?? null, operation.index),
+        change: { op, sessionId: operation.sessionId },
+      }
+    default:
+      throw new Error('unknown-operation')
+  }
+}
+
+/**
+ * Plan/apply a list of structural operations. The returned doc is a candidate;
+ * the host adapter must still perform revision CAS and atomic persistence.
+ *
+ * @param {object} doc
+ * @param {Array<object>} operations
+ * @param {{allowDestructive?: boolean}} [options]
+ */
+export const applyControlOperations = (doc, operations, options = {}) => {
+  if (!Array.isArray(operations) || operations.length === 0) {
+    return fail('operations-required', 'operations must be a non-empty array', -1)
+  }
+  if (operations.length > MAX_CONTROL_OPERATIONS) {
+    return fail('too-many-operations', `at most ${String(MAX_CONTROL_OPERATIONS)} operations are allowed`, -1)
+  }
+  const allowDestructive = options.allowDestructive === true
+  let next = cloneDoc(doc)
+  const changes = []
+  for (let index = 0; index < operations.length; index += 1) {
+    try {
+      const result = applyOne(next, operations[index], allowDestructive)
+      next = result.doc
+      changes.push(result.change)
+    } catch (error) {
+      return fail('operation-failed', error instanceof Error ? error.message : String(error), index, {
+        changes,
+      })
+    }
+  }
+  try {
+    validateDoc(next)
+  } catch (error) {
+    return fail('invalid-result', error instanceof Error ? error.message : String(error), -1, { changes })
+  }
+  if (changes.length === 0) return fail('no-change', 'operations produced no change', -1)
+  return { ok: true, doc: next, changes }
+}
+
+/** Minimal state validation used by the adapter before planning. */
+export const validateControlDoc = (doc) => {
+  try {
+    validateDoc(doc)
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, code: 'invalid-doc', message: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+/** Option list for a future skill; kept in core so adapter/skill share one vocabulary. */
+export const CONTROL_OPERATIONS = Object.freeze([
+  'group.create',
+  'group.rename',
+  'group.update',
+  'group.move',
+  'group.delete',
+  'session.assign',
+])

@@ -71,6 +71,10 @@ src/index.js     Cordis host 入口
 - `src/core/menu-position.js`
   - 菜单 anchor/clamp 纯数学；viewport 由调用方注入
   - `src/client/menu-position.js` 只保留兼容 re-export
+- `src/core/control.js`
+  - AI 控制协议：state、结构化 operation、plan/apply 候选 doc
+  - 无 HTTP、无设置、无 revision/CAS、无审计；这些属于后续 host 适配器
+  - 删除操作必须显式 `allowDestructive`，无 raw-doc 写入
 - `src/core/color.js`
   - `groupColorCss` 自定义 hex 优先、palette token 回退
 
