@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0-beta.5 (2026-11-02)
+
+- Fixed the React #300 crash when collapsing the host sidebar: stable handler hooks now run before the rail/error early returns.
+- Fixed the undefined targetSessionId drag-over reference and localized drag labels.
+- Fixed host locale resolution by reading snapshot.active, using the host translator, and subscribing to locale changes.
+
 ## 0.3.0-beta.4 (2026-11-02)
 
 - Fixed 264px sidebar horizontal overflow by compacting the header status/action spacing at the existing data-narrow breakpoint.
@@ -62,5 +68,6 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 

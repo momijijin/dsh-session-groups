@@ -22,11 +22,13 @@ test('formatMessage substitutes {name} placeholders and falls back to keys', () 
   assert.equal(formatMessage(zh, 'group.sessionCount'), '{n} 个会话')
 })
 
-test('createTranslator follows the host locale snapshot', () => {
-  const english = createTranslator(() => ({ id: 'en-US' }))
+test('createTranslator follows the host locale snapshot active field', () => {
+  const english = createTranslator(() => ({ active: 'en-US' }))
   assert.equal(english('view.title'), 'Free groups')
-  const chinese = createTranslator(() => ({ id: 'zh-CN' }))
+  const chinese = createTranslator(() => ({ active: 'zh-CN' }))
   assert.equal(chinese('view.title'), '自由分组')
+  const legacy = createTranslator(() => ({ id: 'en' }))
+  assert.equal(legacy('view.title'), 'Free groups')
   const broken = createTranslator(() => {
     throw new Error('boom')
   })

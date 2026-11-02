@@ -292,6 +292,8 @@ export const createStore = ({ storage = safeStorage() } = {}) => {
         return publish({ ...snapshot, toast: payload.toast ?? null })
       case 'banner':
         return publish({ ...snapshot, banner: payload.banner ?? null })
+      case 'locale-changed':
+        return publish({ ...snapshot, localeRevision: (snapshot.localeRevision ?? 0) + 1 })
       default:
         return snapshot
     }

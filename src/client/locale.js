@@ -520,13 +520,15 @@ export const formatMessage = (dict, key, params = {}) => {
 }
 
 /**
- * Create a translator bound to a locale snapshot getter.
- * @param {() => ({ id?: string } | null | undefined)} [getLocaleSnapshot]
+ * Create a translator bound to a host locale snapshot getter.
+ * Host snapshots use `active`; `id` is kept for older compositions.
+ * @param {() => ({ active?: string, id?: string } | null | undefined)} [getLocaleSnapshot]
  */
 export const createTranslator = (getLocaleSnapshot) => (key, params) => {
   let localeId = 'zh'
   try {
-    localeId = getLocaleSnapshot?.()?.id ?? 'zh'
+    const snapshot = getLocaleSnapshot?.()
+    localeId = snapshot?.active ?? snapshot?.id ?? 'zh'
   } catch {
     localeId = 'zh'
   }

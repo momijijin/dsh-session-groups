@@ -70,6 +70,7 @@ export const createPlugin = () => {
   let workspaceToggle = null
   let widthRetryTimer = null
   let localeDisposer = null
+  let localeSubscriptionDisposer = null
   let perfDisposer = null
   let loadPromise = null
   let commitTail = Promise.resolve()
@@ -483,7 +484,12 @@ export const createPlugin = () => {
         return null
       }
     }
-    t = createTranslator(getLocaleSnapshot)
+    // The host translator owns the active-locale fallback chain. Keep the local
+    // translator only as a feature-detection fallback for older compositions.
+    t =
+      typeof localeService?.bind === 'function'
+        ? localeService.bind(LOCALE_NS)
+        : createTranslator(getLocaleSnapshot)
     queue = createOptimisticQueue({
       store,
       commit: (doc, revision) => api.commit(doc, revision),
@@ -497,6 +503,14 @@ export const createPlugin = () => {
     try {
       const disposer = localeService?.register?.(LOCALE_NS, { zh: dictionaries.zh, en: dictionaries.en })
       if (typeof disposer === 'function') localeDisposer = disposer
+      const unsubscribe = localeService?.subscribe?.(() => {
+        try {
+          store?.dispatch('locale-changed')
+        } catch {
+          /* locale refresh must not break the view */
+        }
+      })
+      if (typeof unsubscribe === 'function') localeSubscriptionDisposer = unsubscribe
     } catch {
       /* locale service optional */
     }
@@ -585,6 +599,8 @@ export const createPlugin = () => {
         clearManagedWidth()
         if (typeof localeDisposer === 'function') localeDisposer()
         localeDisposer = null
+        if (typeof localeSubscriptionDisposer === 'function') localeSubscriptionDisposer()
+        localeSubscriptionDisposer = null
         if (typeof perfDisposer === 'function') perfDisposer()
         perfDisposer = null
         if (typeof styleDisposer === 'function') styleDisposer()

@@ -1,10 +1,10 @@
-# 0.3.0-beta.4 发布与安装说明
+# 0.3.0-beta.5 发布与安装说明
 
-- 版本：`0.3.0-beta.4`（0.3.0-beta 加固版）
+- 版本：`0.3.0-beta.5`（0.3.0-beta 加固版）
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 - 状态：单元/契约测试 325/325；本轮桌面回归由用户执行
 - 范围：自由分组、跨工作区会话、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、弹窗细滚动条
-- 发布包：`dsh-session-groups-0.3.0-beta.4.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.5.tgz`
 
 ## 1. 本轮变化
 
@@ -46,11 +46,11 @@ npm pack
 
 - `npm test`：325/325 PASS
 - 构建：`lib/client.js`
-- 包：`dsh-session-groups-0.3.0-beta.4.tgz`
+- 包：`dsh-session-groups-0.3.0-beta.5.tgz`
 
 ### 发布包信息
 
-- 文件：`dsh-session-groups-0.3.0-beta.4.tgz`
+- 文件：`dsh-session-groups-0.3.0-beta.5.tgz`
 - 大小与 SHA256：以最终 `npm pack` 输出和桌面安装记录为准（不写进包内文档，避免自引用）
 
 ## 3. 安装
@@ -64,7 +64,7 @@ npm pack
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.4.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.5.tgz"
 ```
 
 安装前备份：
@@ -109,7 +109,7 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.4.tgz"
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.5.tgz"
 ```
 
 - 使用 `%TEMP%` 下的独立 `DSH_HOME`，不会读写真实 `~/.dsh`
@@ -120,7 +120,7 @@ pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\lifecycle-isolated.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.4.tgz" `
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.5.tgz" `
   -Port 4417
 ```
 
@@ -134,7 +134,7 @@ pwsh -NoProfile -File .\scripts\qa\lifecycle-isolated.ps1 `
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\start-isolated-web.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.4.tgz" `
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.5.tgz" `
   -Port 4416
 
 $env:DSH_TEST_URL = "<web.json 中的 url>"
@@ -144,7 +144,7 @@ npm run test:isolated
 
 - 只访问独立端口和独立 `DSH_HOME`
 - 测试脚本拒绝真实 43120 和真实 `~/.dsh`
-- 当前冒烟覆盖首次引导、三状态按钮、移动到分组 head、收起/展开顺序
+- 当前冒烟覆盖首次引导、三状态按钮、移动到分组 head、收起/展开顺序、264px、英文、深色、宿主侧栏 Rail
 - 不连接真实 DSH 窗口
 
 ## 6. 验证清单
@@ -164,6 +164,7 @@ npm run test:isolated
 - [ ] `debugProbe` 关闭时 `/dsh-session-groups/debug` 返回 404
 - [ ] 分组数据、归档、搜索、拖拽回归
 - [ ] 窄侧栏 264px / 深浅色 / 中英文
+- [ ] 宿主 sidebar 收起进入 Rail，展开后分组视图恢复且无 React 错误
 
 ## 7. 已知限制
 
@@ -173,12 +174,13 @@ npm run test:isolated
 - 搜索最多 20 条
 - 宽度覆盖依赖宿主侧栏 DOM，失败时 fail-soft
 - 对话框拖动/缩放没有键盘操作
-- 0.3.0-beta.4 尚未记录完整 E2E 结果；以单元/契约测试 + 用户桌面回归为准
+- 0.3.0-beta.5 尚未记录完整 E2E 结果；以单元/契约测试 + 用户桌面回归为准
 
 ## 8. 后续
 
-0.3.0-beta.4 用于验证首次引导、状态弹层可读性与发布工程。  
+0.3.0-beta.5 用于验证首次引导、状态弹层可读性与发布工程。  
 用户桌面回归通过后再考虑 0.3.0 正式版和插件市场发布。
+
 
 
 

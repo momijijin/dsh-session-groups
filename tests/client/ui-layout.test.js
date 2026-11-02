@@ -198,7 +198,7 @@ test('0.2.54 ungrouped body drop is position-aware and does not bubble invalid r
   assert.match(components, /onDragOverUngroupedBody/)
   assert.match(components, /onDropUngroupedBody/)
   assert.match(components, /ungroupedBodyTarget/)
-  assert.match(components, /targetSessionId !== sessionId/)
+  assert.match(components, /sessionId !== drag\.sessionId/)
   assert.match(components, /event\.stopPropagation\(\)/)
 })
 
@@ -714,7 +714,9 @@ test('0.2.22 group-body gaps do not become group-head drop targets', () => {
 
 test('0.2.20 session rows are memoized behind a stable handler facade', () => {
   assert.match(components, /const SessionRow = memo\(SessionRowImpl, sessionRowPropsEqual\)/)
-  assert.match(components, /const stableHandlers = useMemo\(\(\) => \{/)
+  assert.match(components, /const stableHandlers = useMemo\(/)
+  assert.match(components, /new Proxy\(/)
+  assert.match(components, /handlersRef\.current\?\.\[property\]/)
   assert.match(components, /handlers: stableHandlers, sessionsById: byId/)
   assert.match(components, /handlers: stableHandlers, virtualRef/)
 })

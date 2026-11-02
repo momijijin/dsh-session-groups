@@ -56,7 +56,11 @@ const browser = await chromium.launch({
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
 const page = await context.newPage()
 page.setDefaultTimeout(12_000)
-page.on('pageerror', (error) => console.error(`PAGE_ERROR: ${error.message}`))
+const pageErrors = []
+page.on('pageerror', (error) => {
+  pageErrors.push(error.message)
+  console.error(`PAGE_ERROR: ${error.message}`)
+})
 page.on('console', (msg) => {
   if (msg.type() === 'error') console.error(`PAGE_CONSOLE: ${msg.text()}`)
 })
@@ -138,7 +142,7 @@ const createGroup = async (name) => {
 const createChildGroup = async (parentId, name) => {
   const parent = groupRowById(parentId)
   await parent.locator('[data-testid="session-groups-group-menu"]').click({ force: true })
-  await menuItem(/新建子分组/).click()
+  await menuItem(/新建子分组|New subgroup/).click()
   await page.locator('[data-testid="session-groups-dialog-input"]').fill(name)
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
   await groupRow(name).waitFor({ state: 'visible' })
@@ -147,7 +151,7 @@ const createChildGroup = async (parentId, name) => {
 const moveGroup = async (sourceId, targetId) => {
   const source = groupRowById(sourceId)
   await source.locator('[data-testid="session-groups-group-menu"]').click({ force: true })
-  await menuItem(/移动到分组/).click()
+  await menuItem(/移动到分组|Move to group/).click()
   await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
   await page.waitForTimeout(500)
@@ -156,7 +160,7 @@ const moveGroup = async (sourceId, targetId) => {
 const moveSessionToGroup = async (sessionId, targetId) => {
   const session = page.locator(`[data-testid="session-groups-session"][data-session-id="${sessionId}"]`).first()
   await session.locator('[data-testid="session-groups-session-menu"]').click({ force: true })
-  await menuItem(/移动到分组/).click()
+  await menuItem(/移动到分组|Move to group/).click()
   await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
   await page.waitForTimeout(500)
@@ -308,7 +312,7 @@ try {
   const lang = await page.evaluate(() => document.documentElement.lang)
   if (!/^en/i.test(lang)) throw new Error(`isolated host expected English locale, got ${lang}`)
   const headerLabel = (await page.locator('.dsg-header-label').first().textContent()) ?? ''
-  if (!/Free groups|自由分组/.test(headerLabel)) throw new Error(`unexpected header label: ${headerLabel}`)
+  if (headerLabel !== 'Free groups') throw new Error(`plugin did not follow the English host locale: ${headerLabel}`)
   const lightToken = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--dsw-alias-bg-base').trim())
   await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', ''))
   await page.waitForTimeout(300)
@@ -321,7 +325,25 @@ try {
   if (dark.rootScrollWidth > dark.rootClientWidth + 1) throw new Error('dark narrow layout overflows')
   await page.screenshot({ path: `${testHome}/dark-264.png` })
 
-  console.log('PASS: isolated onboarding, status buttons, head insertion, collapse/expand, 264px, dark')
+  // Host sidebar collapse must switch to the rail without a React hook-order
+  // crash, then restore the groups view on expand.
+  const collapse = page.locator('button[aria-label="Collapse sidebar"]').first()
+  if ((await collapse.count()) !== 1) throw new Error('host sidebar collapse button missing')
+  await page.evaluate(() => document.querySelector('button[aria-label="Collapse sidebar"]')?.click())
+  await page.waitForTimeout(800)
+  const collapsedBody = await page.locator('body').innerText()
+  if (/分组视图出错|The groups view failed|render error/i.test(collapsedBody)) {
+    throw new Error('sidebar collapse triggered the groups render error')
+  }
+  if (pageErrors.some((message) => /React error #300|targetSessionId|hook/i.test(message))) {
+    throw new Error(`sidebar collapse emitted a React error: ${pageErrors.join(' | ')}`)
+  }
+  const expand = page.locator('[data-testid="session-groups-rail-expand"]').first()
+  if ((await expand.count()) > 0) await page.evaluate(() => document.querySelector('[data-testid="session-groups-rail-expand"]')?.click())
+  await page.waitForTimeout(800)
+  await groupView.waitFor({ state: 'visible' })
+
+  console.log('PASS: isolated onboarding, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)

@@ -2735,6 +2735,21 @@ export const GroupsView = (props) => {
   perfRender('GroupsView')
   diagRender('GroupsView')
 
+  // Hook order must stay stable when the host switches wide -> rail. The
+  // handlers object is built later (and is skipped by rail/error early returns),
+  // so keep a stable proxy before every conditional return.
+  const handlersRef = useRef(null)
+  const stableHandlers = useMemo(
+    () =>
+      new Proxy(
+        {},
+        {
+          get: (_target, property) => (...args) => handlersRef.current?.[property]?.(...args),
+        }
+      ),
+    []
+  )
+
   // Framework standard hooks: always called (rules of hooks), feature-detected.
   const sessions = typeof props?.useSessions === 'function' ? props.useSessions((snapshot) => snapshot, sessionViewEqual) : null
   const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot, workspaceViewEqual) : null
@@ -3590,7 +3605,7 @@ export const GroupsView = (props) => {
         // to the top of the ungrouped list and made the placeholder oscillate.
         event.preventDefault()
         event.stopPropagation()
-        if (targetSessionId !== sessionId) {
+        if (sessionId !== drag.sessionId) {
           setDropTargetTracked(null)
         }
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
@@ -3836,15 +3851,7 @@ export const GroupsView = (props) => {
 
   // 0.2.20: stable handler facade for memoized rows. Every call reads the
   // latest render's closure, so memoization cannot dispatch stale drag/doc data.
-  const handlersRef = useRef(handlers)
   handlersRef.current = handlers
-  const stableHandlers = useMemo(() => {
-    const proxy = {}
-    for (const handlerName of Object.keys(handlersRef.current)) {
-      proxy[handlerName] = (...args) => handlersRef.current[handlerName]?.(...args)
-    }
-    return proxy
-  }, [])
 
   return h(
     'div',
