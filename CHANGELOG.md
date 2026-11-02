@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0-beta.3 (2026-11-02)
+
+- Dialog move-to-group now inserts sessions and groups at the target parent head instead of the tail; this keeps moved items visible above the session watermark.
+- Added model and wiring regressions for the head insertion behavior.
+- Added the A+ isolated web + Playwright smoke path; it refuses the real DSH home/port.
+- Test suite: 325/325.
+
 ## 0.3.0-beta.2 (2026-11-02)
 
 Hardening beta.
@@ -49,3 +56,4 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+

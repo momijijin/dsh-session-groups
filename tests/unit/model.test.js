@@ -9,6 +9,7 @@ import {
   deleteGroup,
   deleteGroupTo,
   emptyDoc,
+  findGroup,
   groupColor,
   groupColorHex,
   groupColorValue,
@@ -164,6 +165,21 @@ test('moveGroup reorders siblings and keeps the subtree', () => {
   doc = moveGroup(doc, a.id, null, 1)
   assert.deepEqual(childrenOf(doc, null).map((g) => g.name), ['B', 'A'])
   assert.equal(childrenOf(doc, doc.groups.find((g) => g.name === 'A').id).length, 1)
+})
+
+test('dialog move semantics insert a session and group at the target head', () => {
+  let doc = createGroup(emptyDoc(), { name: 'Target' })
+  const target = doc.groups[0].id
+  doc = createGroup(doc, { name: 'Source' })
+  const source = doc.groups[1].id
+  doc = createGroup(doc, { name: 'TargetChildA', parentId: target })
+  doc = createGroup(doc, { name: 'TargetChildB', parentId: target })
+  doc = assignSession(doc, 'old', target)
+  doc = assignSession(doc, 'moved', null)
+  doc = assignSession(doc, 'moved', target, 0)
+  assert.deepEqual(findGroup(doc, target).sessionIds, ['moved', 'old'])
+  doc = moveGroup(doc, source, target, 0)
+  assert.deepEqual(childrenOf(doc, target).map((g) => g.name), ['Source', 'TargetChildA', 'TargetChildB'])
 })
 
 test('moveGroup rejects cycles and depth overflow', () => {

@@ -412,13 +412,16 @@ export const createPlugin = () => {
           return
         }
         case 'move-session': {
-          await actions.moveSession(dialog.sessionId, payload.groupId ?? null, undefined)
+          // Dialog moves are discoverability actions: put the session at the
+          // target group's session head so the watermark cannot hide it.
+          await actions.moveSession(dialog.sessionId, payload.groupId ?? null, 0)
           closeDialog()
           notify({ kind: 'success', message: t('toast.moved') })
           return
         }
         case 'move-group': {
-          await commitDocFromAction((latest) => moveGroup(latest, dialog.groupId, payload.groupId ?? null, undefined))
+          // Same rule for groups: the moved group becomes the first child.
+          await commitDocFromAction((latest) => moveGroup(latest, dialog.groupId, payload.groupId ?? null, 0))
           return
         }
         case 'new-session': {

@@ -1,10 +1,10 @@
-# 0.3.0-beta.2 发布与安装说明
+# 0.3.0-beta.3 发布与安装说明
 
-- 版本：`0.3.0-beta.2`（0.3.0-beta 加固版）
+- 版本：`0.3.0-beta.3`（0.3.0-beta 加固版）
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：单元/契约测试 323/323；本轮桌面回归由用户执行
+- 状态：单元/契约测试 325/325；本轮桌面回归由用户执行
 - 范围：自由分组、跨工作区会话、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、弹窗细滚动条
-- 发布包：`dsh-session-groups-0.3.0-beta.2.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.3.tgz`
 
 ## 1. 本轮变化
 
@@ -44,13 +44,13 @@ npm pack
 
 预期：
 
-- `npm test`：322/322 PASS
+- `npm test`：325/325 PASS
 - 构建：`lib/client.js`
-- 包：`dsh-session-groups-0.3.0-beta.2.tgz`
+- 包：`dsh-session-groups-0.3.0-beta.3.tgz`
 
 ### 发布包信息
 
-- 文件：`dsh-session-groups-0.3.0-beta.2.tgz`
+- 文件：`dsh-session-groups-0.3.0-beta.3.tgz`
 - 大小与 SHA256：以最终 `npm pack` 输出和桌面安装记录为准（不写进包内文档，避免自引用）
 
 ## 3. 安装
@@ -64,7 +64,7 @@ npm pack
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.2.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.3.tgz"
 ```
 
 安装前备份：
@@ -109,18 +109,35 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.2.tgz"
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.3.tgz"
 ```
 
 - 使用 `%TEMP%` 下的独立 `DSH_HOME`，不会读写真实 `~/.dsh`
 - 自动拒绝指向真实 `.dsh` 的路径
 - 不删除任何文件；测试结束后按输出的 `TEST_HOME` 手工清理
 
+### A+ 隔离 Playwright 冒烟
+
+```powershell
+pwsh -NoProfile -File .\scripts\qa\start-isolated-web.ps1 `
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.3.tgz" `
+  -Port 4416
+
+$env:DSH_TEST_URL = "<web.json 中的 url>"
+$env:DSH_TEST_HOME = "<web.json 中的 testHome>"
+npm run test:isolated
+```
+
+- 只访问独立端口和独立 `DSH_HOME`
+- 测试脚本拒绝真实 43120 和真实 `~/.dsh`
+- 当前冒烟覆盖首次引导、三状态按钮、无后台任务按钮
+- 不连接真实 DSH 窗口
+
 ## 6. 验证清单
 
 发布前必须确认：
 
-- [ ] `npm test` 323/323
+- [ ] `npm test` 325/325
 - [ ] `npm run check:all`
 - [ ] `node --check lib/client.js`
 - [ ] `npm pack` 包含 README、LICENSE、CHANGELOG、locale
@@ -142,10 +159,12 @@ pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
 - 搜索最多 20 条
 - 宽度覆盖依赖宿主侧栏 DOM，失败时 fail-soft
 - 对话框拖动/缩放没有键盘操作
-- 0.3.0-beta.2 尚未记录完整 E2E 结果；以单元/契约测试 + 用户桌面回归为准
+- 0.3.0-beta.3 尚未记录完整 E2E 结果；以单元/契约测试 + 用户桌面回归为准
 
 ## 8. 后续
 
-0.3.0-beta.2 用于验证首次引导、状态弹层可读性与发布工程。  
+0.3.0-beta.3 用于验证首次引导、状态弹层可读性与发布工程。  
 用户桌面回归通过后再考虑 0.3.0 正式版和插件市场发布。
+
+
 

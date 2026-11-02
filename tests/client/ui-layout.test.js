@@ -683,6 +683,12 @@ test('0.2.14 dialog options use roomy padding and standard depth indent', () => 
   assert.match(CSS, /\.dsg-color-option \{[^}]*height:\s*36px/s)
 })
 
+test('0.3.0-beta.3 move dialogs insert at the target group head', () => {
+  const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
+  assert.match(plugin, /actions\.moveSession\(dialog\.sessionId, payload\.groupId \?\? null, 0\)/)
+  assert.match(plugin, /moveGroup\(latest, dialog\.groupId, payload\.groupId \?\? null, 0\)/)
+})
+
 test('0.3.0-beta.2 drag floating labels are localized', () => {
   assert.match(components, /t\('drag\.sessionIntoGroup'/)
   assert.match(components, /t\('drag\.sessionOut'\)/)

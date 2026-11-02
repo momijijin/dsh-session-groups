@@ -172,7 +172,7 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t }) => 
     }
   }
 
-  /** Move a session to a group (append) or out of all groups. */
+  /** Move a session to a group at an index (omit index = append) or out of all groups. */
   const moveSession = async (sessionId, groupId, index) => {
     const doc = getDoc()
     if (groupId !== null && !findGroup(doc, groupId)) throw new Error('group-not-found')
