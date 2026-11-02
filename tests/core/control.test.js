@@ -77,6 +77,8 @@ test('control creates, renames, updates, moves and assigns without mutating inpu
   assert.equal(result.ok, true)
   assert.equal(JSON.stringify(doc), before)
   assert.equal(result.doc.groups.some((group) => group.name === 'C'), true)
+  assert.equal(result.changes[0].created, true)
+  assert.equal('groupId' in result.changes[0], false)
   const updated = findGroup(result.doc, b)
   assert.equal(updated.name, 'B2')
   assert.equal(updated.icon, 'star')

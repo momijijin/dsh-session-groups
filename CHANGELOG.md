@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.21 (2026-11-02)
+
+- Harden the plan/apply contract: group.create plan changes no longer expose a random id that apply would regenerate; callers read state after apply.
+
 ## 0.3.0-beta.20 (2026-11-02)
 
 - Add strict root-to-leaf path resolution for AI control, reject control characters in group names, return 404/409/422 for missing/ambiguous/malformed paths, and keep writes ID-only.
@@ -131,6 +135,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

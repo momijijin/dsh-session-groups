@@ -56,7 +56,9 @@ silently.
 }
 ```
 
-4. Run `plan <file>` and inspect `changes` and `planHash`.
+4. Run `plan <file>` and inspect `changes` and `planHash`. A `group.create`
+   change deliberately has no `groupId`: the id is generated only on apply.
+   Read `state` after apply to get the new id.
 5. Run `apply <file>` with the plan hash:
 
 ```json

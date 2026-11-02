@@ -222,7 +222,6 @@ export const resolveGroupPath = (doc, path) => {
 }
 
 const applyOne = (doc, operation, allowDestructive) => {
-  const beforeIds = new Set(doc.groups.map((group) => group.id))
   const op = operation?.op
   switch (op) {
     case 'group.create': {
@@ -234,8 +233,9 @@ const applyOne = (doc, operation, allowDestructive) => {
         color: operation.color,
         colorHex: operation.colorHex,
       })
-      const created = next.groups.find((group) => !beforeIds.has(group.id))
-      return { doc: next, change: { op, groupId: created?.id ?? null } }
+      // A plan and its later apply run the create independently, so a generated
+      // id is not stable across the two calls. Do not expose it as if it were.
+      return { doc: next, change: { op, created: true } }
     }
     case 'group.rename':
       return { doc: renameGroup(doc, operation.groupId, operation.name), change: { op, groupId: operation.groupId } }

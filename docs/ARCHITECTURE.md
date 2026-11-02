@@ -71,10 +71,13 @@ src/index.js     Cordis host 入口
 - `src/core/menu-position.js`
   - 菜单 anchor/clamp 纯数学；viewport 由调用方注入
   - `src/client/menu-position.js` 只保留兼容 re-export
-- `src/core/control.js`\n  - `resolveGroupPath`：完整根路径 → 唯一 ID；不存在/同名歧义/控制字符均结构化失败
+- `src/core/control.js`
+  - `resolveGroupPath`：完整根路径 → 唯一 ID；不存在/同名歧义/控制字符均结构化失败
   - AI 控制协议：state、结构化 operation、plan/apply 候选 doc
   - 无 HTTP、无设置、无 revision/CAS、无审计；这些在 `src/host/routes.js` 与 `src/index.js`
-  - 删除操作必须显式 `allowDestructive`，无 raw-doc 写入`n  - 严格 operation schema：未知字段、错误类型、负数/非整数 index 一律 422，不做静默降级
+  - 删除操作必须显式 `allowDestructive`，无 raw-doc 写入
+  - 严格 operation schema：未知字段、错误类型、负数/非整数 index 一律 422，不做静默降级
+  - `group.create` 的 plan 不返回随机 ID；apply 后通过 state 读取
 - `src/core/color.js`
   - `groupColorCss` 自定义 hex 优先、palette token 回退
 
@@ -106,6 +109,7 @@ src/index.js     Cordis host 入口
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
 `tests/core/shared-boundary.test.js` 对共享领域内核施加同样的约束。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
+
 
 
 
