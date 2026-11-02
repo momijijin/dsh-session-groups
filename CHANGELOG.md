@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0-beta.25 (2026-11-02)
+
+- Load the plugin-manager client package so the Plugins-page skill repair slot can register; auto-install the managed skill on controlApi enable.
+
+## 0.3.0-beta.24 (2026-11-02)
+
+- Auto-install the managed control skill into <DSH_HOME>/skills when controlApi is enabled; add a fenced repair route and Plugins-page repair/verify button with managed-file safety.
+
 ## 0.3.0-beta.23 (2026-11-02)
 
 - Fix host sidebar collapse: detect data-sidebar-collapsed, release the managed width override, suppress retries while in rail mode, and assert the rail is <=64px in A+.
@@ -143,6 +151,8 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
+
 
 
 

@@ -1,7 +1,9 @@
 ---
 name: session-groups-control
-description: Read and safely change the DSH free-groups sidebar through the opt-in session-groups control API. Use when the user asks to create, rename, move, color, delete groups, or assign sessions to groups without clicking the sidebar.
+description: Read and safely change the DSH free-groups sidebar or a session's title/archive state. Use when the user asks to create, rename, move, color, delete groups, assign sessions to groups, rename a session, or archive/restore it without clicking the sidebar.
 ---
+
+<!-- managed-by: dsh-session-groups -->
 
 # session-groups-control
 

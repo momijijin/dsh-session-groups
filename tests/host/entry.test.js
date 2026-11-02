@@ -33,7 +33,7 @@ test('0.2.18 exposes a plugin-manager Config with diagnostics and debug probe of
   assert.equal(Config.dict.debugProbe.meta.default, false)
 })
 
-test('apply() returns void synchronously and mounts the three routes inside ctx.effect', async (t) => {
+test('apply() returns void synchronously and mounts the host routes inside ctx.effect', async (t) => {
   const temp = await makeTempStore()
   t.after(temp.cleanup)
   const { ctx, routes, logs } = makeContext()
@@ -47,7 +47,7 @@ test('apply() returns void synchronously and mounts the three routes inside ctx.
 
   // Cordis 4.0.5 treats the return value as the plugin effect list.
   assert.equal(returned, undefined)
-  assert.equal(routes.length, 3)
+  assert.equal(routes.length, 4)
   assert.equal(ready.filePath, temp.filePath)
   assert.equal(ready.diagnosticsFilePath, join(temp.storages, 'dsh-session-groups.diagnostics.ndjson'))
   assert.equal(ready.debugFilePath, join(temp.storages, 'dsh-session-groups.debug.ndjson'))

@@ -240,5 +240,12 @@
   "blocked.empty": "No sessions are waiting for you",
   "unread.open": "View unread sessions",
   "unread.aria": "Unread sessions, {n}",
-  "unread.empty": "No unread sessions"
+  "unread.empty": "No unread sessions",
+  "skill.repairTitle": "AI control skill",
+  "skill.repairBody": "Verify or reinstall the local session-groups-control skill when the installed copy is missing or damaged.",
+  "skill.repairButton": "Verify / reinstall skill",
+  "skill.repairRunning": "Checking…",
+  "skill.repairOk": "Skill is ready",
+  "skill.repairFailed": "Skill repair failed"
 }
+

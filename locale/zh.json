@@ -240,5 +240,12 @@
   "blocked.empty": "没有等待用户介入的会话",
   "unread.open": "查看未读会话",
   "unread.aria": "未读会话，{n} 个",
-  "unread.empty": "没有未读会话"
+  "unread.empty": "没有未读会话",
+  "skill.repairTitle": "AI 控制技能",
+  "skill.repairBody": "校验或重新安装本地 session-groups-control skill，修复被删除或损坏的技能文件。",
+  "skill.repairButton": "校验 / 重装技能",
+  "skill.repairRunning": "正在检查…",
+  "skill.repairOk": "技能已可用",
+  "skill.repairFailed": "技能修复失败"
 }
+

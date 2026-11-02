@@ -20,6 +20,7 @@ import { DOC_VERSION } from '../shared/constants.js'
 import { normalizeColor, normalizeColorHex, validateDoc } from '../shared/model.js'
 import { applyControlOperations, buildControlState, CONTROL_PROTOCOL, resolveGroupPath } from '../core/control.js'
 import { hasControlChars } from '../shared/model.js'
+import { repairManagedSkill } from './skill-install.js'
 import {
   COMMIT_PATH,
   CONTROL_APPLY_PATH,
@@ -37,6 +38,7 @@ import {
   MAX_DIAGNOSTICS_BODY_BYTES,
   MAX_DIAGNOSTICS_EVENTS,
   MAX_DIAGNOSTICS_FILE_BYTES,
+  SKILL_REPAIR_PATH,
 } from './constants.js'
 import { fenceRequest, probeConnection } from './fence.js'
 import { logInfo, logWarn } from './log.js'
@@ -240,6 +242,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
   const controlApiEnabled = options.controlApiEnabled === true
   const controlDestructiveEnabled = options.controlDestructiveEnabled === true
   const controlSessionsEnabled = options.controlSessionsEnabled === true
+  const skillDshHome = typeof options.skillDshHome === 'string' && options.skillDshHome.length > 0 ? options.skillDshHome : null
   const getService = (name) => {
     try {
       return ctx.get?.(name) ?? null
@@ -555,6 +558,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
   let sessionInspectPath = null
   let sessionRenamePath = null
   let sessionArchivePath = null
+  let skillRepairPath = null
   if (controlApiEnabled) {
     const idempotency = new Map()
     const remember = (key, value) => {
@@ -1051,6 +1055,38 @@ export const registerRoutes = (ctx, store, options = {}) => {
     )
   }
 
+  if (skillDshHome !== null) {
+    skillRepairPath = register(
+      SKILL_REPAIR_PATH,
+      async (req, res) => {
+        if (fenceDenied(req, res)) return
+        if (req.method !== 'POST') {
+          sendMethodNotAllowed(res, 'POST')
+          return
+        }
+        if (!controlApiEnabled) {
+          sendJson(res, 409, {
+            ok: false,
+            code: 'control-api-disabled',
+            message: 'enable controlApi before installing or repairing the control skill',
+          })
+          return
+        }
+        try {
+          const result = repairManagedSkill({ dshHome: skillDshHome, force: true })
+          sendJson(res, 200, result)
+        } catch (error) {
+          sendJson(res, 503, {
+            ok: false,
+            code: 'skill-install-failed',
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
+      },
+      `dsh-session-groups: POST ${SKILL_REPAIR_PATH}`,
+    )
+  }
+
   return {
     registered: true,
     routes: [
@@ -1060,6 +1096,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
       ...(debugPath === null ? [] : [debugPath]),
       ...(controlStatePath === null ? [] : [controlStatePath, controlResolvePath, controlPlanPath, controlApplyPath]),
       ...(sessionInspectPath === null ? [] : [sessionInspectPath, sessionRenamePath, sessionArchivePath]),
+      ...(skillRepairPath === null ? [] : [skillRepairPath]),
     ],
   }
 }

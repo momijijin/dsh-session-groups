@@ -24,6 +24,7 @@ export const CONTROL_APPLY_PATH = `${BASE_PATH}/control/apply`
 export const CONTROL_SESSION_INSPECT_PATH = `${BASE_PATH}/control/session/inspect`
 export const CONTROL_SESSION_RENAME_PATH = `${BASE_PATH}/control/session/rename`
 export const CONTROL_SESSION_ARCHIVE_PATH = `${BASE_PATH}/control/session/archive`
+export const SKILL_REPAIR_PATH = `${BASE_PATH}/skill/repair`
 export const MAX_CONTROL_BODY_BYTES = 256 * 1024
 export const CONTROL_TOKEN_FILE_NAME = 'dsh-session-groups.control-token'
 

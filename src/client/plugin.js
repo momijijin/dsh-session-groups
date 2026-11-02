@@ -26,6 +26,7 @@ import {
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
 import { installClientRuntime } from '../adapters/client-runtime.js'
 import { GroupsViewBoundary } from './components.js'
+import { SkillRepairCard } from './skill-repair.js'
 import {
   applyManagedWidth,
   clearManagedWidth,
@@ -73,6 +74,7 @@ export const createPlugin = () => {
   let widthRetryTimer = null
   let localeDisposer = null
   let localeSubscriptionDisposer = null
+  let configSlotDisposer = null
   let perfDisposer = null
   let loadPromise = null
   let commitTail = Promise.resolve()
@@ -504,6 +506,18 @@ export const createPlugin = () => {
     })
 
     styleDisposer = installStyles(globalThis.document)
+    // The Plugins page renders a row-config slot keyed by bundle#row. Keep the
+    // repair card optional so synthetic compositions without that slot still work.
+    try {
+      configSlotDisposer = ctx.slots?.inject?.('plugins.row.config', () =>
+        ctx.slots.register(
+          { name: 'plugins.row.config', key: 'dsh-session-groups#dsh-session-groups' },
+          SkillRepairCard,
+        ),
+      )
+    } catch {
+      /* compatible with host versions without the plugins settings slot */
+    }
     // Register our dictionaries with the host locale service when available.
     // Register only the locales the host currently exposes. Do not call
     // addLanguage and do not add a plugin picker: extra locale files remain
@@ -609,6 +623,8 @@ export const createPlugin = () => {
         localeDisposer = null
         if (typeof localeSubscriptionDisposer === 'function') localeSubscriptionDisposer()
         localeSubscriptionDisposer = null
+        if (typeof configSlotDisposer === 'function') configSlotDisposer()
+        configSlotDisposer = null
         if (typeof perfDisposer === 'function') perfDisposer()
         perfDisposer = null
         if (typeof styleDisposer === 'function') styleDisposer()

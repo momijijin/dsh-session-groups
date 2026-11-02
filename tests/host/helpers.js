@@ -160,6 +160,7 @@ export const mountRoutes = async (options = {}) => {
     controlDestructiveEnabled: options.controlDestructiveEnabled,
     controlSessionsEnabled: options.controlSessionsEnabled,
     controlToken: options.controlToken,
+    skillDshHome: options.skillDshHome,
   })
   return {
     ...temp,

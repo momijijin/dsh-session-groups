@@ -24,6 +24,7 @@ import { logInfo, logWarn } from './host/log.js'
 import { CONTROL_TOKEN_FILE_NAME, DEBUG_FILE_NAME, DIAGNOSTICS_FILE_NAME } from './host/constants.js'
 import { registerRoutes } from './host/routes.js'
 import { createStore } from './host/store.js'
+import { removeManagedSkill, repairManagedSkill } from './host/skill-install.js'
 
 /** Cordis function-plugin name (matches the bundle patch row id). */
 export const name = 'dsh-session-groups'
@@ -72,6 +73,25 @@ export const apply = (ctx, config = {}) => {
         join(dirname(record.filePath), DIAGNOSTICS_FILE_NAME)
   let controlToken = null
   let controlTokenPath = null
+  const dshHome = dirname(record.storageDir)
+  let skillStatus = null
+  if (config?.controlApi === true) {
+    try {
+      skillStatus = repairManagedSkill({ dshHome })
+      ctx.effect(
+        () => () => {
+          try {
+            removeManagedSkill(dshHome)
+          } catch {
+            /* managed skill cleanup is best effort */
+          }
+        },
+        'dsh-session-groups: remove managed skill',
+      )
+    } catch (error) {
+      logWarn(ctx, `dsh-session-groups: skill install failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
   if (config?.controlApi === true) {
     controlToken = randomBytes(32).toString('hex')
     controlTokenPath = join(dirname(record.filePath), CONTROL_TOKEN_FILE_NAME)
@@ -102,6 +122,7 @@ export const apply = (ctx, config = {}) => {
     controlDestructiveEnabled: config?.controlDestructive === true,
     controlSessionsEnabled: config?.controlSessions === true,
     controlToken,
+    skillDshHome: dshHome,
   })
   const probe = probeConnection(ctx)
 
