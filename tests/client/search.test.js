@@ -7,7 +7,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { UNGROUPED_ID, buildSearchIndex, matchSessions, revealSession } from '../../src/client/search.js'
+import { UNGROUPED_ID, buildSearchIndex, matchSessions, revealSession } from '../../src/core/search.js'
 
 /**
  * Index fixture:

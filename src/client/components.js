@@ -78,7 +78,7 @@ import {
   perfRender,
   perfSample,
 } from './perf.js'
-import { buildSearchIndex, matchSessions, revealSession } from './search.js'
+import { buildSearchIndex, matchSessions, revealSession } from '../core/search.js'
 import { readOnboardingDone, writeOnboardingDone } from './state.js'
 import {
   applyManagedWidth,
@@ -97,7 +97,7 @@ import {
   VIRTUAL_HEADER_HEIGHT,
   VIRTUAL_ROW_GAP,
   VIRTUAL_ROW_HEIGHT,
-} from './virtual-list.js'
+} from '../core/virtual-list.js'
 import {
   displayDepth,
   expandAncestors,

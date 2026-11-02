@@ -16,7 +16,7 @@ import {
   VIRTUAL_ROW_GAP,
   VIRTUAL_ROW_HEIGHT,
   VIRTUAL_STEP,
-} from '../../src/client/virtual-list.js'
+} from '../../src/core/virtual-list.js'
 
 const heightOf = (win, total, { rowHeight = VIRTUAL_ROW_HEIGHT, gap = VIRTUAL_ROW_GAP } = {}) => {
   if (total === 0) return 0

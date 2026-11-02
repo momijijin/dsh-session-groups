@@ -39,6 +39,12 @@ src/index.js     Cordis host 入口
 - `src/core/filter.js`
   - 可见树、归档过滤、标题/子代理判定
   - `src/client/filter.js` 只保留兼容 re-export
+- `src/core/search.js`
+  - 搜索索引、匹配与 reveal 折叠补丁
+  - `src/client/search.js` 只保留兼容 re-export
+- `src/core/virtual-list.js`
+  - 虚拟列表窗口与 spacer 算术
+  - `src/client/virtual-list.js` 只保留兼容 re-export
 
 ## 当前适配器
 
@@ -54,13 +60,12 @@ src/index.js     Cordis host 入口
 - `src/client/group-drag.js`
 - `src/client/dialog-selection.js`
 - `src/client/dialog-geometry.js`
-- `src/client/search.js`
-- `src/client/virtual-list.js`
 
 ## 测试边界
 
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
+
 
 
 
