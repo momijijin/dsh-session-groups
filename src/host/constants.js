@@ -21,6 +21,7 @@ export const CONTROL_STATE_PATH = `${BASE_PATH}/control/state`
 export const CONTROL_PLAN_PATH = `${BASE_PATH}/control/plan`
 export const CONTROL_APPLY_PATH = `${BASE_PATH}/control/apply`
 export const MAX_CONTROL_BODY_BYTES = 256 * 1024
+export const CONTROL_TOKEN_FILE_NAME = 'dsh-session-groups.control-token'
 
 /** Diagnostics trace file under the Harness `storages` directory. */
 export const DIAGNOSTICS_FILE_NAME = 'dsh-session-groups.diagnostics.ndjson'

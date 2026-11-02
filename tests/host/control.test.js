@@ -74,6 +74,29 @@ test('control state, plan and apply use revision CAS and idempotency', async (t)
   assert.equal(loaded.json.revision, 2)
 })
 
+test('control bearer token bypasses the browser cookie fence only for control routes', async (t) => {
+  const mounted = await mountRoutes({
+    connection: connection(),
+    controlApiEnabled: true,
+    controlToken: 'secret-token',
+  })
+  t.after(() => mounted.cleanup())
+  await mounted.store.save(sampleDoc())
+
+  const state = await mounted.call(
+    CONTROL_STATE_PATH,
+    makeRequest({ headers: { authorization: 'Bearer secret-token' } }),
+  )
+  assert.equal(state.res.statusCode, 200)
+  assert.equal(state.json.revision, 1)
+
+  const bad = await mounted.call(
+    CONTROL_STATE_PATH,
+    makeRequest({ headers: { authorization: 'Bearer wrong-token' } }),
+  )
+  assert.equal(bad.res.statusCode, 401)
+})
+
 test('destructive control operations require the separate switch', async (t) => {
   const guarded = await mountRoutes({ connection: connection(), controlApiEnabled: true })
   t.after(() => guarded.cleanup())

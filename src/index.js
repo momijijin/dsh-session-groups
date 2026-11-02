@@ -15,11 +15,13 @@
  */
 
 import { dirname, join } from 'node:path'
+import { randomBytes } from 'node:crypto'
+import { mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import z from '@deepseek-ai/schemastery'
 import { probeConnection } from './host/fence.js'
 import { resolveRecordPath } from './host/home.js'
-import { logInfo } from './host/log.js'
-import { DEBUG_FILE_NAME, DIAGNOSTICS_FILE_NAME } from './host/constants.js'
+import { logInfo, logWarn } from './host/log.js'
+import { CONTROL_TOKEN_FILE_NAME, DEBUG_FILE_NAME, DIAGNOSTICS_FILE_NAME } from './host/constants.js'
 import { registerRoutes } from './host/routes.js'
 import { createStore } from './host/store.js'
 
@@ -64,6 +66,29 @@ export const apply = (ctx, config = {}) => {
         // `dshHomePath('storages')`, and a test seam that overrides `filePath`
         // can never point diagnostics at the real home.
         join(dirname(record.filePath), DIAGNOSTICS_FILE_NAME)
+  let controlToken = null
+  let controlTokenPath = null
+  if (config?.controlApi === true) {
+    controlToken = randomBytes(32).toString('hex')
+    controlTokenPath = join(dirname(record.filePath), CONTROL_TOKEN_FILE_NAME)
+    try {
+      mkdirSync(dirname(controlTokenPath), { recursive: true })
+      writeFileSync(controlTokenPath, controlToken, { encoding: 'utf8', mode: 0o600 })
+      ctx.effect(
+        () => () => {
+          try {
+            unlinkSync(controlTokenPath)
+          } catch {
+            /* token already removed */
+          }
+        },
+        'dsh-session-groups: remove control token',
+      )
+    } catch (error) {
+      controlToken = null
+      logWarn(ctx, `dsh-session-groups: control token unavailable: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
   const mounted = registerRoutes(ctx, store, {
     diagnosticsFilePath,
     debugFilePath: join(dirname(record.filePath), DEBUG_FILE_NAME),
@@ -71,6 +96,7 @@ export const apply = (ctx, config = {}) => {
     debugProbeEnabled: config?.debugProbe === true,
     controlApiEnabled: config?.controlApi === true,
     controlDestructiveEnabled: config?.controlDestructive === true,
+    controlToken,
   })
   const probe = probeConnection(ctx)
 

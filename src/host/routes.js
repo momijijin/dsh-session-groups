@@ -14,7 +14,7 @@
  */
 
 import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises'
-import { createHash } from 'node:crypto'
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { basename, dirname } from 'node:path'
 import { DOC_VERSION } from '../shared/constants.js'
 import { normalizeColor, normalizeColorHex, validateDoc } from '../shared/model.js'
@@ -229,6 +229,17 @@ export const registerRoutes = (ctx, store, options = {}) => {
   const debugProbeEnabled = options.debugProbeEnabled === true
   const controlApiEnabled = options.controlApiEnabled === true
   const controlDestructiveEnabled = options.controlDestructiveEnabled === true
+  const controlToken = typeof options.controlToken === 'string' && options.controlToken.length > 0 ? options.controlToken : null
+  const hasControlToken = (req) => {
+    if (controlToken === null) return false
+    const header = req.headers.authorization
+    if (typeof header !== 'string' || !header.startsWith('Bearer ')) return false
+    const value = header.slice(7)
+    const supplied = Buffer.from(value, 'utf8')
+    const expected = Buffer.from(controlToken, 'utf8')
+    return supplied.length === expected.length && timingSafeEqual(supplied, expected)
+  }
+  const controlDenied = (req, res) => (hasControlToken(req) ? false : fenceDenied(req, res))
 
   // The composition's `connection` service may arrive through a sibling row
   // after this plugin activates, so the fence is resolved per request and the
@@ -511,7 +522,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
     controlStatePath = register(
       CONTROL_STATE_PATH,
       async (req, res) => {
-        if (fenceDenied(req, res)) return
+        if (controlDenied(req, res)) return
         if (req.method !== 'GET') {
           sendMethodNotAllowed(res, 'GET')
           return
@@ -533,7 +544,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
     controlPlanPath = register(
       CONTROL_PLAN_PATH,
       async (req, res) => {
-        if (fenceDenied(req, res)) return
+        if (controlDenied(req, res)) return
         if (req.method !== 'POST') {
           sendMethodNotAllowed(res, 'POST')
           return
@@ -594,7 +605,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
     controlApplyPath = register(
       CONTROL_APPLY_PATH,
       async (req, res) => {
-        if (fenceDenied(req, res)) return
+        if (controlDenied(req, res)) return
         if (req.method !== 'POST') {
           sendMethodNotAllowed(res, 'POST')
           return

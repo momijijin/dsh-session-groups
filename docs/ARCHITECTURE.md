@@ -73,7 +73,7 @@ src/index.js     Cordis host 入口
   - `src/client/menu-position.js` 只保留兼容 re-export
 - `src/core/control.js`
   - AI 控制协议：state、结构化 operation、plan/apply 候选 doc
-  - 无 HTTP、无设置、无 revision/CAS、无审计；这些属于后续 host 适配器
+  - 无 HTTP、无设置、无 revision/CAS、无审计；这些在 `src/host/routes.js` 与 `src/index.js`
   - 删除操作必须显式 `allowDestructive`，无 raw-doc 写入
 - `src/core/color.js`
   - `groupColorCss` 自定义 hex 优先、palette token 回退
@@ -85,6 +85,15 @@ src/index.js     Cordis host 入口
   - 由 `plugin.js` 注入，React 组件只读取这个薄桥
 - `src/client/dialog-geometry.js`
   - 只保留 geometry key、read/save/clear 与 localStorage 适配
+- `src/host/routes.js` + `src/index.js`
+  - 只在 `controlApi` 开启时挂载 state/plan/apply
+  - 本地 bearer token（0600）+ host fence
+  - revision CAS、planHash、idempotency、审计日志
+- `scripts/session-groups-control.mjs`
+  - 本地 CLI；只调用 state/plan/apply，不直接写 JSON
+  - 读取 DSH_HOME 下的 control token
+- `skills/session-groups-control/SKILL.md`
+  - 模型侧操作流程与安全约束
 
 ## 已有纯模块
 
@@ -97,6 +106,7 @@ src/index.js     Cordis host 入口
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
 `tests/core/shared-boundary.test.js` 对共享领域内核施加同样的约束。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
+
 
 
 

@@ -157,6 +157,7 @@ export const mountRoutes = async (options = {}) => {
     debugProbeEnabled: options.debugProbeEnabled,
     controlApiEnabled: options.controlApiEnabled,
     controlDestructiveEnabled: options.controlDestructiveEnabled,
+    controlToken: options.controlToken,
   })
   return {
     ...temp,

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.18 (2026-11-02)
+
+- Added a per-run local bearer token for the control API, a state/plan/apply CLI, and the bundled session-groups-control skill.
+
 ## 0.3.0-beta.17 (2026-11-02)
 
 - Wired the opt-in AI control host adapter: state/plan/apply routes, revision CAS, planHash, idempotency keys, destructive second switch and audit logging.
@@ -119,6 +123,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

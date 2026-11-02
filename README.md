@@ -7,7 +7,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 - 不修改官方工作区注册表
 - 不写入 `workspace.json`
 
-当前版本：**0.3.0-beta.17**  
+当前版本：**0.3.0-beta.18**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 功能
@@ -88,7 +88,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 设置 → 插件 → 添加插件 → 选择：
 
 ```text
-dsh-session-groups-0.3.0-beta.17.tgz
+dsh-session-groups-0.3.0-beta.18.tgz
 ```
 
 启用后完整重启 DSH（或按宿主提示刷新）。
@@ -98,7 +98,7 @@ dsh-session-groups-0.3.0-beta.17.tgz
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.17.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.18.tgz"
 ```
 
 安装后重启 DSH。安装命令会改 `desktop` profile，请先备份 `~/.dsh/profiles/desktop/package.json`。
@@ -153,6 +153,23 @@ POST /dsh-session-groups/control/apply
 
 `apply` 需要 `baseRevision`、`operations`、`planHash`；重复请求可带 `idempotencyKey`。删除操作必须同时打开 `controlDestructive`。
 
+开启 `controlApi` 后，插件在以下位置写入一次性本地 bearer token（权限 0600），供本地 CLI/skill 使用：
+
+```text
+<dshHome>/storages/dsh-session-groups.control-token
+```
+
+CLI：
+
+```powershell
+$cli = "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-session-groups\scripts\session-groups-control.mjs"
+node $cli state
+node $cli plan .\plan.json
+node $cli apply .\apply.json
+```
+
+包内置 skill：`skills/session-groups-control/SKILL.md`。它只调用 state/plan/apply，不直接读写分组 JSON；删除必须用户明确确认。
+
 诊断文件位置：
 
 ```text
@@ -174,7 +191,7 @@ POST /dsh-session-groups/control/apply
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
-- 当前发布验证以 347 项单元/契约测试和用户桌面回归为准；仓库保留 E2E 脚本，但尚未记录 0.3.0-beta.17 的完整 E2E 结果。
+- 当前发布验证以 348 项单元/契约测试和用户桌面回归为准；仓库保留 E2E 脚本，但尚未记录 0.3.0-beta.18 的完整 E2E 结果。
 
 ## 开发
 
@@ -185,7 +202,7 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：347 项单元/契约测试
+- `npm test`：348 项单元/契约测试
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试`n- `npm run check:core`：只加载并测试 src/core，不启动 DSH
 - `scripts/qa/clean-profile.ps1`：隔离 profile 安装/卸载验证，不碰真实 `~/.dsh`
@@ -195,13 +212,14 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.17.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.18.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 
 ## 许可
 
 MIT，见 `LICENSE`。
+
 
 
 
