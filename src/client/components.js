@@ -66,7 +66,7 @@ import {
   diagTargetChange,
   diagTrace,
 } from './diagnostics.js'
-import { GROUP_DRAG_MIME, resolveGroupDrop } from '../core/group-drag.js'
+import { GROUP_DRAG_MIME, groupHeaderZoneFromRect, isCurrentGroupPosition, resolveGroupDrop } from '../core/group-drag.js'
 import { ICON_GROUPS, renderGlyph, renderHeaderIcon, renderIcon } from './icons.js'
 import { clampMenuPosition, isMenuKey, menuAnchorFromEvent, menuAnchorFromRow } from './menu-position.js'
 import {
@@ -259,18 +259,6 @@ const GROUP_DROP_NOOP = Symbol('dsh-session-groups/group-drop-noop')
  * `root-end` is the one target whose index includes the dragged group, so a
  * dragged group that is already the last root is explicitly a no-op.
  */
-const isCurrentGroupPosition = (doc, draggedId, resolved, target) => {
-  const dragged = findGroup(doc, draggedId)
-  if (!dragged || !resolved || resolved.invalid) return false
-  if (resolved.parentId !== dragged.parentId) return false
-  const siblings = childrenOf(doc, dragged.parentId)
-  const originalIndex = siblings.findIndex((group) => group.id === draggedId)
-  if (originalIndex === -1) return false
-  const postRemovalCount = siblings.length - 1
-  if (target?.kind === 'root-end' && dragged.parentId === null && originalIndex === postRemovalCount) return true
-  return Math.min(resolved.index, postRemovalCount) === originalIndex
-}
-
 // ---------------------------------------------------------------------------
 // Small primitives
 // ---------------------------------------------------------------------------
@@ -3194,14 +3182,7 @@ export const GroupsView = (props) => {
   }
 
   /** Top/bottom edge zone of a group header; the middle 50% is invalid. */
-  const groupHeaderZone = (row, clientY) => {
-    const rect = row?.getBoundingClientRect?.()
-    if (!rect || !(rect.height > 0)) return null
-    const ratio = (clientY - rect.top) / rect.height
-    if (ratio < 0.25) return 'before'
-    if (ratio > 0.75) return 'after'
-    return null
-  }
+  const groupHeaderZone = (row, clientY) => groupHeaderZoneFromRect(row?.getBoundingClientRect?.(), clientY)
 
   /** Consume the click synthesized right after a dragstart (400 ms guard). */
   const consumeDragClick = (groupId) => {

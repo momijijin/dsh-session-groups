@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.15 (2026-11-02)
+
+- Moved no-op group-position detection and group-header edge-zone geometry into src/core/group-drag.js; direct core tests now cover both.
+
 ## 0.3.0-beta.14 (2026-11-02)
 
 - Split pure dialog rectangle math into src/core/dialog-geometry.js; the client keeps localStorage persistence and re-exports the math.
@@ -107,6 +111,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

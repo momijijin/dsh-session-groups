@@ -110,3 +110,35 @@ export const resolveGroupDrop = ({ doc, draggedId, target } = {}) => {
       return invalid('target-invalid')
   }
 }
+
+/**
+ * True when a group drop would leave the dragged group at its current position.
+ * Pure: callers pass the latest doc and resolved drop target.
+ */
+export const isCurrentGroupPosition = (doc, draggedId, resolved, target) => {
+  const dragged = findGroup(doc, draggedId)
+  if (!dragged || !resolved || resolved.invalid) return false
+  if (resolved.parentId !== dragged.parentId) return false
+  const siblings = childrenOf(doc, dragged.parentId)
+  const originalIndex = siblings.findIndex((group) => group.id === draggedId)
+  if (originalIndex === -1) return false
+  const postRemovalCount = siblings.length - 1
+  if (target?.kind === 'root-end' && dragged.parentId === null && originalIndex === postRemovalCount) return true
+  return Math.min(resolved.index, postRemovalCount) === originalIndex
+}
+
+/**
+ * Map a vertical position inside a group header to its valid drop zone.
+ * A plain rect keeps this pure; the client adapter reads the DOM rect.
+ *
+ * @param {{top:number,height:number}|null|undefined} rect
+ * @param {number} clientY
+ * @returns {'before'|'after'|null}
+ */
+export const groupHeaderZoneFromRect = (rect, clientY) => {
+  if (!rect || !(rect.height > 0)) return null
+  const ratio = (clientY - rect.top) / rect.height
+  if (ratio < 0.25) return 'before'
+  if (ratio > 0.75) return 'after'
+  return null
+}
