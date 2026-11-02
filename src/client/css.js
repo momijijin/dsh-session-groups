@@ -127,6 +127,11 @@ export const CSS = `
 .dsg-status-action[data-count="0"] { color: var(--dsw-alias-label-caption, color-mix(in srgb, CanvasText 55%, transparent)); }
 .dsg-status-action-icon { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .dsg-status-action-count { min-width: 8px; font-size: var(--dsg-font-11, 11px); line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+/* 264px sidebar: remove the intentional blank separator and compact the
+ * counters so the title and all view controls fit without horizontal scroll. */
+.dsg-root[data-narrow="true"] .dsg-header-actions { gap: 2px; }
+.dsg-root[data-narrow="true"] .dsg-status-actions { margin-right: 0; gap: 1px; }
+.dsg-root[data-narrow="true"] .dsg-status-action { min-width: 26px; padding: 0 2px; gap: 1px; }
 /* Optional second row: the existing SearchBox (30px) under the title row. */
 .dsg-header-search-row { align-items: center; gap: 4px; height: 30px; }
 .dsg-search { position: relative; display: flex; flex: 1 1 auto; min-width: 0; }

@@ -276,7 +276,33 @@ try {
     throw new Error(`moved session order changed after collapse/expand: ${JSON.stringify(afterToggle)}`)
   }
 
-  console.log('PASS: isolated onboarding, status buttons, head insertion, collapse/expand')
+  // Narrow sidebar visual gate: the sidebar must not create horizontal overflow.
+  await page.evaluate(() => localStorage.setItem('dsh-session-groups.width.v1', '264'))
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1500)
+  await closeGetStarted()
+  if ((await groupView.count()) === 0) {
+    const toggle = page.locator('[data-testid="session-groups-workspace-toggle"], [data-testid="session-groups-toggle"]').first()
+    if (await toggle.count()) await toggle.click()
+  }
+  await groupView.waitFor({ state: 'visible' })
+  const narrow = await page.evaluate(() => {
+    const root = document.querySelector('.dsg-root')
+    const rect = root?.getBoundingClientRect()
+    return {
+      rootWidth: rect?.width ?? null,
+      rootClientWidth: root?.clientWidth ?? null,
+      rootScrollWidth: root?.scrollWidth ?? null,
+      headerButtons: document.querySelectorAll('.dsg-status-actions .dsg-status-action').length,
+    }
+  })
+  if (narrow.headerButtons !== 3) throw new Error(`narrow layout expected three status buttons, got ${narrow.headerButtons}`)
+  if (narrow.rootScrollWidth > narrow.rootClientWidth + 1) {
+    throw new Error(`narrow layout overflows horizontally: ${JSON.stringify(narrow)}`)
+  }
+  await page.screenshot({ path: `${testHome}/narrow-264.png` })
+
+  console.log('PASS: isolated onboarding, status buttons, head insertion, collapse/expand, 264px')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
