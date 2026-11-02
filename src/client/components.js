@@ -54,7 +54,7 @@ import {
   ARCHIVE_FILTERS,
   ARCHIVE_FILTER_LABEL_KEYS,
 } from './filter.js'
-import { applyDrop, hitTest, sameDropTarget, stickyDropTarget, ungroupedBodyTarget } from './drag.js'
+import { applyDrop, hitTest, sameDropTarget, stickyDropTarget, ungroupedBodyTarget } from '../core/drag.js'
 import {
   diagContext,
   diagDragEnd,

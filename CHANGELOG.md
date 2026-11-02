@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.9 (2026-11-02)
+
+- Moved drag-and-drop policy into src/core/drag.js; the client path remains a one-line compatibility re-export.
+
 ## 0.3.0-beta.8 (2026-11-02)
 
 - Extracted a pure core layer (session-row policy, layout arithmetic) with boundary tests, and moved the DSH runtime bridge into src/adapters.
@@ -81,6 +85,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

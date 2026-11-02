@@ -30,6 +30,9 @@ src/index.js     Cordis host 入口
   - `statusLabel`：状态无障碍文案
 - `src/core/layout.js`
   - `estimatedTreeHeight`：虚拟列表首帧估算
+- `src/core/drag.js`
+  - `hitTest` / `applyDrop` / sticky target / ungrouped target
+  - `src/client/drag.js` 只保留兼容 re-export
 
 ## 当前适配器
 
@@ -42,7 +45,6 @@ src/index.js     Cordis host 入口
 这些模块目前仍在原位置，但同样必须保持纯函数性质，后续可按同样方式迁入 `src/core`：
 
 - `src/shared/model.js`
-- `src/client/drag.js`
 - `src/client/group-drag.js`
 - `src/client/tree.js`
 - `src/client/dialog-selection.js`
@@ -55,4 +57,5 @@ src/index.js     Cordis host 入口
 
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
+
 

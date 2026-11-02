@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyDrop, canDropGroupInto, hitTest, sameDropTarget, sessionLocation, stickyDropTarget, ungroupedBodyTarget } from '../../src/client/drag.js'
+import { applyDrop, canDropGroupInto, hitTest, sameDropTarget, sessionLocation, stickyDropTarget, ungroupedBodyTarget } from '../../src/core/drag.js'
 import { assignSession, createGroup, emptyDoc, findGroup } from '../../src/shared/model.js'
 
 const docWithTwoGroups = () => {
