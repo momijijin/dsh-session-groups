@@ -302,7 +302,26 @@ try {
   }
   await page.screenshot({ path: `${testHome}/narrow-264.png` })
 
-  console.log('PASS: isolated onboarding, status buttons, head insertion, collapse/expand, 264px')
+  // Runtime locale/theme gates. The test host boots in English; dark mode is
+  // applied through the shipped data-ds-dark-theme attribute and must change
+  // theme tokens without introducing overflow.
+  const lang = await page.evaluate(() => document.documentElement.lang)
+  if (!/^en/i.test(lang)) throw new Error(`isolated host expected English locale, got ${lang}`)
+  const headerLabel = (await page.locator('.dsg-header-label').first().textContent()) ?? ''
+  if (!/Free groups|自由分组/.test(headerLabel)) throw new Error(`unexpected header label: ${headerLabel}`)
+  const lightToken = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--dsw-alias-bg-base').trim())
+  await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', ''))
+  await page.waitForTimeout(300)
+  const dark = await page.evaluate(() => {
+    const token = getComputedStyle(document.body).getPropertyValue('--dsw-alias-bg-base').trim()
+    const root = document.querySelector('.dsg-root')
+    return { token, rootScrollWidth: root?.scrollWidth ?? null, rootClientWidth: root?.clientWidth ?? null }
+  })
+  if (!lightToken || lightToken === dark.token) throw new Error(`dark theme did not change tokens: ${lightToken} -> ${dark.token}`)
+  if (dark.rootScrollWidth > dark.rootClientWidth + 1) throw new Error('dark narrow layout overflows')
+  await page.screenshot({ path: `${testHome}/dark-264.png` })
+
+  console.log('PASS: isolated onboarding, status buttons, head insertion, collapse/expand, 264px, dark')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
