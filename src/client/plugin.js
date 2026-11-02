@@ -500,6 +500,9 @@ export const createPlugin = () => {
 
     styleDisposer = installStyles(globalThis.document)
     // Register our dictionaries with the host locale service when available.
+    // Register only the locales the host currently exposes. Do not call
+    // addLanguage and do not add a plugin picker: extra locale files remain
+    // dormant until the host catalog supports them.
     try {
       const disposer = localeService?.register?.(LOCALE_NS, { zh: dictionaries.zh, en: dictionaries.en })
       if (typeof disposer === 'function') localeDisposer = disposer
