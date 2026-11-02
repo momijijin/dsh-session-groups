@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { clampMenuPosition, isMenuKey, menuAnchorFromEvent, menuAnchorFromRow } from '../../src/client/menu-position.js'
+import { clampMenuPosition, isMenuKey, menuAnchorFromEvent, menuAnchorFromRow } from '../../src/core/menu-position.js'
 
 const viewport = { width: 500, height: 400 }
 const row = { getBoundingClientRect: () => ({ left: 30, bottom: 90 }) }

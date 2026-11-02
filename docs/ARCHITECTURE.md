@@ -68,6 +68,11 @@ src/index.js     Cordis host 入口
 - `src/core/group-drag.js` 补充
   - `isCurrentGroupPosition`：当前兄弟位置 no-op 判定
   - `groupHeaderZoneFromRect`：上/下 25% 边缘 zone
+- `src/core/menu-position.js`
+  - 菜单 anchor/clamp 纯数学；viewport 由调用方注入
+  - `src/client/menu-position.js` 只保留兼容 re-export
+- `src/core/color.js`
+  - `groupColorCss` 自定义 hex 优先、palette token 回退
 
 ## 当前适配器
 
@@ -88,6 +93,7 @@ src/index.js     Cordis host 入口
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
 `tests/core/shared-boundary.test.js` 对共享领域内核施加同样的约束。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
+
 
 
 

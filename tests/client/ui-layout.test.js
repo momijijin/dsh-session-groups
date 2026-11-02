@@ -583,7 +583,8 @@ test('0.2.14 color dialog: 2x3 roomy grid, fixed check slot, custom native+hex r
 test('0.2.7 hash default icon and custom color precedence helpers', () => {
   assert.equal(GROUP_ICONS.includes('hash'), true)
   assert.equal(typeof ICON_PATHS.hash, 'object')
-  assert.match(components, /groupColorHex\(group\) \?\? `var\(--dsg-color-\$\{groupColor\(group\)\}\)`/)
+  const colorCore = readFileSync(new URL('../../src/core/color.js', import.meta.url), 'utf8')
+  assert.match(colorCore, /groupColorHex\(group\) \?\? `var\(--dsg-color-\$\{groupColor\(group\)\}\)`/)
   assert.match(components, /style: \{ '--dsg-group-color': groupColorCss\(group\) \}/)
   // The host stores the custom hex alongside the legacy palette id.
   const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')

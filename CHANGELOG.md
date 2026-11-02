@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.16 (2026-11-02)
+
+- Moved menu anchor/clamp math and group-color CSS policy into src/core; viewport is injected so core has no globalThis dependency.
+
 ## 0.3.0-beta.15 (2026-11-02)
 
 - Moved no-op group-position detection and group-header edge-zone geometry into src/core/group-drag.js; direct core tests now cover both.
@@ -111,6 +115,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

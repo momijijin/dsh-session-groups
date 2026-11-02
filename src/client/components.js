@@ -8,6 +8,7 @@
  */
 import { Component, createElement, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
+import { groupColorCss } from '../core/color.js'
 import { estimatedTreeHeight } from '../core/layout.js'
 import { sessionRowPropsEqual, statusLabel } from '../core/session-row.js'
 import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME, PLUGIN_VERSION, SESSION_WATERMARK_BASE, SESSION_WATERMARK_AUTO_MAX } from '../shared/constants.js'
@@ -68,7 +69,7 @@ import {
 } from './diagnostics.js'
 import { GROUP_DRAG_MIME, groupHeaderZoneFromRect, isCurrentGroupPosition, resolveGroupDrop } from '../core/group-drag.js'
 import { ICON_GROUPS, renderGlyph, renderHeaderIcon, renderIcon } from './icons.js'
-import { clampMenuPosition, isMenuKey, menuAnchorFromEvent, menuAnchorFromRow } from './menu-position.js'
+import { clampMenuPosition, isMenuKey, menuAnchorFromEvent, menuAnchorFromRow } from '../core/menu-position.js'
 import {
   perfDragOver,
   perfDropTarget,
@@ -349,9 +350,6 @@ const SessionStatusCell = ({ statuses, hidden = false, testId = 'session-groups-
     show ? list.map((status, index) => h('span', { key: `${status.labelKey}-${index}`, class: 'dsg-visually-hidden' }, statusText(status))) : null
   )
 }
-
-/** Effective group color for the wrapper custom property (hex wins over palette). */
-const groupColorCss = (group) => groupColorHex(group) ?? `var(--dsg-color-${groupColor(group)})`
 
 /**
  * Relative updated-time label + absolute tooltip. Missing/invalid timestamps
@@ -3323,7 +3321,7 @@ export const GroupsView = (props) => {
     },
     openSessionMenu: (event, sessionNode) => {
       const row = sessionNode.session
-      const point = menuAnchorFromEvent(event)
+      const point = menuAnchorFromEvent(event, { width: globalThis.innerWidth, height: globalThis.innerHeight })
       dispatch('menu', {
         menu: {
           kind: 'session',
@@ -3340,7 +3338,7 @@ export const GroupsView = (props) => {
     },
     openSessionMenuAtRow: (rowElement, sessionNode) => {
       const row = sessionNode.session
-      const point = menuAnchorFromRow(rowElement)
+      const point = menuAnchorFromRow(rowElement, { width: globalThis.innerWidth, height: globalThis.innerHeight })
       dispatch('menu', {
         menu: {
           kind: 'session',
@@ -3362,7 +3360,7 @@ export const GroupsView = (props) => {
       handlers.openSessionMenu(event, sessionNode)
     },
     openGroupMenu: (event, group) => {
-      const point = menuAnchorFromEvent(event)
+      const point = menuAnchorFromEvent(event, { width: globalThis.innerWidth, height: globalThis.innerHeight })
       dispatch('menu', {
         menu: {
           kind: 'group',
@@ -3375,7 +3373,7 @@ export const GroupsView = (props) => {
       })
     },
     openGroupMenuAtRow: (rowElement, group) => {
-      const point = menuAnchorFromRow(rowElement)
+      const point = menuAnchorFromRow(rowElement, { width: globalThis.innerWidth, height: globalThis.innerHeight })
       dispatch('menu', {
         menu: {
           kind: 'group',
@@ -3873,4 +3871,5 @@ export const GroupsViewBoundary = (props) =>
 
 // Keep the module-level runtime reachable for plugin.js helpers.
 export const __internal = { findGroupsFlat, currentGroupIdOf }
+
 
