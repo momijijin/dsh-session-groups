@@ -90,6 +90,7 @@ export const makeResponse = () => {
 export const makeContext = (options = {}) => {
   const services = new Map()
   if (options.connection !== undefined) services.set('connection', options.connection)
+  for (const [name, value] of Object.entries(options.services ?? {})) services.set(name, value)
   const routes = []
   const disposers = []
   const logs = { info: [], warn: [] }
@@ -157,6 +158,7 @@ export const mountRoutes = async (options = {}) => {
     debugProbeEnabled: options.debugProbeEnabled,
     controlApiEnabled: options.controlApiEnabled,
     controlDestructiveEnabled: options.controlDestructiveEnabled,
+    controlSessionsEnabled: options.controlSessionsEnabled,
     controlToken: options.controlToken,
   })
   return {

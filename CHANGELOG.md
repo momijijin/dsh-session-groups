@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.22 (2026-11-02)
+
+- Add opt-in session inspect/rename/archive control endpoints with live-session and expected-state preconditions, CLI commands, and skill sequence guidance.
+
 ## 0.3.0-beta.21 (2026-11-02)
 
 - Harden the plan/apply contract: group.create plan changes no longer expose a random id that apply would regenerate; callers read state after apply.
@@ -135,6 +139,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

@@ -46,6 +46,10 @@ export const Config = z.object({
     .boolean()
     .default(false)
     .description('Allow destructive AI control operations such as group deletion'),
+  controlSessions: z
+    .boolean()
+    .default(false)
+    .description('Allow AI control of session title and archived status; requires controlApi'),
 })
 
 /**
@@ -96,6 +100,7 @@ export const apply = (ctx, config = {}) => {
     debugProbeEnabled: config?.debugProbe === true,
     controlApiEnabled: config?.controlApi === true,
     controlDestructiveEnabled: config?.controlDestructive === true,
+    controlSessionsEnabled: config?.controlSessions === true,
     controlToken,
   })
   const probe = probeConnection(ctx)

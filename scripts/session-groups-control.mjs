@@ -41,14 +41,16 @@ const usage = () => {
       code: 'usage',
       message:
         'usage: session-groups-control.mjs state | resolve <body.json> | plan <body.json> | apply <body.json>\n' +
-        'body.json: { path?, baseRevision, operations?, planHash?, idempotencyKey? }',
+        '       | session-inspect <body.json> | session-rename <body.json> | session-archive <body.json>\n' +
+        'body.json: { path?, baseRevision, operations?, planHash?, idempotencyKey?, sessionId?, title?, archived? }',
     },
     2,
   )
 }
 
 const command = process.argv[2]
-if (!['state', 'resolve', 'plan', 'apply'].includes(command)) usage()
+const commands = ['state', 'resolve', 'plan', 'apply', 'session-inspect', 'session-rename', 'session-archive']
+if (!commands.includes(command)) usage()
 
 let body
 if (command !== 'state') {
@@ -72,7 +74,8 @@ if (!TOKEN) {
   )
 }
 
-const path = `/dsh-session-groups/control/${command}`
+const controlPath = command.startsWith('session-') ? command.slice(8) : command
+const path = `/dsh-session-groups/control/${command.startsWith('session-') ? `session/${controlPath}` : controlPath}`
 const response = await fetch(`${BASE}${path}`, {
   method: command === 'state' ? 'GET' : 'POST',
   headers: {

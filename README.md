@@ -7,7 +7,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 - 不修改官方工作区注册表
 - 不写入 `workspace.json`
 
-当前版本：**0.3.0-beta.21**  
+当前版本：**0.3.0-beta.22**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 功能
@@ -88,7 +88,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 设置 → 插件 → 添加插件 → 选择：
 
 ```text
-dsh-session-groups-0.3.0-beta.21.tgz
+dsh-session-groups-0.3.0-beta.22.tgz
 ```
 
 启用后完整重启 DSH（或按宿主提示刷新）。
@@ -98,7 +98,7 @@ dsh-session-groups-0.3.0-beta.21.tgz
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.21.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.22.tgz"
 ```
 
 安装后重启 DSH。安装命令会改 `desktop` profile，请先备份 `~/.dsh/profiles/desktop/package.json`。
@@ -130,7 +130,7 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 
 ## 配置
 
-插件管理器提供四个开关，默认都关闭：
+插件管理器提供五个开关，默认都关闭：
 
 | 配置 | 默认 | 作用 |
 |---|---|---|
@@ -138,6 +138,7 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 | `debugProbe` | 关闭 | 临时弹窗布局探针与 `.debug.ndjson` 路由；生产使用不要开启 |
 | `controlApi` | 关闭 | 本地 AI 控制 API：state / plan / apply；开启后才挂载路由 |
 | `controlDestructive` | 关闭 | 允许 AI 控制接口执行删除等破坏性操作 |
+| `controlSessions` | 关闭 | 允许会话改名、归档状态切换；需同时开启 `controlApi` |
 
 `debugProbe` 关闭时不会挂载 `/dsh-session-groups/debug` 路由，也不会写调试文件。  
 `controlApi` 关闭时不会挂载 control 路由。开启后仅本地可用，并复用 host connection fence。  
@@ -150,11 +151,16 @@ GET  /dsh-session-groups/control/state
 POST /dsh-session-groups/control/resolve
 POST /dsh-session-groups/control/plan
 POST /dsh-session-groups/control/apply
+POST /dsh-session-groups/control/session/inspect
+POST /dsh-session-groups/control/session/rename
+POST /dsh-session-groups/control/session/archive
 ```
 
 `state` 为每个分组返回 `id`、`path`（从顶级到叶子的名称数组）和 icon/color。写入操作仍然只接受 ID。`resolve` 只把完整 path 解析成 ID：不存在返回 404，同名同级返回 409 `ambiguous-path` 并给出 candidates，路径格式错误返回 422。路径按数组传输，不拼字符串，不做模糊匹配。
 
 `apply` 需要 `baseRevision`、`operations`、`planHash`；重复请求可带 `idempotencyKey`。删除操作必须同时打开 `controlDestructive`。
+
+`session/inspect`、`session/rename`、`session/archive` 需要同时打开 `controlSessions`。改名使用 `expectedTitle` 前置条件；归档使用 `expectedArchived` 前置条件。归档运行中的会话默认会被拒绝，只有显式 `stopActivity: true` 才会停止活动。
 
 `group.create` 的 plan 结果不返回 `groupId`：ID 只在 apply 时生成，apply 后重新 `state` 读取新 ID。
 
@@ -169,8 +175,12 @@ CLI：
 ```powershell
 $cli = "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-session-groups\scripts\session-groups-control.mjs"
 node $cli state
+node $cli resolve .\resolve.json
 node $cli plan .\plan.json
 node $cli apply .\apply.json
+node $cli session-inspect .\session.json
+node $cli session-rename .\rename.json
+node $cli session-archive .\archive.json
 ```
 
 包内置 skill：`skills/session-groups-control/SKILL.md`。它只调用 state/plan/apply，不直接读写分组 JSON；删除必须用户明确确认。
@@ -196,7 +206,7 @@ node $cli apply .\apply.json
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
-- 当前发布验证以 353 项单元/契约测试和用户桌面回归为准；仓库保留 E2E 脚本，但尚未记录 0.3.0-beta.21 的完整 E2E 结果。
+- 当前发布验证以 356 项单元/契约测试和用户桌面回归为准；仓库保留 E2E 脚本，但尚未记录 0.3.0-beta.22 的完整 E2E 结果。
 
 ## 开发
 
@@ -207,7 +217,7 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：353 项单元/契约测试
+- `npm test`：356 项单元/契约测试
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试`n- `npm run check:core`：只加载并测试 src/core，不启动 DSH
 - `scripts/qa/clean-profile.ps1`：隔离 profile 安装/卸载验证，不碰真实 `~/.dsh`
@@ -217,13 +227,14 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.21.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.22.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 
 ## 许可
 
 MIT，见 `LICENSE`。
+
 
 
 
