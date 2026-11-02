@@ -36,6 +36,14 @@ export const Config = z.object({
     .boolean()
     .default(false)
     .description('Enable the temporary dialog layout probe and its local .debug.ndjson route'),
+  controlApi: z
+    .boolean()
+    .default(false)
+    .description('Enable the local AI control API (state/plan/apply); default off'),
+  controlDestructive: z
+    .boolean()
+    .default(false)
+    .description('Allow destructive AI control operations such as group deletion'),
 })
 
 /**
@@ -61,6 +69,8 @@ export const apply = (ctx, config = {}) => {
     debugFilePath: join(dirname(record.filePath), DEBUG_FILE_NAME),
     diagnosticsEnabled: config?.diagnostics === true,
     debugProbeEnabled: config?.debugProbe === true,
+    controlApiEnabled: config?.controlApi === true,
+    controlDestructiveEnabled: config?.controlDestructive === true,
   })
   const probe = probeConnection(ctx)
 

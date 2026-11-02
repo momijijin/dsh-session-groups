@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.17 (2026-11-02)
+
+- Wired the opt-in AI control host adapter: state/plan/apply routes, revision CAS, planHash, idempotency keys, destructive second switch and audit logging.
+
 ## 0.3.0-beta.16 (2026-11-02)
 
 - Moved menu anchor/clamp math and group-color CSS policy into src/core; viewport is injected so core has no globalThis dependency.
@@ -115,6 +119,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

@@ -16,6 +16,12 @@ export const DIAGNOSTICS_PATH = `${BASE_PATH}/diagnostics`
 /** Opt-in dialog style probe (0.2.36; separate from drag diagnostics). */
 export const DEBUG_PATH = `${BASE_PATH}/debug`
 
+/** Opt-in AI-control API (default off; registered only when enabled). */
+export const CONTROL_STATE_PATH = `${BASE_PATH}/control/state`
+export const CONTROL_PLAN_PATH = `${BASE_PATH}/control/plan`
+export const CONTROL_APPLY_PATH = `${BASE_PATH}/control/apply`
+export const MAX_CONTROL_BODY_BYTES = 256 * 1024
+
 /** Diagnostics trace file under the Harness `storages` directory. */
 export const DIAGNOSTICS_FILE_NAME = 'dsh-session-groups.diagnostics.ndjson'
 export const DEBUG_FILE_NAME = 'dsh-session-groups.debug.ndjson'

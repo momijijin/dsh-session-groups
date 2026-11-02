@@ -14,15 +14,21 @@
  */
 
 import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { basename, dirname } from 'node:path'
 import { DOC_VERSION } from '../shared/constants.js'
 import { normalizeColor, normalizeColorHex, validateDoc } from '../shared/model.js'
+import { applyControlOperations, buildControlState, CONTROL_PROTOCOL } from '../core/control.js'
 import {
   COMMIT_PATH,
+  CONTROL_APPLY_PATH,
+  CONTROL_PLAN_PATH,
+  CONTROL_STATE_PATH,
   DEBUG_PATH,
   DIAGNOSTICS_PATH,
   LOAD_PATH,
   MAX_BODY_BYTES,
+  MAX_CONTROL_BODY_BYTES,
   MAX_DIAGNOSTICS_BODY_BYTES,
   MAX_DIAGNOSTICS_EVENTS,
   MAX_DIAGNOSTICS_FILE_BYTES,
@@ -78,9 +84,11 @@ const readBoundedBody = async (req, limit = MAX_BODY_BYTES) => {
   return { text: Buffer.concat(chunks, size).toString('utf8') }
 }
 
+const controlPlanHash = (baseRevision, operations) =>
+  createHash('sha256').update(JSON.stringify({ baseRevision, operations })).digest('hex')
+
 /** Map a store load result to the wire response. */
-export const loadResponse = (result) => {
-  if (result.kind === 'unsupported-version') {
+export const loadResponse = (result) => {  if (result.kind === 'unsupported-version') {
     return {
       status: 409,
       body: {
@@ -219,6 +227,8 @@ export const registerRoutes = (ctx, store, options = {}) => {
     typeof options.debugFilePath === 'string' && options.debugFilePath.length > 0 ? options.debugFilePath : null
   const diagnosticsEnabled = options.diagnosticsEnabled !== false
   const debugProbeEnabled = options.debugProbeEnabled === true
+  const controlApiEnabled = options.controlApiEnabled === true
+  const controlDestructiveEnabled = options.controlDestructiveEnabled === true
 
   // The composition's `connection` service may arrive through a sibling row
   // after this plugin activates, so the fence is resolved per request and the
@@ -487,8 +497,205 @@ export const registerRoutes = (ctx, store, options = {}) => {
     )
   }
 
+  let controlStatePath = null
+  let controlPlanPath = null
+  let controlApplyPath = null
+  if (controlApiEnabled) {
+    const idempotency = new Map()
+    const remember = (key, value) => {
+      if (!key) return
+      idempotency.set(key, value)
+      if (idempotency.size > 128) idempotency.delete(idempotency.keys().next().value)
+    }
+
+    controlStatePath = register(
+      CONTROL_STATE_PATH,
+      async (req, res) => {
+        if (fenceDenied(req, res)) return
+        if (req.method !== 'GET') {
+          sendMethodNotAllowed(res, 'GET')
+          return
+        }
+        try {
+          const result = await store.load()
+          if (result.kind === 'unsupported-version') {
+            sendJson(res, 409, loadResponse(result).body)
+            return
+          }
+          sendJson(res, 200, { ok: true, ...buildControlState(result.doc, result.revision) })
+        } catch (error) {
+          sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
+        }
+      },
+      `dsh-session-groups: GET ${CONTROL_STATE_PATH}`,
+    )
+
+    controlPlanPath = register(
+      CONTROL_PLAN_PATH,
+      async (req, res) => {
+        if (fenceDenied(req, res)) return
+        if (req.method !== 'POST') {
+          sendMethodNotAllowed(res, 'POST')
+          return
+        }
+        if (contentTypeOf(req) !== 'application/json') {
+          sendJson(res, 415, { ok: false, code: 'unsupported-media-type', message: 'content-type must be application/json' })
+          return
+        }
+        let body
+        try {
+          const read = await readBoundedBody(req, MAX_CONTROL_BODY_BYTES)
+          if (read.tooLarge === true) {
+            sendJson(res, 413, { ok: false, code: 'payload-too-large', message: 'request body is too large' })
+            return
+          }
+          body = JSON.parse(read.text)
+        } catch {
+          sendJson(res, 422, { ok: false, code: 'invalid', message: 'body is not valid JSON' })
+          return
+        }
+        const baseRevision = body?.baseRevision
+        const operations = body?.operations
+        if (!Number.isInteger(baseRevision) || baseRevision < 0) {
+          sendJson(res, 422, { ok: false, code: 'invalid-revision', message: 'baseRevision must be a non-negative integer' })
+          return
+        }
+        try {
+          const result = await store.load()
+          if (result.kind === 'unsupported-version') {
+            sendJson(res, 409, loadResponse(result).body)
+            return
+          }
+          if (result.revision !== baseRevision) {
+            sendJson(res, 409, { ok: false, code: 'conflict', message: 'revision mismatch', revision: result.revision })
+            return
+          }
+          const planned = applyControlOperations(result.doc, operations, {
+            allowDestructive: controlDestructiveEnabled,
+          })
+          if (!planned.ok) {
+            sendJson(res, 422, planned)
+            return
+          }
+          sendJson(res, 200, {
+            ok: true,
+            protocol: CONTROL_PROTOCOL,
+            baseRevision,
+            planHash: controlPlanHash(baseRevision, operations),
+            changes: planned.changes,
+          })
+        } catch (error) {
+          sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
+        }
+      },
+      `dsh-session-groups: POST ${CONTROL_PLAN_PATH}`,
+    )
+
+    controlApplyPath = register(
+      CONTROL_APPLY_PATH,
+      async (req, res) => {
+        if (fenceDenied(req, res)) return
+        if (req.method !== 'POST') {
+          sendMethodNotAllowed(res, 'POST')
+          return
+        }
+        if (contentTypeOf(req) !== 'application/json') {
+          sendJson(res, 415, { ok: false, code: 'unsupported-media-type', message: 'content-type must be application/json' })
+          return
+        }
+        let body
+        try {
+          const read = await readBoundedBody(req, MAX_CONTROL_BODY_BYTES)
+          if (read.tooLarge === true) {
+            sendJson(res, 413, { ok: false, code: 'payload-too-large', message: 'request body is too large' })
+            return
+          }
+          body = JSON.parse(read.text)
+        } catch {
+          sendJson(res, 422, { ok: false, code: 'invalid', message: 'body is not valid JSON' })
+          return
+        }
+        const baseRevision = body?.baseRevision
+        const operations = body?.operations
+        const planHash = body?.planHash
+        const idempotencyKey = typeof body?.idempotencyKey === 'string' && body.idempotencyKey.length > 0 && body.idempotencyKey.length <= 128
+          ? body.idempotencyKey
+          : null
+        if (!Number.isInteger(baseRevision) || baseRevision < 0) {
+          sendJson(res, 422, { ok: false, code: 'invalid-revision', message: 'baseRevision must be a non-negative integer' })
+          return
+        }
+        if (typeof planHash !== 'string' || planHash.length === 0) {
+          sendJson(res, 422, { ok: false, code: 'invalid-plan', message: 'planHash is required' })
+          return
+        }
+        const expectedHash = controlPlanHash(baseRevision, operations)
+        if (expectedHash !== planHash) {
+          sendJson(res, 409, { ok: false, code: 'stale-plan', message: 'planHash does not match baseRevision + operations' })
+          return
+        }
+        if (idempotencyKey !== null) {
+          const cached = idempotency.get(idempotencyKey)
+          if (cached !== undefined) {
+            if (cached.planHash !== planHash) {
+              sendJson(res, 409, { ok: false, code: 'idempotency-conflict', message: 'idempotencyKey was used for another plan' })
+              return
+            }
+            sendJson(res, 200, cached.body)
+            return
+          }
+        }
+        try {
+          const result = await store.load()
+          if (result.kind === 'unsupported-version') {
+            sendJson(res, 409, loadResponse(result).body)
+            return
+          }
+          if (result.revision !== baseRevision) {
+            sendJson(res, 409, { ok: false, code: 'conflict', message: 'revision mismatch', revision: result.revision })
+            return
+          }
+          const planned = applyControlOperations(result.doc, operations, {
+            allowDestructive: controlDestructiveEnabled,
+          })
+          if (!planned.ok) {
+            sendJson(res, 422, planned)
+            return
+          }
+          const committed = await store.commit(baseRevision, planned.doc)
+          const { status, body: committedBody } = commitResponse(committed)
+          if (status === 200) {
+            const responseBody = {
+              ...committedBody,
+              protocol: CONTROL_PROTOCOL,
+              planHash,
+              changes: planned.changes,
+            }
+            if (idempotencyKey !== null) remember(idempotencyKey, { planHash, body: responseBody })
+            logInfo(
+              ctx,
+              `[dsh-session-groups] control apply revision=${String(committed.revision)} plan=${planHash.slice(0, 12)} operations=${String(planned.changes.length)}`,
+            )
+            sendJson(res, 200, responseBody)
+            return
+          }
+          sendJson(res, status, committedBody)
+        } catch (error) {
+          sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
+        }
+      },
+      `dsh-session-groups: POST ${CONTROL_APPLY_PATH}`,
+    )
+  }
+
   return {
     registered: true,
-    routes: [loadPath, commitPath, diagnosticsPath, ...(debugPath === null ? [] : [debugPath])],
+    routes: [
+      loadPath,
+      commitPath,
+      diagnosticsPath,
+      ...(debugPath === null ? [] : [debugPath]),
+      ...(controlStatePath === null ? [] : [controlStatePath, controlPlanPath, controlApplyPath]),
+    ],
   }
 }

@@ -155,6 +155,8 @@ export const mountRoutes = async (options = {}) => {
       options.debugFilePath ?? (temp.dir === undefined ? null : join(temp.dir, 'storages', DEBUG_FILE_NAME)),
     diagnosticsEnabled: options.diagnosticsEnabled,
     debugProbeEnabled: options.debugProbeEnabled,
+    controlApiEnabled: options.controlApiEnabled,
+    controlDestructiveEnabled: options.controlDestructiveEnabled,
   })
   return {
     ...temp,
