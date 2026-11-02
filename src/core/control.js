@@ -10,11 +10,13 @@
  */
 import {
   assignSession,
+  childrenOf,
   cloneDoc,
   createGroup,
   deleteGroupTo,
   groupColor,
   groupColorHex,
+  hasControlChars,
   moveGroup,
   renameGroup,
   setGroupColor,
@@ -22,6 +24,7 @@ import {
   setGroupIcon,
   validateDoc,
 } from '../shared/model.js'
+import { MAX_DEPTH, MAX_GROUP_NAME } from '../shared/constants.js'
 
 export const CONTROL_PROTOCOL = 1
 export const MAX_CONTROL_OPERATIONS = 64
@@ -150,11 +153,25 @@ const validateOperation = (operation, index) => {
 }
 
 /** Read-only state for an AI client; IDs are the stable API surface. */
+const pathOfGroup = (doc, group) => {
+  const names = []
+  const seen = new Set()
+  let current = group
+  while (current) {
+    if (seen.has(current.id)) break
+    seen.add(current.id)
+    names.unshift(current.name)
+    current = current.parentId === null ? null : doc.groups.find((entry) => entry.id === current.parentId)
+  }
+  return names
+}
+
 export const buildControlState = (doc, revision) => ({
   protocol: CONTROL_PROTOCOL,
   revision,
   groups: doc.groups.map((group) => ({
     id: group.id,
+    path: pathOfGroup(doc, group),
     name: group.name,
     parentId: group.parentId,
     icon: group.icon,
@@ -164,6 +181,45 @@ export const buildControlState = (doc, revision) => ({
   })),
   ungrouped: [...doc.ungrouped],
 })
+
+/**
+ * Resolve a root-to-leaf display path to exactly one group id.
+ * Duplicate siblings are ambiguous; never pick one silently.
+ */
+export const resolveGroupPath = (doc, path) => {
+  if (!Array.isArray(path) || path.length === 0 || path.length > MAX_DEPTH) {
+    return fail('invalid-path', `path must be an array of 1..${String(MAX_DEPTH)} non-empty strings`, -1, {
+      field: 'path',
+    })
+  }
+  if (path.some((name) => typeof name !== 'string' || name.length === 0 || name.length > MAX_GROUP_NAME || hasControlChars(name))) {
+    return fail('invalid-path', 'every path segment must be a non-empty control-character-free string within the name limit', -1, {
+      field: 'path',
+    })
+  }
+  let parentId = null
+  for (let depth = 0; depth < path.length; depth += 1) {
+    const matches = childrenOf(doc, parentId).filter((group) => group.name === path[depth])
+    if (matches.length === 0) {
+      return fail('group-not-found', `group path not found at depth ${String(depth)}`, -1, {
+        field: 'path',
+        path: path.slice(0, depth + 1),
+        depth,
+        missingName: path[depth],
+      })
+    }
+    if (matches.length > 1) {
+      return fail('ambiguous-path', `group path is ambiguous at depth ${String(depth)}`, -1, {
+        field: 'path',
+        path: path.slice(0, depth + 1),
+        depth,
+        candidates: matches.map((group) => ({ id: group.id, path: pathOfGroup(doc, group), parentId: group.parentId })),
+      })
+    }
+    parentId = matches[0].id
+  }
+  return { ok: true, groupId: parentId, path: [...path] }
+}
 
 const applyOne = (doc, operation, allowDestructive) => {
   const beforeIds = new Set(doc.groups.map((group) => group.id))

@@ -30,7 +30,22 @@ copy the token.
 ## Workflow
 
 1. Run `state`. Use the returned stable `revision` and group/session IDs.
-2. Build a plan file:
+   Each group also has a root-to-leaf `path` array.
+2. If you only know a group name, resolve the full path first:
+
+```json
+{ "path": ["Work", "Frontend"], "baseRevision": 12 }
+```
+
+```powershell
+node $cli resolve .\resolve.json
+```
+
+Use the returned `groupId`. A missing path returns 404; duplicate sibling
+names return 409 `ambiguous-path` with candidates. Never choose a duplicate
+silently.
+
+3. Build a plan file:
 
 ```json
 {
@@ -41,8 +56,8 @@ copy the token.
 }
 ```
 
-3. Run `plan <file>` and inspect `changes` and `planHash`.
-4. Run `apply <file>` with the plan hash:
+4. Run `plan <file>` and inspect `changes` and `planHash`.
+5. Run `apply <file>` with the plan hash:
 
 ```json
 {
@@ -53,8 +68,8 @@ copy the token.
 }
 ```
 
-5. Run `state` again and verify the expected revision/content.
-6. On `409 conflict`, re-read state and rebuild the plan. Never blindly retry.
+6. Run `state` again and verify the expected revision/content.
+7. On `409 conflict`, re-read state and rebuild the plan. Never blindly retry.
 
 ## Operation vocabulary
 

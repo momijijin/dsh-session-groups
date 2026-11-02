@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.20 (2026-11-02)
+
+- Add strict root-to-leaf path resolution for AI control, reject control characters in group names, return 404/409/422 for missing/ambiguous/malformed paths, and keep writes ID-only.
+
 ## 0.3.0-beta.19 (2026-11-02)
 
 - Harden control inputs: strict operation schemas, unknown-field rejection, typed index/parent/id checks, top-level field rejection, idempotencyKey type validation; no silent coercion or partial writes.
@@ -127,6 +131,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

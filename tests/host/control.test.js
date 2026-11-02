@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   CONTROL_APPLY_PATH,
   CONTROL_PLAN_PATH,
+  CONTROL_RESOLVE_PATH,
   CONTROL_STATE_PATH,
   LOAD_PATH,
 } from '../../src/host/constants.js'
@@ -27,7 +28,12 @@ test('control routes stay unmounted unless the API setting is enabled', async (t
 
   const on = await mountRoutes({ connection: connection(), controlApiEnabled: true })
   t.after(() => on.cleanup())
-  assert.deepEqual(on.mounted.routes.slice(-3), [CONTROL_STATE_PATH, CONTROL_PLAN_PATH, CONTROL_APPLY_PATH])
+  assert.deepEqual(on.mounted.routes.slice(-4), [
+    CONTROL_STATE_PATH,
+    CONTROL_RESOLVE_PATH,
+    CONTROL_PLAN_PATH,
+    CONTROL_APPLY_PATH,
+  ])
 })
 
 test('control state, plan and apply use revision CAS and idempotency', async (t) => {
@@ -128,6 +134,52 @@ test('control rejects extra top-level fields and malformed idempotency keys', as
 
   const loaded = await mounted.call(LOAD_PATH, makeRequest({ headers }))
   assert.equal(loaded.json.revision, 1)
+})
+
+test('control resolves full paths, reports missing/ambiguous paths and rejects control characters', async (t) => {
+  const mounted = await mountRoutes({ connection: connection(), controlApiEnabled: true })
+  t.after(() => mounted.cleanup())
+  await mounted.store.save(sampleDoc())
+
+  const state = await mounted.call(CONTROL_STATE_PATH, makeRequest({ headers }))
+  assert.deepEqual(state.json.groups[0].path, ['施工中'])
+  assert.deepEqual(state.json.groups[1].path, ['施工中', '子组'])
+  assert.equal(state.json.groups[0].icon, 'folder-open')
+  assert.equal(typeof state.json.groups[0].color, 'string')
+
+  const resolved = await mounted.call(
+    CONTROL_RESOLVE_PATH,
+    post({ path: ['施工中', '子组'], baseRevision: 1 }),
+  )
+  assert.equal(resolved.res.statusCode, 200)
+  assert.equal(resolved.json.groupId, state.json.groups[1].id)
+  assert.equal(resolved.json.revision, 1)
+
+  const missing = await mounted.call(CONTROL_RESOLVE_PATH, post({ path: ['不存在'] }))
+  assert.equal(missing.res.statusCode, 404)
+  assert.equal(missing.json.code, 'group-not-found')
+
+  const invalid = await mounted.call(CONTROL_RESOLVE_PATH, post({ path: ['施工\n中'] }))
+  assert.equal(invalid.res.statusCode, 422)
+  assert.equal(invalid.json.code, 'invalid-path')
+
+  const stale = await mounted.call(
+    CONTROL_RESOLVE_PATH,
+    post({ path: ['施工中'], baseRevision: 0 }),
+  )
+  assert.equal(stale.res.statusCode, 409)
+  assert.equal(stale.json.code, 'revision-mismatch')
+
+  const duplicate = {
+    ...sampleDoc(),
+    groups: [...sampleDoc().groups, { ...sampleDoc().groups[0], id: 'g-duplicate', sessionIds: [] }],
+  }
+  await mounted.store.save(duplicate)
+  const ambiguous = await mounted.call(CONTROL_RESOLVE_PATH, post({ path: ['施工中'] }))
+  assert.equal(ambiguous.res.statusCode, 409)
+  assert.equal(ambiguous.json.code, 'ambiguous-path')
+  assert.equal(ambiguous.json.candidates.length, 2)
+  assert.deepEqual(Object.keys(ambiguous.json.candidates[0]).sort(), ['id', 'parentId', 'path'])
 })
 
 test('destructive control operations require the separate switch', async (t) => {

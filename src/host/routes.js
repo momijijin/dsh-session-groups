@@ -18,11 +18,12 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { basename, dirname } from 'node:path'
 import { DOC_VERSION } from '../shared/constants.js'
 import { normalizeColor, normalizeColorHex, validateDoc } from '../shared/model.js'
-import { applyControlOperations, buildControlState, CONTROL_PROTOCOL } from '../core/control.js'
+import { applyControlOperations, buildControlState, CONTROL_PROTOCOL, resolveGroupPath } from '../core/control.js'
 import {
   COMMIT_PATH,
   CONTROL_APPLY_PATH,
   CONTROL_PLAN_PATH,
+  CONTROL_RESOLVE_PATH,
   CONTROL_STATE_PATH,
   DEBUG_PATH,
   DIAGNOSTICS_PATH,
@@ -514,6 +515,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
   }
 
   let controlStatePath = null
+  let controlResolvePath = null
   let controlPlanPath = null
   let controlApplyPath = null
   if (controlApiEnabled) {
@@ -544,6 +546,82 @@ export const registerRoutes = (ctx, store, options = {}) => {
         }
       },
       `dsh-session-groups: GET ${CONTROL_STATE_PATH}`,
+    )
+
+    controlResolvePath = register(
+      CONTROL_RESOLVE_PATH,
+      async (req, res) => {
+        if (controlDenied(req, res)) return
+        if (req.method !== 'POST') {
+          sendMethodNotAllowed(res, 'POST')
+          return
+        }
+        if (contentTypeOf(req) !== 'application/json') {
+          sendJson(res, 415, { ok: false, code: 'unsupported-media-type', message: 'content-type must be application/json' })
+          return
+        }
+        let body
+        try {
+          const read = await readBoundedBody(req, MAX_CONTROL_BODY_BYTES)
+          if (read.tooLarge === true) {
+            sendJson(res, 413, { ok: false, code: 'payload-too-large', message: 'request body is too large' })
+            return
+          }
+          body = JSON.parse(read.text)
+        } catch {
+          sendJson(res, 422, { ok: false, code: 'invalid', message: 'body is not valid JSON' })
+          return
+        }
+        if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+          sendJson(res, 422, { ok: false, code: 'invalid-body', message: 'body must be a JSON object' })
+          return
+        }
+        const unexpected = unexpectedControlField(body, new Set(['path', 'baseRevision']))
+        if (unexpected !== null) {
+          sendJson(res, 422, {
+            ok: false,
+            code: 'unexpected-field',
+            message: `unexpected top-level field "${unexpected}"`,
+            field: unexpected,
+          })
+          return
+        }
+        if (body.baseRevision !== undefined && (!Number.isInteger(body.baseRevision) || body.baseRevision < 0)) {
+          sendJson(res, 422, {
+            ok: false,
+            code: 'invalid-revision',
+            message: 'baseRevision must be a non-negative integer',
+            field: 'baseRevision',
+          })
+          return
+        }
+        try {
+          const result = await store.load()
+          if (result.kind === 'unsupported-version') {
+            sendJson(res, 409, loadResponse(result).body)
+            return
+          }
+          if (body.baseRevision !== undefined && result.revision !== body.baseRevision) {
+            sendJson(res, 409, {
+              ok: false,
+              code: 'revision-mismatch',
+              message: 'revision changed before path resolution',
+              revision: result.revision,
+            })
+            return
+          }
+          const resolved = resolveGroupPath(result.doc, body.path)
+          if (!resolved.ok) {
+            const status = resolved.code === 'ambiguous-path' ? 409 : resolved.code === 'invalid-path' ? 422 : 404
+            sendJson(res, status, resolved)
+            return
+          }
+          sendJson(res, 200, { ...resolved, protocol: CONTROL_PROTOCOL, revision: result.revision })
+        } catch (error) {
+          sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
+        }
+      },
+      `dsh-session-groups: POST ${CONTROL_RESOLVE_PATH}`,
     )
 
     controlPlanPath = register(
@@ -752,7 +830,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
       commitPath,
       diagnosticsPath,
       ...(debugPath === null ? [] : [debugPath]),
-      ...(controlStatePath === null ? [] : [controlStatePath, controlPlanPath, controlApplyPath]),
+      ...(controlStatePath === null ? [] : [controlStatePath, controlResolvePath, controlPlanPath, controlApplyPath]),
     ],
   }
 }

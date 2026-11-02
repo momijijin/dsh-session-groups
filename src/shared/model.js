@@ -75,10 +75,16 @@ export const groupColorHex = (group) => (isColorHex(group?.colorHex) ? group.col
 export const groupColorValue = (group) => groupColorHex(group) ?? groupColor(group)
 
 
+/** C0/C1 control characters are forbidden in user-visible group names. */
+export const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f]/
+
+export const hasControlChars = (value) => typeof value === 'string' && CONTROL_CHARS_RE.test(value)
+
 export const normalizeName = (name) => {
   const text = asString(name).trim()
   if (text.length === 0) throw new Error('name-required')
   if (text.length > MAX_GROUP_NAME) throw new Error('name-too-long')
+  if (hasControlChars(text)) throw new Error('name-control-chars')
   return text
 }
 
@@ -425,7 +431,12 @@ export const validateDoc = (doc) => {
     if (typeof group.id !== 'string' || group.id === '') errors.push('group-id')
     else if (ids.has(group.id)) errors.push(`duplicate-group:${group.id}`)
     else ids.add(group.id)
-    if (typeof group.name !== 'string' || group.name.trim() === '' || group.name.trim().length > MAX_GROUP_NAME) {
+    if (
+      typeof group.name !== 'string' ||
+      group.name.trim() === '' ||
+      group.name.trim().length > MAX_GROUP_NAME ||
+      hasControlChars(group.name)
+    ) {
       errors.push(`group-name:${group.id}`)
     }
     if (typeof group.icon !== 'string' || group.icon.length > MAX_ICON_LENGTH) errors.push(`group-icon:${group.id}`)
@@ -497,7 +508,8 @@ export const normalizeDoc = (doc) => {
     if (!isObject(raw) || typeof raw.id !== 'string' || raw.id === '' || known.has(raw.id)) continue
     known.add(raw.id)
     firstRawById.set(raw.id, raw)
-    const name = asString(raw.name).trim().slice(0, MAX_GROUP_NAME) || '未命名'
+    const cleanName = asString(raw.name).replace(CONTROL_CHARS_RE, '').trim().slice(0, MAX_GROUP_NAME)
+    const name = cleanName || '未命名'
     const hex = normalizeColorHex(raw.colorHex)
     groups.push({
       id: raw.id,

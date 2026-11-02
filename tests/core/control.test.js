@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyControlOperations, buildControlState, CONTROL_OPERATIONS, CONTROL_PROTOCOL } from '../../src/core/control.js'
-import { assignSession, createGroup, emptyDoc, findGroup } from '../../src/shared/model.js'
+import { applyControlOperations, buildControlState, CONTROL_OPERATIONS, CONTROL_PROTOCOL, resolveGroupPath } from '../../src/core/control.js'
+import { assignSession, createGroup, emptyDoc, findGroup, normalizeDoc } from '../../src/shared/model.js'
 
 const fixture = () => {
   let doc = emptyDoc()
@@ -30,6 +30,38 @@ test('control state exposes stable ids and operation vocabulary', () => {
     'session.assign',
   ])
   assert.equal(findGroup(doc, a).name, 'A')
+})
+
+test('control resolves full paths and rejects missing, ambiguous and control-character paths', () => {
+  let doc = emptyDoc()
+  doc = createGroup(doc, { name: 'Work' })
+  const work = doc.groups[0].id
+  doc = createGroup(doc, { name: 'Front', parentId: work })
+  doc = createGroup(doc, { name: 'Duplicate' })
+  doc = createGroup(doc, { name: 'Duplicate' })
+  const front = doc.groups.find((group) => group.name === 'Front')
+  assert.deepEqual(buildControlState(doc, 1).groups.find((group) => group.id === front.id).path, ['Work', 'Front'])
+  assert.equal(resolveGroupPath(doc, ['Work', 'Front']).groupId, front.id)
+  assert.equal(resolveGroupPath(doc, ['Work', 'missing']).code, 'group-not-found')
+  assert.equal(resolveGroupPath(doc, ['Duplicate']).code, 'ambiguous-path')
+  assert.equal(resolveGroupPath(doc, ['Duplicate']).candidates.length, 2)
+  assert.equal(resolveGroupPath(doc, ['Work\nFront']).code, 'invalid-path')
+  assert.equal(resolveGroupPath(doc, []).code, 'invalid-path')
+  assert.equal(resolveGroupPath(doc, ['Work', 1]).code, 'invalid-path')
+})
+
+test('group names reject control characters and normalize strips them on load', () => {
+  assert.throws(() => createGroup(emptyDoc(), { name: 'bad\nname' }), /name-control-chars/)
+  const normalized = buildControlState(
+    normalizeDoc({
+      version: 1,
+      revision: 0,
+      groups: [{ id: 'g-x', name: 'bad\nname', icon: 'folder', parentId: null, sessionIds: [] }],
+      ungrouped: [],
+    }),
+    0,
+  )
+  assert.equal(normalized.groups[0].name, 'badname')
 })
 
 test('control creates, renames, updates, moves and assigns without mutating input', () => {

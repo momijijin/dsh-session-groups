@@ -40,15 +40,15 @@ const usage = () => {
       ok: false,
       code: 'usage',
       message:
-        'usage: session-groups-control.mjs state | plan <body.json> | apply <body.json>\n' +
-        'body.json: { baseRevision, operations, planHash?, idempotencyKey? }',
+        'usage: session-groups-control.mjs state | resolve <body.json> | plan <body.json> | apply <body.json>\n' +
+        'body.json: { path?, baseRevision, operations?, planHash?, idempotencyKey? }',
     },
     2,
   )
 }
 
 const command = process.argv[2]
-if (!['state', 'plan', 'apply'].includes(command)) usage()
+if (!['state', 'resolve', 'plan', 'apply'].includes(command)) usage()
 
 let body
 if (command !== 'state') {
