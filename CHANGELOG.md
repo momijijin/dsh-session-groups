@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.23 (2026-11-02)
+
+- Fix host sidebar collapse: detect data-sidebar-collapsed, release the managed width override, suppress retries while in rail mode, and assert the rail is <=64px in A+.
+
 ## 0.3.0-beta.22 (2026-11-02)
 
 - Add opt-in session inspect/rename/archive control endpoints with live-session and expected-state preconditions, CLI commands, and skill sequence guidance.
@@ -139,6 +143,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

@@ -30,6 +30,7 @@ import {
   applyManagedWidth,
   clearManagedWidth,
   findLayoutNodes,
+  isSidebarCollapsed,
   readSidebarWidth,
   SIDEBAR_WIDTH_DEFAULT,
   updateManagedWidth,
@@ -233,6 +234,9 @@ export const createPlugin = () => {
   const syncSidebarWidth = () => {
     const nodes = findLiveLayoutNodes()
     if (!nodes?.supported) return false
+    // Host rail mode owns the 56px width; report success so the retry timer
+    // stops instead of reapplying our 264..420px override.
+    if (isSidebarCollapsed(nodes)) return true
     return applyManagedWidth(nodes, readSidebarWidth(), globalThis.innerWidth || 1440) !== null
   }
 

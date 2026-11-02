@@ -84,6 +84,7 @@ import { readOnboardingDone, writeOnboardingDone } from './state.js'
 import {
   applyManagedWidth,
   clampSidebarWidth,
+  clearManagedWidth,
   findLayoutNodes,
   maxSidebarWidth,
   readSidebarWidth,
@@ -2827,7 +2828,9 @@ export const GroupsView = (props) => {
 
   useEffect(() => {
     if (!wide) {
-      widthControllerRef.current?.clear()
+      // The host owns the 56px rail. The cross-view managed override must also
+      // be released, not just this component's local controller reference.
+      clearManagedWidth()
       widthControllerRef.current = null
       setWidthSupported(false)
       return undefined

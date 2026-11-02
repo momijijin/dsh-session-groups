@@ -152,6 +152,7 @@ export const findLayoutNodes = (rootElement) => {
     officialHandle: null,
     template: null,
     rest: null,
+    collapsed: false,
   }
   const doc = rootElement?.ownerDocument
   if (!rootElement || !doc) return nodes
@@ -172,9 +173,14 @@ export const findLayoutNodes = (rootElement) => {
   nodes.officialHandle = frame.querySelector(OFFICIAL_HANDLE_SELECTOR)
   nodes.template = frame.style.gridTemplateColumns
   nodes.rest = restOfTemplate(nodes.template)
+  nodes.collapsed = frame.getAttribute('data-sidebar-collapsed') === 'true'
   nodes.supported = true
   return nodes
 }
+
+/** True when the shipped shell is in its icon-rail state. */
+export const isSidebarCollapsed = (nodes) =>
+  nodes?.frame?.getAttribute?.('data-sidebar-collapsed') === 'true'
 
 /**
  * Resolve a viewport width, falling back to the live one. `update()` is called
@@ -208,7 +214,7 @@ const resolveViewportWidth = (value, fallback) => {
  *   host a wider-than-minimum sidebar.
  */
 export const applyWidthOverride = (nodes, width, viewportWidth, { onLost } = {}) => {
-  if (!nodes?.supported || !nodes.frame || !nodes.sidebarRoot) return null
+  if (!nodes?.supported || !nodes.frame || !nodes.sidebarRoot || isSidebarCollapsed(nodes)) return null
   const frame = nodes.frame
   const sidebarRoot = nodes.sidebarRoot
   const doc = frame.ownerDocument
@@ -249,6 +255,12 @@ export const applyWidthOverride = (nodes, width, viewportWidth, { onLost } = {})
 
   const refresh = () => {
     if (!active) return
+    // The shipped shell owns the 56px icon rail while collapsed; never let a
+    // remembered 264..420px width override leak into that state.
+    if (isSidebarCollapsed({ frame })) {
+      clear()
+      return
+    }
     // The host replaced the frame or the sidebar root: drop the override so the
     // shipped layout owns the width again and let the caller re-find the nodes
     // (and hide the handle) instead of silently keeping a stale controller.
@@ -310,6 +322,12 @@ let managedNodes = null
  * @returns {ReturnType<typeof applyWidthOverride>}
  */
 export const applyManagedWidth = (nodes, width, viewportWidth) => {
+  if (isSidebarCollapsed(nodes)) {
+    managedWidth?.clear()
+    managedWidth = null
+    managedNodes = null
+    return null
+  }
   const sameHost = managedWidth !== null && managedNodes?.frame === nodes?.frame && managedNodes?.sidebarRoot === nodes?.sidebarRoot
   if (managedWidth !== null && !sameHost) {
     managedWidth.clear()
@@ -328,7 +346,13 @@ export const applyManagedWidth = (nodes, width, viewportWidth) => {
 }
 
 /** Retune the existing cross-view override; no-op when it was not installed. */
-export const updateManagedWidth = (width, viewportWidth) => managedWidth?.update(width, viewportWidth) ?? null
+export const updateManagedWidth = (width, viewportWidth) => {
+  if (managedNodes !== null && isSidebarCollapsed(managedNodes)) {
+    clearManagedWidth()
+    return null
+  }
+  return managedWidth?.update(width, viewportWidth) ?? null
+}
 
 /** Remove the cross-view override (plugin unload / unsupported layout). */
 export const clearManagedWidth = () => {

@@ -509,6 +509,17 @@ try {
   if (pageErrors.some((message) => /React error #300|targetSessionId|hook/i.test(message))) {
     throw new Error(`sidebar collapse emitted a React error: ${pageErrors.join(' | ')}`)
   }
+  const collapsedLayout = await page.evaluate(() => ({
+    rootWidth: document.querySelector('[data-dsg-sidebar-root]')?.getBoundingClientRect().width ?? null,
+    railWidth: document.querySelector('[data-testid="session-groups-rail"]')?.getBoundingClientRect().width ?? null,
+    widthOverride: document.querySelector('[data-dsg-width]')?.textContent ?? null,
+  }))
+  if (collapsedLayout.rootWidth > 64 || collapsedLayout.railWidth > 64) {
+    throw new Error(`collapsed rail kept the wide sidebar: ${JSON.stringify(collapsedLayout)}`)
+  }
+  if (collapsedLayout.widthOverride !== null) {
+    throw new Error(`collapsed rail kept the width override: ${collapsedLayout.widthOverride}`)
+  }
   const expand = page.locator('[data-testid="session-groups-rail-expand"]').first()
   if ((await expand.count()) > 0) await page.evaluate(() => document.querySelector('[data-testid="session-groups-rail-expand"]')?.click())
   await page.waitForTimeout(800)
