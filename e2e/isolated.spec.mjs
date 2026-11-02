@@ -307,6 +307,42 @@ try {
     if (currentFilter !== filter) throw new Error(`archive filter expected ${filter}, got ${currentFilter}`)
   }
 
+  // Dragging an outside session over a collapsed target must auto-expand it.
+  const dragRootId = await createGroup(`Drag ${suffix}`)
+  await addSessionToGroup(dragRootId)
+  const dragSessionId = groupSessionIds(dragRootId)[0]
+  if (!dragSessionId) throw new Error('drag source session was not created')
+  const targetRowForDrag = groupRowById(targetId)
+  await targetRowForDrag.click({ force: true })
+  await page.waitForTimeout(300)
+  if ((await targetRowForDrag.getAttribute('aria-expanded')) !== 'false') throw new Error('target did not collapse for drag')
+  await page.evaluate(({ sourceId, targetId }) => {
+    const source = document.querySelector(`[data-testid="session-groups-session"][data-session-id="${sourceId}"]`)
+    const target = document.querySelector(`[data-testid="session-groups-group"][data-group-id="${targetId}"]`)
+    if (!source || !target) throw new Error('drag rows missing')
+    const dt = new DataTransfer()
+    window.__dsgTestTransfer = dt
+    window.__dsgTestSource = source
+    source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }))
+    const rect = target.getBoundingClientRect()
+    for (const type of ['dragenter', 'dragover']) {
+      target.dispatchEvent(new DragEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: dt,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+      }))
+    }
+  }, { sourceId: dragSessionId, targetId })
+  await page.waitForTimeout(850)
+  if ((await targetRowForDrag.getAttribute('aria-expanded')) !== 'true') throw new Error('collapsed target did not auto-expand on drag hover')
+  await page.evaluate(() => {
+    window.__dsgTestSource?.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: window.__dsgTestTransfer }))
+    window.__dsgTestSource = null
+    window.__dsgTestTransfer = null
+  })
+
   // Narrow sidebar visual gate: the sidebar must not create horizontal overflow.
   await page.evaluate(() => localStorage.setItem('dsh-session-groups.width.v1', '264'))
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -408,7 +444,7 @@ try {
   await page.waitForTimeout(800)
   await groupView.waitFor({ state: 'visible' })
 
-  console.log('PASS: isolated onboarding, search, archive filter, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
@@ -417,5 +453,6 @@ try {
   await context.close().catch(() => {})
   await browser.close().catch(() => {})
 }
+
 
 
