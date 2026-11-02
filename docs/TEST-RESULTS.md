@@ -19,6 +19,7 @@
   - 归档 tri-state 切换 `only/all/hidden` 时 popover 关闭且筛选状态持久化
   - 把组外会话拖到已收起目标组上时，目标组自动展开
   - 分组头部上/下边缘分别生成 `group-before` / `group-after` 占位
+  - 弹窗标题栏可拖动、resizer 可改变尺寸、backdrop 点击不关闭
   - 亮色头部标题对比度 ≥ 4.5，0 计数状态按钮 ≥ 3.0
   - 深色主题 token 切换且 264px 下无溢出
   - 宿主 sidebar 收起后进入 Rail，无 React #300，展开后分组视图恢复

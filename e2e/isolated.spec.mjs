@@ -377,6 +377,42 @@ try {
     await page.waitForTimeout(250)
   }
 
+  // Dialog geometry and backdrop policy: titlebar drag moves, backdrop click
+  // leaves the dialog open, and the resize handle changes its size.
+  await page.evaluate(() => document.querySelector('[data-testid="session-groups-new-group"]')?.click())
+  const dialog = page.locator('[data-testid="session-groups-dialog"]')
+  await dialog.waitFor({ state: 'visible' })
+  const dialogBefore = await dialog.boundingBox()
+  const titlebar = page.locator('.dsg-dialog-titlebar').first()
+  const titleBox = await titlebar.boundingBox()
+  if (!dialogBefore || !titleBox) throw new Error('dialog geometry missing')
+  await page.mouse.move(titleBox.x + titleBox.width / 2, titleBox.y + titleBox.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(titleBox.x + titleBox.width / 2 + 50, titleBox.y + titleBox.height / 2 + 25, { steps: 6 })
+  await page.mouse.up()
+  await page.waitForTimeout(250)
+  const dialogMoved = await dialog.boundingBox()
+  if (!dialogMoved || (Math.abs(dialogMoved.x - dialogBefore.x) < 10 && Math.abs(dialogMoved.y - dialogBefore.y) < 10)) {
+    throw new Error(`dialog did not move: ${JSON.stringify({ dialogBefore, dialogMoved })}`)
+  }
+  await page.evaluate(() => document.querySelector('.dsg-dialog-backdrop')?.click())
+  await page.waitForTimeout(250)
+  if ((await dialog.count()) !== 1) throw new Error('backdrop click must not close the dialog')
+  const resizer = page.locator('.dsg-dialog-resizer').first()
+  const resizeBox = await resizer.boundingBox()
+  if (!resizeBox) throw new Error('dialog resizer missing')
+  await page.mouse.move(resizeBox.x + resizeBox.width / 2, resizeBox.y + resizeBox.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(resizeBox.x + resizeBox.width / 2 + 35, resizeBox.y + resizeBox.height / 2 + 25, { steps: 6 })
+  await page.mouse.up()
+  await page.waitForTimeout(250)
+  const dialogResized = await dialog.boundingBox()
+  if (!dialogResized || (Math.abs(dialogResized.width - dialogMoved.width) < 5 && Math.abs(dialogResized.height - dialogMoved.height) < 5)) {
+    throw new Error(`dialog did not resize: ${JSON.stringify({ dialogMoved, dialogResized })}`)
+  }
+  await page.evaluate(() => document.querySelector('[data-testid="session-groups-dialog-cancel"]')?.click())
+  await page.waitForTimeout(300)
+
   // Narrow sidebar visual gate: the sidebar must not create horizontal overflow.
   await page.evaluate(() => localStorage.setItem('dsh-session-groups.width.v1', '264'))
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -478,7 +514,7 @@ try {
   await page.waitForTimeout(800)
   await groupView.waitFor({ state: 'visible' })
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
@@ -487,6 +523,7 @@ try {
   await context.close().catch(() => {})
   await browser.close().catch(() => {})
 }
+
 
 
 

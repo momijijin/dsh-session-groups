@@ -177,7 +177,7 @@ npm pack
 - `scripts/qa/clean-profile.ps1`：隔离 profile 安装/卸载验证，不碰真实 `~/.dsh`
 - `scripts/qa/lifecycle-isolated.ps1`：隔离 install → uninstall → reinstall，校验分组记录 hash 不变
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`：A+ 隔离 Playwright 冒烟
-  - 覆盖首次引导、搜索、归档筛选、拖拽自动展开、拖拽边缘、三状态按钮、移动到分组 head、收起/展开顺序、264px、英文/深色、宿主侧栏 Rail、亮色对比度
+  - 覆盖首次引导、搜索、归档筛选、拖拽自动展开、拖拽边缘、弹窗拖动/缩放、三状态按钮、移动到分组 head、收起/展开顺序、264px、英文/深色、宿主侧栏 Rail、亮色对比度
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
