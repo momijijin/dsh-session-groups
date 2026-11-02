@@ -37,6 +37,25 @@ test('0.2.18 exposes a plugin-manager Config with diagnostics and debug probe of
   }
 })
 
+test('apply registers the native control tool when the tools service is present', async (t) => {
+  const temp = await makeTempStore()
+  t.after(temp.cleanup)
+  let registered = null
+  const tools = {
+    register(tool) {
+      registered = tool
+      return () => {
+        registered = null
+      }
+    },
+  }
+  const { ctx } = makeContext({ services: { tools } })
+  apply(ctx, { filePath: temp.filePath })
+  assert.equal(registered?.name, 'session_groups_control')
+  assert.equal(registered.parameters.required.includes('action'), true)
+  assert.equal(typeof registered.execute, 'function')
+})
+
 test('apply() returns void synchronously and mounts the host routes inside ctx.effect', async (t) => {
   const temp = await makeTempStore()
   t.after(temp.cleanup)

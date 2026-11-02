@@ -25,6 +25,7 @@ import { CONTROL_TOKEN_FILE_NAME, DEBUG_FILE_NAME, DIAGNOSTICS_FILE_NAME } from 
 import { registerRoutes } from './host/routes.js'
 import { createStore } from './host/store.js'
 import { removeManagedSkill, repairManagedSkill } from './host/skill-install.js'
+import { createControlTool } from './host/tool.js'
 
 /** Cordis function-plugin name (matches the bundle patch row id). */
 export const name = 'dsh-session-groups'
@@ -133,6 +134,35 @@ export const apply = (ctx, config = {}) => {
     controlToken,
     skillDshHome: dshHome,
   })
+  const registerControlTool = (toolCtx) => {
+    if (toolCtx?.tools === undefined || typeof toolCtx.tools.register !== 'function') return
+    const effect = toolCtx.effect ?? ctx.effect
+    effect(
+      () =>
+        toolCtx.tools.register(
+          createControlTool({
+            store,
+            getService: (serviceName) => {
+              try {
+                return toolCtx.get?.(serviceName) ?? ctx.get?.(serviceName) ?? null
+              } catch {
+                return null
+              }
+            },
+            controlApiEnabled: () => readFlag('controlApi'),
+            controlSessionsEnabled: () => readFlag('controlSessions'),
+            controlDestructiveEnabled: () => readFlag('controlDestructive'),
+          }),
+        ),
+      'dsh-session-groups: register control tool',
+    )
+  }
+  if (typeof ctx.inject === 'function') {
+    ctx.inject(['tools'], registerControlTool)
+  } else {
+    const tools = ctx.get?.('tools')
+    if (tools !== undefined) registerControlTool({ ...ctx, tools })
+  }
   const probe = probeConnection(ctx)
 
   logInfo(

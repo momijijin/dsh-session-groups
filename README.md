@@ -7,7 +7,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 - 不修改官方工作区注册表
 - 不写入 `workspace.json`
 
-当前版本：**0.3.0-beta.29**  
+当前版本：**0.3.0-beta.30**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 功能
@@ -88,7 +88,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 设置 → 插件 → 添加插件 → 选择：
 
 ```text
-dsh-session-groups-0.3.0-beta.29.tgz
+dsh-session-groups-0.3.0-beta.30.tgz
 ```
 
 启用后完整重启 DSH（或按宿主提示刷新）。
@@ -98,7 +98,7 @@ dsh-session-groups-0.3.0-beta.29.tgz
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.29.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.30.tgz"
 ```
 
 安装后重启 DSH。安装命令会改 `desktop` profile，请先备份 `~/.dsh/profiles/desktop/package.json`。
@@ -136,7 +136,7 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 |---|---|---|
 | `diagnostics` | 关闭 | 拖拽 HUD 与本地 NDJSON trace |
 | `debugProbe` | 关闭 | 临时弹窗布局探针与 `.debug.ndjson` 路由；生产使用不要开启 |
-| `controlApi` | 关闭 | 本地 AI 控制 API：state / plan / apply；开启后才挂载路由 |
+| `controlApi` | 关闭 | AI 控制总开关：原生 `session_groups_control` 工具 + 浏览器/调试 HTTP 路由 |
 | `controlDestructive` | 关闭 | 允许 AI 控制接口执行删除等破坏性操作 |
 | `controlSessions` | 关闭 | 允许会话改名、归档状态切换；需同时开启 `controlApi` |
 
@@ -144,7 +144,42 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 `controlApi` 关闭时不会挂载 control 路由。开启后仅本地可用，并复用 host connection fence。  
 后台任务监控已在 0.3.0-beta.1 回滚，不订阅 `ctx.jobs`、不额外开启 job 流。
 
-AI control 路由：
+## AI 控制
+
+AI 的主通道是 Host 原生工具：
+
+```text
+session_groups_control
+```
+
+它直接在 DSH Host 进程内执行，不经过 HTTP、不需要浏览器 Cookie、不需要
+control token，也不依赖 CLI。`controlApi` 必须是开启状态；`controlSessions`
+控制会话改名/归档；`controlDestructive` 控制删除。
+
+工具动作：
+
+```text
+state
+resolve
+plan
+apply
+session_inspect
+session_rename
+session_archive
+```
+
+`state` 返回稳定 `revision`、每个分组的 `id`/`path`/icon/color 和 sessionIds。
+`resolve` 只把完整 path 数组解析成 ID；不存在返回 `group-not-found`，同名同级
+返回 `ambiguous-path` 并给出 candidates。`plan` 返回 `changes` 和 `planHash`；
+`apply` 必须带同一个 `planHash` 和 `baseRevision`，用 CAS 提交。
+
+会话动作必须显式传 `sessionId`；缺失就是 `invalid-session-id`，不猜最近会话。
+改名用 `expectedTitle`，归档用 `expectedArchived`；运行中的会话归档需要显式
+`stopActivity: true`。
+
+### HTTP 路由（浏览器/调试）
+
+以下路由保留给浏览器设置页和本地调试，不作为 AI CLI 的主通道：
 
 ```text
 GET  /dsh-session-groups/control/state
@@ -156,31 +191,17 @@ POST /dsh-session-groups/control/session/rename
 POST /dsh-session-groups/control/session/archive
 ```
 
-`state` 为每个分组返回 `id`、`path`（从顶级到叶子的名称数组）和 icon/color。写入操作仍然只接受 ID。`resolve` 只把完整 path 解析成 ID：不存在返回 404，同名同级返回 409 `ambiguous-path` 并给出 candidates，路径格式错误返回 422。路径按数组传输，不拼字符串，不做模糊匹配。
+真实 DSH Desktop 的 Host 浏览器会话 fence 在插件路由之前执行，只带插件
+Bearer token 的 CLI 会被 403 拒绝。因此 AI 不要再走 HTTP/CLI，改用原生工具。
 
-`apply` 需要 `baseRevision`、`operations`、`planHash`；重复请求可带 `idempotencyKey`。删除操作必须同时打开 `controlDestructive`。
+`group.create` 的 plan 结果不返回 `groupId`：ID 只在 apply 时生成，apply 后重新
+`state` 读取新 ID。
 
-`session/inspect`、`session/rename`、`session/archive` 需要同时打开 `controlSessions`。改名使用 `expectedTitle` 前置条件；归档使用 `expectedArchived` 前置条件。归档运行中的会话默认会被拒绝，只有显式 `stopActivity: true` 才会停止活动。
-
-`group.create` 的 plan 结果不返回 `groupId`：ID 只在 apply 时生成，apply 后重新 `state` 读取新 ID。
-
-插件在以下位置写入一次性本地 bearer token（权限 0600），供本地 CLI/skill 使用；`controlApi` 关闭时控制路由仍返回 404：
+插件在以下位置写入本地控制 token（权限 0600）；`controlApi` 关闭时控制路由
+仍返回 404，token 本身不能绕过 Host 浏览器 fence：
 
 ```text
 <dshHome>/storages/dsh-session-groups.control-token
-```
-
-CLI：
-
-```powershell
-$cli = "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-session-groups\scripts\session-groups-control.mjs"
-node $cli state
-node $cli resolve .\resolve.json
-node $cli plan .\plan.json
-node $cli apply .\apply.json
-node $cli session-inspect .\session.json
-node $cli session-rename .\rename.json
-node $cli session-archive .\archive.json
 ```
 
 包内置 skill：`skills/session-groups-control/SKILL.md`。开启 `controlApi` 后，插件会自动安装到 `<dshHome>/skills/session-groups-control/SKILL.md`；Plugins 页对应插件行提供“校验 / 重装技能”按钮，可修复丢失或损坏的 skill，无需卸载整个插件。
@@ -206,7 +227,7 @@ node $cli session-archive .\archive.json
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
-- 当前发布验证以 360 项单元/契约测试和用户桌面回归为准；仓库保留 E2E 脚本，但尚未记录 0.3.0-beta.29 的完整 E2E 结果。
+- 当前发布验证以 366 项单元/契约测试和用户桌面回归为准；仓库保留 E2E 脚本，但尚未记录 0.3.0-beta.30 的完整 E2E 结果。
 
 ## 开发
 
@@ -217,7 +238,7 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：360 项单元/契约测试
+- `npm test`：366 项单元/契约测试
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试`n- `npm run check:core`：只加载并测试 src/core，不启动 DSH
 - `scripts/qa/clean-profile.ps1`：隔离 profile 安装/卸载验证，不碰真实 `~/.dsh`
@@ -227,13 +248,15 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.29.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.30.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 
 ## 许可
 
 MIT，见 `LICENSE`。
+
+
 
 
 

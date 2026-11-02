@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.30 (2026-11-02)
+
+- Add the native session_groups_control Host tool and make it the AI path; HTTP/CLI remains browser-only because the Host browser-session fence rejects plugin bearer tokens.
+
 ## 0.3.0-beta.29 (2026-11-02)
 
 - Lock the restored settings-page switches and live controlApi gate with contract tests; all five fields must be volatile and default off.
@@ -167,6 +171,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 
