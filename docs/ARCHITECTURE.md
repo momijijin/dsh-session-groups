@@ -51,6 +51,9 @@ src/index.js     Cordis host 入口
 - `src/core/dialog-selection.js`
   - 选择弹窗初始值、合法性与 Confirm payload
   - `src/client/dialog-selection.js` 只保留兼容 re-export
+- `src/core/dialog-geometry.js`
+  - 矩形 viewport clamp、居中、拖动、八方向缩放
+  - `src/client/dialog-geometry.js` 保留 localStorage 持久化并 re-export 纯数学
 
 ## 当前适配器
 
@@ -58,19 +61,19 @@ src/index.js     Cordis host 入口
   - `installClientRuntime` / `clientRuntime`
   - 由 `plugin.js` 注入，React 组件只读取这个薄桥
 - `src/client/dialog-geometry.js`
-  - 纯矩形数学与 localStorage 持久化仍在同一适配器模块；后续可把纯数学拆到 `src/core`
+  - 只保留 geometry key、read/save/clear 与 localStorage 适配
 
 ## 已有纯模块
 
 这些模块目前仍在原位置，但同样必须保持纯函数性质，后续可按同样方式迁入 `src/core`：
 
 - `src/shared/model.js`
-- `src/client/dialog-geometry.js`
 
 ## 测试边界
 
 `tests/core/boundary.test.js` 会扫描 `src/core/**`，阻止 React/DSH/DOM 依赖倒灌进来。  
 `tests/core/session-row.test.js` 直接测试纯比较与文案策略。
+
 
 
 
