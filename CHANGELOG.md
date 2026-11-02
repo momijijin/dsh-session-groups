@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.8 (2026-11-02)
+
+- Extracted a pure core layer (session-row policy, layout arithmetic) with boundary tests, and moved the DSH runtime bridge into src/adapters.
+
 ## 0.3.0-beta.7 (2026-11-02)
 
 - Raised light-theme contrast for the groups header and zero-count status buttons; added A+ contrast gates.
@@ -77,6 +81,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

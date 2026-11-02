@@ -7,6 +7,9 @@
  * from those hooks; the only local state is this plugin's view store.
  */
 import { Component, createElement, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { clientRuntime as rt } from '../adapters/client-runtime.js'
+import { estimatedTreeHeight } from '../core/layout.js'
+import { sessionRowPropsEqual, statusLabel } from '../core/session-row.js'
 import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME, PLUGIN_VERSION, SESSION_WATERMARK_BASE, SESSION_WATERMARK_AUTO_MAX } from '../shared/constants.js'
 import {
   childrenOf,
@@ -110,17 +113,8 @@ import {
 const h = createElement
 
 // ---------------------------------------------------------------------------
-// Runtime bridge (set by plugin.js during apply; module scope = one plugin
-// instance per page, matching the single sidebar.workspaces slot).
+// Runtime bridge is installed by plugin.js through the DSH client adapter.
 // ---------------------------------------------------------------------------
-let runtime = null
-
-/** @param {object} value - plugin runtime {store, t, actions, commitDoc, load, requestLoad, ...} */
-export const setRuntime = (value) => {
-  runtime = value
-}
-
-const rt = () => runtime
 
 const useViewStore = () => {
   const store = rt()?.store
@@ -343,10 +337,7 @@ const StatusSpinner = () =>
 const StatusDot = ({ state }) => h('span', { class: 'dsg-status-dot', 'data-state': state, 'aria-hidden': 'true' })
 
 /** One translated status label for the visually-hidden accessibility text. */
-const statusText = (status) => {
-  const t = rt()?.t ?? ((key) => key)
-  return t(status.labelKey, status.params)
-}
+const statusText = (status) => statusLabel(status, rt()?.t)
 
 /**
  * The leading 16x20 status cell shared by session rows. Idle renders an empty
@@ -511,30 +502,8 @@ const EmptyDropBox = ({ label, active = false, testId = 'session-groups-empty', 
  * 0.2.20: a stream/frame snapshot rebuilds the whole tree. The row only needs
  * to repaint when display data, status, workspace, archive flag or active
  * highlight changes; handlers are the stable proxy supplied by GroupsView.
+ * Comparison policy lives in src/core/session-row.js.
  */
-const sessionRowPropsEqual = (prev, next) => {
-  const a = prev.sessionNode
-  const b = next.sessionNode
-  if (a.session.id !== b.session.id) return false
-  if (prev.depth !== next.depth || prev.groupId !== next.groupId || prev.ungrouped !== next.ungrouped) return false
-  if (a.archived !== b.archived || a.runningSubagentCount !== b.runningSubagentCount) return false
-  if ((prev.store?.currentSessionId === a.session.id) !== (next.store?.currentSessionId === b.session.id)) return false
-  const ar = a.session
-  const br = b.session
-  if (ar.title !== br.title || ar.displayTitle !== br.displayTitle || ar.updatedAt !== br.updatedAt || ar.blank !== br.blank) return false
-  const aw = a.workspace
-  const bw = b.workspace
-  if (aw?.workspaceId !== bw?.workspaceId || aw?.title !== bw?.title || aw?.path !== bw?.path) return false
-  const as = a.status
-  const bs = b.status
-  if (as === bs) return true
-  if (!as || !bs) return false
-  return (
-    as.running === bs.running &&
-    as.completionUnread === bs.completionUnread &&
-    as.pendingInteraction?.kind === bs.pendingInteraction?.kind
-  )
-}
 
 const SessionRowImpl = ({
   sessionNode,
@@ -924,13 +893,9 @@ const GroupNode = ({ node, depth, props, handlers, store }) => {
 // ---------------------------------------------------------------------------
 /**
  * Estimated initial viewport for the first render before the real `.dsg-tree`
- * metrics are measured. The window is recomputed from the DOM immediately after
- * mount, so this only affects the first paint, never the settled list.
+ * metrics are measured. Pure arithmetic lives in src/core/layout.js; the host
+ * viewport probe stays here.
  */
-const estimatedTreeHeight = () => {
-  const height = Number(globalThis.innerHeight)
-  return Number.isFinite(height) && height > 0 ? Math.max(240, height - 220) : 700
-}
 
 const VirtualSpacer = ({ height, position }) =>
   h('div', {
@@ -958,7 +923,7 @@ const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
   const total = node.length
   const [metrics, setMetrics] = useState(() => ({
     scrollTop: 0,
-    viewportHeight: estimatedTreeHeight(),
+    viewportHeight: estimatedTreeHeight(globalThis.innerHeight),
     listTop: VIRTUAL_HEADER_HEIGHT + 4,
   }))
   const win = computeVirtualWindow({

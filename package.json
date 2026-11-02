@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-groups",
-  "version": "0.3.0-beta.7",
+  "version": "0.3.0-beta.8",
   "description": "DSH left-sidebar global session groups: organize sessions across workspaces without moving them.",
   "author": "momiji-gz302ea <2648863351@qq.com>",
   "keywords": [
@@ -25,6 +25,7 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
+    "docs/ARCHITECTURE.md",
     "docs/RELEASE.md",
     "docs/TEST-RESULTS.md"
   ],
@@ -66,3 +67,4 @@
     "@deepseek-ai/schemastery": "~3.18.5"
   }
 }
+

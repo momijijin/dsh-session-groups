@@ -24,7 +24,8 @@ import {
   initDiagnostics,
 } from './diagnostics.js'
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
-import { GroupsViewBoundary, setRuntime } from './components.js'
+import { installClientRuntime } from '../adapters/client-runtime.js'
+import { GroupsViewBoundary } from './components.js'
 import {
   applyManagedWidth,
   clearManagedWidth,
@@ -548,7 +549,7 @@ export const createPlugin = () => {
         return capabilities()
       },
     }
-    setRuntime(bridge)
+    installClientRuntime(bridge)
 
     const onWindowResize = () => {
       if (updateManagedWidth(readSidebarWidth(), globalThis.innerWidth || 1440) === null) syncSidebarWidth()
