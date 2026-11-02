@@ -89,8 +89,9 @@ copy the token.
 
 For "rename this session, then move it into a group":
 
-1. Wait until the named task has actually returned; never infer completion by
-   polling blindly.
+1. The user's follow-up prompt is the trigger. If the user says the task is
+   complete, proceed; do not poll for an event and do not require a scheduler.
+   If you are still waiting on your own tool/subagent result, finish that first.
 2. `session-inspect` for the current `$env:DSH_SESSION_ID`; capture `title`.
 3. `state`; capture `revision`; resolve the full target group path.
 4. `session-rename` with `expectedTitle`; then `session-inspect` to verify.
