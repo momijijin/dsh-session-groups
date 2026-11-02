@@ -280,6 +280,17 @@ try {
     throw new Error(`moved session order changed after collapse/expand: ${JSON.stringify(afterToggle)}`)
   }
 
+  // Header search must find a group by its name and close cleanly.
+  await page.evaluate(() => document.querySelector('[data-testid="session-groups-search-toggle"]')?.click())
+  const search = page.locator('[data-testid="session-groups-search"]')
+  await search.waitFor({ state: 'visible' })
+  await search.fill(targetName)
+  await page.waitForTimeout(500)
+  const searchText = (await page.locator('[data-testid="session-groups-search-result"]').allTextContents()).join('\n')
+  if (!searchText.includes(targetName)) throw new Error(`search did not find ${targetName}: ${JSON.stringify(searchText)}`)
+  await page.evaluate(() => document.querySelector('[data-testid="session-groups-search-close"]')?.click())
+  await page.waitForTimeout(300)
+
   // Narrow sidebar visual gate: the sidebar must not create horizontal overflow.
   await page.evaluate(() => localStorage.setItem('dsh-session-groups.width.v1', '264'))
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -381,7 +392,7 @@ try {
   await page.waitForTimeout(800)
   await groupView.waitFor({ state: 'visible' })
 
-  console.log('PASS: isolated onboarding, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
+  console.log('PASS: isolated onboarding, search, status buttons, head insertion, collapse/expand, 264px, dark, host rail')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
@@ -390,3 +401,4 @@ try {
   await context.close().catch(() => {})
   await browser.close().catch(() => {})
 }
+
