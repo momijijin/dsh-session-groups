@@ -31,6 +31,10 @@ test('0.2.18 exposes a plugin-manager Config with diagnostics and debug probe of
   assert.equal(Config.dict.diagnostics.meta.default, false)
   assert.equal(Config.dict.debugProbe.type, 'boolean')
   assert.equal(Config.dict.debugProbe.meta.default, false)
+  for (const key of ['diagnostics', 'debugProbe', 'controlApi', 'controlDestructive', 'controlSessions']) {
+    assert.equal(Config.dict[key].meta.volatile, true, `${key} must be served by the host config form`)
+    assert.equal(Config.dict[key].meta.default, false, `${key} must default off`)
+  }
 })
 
 test('apply() returns void synchronously and mounts the host routes inside ctx.effect', async (t) => {
@@ -47,7 +51,7 @@ test('apply() returns void synchronously and mounts the host routes inside ctx.e
 
   // Cordis 4.0.5 treats the return value as the plugin effect list.
   assert.equal(returned, undefined)
-  assert.equal(routes.length, 4)
+  assert.equal(routes.length, 11)
   assert.equal(ready.filePath, temp.filePath)
   assert.equal(ready.diagnosticsFilePath, join(temp.storages, 'dsh-session-groups.diagnostics.ndjson'))
   assert.equal(ready.debugFilePath, join(temp.storages, 'dsh-session-groups.debug.ndjson'))

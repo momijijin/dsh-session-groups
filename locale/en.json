@@ -246,6 +246,18 @@
   "skill.repairButton": "Verify / reinstall skill",
   "skill.repairRunning": "Checking…",
   "skill.repairOk": "Skill is ready",
-  "skill.repairFailed": "Skill repair failed"
+  "skill.repairFailed": "Skill repair failed",
+  "config.title": "Free-group settings",
+  "config.hint": "Only enable AI control, session mutations, or diagnostics for callers you trust.",
+  "config.diagnostics": "Drag diagnostics",
+  "config.diagnosticsHint": "Enable the local HUD and NDJSON trace.",
+  "config.debugProbe": "Dialog layout probe",
+  "config.debugProbeHint": "Temporary debugging only; leave off in production.",
+  "config.controlApi": "AI control API",
+  "config.controlApiHint": "Enable state / resolve / plan / apply and session-operation routes.",
+  "config.controlDestructive": "Allow destructive operations",
+  "config.controlDestructiveHint": "Allow the AI control API to delete groups.",
+  "config.controlSessions": "Allow session operations",
+  "config.controlSessionsHint": "Allow session rename and archive-state changes."
 }
 

@@ -760,6 +760,14 @@ export const CSS = `
 .dsg-rail-button { width: 36px; height: 36px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.08)); color: var(--dsw-alias-label-secondary, CanvasText); border-radius: var(--dsw-radius-md, 8px); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .dsg-rail-label { font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-skill-repair { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0 2px; }
+.dsg-config-list { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 14px; }
+.dsg-config-title { font-size: var(--dsg-font-14, 14px); line-height: 20px; color: var(--dsw-alias-label-primary, CanvasText); }
+.dsg-config-hint { margin: 2px 0 8px; font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-label-tertiary, CanvasText); }
+.dsg-config-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; cursor: pointer; }
+.dsg-config-checkbox { width: 16px; height: 16px; margin: 2px 0 0; flex: none; accent-color: var(--dsw-alias-brand-primary, CanvasText); }
+.dsg-config-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dsg-config-label { font-size: var(--dsg-font-13, 13px); line-height: 20px; color: var(--dsw-alias-label-primary, CanvasText); }
+.dsg-config-proof { font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-skill-repair-copy { flex: 1; min-width: 180px; }
 .dsg-skill-repair-title { font-size: var(--dsg-font-14, 14px); line-height: 20px; color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-skill-repair-body { margin-top: 2px; font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-label-tertiary, CanvasText); }

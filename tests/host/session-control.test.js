@@ -47,11 +47,14 @@ const sessionServices = () => {
   }
 }
 
-test('session control routes require the session mutation switch', async (t) => {
+test('session control routes stay behind the session mutation switch', async (t) => {
   const services = sessionServices()
   const off = await mountRoutes({ connection: connection(), controlApiEnabled: true, services: services.services })
   t.after(() => off.cleanup())
-  assert.equal(off.routes.some((route) => route.path === CONTROL_SESSION_INSPECT_PATH), false)
+  assert.equal(off.routes.some((route) => route.path === CONTROL_SESSION_INSPECT_PATH), true)
+  const hidden = await off.call(CONTROL_SESSION_INSPECT_PATH, post({ sessionId: 's-1' }))
+  assert.equal(hidden.res.statusCode, 404)
+  assert.equal(hidden.json.code, 'session-controls-disabled')
 
   const on = await mountRoutes({
     connection: connection(),
@@ -60,11 +63,10 @@ test('session control routes require the session mutation switch', async (t) => 
     services: services.services,
   })
   t.after(() => on.cleanup())
-  assert.deepEqual(on.mounted.routes.slice(-3), [
-    CONTROL_SESSION_INSPECT_PATH,
-    CONTROL_SESSION_RENAME_PATH,
-    CONTROL_SESSION_ARCHIVE_PATH,
-  ])
+  assert.deepEqual(
+    on.mounted.routes.filter((path) => path.startsWith('/dsh-session-groups/control/session/')),
+    [CONTROL_SESSION_INSPECT_PATH, CONTROL_SESSION_RENAME_PATH, CONTROL_SESSION_ARCHIVE_PATH],
+  )
 })
 
 test('session inspect, rename and archive use explicit preconditions', async (t) => {

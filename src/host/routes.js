@@ -239,9 +239,9 @@ export const registerRoutes = (ctx, store, options = {}) => {
     typeof options.debugFilePath === 'string' && options.debugFilePath.length > 0 ? options.debugFilePath : null
   const diagnosticsEnabled = options.diagnosticsEnabled !== false
   const debugProbeEnabled = options.debugProbeEnabled === true
-  const controlApiEnabled = options.controlApiEnabled === true
-  const controlDestructiveEnabled = options.controlDestructiveEnabled === true
-  const controlSessionsEnabled = options.controlSessionsEnabled === true
+  const controlApiEnabled = () => (typeof options.controlApiEnabled === 'function' ? options.controlApiEnabled() === true : options.controlApiEnabled === true)
+  const controlDestructiveEnabled = () => (typeof options.controlDestructiveEnabled === 'function' ? options.controlDestructiveEnabled() === true : options.controlDestructiveEnabled === true)
+  const controlSessionsEnabled = () => (typeof options.controlSessionsEnabled === 'function' ? options.controlSessionsEnabled() === true : options.controlSessionsEnabled === true)
   const skillDshHome = typeof options.skillDshHome === 'string' && options.skillDshHome.length > 0 ? options.skillDshHome : null
   const getService = (name) => {
     try {
@@ -261,6 +261,11 @@ export const registerRoutes = (ctx, store, options = {}) => {
     return supplied.length === expected.length && timingSafeEqual(supplied, expected)
   }
   const controlDenied = (req, res) => (hasControlToken(req) ? false : fenceDenied(req, res))
+  const controlUnavailable = (res) => {
+    if (controlApiEnabled()) return false
+    sendJson(res, 404, { ok: false, code: 'control-disabled' })
+    return true
+  }
   const readControlJson = async (req, res) => {
     if (contentTypeOf(req) !== 'application/json') {
       sendJson(res, 415, { ok: false, code: 'unsupported-media-type', message: 'content-type must be application/json' })
@@ -559,7 +564,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
   let sessionRenamePath = null
   let sessionArchivePath = null
   let skillRepairPath = null
-  if (controlApiEnabled) {
+  {
     const idempotency = new Map()
     const remember = (key, value) => {
       if (!key) return
@@ -570,6 +575,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
     controlStatePath = register(
       CONTROL_STATE_PATH,
       async (req, res) => {
+        if (controlUnavailable(res)) return
         if (controlDenied(req, res)) return
         if (req.method !== 'GET') {
           sendMethodNotAllowed(res, 'GET')
@@ -592,6 +598,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
     controlResolvePath = register(
       CONTROL_RESOLVE_PATH,
       async (req, res) => {
+        if (controlUnavailable(res)) return
         if (controlDenied(req, res)) return
         if (req.method !== 'POST') {
           sendMethodNotAllowed(res, 'POST')
@@ -668,6 +675,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
     controlPlanPath = register(
       CONTROL_PLAN_PATH,
       async (req, res) => {
+        if (controlUnavailable(res)) return
         if (controlDenied(req, res)) return
         if (req.method !== 'POST') {
           sendMethodNotAllowed(res, 'POST')
@@ -720,7 +728,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
             return
           }
           const planned = applyControlOperations(result.doc, operations, {
-            allowDestructive: controlDestructiveEnabled,
+            allowDestructive: controlDestructiveEnabled(),
           })
           if (!planned.ok) {
             sendJson(res, 422, planned)
@@ -743,6 +751,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
     controlApplyPath = register(
       CONTROL_APPLY_PATH,
       async (req, res) => {
+        if (controlUnavailable(res)) return
         if (controlDenied(req, res)) return
         if (req.method !== 'POST') {
           sendMethodNotAllowed(res, 'POST')
@@ -832,7 +841,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
             return
           }
           const planned = applyControlOperations(result.doc, operations, {
-            allowDestructive: controlDestructiveEnabled,
+            allowDestructive: controlDestructiveEnabled(),
           })
           if (!planned.ok) {
             sendJson(res, 422, planned)
@@ -864,7 +873,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
     )
   }
 
-  if (controlApiEnabled && controlSessionsEnabled) {
+  {
     const sessionLookup = (sessionId) => {
       const sessions = getService('sessions')
       if (sessions === null || typeof sessions.get !== 'function') return null
@@ -875,6 +884,11 @@ export const registerRoutes = (ctx, store, options = {}) => {
       return registry !== null && Array.isArray(registry.archivedSessionIds) ? registry.archivedSessionIds : null
     }
     const sessionBody = async (req, res) => {
+      if (controlUnavailable(res)) return null
+      if (!controlSessionsEnabled()) {
+        sendJson(res, 404, { ok: false, code: 'session-controls-disabled' })
+        return null
+      }
       if (controlDenied(req, res)) return null
       if (req.method !== 'POST') {
         sendMethodNotAllowed(res, 'POST')
@@ -922,10 +936,11 @@ export const registerRoutes = (ctx, store, options = {}) => {
     )
   }
 
-  if (controlApiEnabled && controlSessionsEnabled) {
+  {
     sessionRenamePath = register(
       CONTROL_SESSION_RENAME_PATH,
       async (req, res) => {
+        if (controlUnavailable(res)) return
         if (controlDenied(req, res)) return
         if (req.method !== 'POST') {
           sendMethodNotAllowed(res, 'POST')
@@ -990,10 +1005,11 @@ export const registerRoutes = (ctx, store, options = {}) => {
     )
   }
 
-  if (controlApiEnabled && controlSessionsEnabled) {
+  {
     sessionArchivePath = register(
       CONTROL_SESSION_ARCHIVE_PATH,
       async (req, res) => {
+        if (controlUnavailable(res)) return
         if (controlDenied(req, res)) return
         if (req.method !== 'POST') {
           sendMethodNotAllowed(res, 'POST')
@@ -1064,7 +1080,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
           sendMethodNotAllowed(res, 'POST')
           return
         }
-        if (!controlApiEnabled) {
+        if (!controlApiEnabled()) {
           sendJson(res, 409, {
             ok: false,
             code: 'control-api-disabled',

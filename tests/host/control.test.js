@@ -21,19 +21,37 @@ const connection = () => ({
 const headers = { cookie: 'token=ok', 'content-type': 'application/json' }
 const post = (body) => makeRequest({ method: 'POST', headers, body: JSON.stringify(body) })
 
-test('control routes stay unmounted unless the API setting is enabled', async (t) => {
+test('control routes stay behind the API switch without changing their paths', async (t) => {
   const off = await mountRoutes({ connection: connection() })
   t.after(() => off.cleanup())
-  assert.equal(off.routes.some((route) => route.path === CONTROL_STATE_PATH), false)
+  assert.equal(off.routes.some((route) => route.path === CONTROL_STATE_PATH), true)
+  const hidden = await off.call(CONTROL_STATE_PATH, makeRequest({ method: 'GET', headers }))
+  assert.equal(hidden.res.statusCode, 404)
+  assert.equal(hidden.json.code, 'control-disabled')
 
   const on = await mountRoutes({ connection: connection(), controlApiEnabled: true })
   t.after(() => on.cleanup())
-  assert.deepEqual(on.mounted.routes.slice(-4), [
-    CONTROL_STATE_PATH,
-    CONTROL_RESOLVE_PATH,
-    CONTROL_PLAN_PATH,
-    CONTROL_APPLY_PATH,
-  ])
+  assert.deepEqual(
+    on.mounted.routes.filter((path) => path.startsWith('/dsh-session-groups/control/') && !path.includes('/session/')),
+    [CONTROL_STATE_PATH, CONTROL_RESOLVE_PATH, CONTROL_PLAN_PATH, CONTROL_APPLY_PATH],
+  )
+})
+
+test('control routes follow the live API switch without remounting', async (t) => {
+  let enabled = false
+  const mounted = await mountRoutes({
+    connection: connection(),
+    controlApiEnabled: () => enabled,
+  })
+  t.after(() => mounted.cleanup())
+
+  const hidden = await mounted.call(CONTROL_STATE_PATH, makeRequest({ method: 'GET', headers }))
+  assert.equal(hidden.res.statusCode, 404)
+  assert.equal(hidden.json.code, 'control-disabled')
+
+  enabled = true
+  const visible = await mounted.call(CONTROL_STATE_PATH, makeRequest({ method: 'GET', headers }))
+  assert.equal(visible.res.statusCode, 200)
 })
 
 test('control state, plan and apply use revision CAS and idempotency', async (t) => {

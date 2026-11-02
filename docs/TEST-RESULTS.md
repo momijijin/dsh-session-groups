@@ -1,12 +1,12 @@
-# 0.3.0-beta.25 测试结果
+# 0.3.0-beta.29 测试结果
 
 日期：2026-11-02  
-版本：`0.3.0-beta.25`  
+版本：`0.3.0-beta.29`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 单元/契约测试：**359/359 PASS**
+- 单元/契约测试：**360/360 PASS**
 - A+ 隔离 Playwright 冒烟：**PASS**（独立 `DSH_HOME` + `sg-e2e` + 4419）
   - 首次引导出现/关闭后刷新不重现
   - 三状态按钮存在，后台任务按钮不存在
@@ -20,7 +20,7 @@
   - 把组外会话拖到已收起目标组上时，目标组自动展开
   - 分组头部上/下边缘分别生成 `group-before` / `group-after` 占位
   - 弹窗标题栏可拖动、resizer 可改变尺寸、backdrop 点击不关闭
-  - 宿主侧栏收起后 Rail 宽度 ≤64px，宽度 override 已释放
+  - 宿主侧栏收起后 Rail 宽度 ≤64px，宽度 override 已释放`n  - Plugins 页五个配置开关实际出现；controlApi 切换后控制路由 404/200 热生效
 - 隔离 control E2E：state/resolve/plan/apply、icon/color、同名歧义、未知字段
 - 隔离 session E2E：inspect / rename / archive / unarchive 实际 CLI 通过
 - 设置页修复卡：实际打开 Plugins 页并点击按钮，返回 `Skill is ready`
@@ -98,6 +98,11 @@ fail 0
 
 - 0.3.0-beta.1 不再包含后台任务状态监控，因此本次没有 `ctx.jobs` 流相关性能验证项。
 - 发布包 SHA256 以构建后的 `npm pack` 输出为准。
+
+
+
+
+
 
 
 

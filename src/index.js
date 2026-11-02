@@ -34,22 +34,26 @@ export const name = 'dsh-session-groups'
  * Diagnostics are off by default; the form switch turns the local trace/HUD on.
  */
 export const Config = z.object({
-  diagnostics: z.boolean().default(false).description('Enable local drag diagnostics (HUD + NDJSON trace)'),
+  diagnostics: z.boolean().default(false).volatile().description('Enable local drag diagnostics (HUD + NDJSON trace)'),
   debugProbe: z
     .boolean()
     .default(false)
+    .volatile()
     .description('Enable the temporary dialog layout probe and its local .debug.ndjson route'),
   controlApi: z
     .boolean()
     .default(false)
+    .volatile()
     .description('Enable the local AI control API (state/plan/apply); default off'),
   controlDestructive: z
     .boolean()
     .default(false)
+    .volatile()
     .description('Allow destructive AI control operations such as group deletion'),
   controlSessions: z
     .boolean()
     .default(false)
+    .volatile()
     .description('Allow AI control of session title and archived status; requires controlApi'),
 })
 
@@ -62,6 +66,11 @@ export const inject = ['webServer']
 
 /** Cordis function plugin body. Must not return data (see module comment). */
 export const apply = (ctx, config = {}) => {
+  const readFlag = (key) => {
+    const value = config?.[key]
+    if (value !== null && typeof value === 'object' && typeof value.get === 'function') return value.get() === true
+    return value === true
+  }
   const record = resolveRecordPath(ctx, config)
   const store = createStore({ filePath: record.filePath })
   const diagnosticsFilePath =
@@ -75,7 +84,7 @@ export const apply = (ctx, config = {}) => {
   let controlTokenPath = null
   const dshHome = dirname(record.storageDir)
   let skillStatus = null
-  if (config?.controlApi === true) {
+  if (readFlag('controlApi')) {
     try {
       skillStatus = repairManagedSkill({ dshHome })
       ctx.effect(
@@ -92,7 +101,7 @@ export const apply = (ctx, config = {}) => {
       logWarn(ctx, `dsh-session-groups: skill install failed: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
-  if (config?.controlApi === true) {
+  {
     controlToken = randomBytes(32).toString('hex')
     controlTokenPath = join(dirname(record.filePath), CONTROL_TOKEN_FILE_NAME)
     try {
@@ -116,11 +125,11 @@ export const apply = (ctx, config = {}) => {
   const mounted = registerRoutes(ctx, store, {
     diagnosticsFilePath,
     debugFilePath: join(dirname(record.filePath), DEBUG_FILE_NAME),
-    diagnosticsEnabled: config?.diagnostics === true,
-    debugProbeEnabled: config?.debugProbe === true,
-    controlApiEnabled: config?.controlApi === true,
-    controlDestructiveEnabled: config?.controlDestructive === true,
-    controlSessionsEnabled: config?.controlSessions === true,
+    diagnosticsEnabled: readFlag('diagnostics'),
+    debugProbeEnabled: readFlag('debugProbe'),
+    controlApiEnabled: () => readFlag('controlApi'),
+    controlDestructiveEnabled: () => readFlag('controlDestructive'),
+    controlSessionsEnabled: () => readFlag('controlSessions'),
     controlToken,
     skillDshHome: dshHome,
   })

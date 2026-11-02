@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0-beta.29 (2026-11-02)
+
+- Lock the restored settings-page switches and live controlApi gate with contract tests; all five fields must be volatile and default off.
+
+## 0.3.0-beta.28 (2026-11-02)
+
+- Follow the univer plugin pattern: keep all config fields volatile, mount control routes persistently, gate them on live config refs, and always create the per-run token so toggling controlApi works without restarting DSH.
+
+## 0.3.0-beta.27 (2026-11-02)
+
+- Mark the five plugin Config fields volatile so the host config form is served, restoring the settings switches alongside the skill repair card.
+
+## 0.3.0-beta.26 (2026-11-02)
+
+- Restore the five config switches on the Plugins row page and keep the skill repair card below them; bind switches through the host config form.
+
 ## 0.3.0-beta.25 (2026-11-02)
 
 - Load the plugin-manager client package so the Plugins-page skill repair slot can register; auto-install the managed skill on controlApi enable.
@@ -151,6 +167,10 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
+
+
+
 
 
 

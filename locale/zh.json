@@ -246,6 +246,18 @@
   "skill.repairButton": "校验 / 重装技能",
   "skill.repairRunning": "正在检查…",
   "skill.repairOk": "技能已可用",
-  "skill.repairFailed": "技能修复失败"
+  "skill.repairFailed": "技能修复失败",
+  "config.title": "自由分组设置",
+  "config.hint": "开启 AI 控制、会话操作或诊断前请确认信任当前调用方。",
+  "config.diagnostics": "拖拽诊断",
+  "config.diagnosticsHint": "启用本地 HUD 与 NDJSON trace。",
+  "config.debugProbe": "弹窗布局探针",
+  "config.debugProbeHint": "临时调试用；生产环境不要开启。",
+  "config.controlApi": "AI 控制接口",
+  "config.controlApiHint": "开启 state / resolve / plan / apply 与会话操作路由。",
+  "config.controlDestructive": "允许破坏性操作",
+  "config.controlDestructiveHint": "允许 AI 控制接口删除分组。",
+  "config.controlSessions": "允许会话操作",
+  "config.controlSessionsHint": "允许会话改名和归档状态切换。"
 }
 
