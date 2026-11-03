@@ -778,6 +778,12 @@ export const initDiagnostics = (options = {}) => {
 /** The live instance (null before the plugin mounts / in unit tests). */
 export const getDiagnostics = () => current
 
+/** Stop and forget the page diagnostics instance after a live config change. */
+export const stopDiagnostics = () => {
+  current?.dispose()
+  current = null
+}
+
 /** Cached boolean check for hot paths. */
 export const diagEnabled = () => current !== null && current.enabled === true
 
@@ -813,8 +819,7 @@ export const diagFlush = (options) => current?.flush(options) ?? Promise.resolve
 
 /** Test seam: dispose and forget the page singleton. */
 export const resetDiagnosticsForTests = () => {
-  current?.dispose()
-  current = null
+  stopDiagnostics()
 }
 
 /** Re-export the target key helper for tests. */

@@ -44,13 +44,45 @@ const commitBody = (baseRevision, doc) => JSON.stringify({ baseRevision, doc })
 test('route registration mounts the frozen paths and diagnostics by default', async (t) => {
   const mounted = await mountRoutes()
   t.after(() => mounted.cleanup())
-  assert.equal(mounted.routes.length, 10)
-  for (const path of [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH]) {
+  assert.equal(mounted.routes.length, 11)
+  for (const path of [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH, DEBUG_PATH]) {
     assert.equal(mounted.routes.some((route) => route.path === path), true)
   }
   assert.deepEqual(mounted.mounted.routes.slice(0, 3), [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH])
   assert.equal(mounted.mounted.routes.includes('/dsh-session-groups/control/state'), true)
   assert.equal(mounted.mounted.routes.includes('/dsh-session-groups/control/session/inspect'), true)
+})
+
+test('diagnostics and debugProbe flags are live per request', async (t) => {
+  const flags = { diagnostics: false, debugProbe: false }
+  const mounted = await mountRoutes({
+    connection: cookieConnection(),
+    diagnosticsEnabled: () => flags.diagnostics,
+    debugProbeEnabled: () => flags.debugProbe,
+  })
+  t.after(() => mounted.cleanup())
+
+  const before = await mounted.call(LOAD_PATH, makeRequest({ headers: { cookie: 'token=ok' } }))
+  assert.equal(before.json.diagnostics, false)
+  assert.equal(before.json.debugProbe, false)
+  const debugOff = await mounted.call(
+    DEBUG_PATH,
+    makeRequest({ method: 'POST', headers: allowedHeaders, body: '{}' }),
+  )
+  assert.equal(debugOff.res.statusCode, 404)
+  assert.equal(debugOff.json.code, 'debug-disabled')
+
+  flags.diagnostics = true
+  flags.debugProbe = true
+  const after = await mounted.call(LOAD_PATH, makeRequest({ headers: { cookie: 'token=ok' } }))
+  assert.equal(after.json.diagnostics, true)
+  assert.equal(after.json.debugProbe, true)
+  const debugOn = await mounted.call(
+    DEBUG_PATH,
+    makeRequest({ method: 'POST', headers: allowedHeaders, body: '{"probe":true}' }),
+  )
+  assert.equal(debugOn.res.statusCode, 200)
+  assert.equal(debugOn.json.ok, true)
 })
 
 test('the debug probe route mounts only when explicitly enabled', async (t) => {

@@ -59,6 +59,7 @@ export const SkillRepairCard = ({ form }) => {
         accepted = await form.mutate([{ op: 'set', path: [field], value }], revision)
       } else accepted = false
       if (accepted === false) setPending((current) => ({ ...current, [field]: !value }))
+      else clientRuntime()?.refreshRuntimeConfig?.()
     } catch {
       setPending((current) => ({ ...current, [field]: !value }))
     }

@@ -222,7 +222,7 @@ export const parseDiagnosticsBody = (body) => {
  *
  * @param {object} ctx Cordis context.
  * @param {object} store group document store.
- * @param {{ diagnosticsFilePath?: string | null, debugFilePath?: string | null, diagnosticsEnabled?: boolean, debugProbeEnabled?: boolean }} [options] host-half options
+ * @param {{ diagnosticsFilePath?: string | null, debugFilePath?: string | null, diagnosticsEnabled?: boolean | (() => boolean), debugProbeEnabled?: boolean | (() => boolean) }} [options] host-half options
  *   (`diagnosticsFilePath` is resolved from `dshHomePath('storages')`; diagnostics default true for direct route
  *   tests, while the Cordis entry passes the plugin config flag).
  * @returns {{ registered: boolean, routes: string[] }}
@@ -238,8 +238,14 @@ export const registerRoutes = (ctx, store, options = {}) => {
       : null
   const debugFilePath =
     typeof options.debugFilePath === 'string' && options.debugFilePath.length > 0 ? options.debugFilePath : null
-  const diagnosticsEnabled = options.diagnosticsEnabled !== false
-  const debugProbeEnabled = options.debugProbeEnabled === true
+  const diagnosticsEnabled = () =>
+    typeof options.diagnosticsEnabled === 'function'
+      ? options.diagnosticsEnabled() === true
+      : options.diagnosticsEnabled !== false
+  const debugProbeEnabled = () =>
+    typeof options.debugProbeEnabled === 'function'
+      ? options.debugProbeEnabled() === true
+      : options.debugProbeEnabled === true
   const controlApiEnabled = () => (typeof options.controlApiEnabled === 'function' ? options.controlApiEnabled() === true : options.controlApiEnabled === true)
   const controlDestructiveEnabled = () => (typeof options.controlDestructiveEnabled === 'function' ? options.controlDestructiveEnabled() === true : options.controlDestructiveEnabled === true)
   const controlSessionsEnabled = () => (typeof options.controlSessionsEnabled === 'function' ? options.controlSessionsEnabled() === true : options.controlSessionsEnabled === true)
@@ -361,7 +367,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
           )
         }
         const { status, body } = loadResponse(result)
-        sendJson(res, status, { ...body, diagnostics: diagnosticsEnabled, debugProbe: debugProbeEnabled })
+        sendJson(res, status, { ...body, diagnostics: diagnosticsEnabled(), debugProbe: debugProbeEnabled() })
       } catch (error) {
         logWarn(ctx, `dsh-session-groups: load failed: ${error instanceof Error ? error.message : String(error)}`)
         sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
@@ -439,7 +445,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
         sendMethodNotAllowed(res, 'POST')
         return
       }
-      if (!diagnosticsEnabled) {
+      if (!diagnosticsEnabled()) {
         sendJson(res, 403, { ok: false, code: 'diagnostics-disabled', message: 'diagnostics are disabled' })
         return
       }
@@ -522,49 +528,50 @@ export const registerRoutes = (ctx, store, options = {}) => {
     `dsh-session-groups: POST ${DIAGNOSTICS_PATH}`,
   )
 
-  let debugPath = null
-  if (debugProbeEnabled) {
-    debugPath = register(
-      DEBUG_PATH,
-      async (req, res) => {
-        if (fenceDenied(req, res)) return
-        if (req.method !== 'POST') {
-          sendMethodNotAllowed(res, 'POST')
+  const debugPath = register(
+    DEBUG_PATH,
+    async (req, res) => {
+      if (fenceDenied(req, res)) return
+      if (req.method !== 'POST') {
+        sendMethodNotAllowed(res, 'POST')
+        return
+      }
+      if (!debugProbeEnabled()) {
+        sendJson(res, 404, { ok: false, code: 'debug-disabled', message: 'debug probe is disabled' })
+        return
+      }
+      if (contentTypeOf(req) !== 'application/json') {
+        sendJson(res, 415, { ok: false, code: 'unsupported-media-type', message: 'content-type must be application/json' })
+        return
+      }
+      if (debugFilePath === null) {
+        sendJson(res, 503, { ok: false, code: 'io', message: 'debug path is not configured' })
+        return
+      }
+      try {
+        const read = await readBoundedBody(req, MAX_BODY_BYTES)
+        if (read.tooLarge === true) {
+          sendJson(res, 413, { ok: false, code: 'payload-too-large', message: 'request body is too large' })
           return
         }
-        if (contentTypeOf(req) !== 'application/json') {
-          sendJson(res, 415, { ok: false, code: 'unsupported-media-type', message: 'content-type must be application/json' })
-          return
-        }
-        if (debugFilePath === null) {
-          sendJson(res, 503, { ok: false, code: 'io', message: 'debug path is not configured' })
-          return
-        }
-        try {
-          const read = await readBoundedBody(req, MAX_BODY_BYTES)
-          if (read.tooLarge === true) {
-            sendJson(res, 413, { ok: false, code: 'payload-too-large', message: 'request body is too large' })
-            return
-          }
-          const body = JSON.parse(read.text)
-          await mkdir(dirname(debugFilePath), { recursive: true })
-          await appendFile(
-            debugFilePath,
-            `${JSON.stringify({ receivedAt: new Date().toISOString(), body })}\n`,
-            'utf8'
-          )
-          sendJson(res, 200, { ok: true })
-        } catch (error) {
-          sendJson(res, 422, {
-            ok: false,
-            code: 'invalid',
-            message: error instanceof Error ? error.message : String(error),
-          })
-        }
-      },
-      `dsh-session-groups: POST ${DEBUG_PATH}`,
-    )
-  }
+        const body = JSON.parse(read.text)
+        await mkdir(dirname(debugFilePath), { recursive: true })
+        await appendFile(
+          debugFilePath,
+          `${JSON.stringify({ receivedAt: new Date().toISOString(), body })}\n`,
+          'utf8'
+        )
+        sendJson(res, 200, { ok: true })
+      } catch (error) {
+        sendJson(res, 422, {
+          ok: false,
+          code: 'invalid',
+          message: error instanceof Error ? error.message : String(error),
+        })
+      }
+    },
+    `dsh-session-groups: POST ${DEBUG_PATH}`,
+  )
 
   let controlStatePath = null
   let controlResolvePath = null
@@ -1164,7 +1171,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
       commitPath,
       diagnosticsPath,
       ...(eventsPath === null ? [] : [eventsPath]),
-      ...(debugPath === null ? [] : [debugPath]),
+      debugPath,
       ...(controlStatePath === null ? [] : [controlStatePath, controlResolvePath, controlPlanPath, controlApplyPath]),
       ...(sessionInspectPath === null ? [] : [sessionInspectPath, sessionRenamePath, sessionArchivePath]),
       ...(skillRepairPath === null ? [] : [skillRepairPath]),

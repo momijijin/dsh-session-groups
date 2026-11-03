@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.39 (2026-11-03)
+
+- Make diagnostics and debugProbe settings live: host route flags are read per request, the debug route is always registered but gated, and the client starts/stops diagnostics after a settings change.
+
 ## 0.3.0-beta.38 (2026-11-03)
 
 - Make Fork session behavior visible and complete: access/blank gating, child insertion at the source group head, and explicit success/placement/failure feedback.
@@ -203,6 +207,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

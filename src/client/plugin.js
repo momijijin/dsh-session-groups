@@ -22,6 +22,7 @@ import {
   diagnosticsEnabled,
   getDiagnostics,
   initDiagnostics,
+  stopDiagnostics,
 } from './diagnostics.js'
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
 import { installClientRuntime } from '../adapters/client-runtime.js'
@@ -182,7 +183,11 @@ export const createPlugin = () => {
         const result = await api.load()
         if (result.ok === true) {
           debugProbe = result.debugProbe === true
-          if (result.diagnostics === true && !diagEnabled()) initDiagnostics({ enabled: true })
+          if (result.diagnostics === true) {
+            if (!diagEnabled()) initDiagnostics({ enabled: true })
+          } else if (diagEnabled()) {
+            stopDiagnostics()
+          }
           store.dispatch('load-success', { doc: result.doc, revision: result.revision, warning: result.warning })
           loadedOk = true
           return
@@ -671,6 +676,7 @@ export const createPlugin = () => {
       get debugProbe() {
         return debugProbe
       },
+      refreshRuntimeConfig: () => requestRefresh({ force: true }),
       notify,
       archiveSession,
       unarchiveSession,

@@ -9,7 +9,11 @@ import assert from 'node:assert/strict'
 
 import {
   createDiagnostics,
+  diagEnabled,
   diagnosticsEnabled,
+  getDiagnostics,
+  initDiagnostics,
+  stopDiagnostics,
   DIAGNOSTICS_HUD_TESTID,
   DIAGNOSTICS_STORAGE_KEY,
 } from '../../src/client/diagnostics.js'
@@ -157,6 +161,23 @@ test('disabled diagnostics are a zero-side-effect no-op', () => {
   assert.equal(instance.trace('x', { a: 1 }), null)
   assert.equal(instance.setContext({ revision: 2 }), undefined)
   assert.deepEqual(instance.snapshot().events, [])
+})
+
+test('diagnostics singleton can start and stop on a live config change', () => {
+  const fake = makeFakeDocument()
+  initDiagnostics({
+    enabled: true,
+    documentRef: fake.documentRef,
+    native: false,
+    hud: false,
+    frames: false,
+    longTasks: false,
+  })
+  assert.equal(diagEnabled(), true)
+  assert.notEqual(getDiagnostics(), null)
+  stopDiagnostics()
+  assert.equal(diagEnabled(), false)
+  assert.equal(getDiagnostics(), null)
 })
 
 test('ring buffer is bounded while stats keep the total count', () => {

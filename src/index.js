@@ -132,8 +132,8 @@ export const apply = (ctx, config = {}) => {
   const mounted = registerRoutes(ctx, store, {
     diagnosticsFilePath,
     debugFilePath: join(dirname(record.filePath), DEBUG_FILE_NAME),
-    diagnosticsEnabled: readFlag('diagnostics'),
-    debugProbeEnabled: readFlag('debugProbe'),
+    diagnosticsEnabled: () => readFlag('diagnostics'),
+    debugProbeEnabled: () => readFlag('debugProbe'),
     controlApiEnabled: () => readFlag('controlApi'),
     controlDestructiveEnabled: () => readFlag('controlDestructive'),
     controlSessionsEnabled: () => readFlag('controlSessions'),
