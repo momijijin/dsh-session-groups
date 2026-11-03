@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.41 (2026-11-03)
+
+- Add real-browser coverage for Copy Session ID (clipboard + toast) and destructive-setting cancellation; preserve upstream archive/rename access semantics.
+
 ## 0.3.0-beta.40 (2026-11-03)
 
 - Harden destructive settings and skill repair: controlDestructive requires an inline explicit confirmation, and the repair route refuses to overwrite a user-owned SKILL.md (409 skill-user-owned).
@@ -211,6 +215,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

@@ -570,8 +570,11 @@ try {
 
   // Session actions must preserve the official core set: no no-op pin item,
   // plus fork/copy ID and a hover archive control.
+  const sessionRow = page.locator('[data-testid="session-groups-session"]').first()
+  const sourceSessionId = await sessionRow.getAttribute('data-session-id')
   const sessionMenuButton = page.locator('[data-testid="session-groups-session-menu"]').first()
   if ((await sessionMenuButton.count()) === 0) throw new Error('session menu button missing')
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await sessionMenuButton.click({ force: true })
   const menuText = await page.locator('[data-testid="session-groups-menu"]').innerText()
   if (!/Copy Session ID/i.test(menuText)) {
@@ -580,7 +583,12 @@ try {
   // Fork is access/blank gated like the official menu; its absence on a blank
   // session is correct. The action/placement path is covered by unit tests.
   if (/^(?:Pin|Unpin)$/im.test(menuText)) throw new Error(`session menu still exposes pin: ${menuText}`)
-  await page.keyboard.press('Escape')
+  await page.getByRole('menuitem', { name: /^Copy Session ID$/i }).click()
+  await page.waitForTimeout(300)
+  const copied = await page.evaluate(() => navigator.clipboard.readText())
+  if (copied !== sourceSessionId) throw new Error(`copy ID wrote ${copied}, expected ${sourceSessionId}`)
+  const toastText = await page.locator('[data-testid="session-groups-toast"]').innerText()
+  if (!/Session ID copied/i.test(toastText)) throw new Error(`copy ID toast missing: ${toastText}`)
   const hoverArchive = page.locator('[data-testid="session-groups-session-archive"]').first()
   if ((await hoverArchive.count()) === 0) throw new Error('session hover archive control missing')
 
@@ -615,7 +623,19 @@ try {
   await configSwitch.click()
   await page.waitForTimeout(300)
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, session actions, first-layer settings, localized title, option details and switch interaction')
+  const destructiveRow = page.locator('[data-testid="session-groups-config-controlDestructive"]')
+  const destructiveSwitch = destructiveRow.locator('[role="switch"]')
+  await destructiveSwitch.click()
+  await page.waitForTimeout(250)
+  const destructiveConfirm = page.locator('[data-testid="session-groups-config-destructive-confirm"]')
+  if ((await destructiveConfirm.count()) === 0) throw new Error('destructive confirmation did not open')
+  await destructiveConfirm.getByRole('button', { name: /Cancel/i }).click()
+  await page.waitForTimeout(250)
+  if ((await destructiveSwitch.getAttribute('aria-checked')) === 'true') {
+    throw new Error('destructive setting enabled without confirmation')
+  }
+
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, session actions, clipboard copy, search, first-layer settings, localized title, option details, switch interaction and destructive confirmation')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
