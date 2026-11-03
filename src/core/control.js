@@ -300,7 +300,10 @@ export const applyControlOperations = (doc, operations, options = {}) => {
     }
   }
   try {
-    validateDoc(next)
+    const validation = validateDoc(next)
+    if (!validation.ok) {
+      return fail('invalid-result', validation.errors.join('; ') || 'invalid doc', -1, { changes })
+    }
   } catch (error) {
     return fail('invalid-result', error instanceof Error ? error.message : String(error), -1, { changes })
   }
@@ -311,7 +314,10 @@ export const applyControlOperations = (doc, operations, options = {}) => {
 /** Minimal state validation used by the adapter before planning. */
 export const validateControlDoc = (doc) => {
   try {
-    validateDoc(doc)
+    const validation = validateDoc(doc)
+    if (!validation.ok) {
+      return { ok: false, code: 'invalid-doc', message: validation.errors.join('; ') || 'invalid doc' }
+    }
     return { ok: true }
   } catch (error) {
     return { ok: false, code: 'invalid-doc', message: error instanceof Error ? error.message : String(error) }

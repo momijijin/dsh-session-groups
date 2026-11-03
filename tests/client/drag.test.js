@@ -76,6 +76,13 @@ test('applyDrop ungrouped reorder writes the full visible order once', () => {
   assert.deepEqual(result.doc.ungrouped, ['u1', 'u2'])
 })
 
+test('applyDrop unknown target kinds are inert and preserve document identity', () => {
+  const { doc } = docWithTwoGroups()
+  const result = applyDrop(doc, { kind: 'session', sessionId: 's1' }, { kind: 'unknown-target' })
+  assert.equal(result.applied, false)
+  assert.equal(result.doc, doc)
+})
+
 test('applyDrop invalid target returns the original doc', () => {
   const { doc } = docWithTwoGroups()
   const result = applyDrop(doc, { kind: 'session', sessionId: 's1' }, { kind: 'invalid' })

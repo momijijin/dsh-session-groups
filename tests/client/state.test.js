@@ -141,3 +141,61 @@ test('menu/dialog/toast are transient store state', () => {
   store.dispatch('toast', { toast: { kind: 'success', message: 'ok' } })
   assert.equal(store.getSnapshot().toast.message, 'ok')
 })
+
+test('storage failures are best-effort and malformed persisted values fall back safely', () => {
+  const blocked = {
+    getItem() { throw new Error('blocked') },
+    setItem() { throw new Error('blocked') },
+  }
+  assert.equal(readViewMode(blocked), 'workspace')
+  assert.equal(readArchiveFilter(blocked), 'hidden')
+  assert.equal(readOnboardingDone(blocked), false)
+  assert.doesNotThrow(() => writeViewMode('groups', blocked))
+  assert.doesNotThrow(() => writeArchiveFilter('all', blocked))
+  assert.doesNotThrow(() => writeOnboardingDone(blocked))
+
+  const malformed = fakeStorage({
+    [VIEW_MODE_KEY]: 'garbage',
+    [ARCHIVE_FILTER_KEY]: 'garbage',
+    [COLLAPSED_KEY]: JSON.stringify({ g1: false, g2: true, '': true }),
+  })
+  const store = createStore({ storage: malformed })
+  assert.equal(store.getSnapshot().viewMode, 'workspace')
+  assert.equal(store.getSnapshot().archiveFilter, 'hidden')
+  assert.deepEqual(store.getSnapshot().collapsed, { g2: true })
+})
+
+test('no-op dispatches do not publish and invalid collapse targets are ignored', () => {
+  const store = createStore({ storage: fakeStorage() })
+  const seen = []
+  store.subscribe(() => seen.push(store.getSnapshot()))
+  store.dispatch('view-mode', { mode: 'workspace' })
+  store.dispatch('archive-filter', { filter: 'hidden' })
+  store.dispatch('expand-group', { id: 'missing' })
+  store.dispatch('collapse-group', { id: '' })
+  store.dispatch('reset-collapsed')
+  store.dispatch('unknown-action')
+  assert.equal(seen.length, 0)
+
+  store.dispatch('collapse-group', { id: 'g1' })
+  assert.equal(store.getSnapshot().collapsed.g1, true)
+  store.dispatch('expand-group', { id: 'g1' })
+  assert.equal(store.getSnapshot().collapsed.g1, undefined)
+  store.dispatch('expand-group', { id: 'g1' })
+  store.dispatch('toggle-group', { id: 'g2' })
+  assert.equal(store.getSnapshot().collapsed.g2, true)
+  store.dispatch('toggle-group', { id: 'g2' })
+  assert.equal(store.getSnapshot().collapsed.g2, undefined)
+  store.dispatch('reset-collapsed')
+  assert.deepEqual(store.getSnapshot().collapsed, {})
+})
+
+test('a throwing subscriber cannot break other subscribers or the store', () => {
+  const store = createStore({ storage: fakeStorage() })
+  const seen = []
+  store.subscribe(() => { throw new Error('broken subscriber') })
+  store.subscribe(() => seen.push(store.getSnapshot().saving))
+  assert.doesNotThrow(() => store.dispatch('saving', { saving: true }))
+  assert.deepEqual(seen, [true])
+  assert.equal(store.getSnapshot().saving, true)
+})

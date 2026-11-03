@@ -4,7 +4,7 @@ import { createControlTool, TOOL_NAME } from '../../src/host/tool.js'
 import { sampleDoc } from './helpers.js'
 
 const setup = (overrides = {}) => {
-  let doc = sampleDoc()
+  let doc = { ...sampleDoc(), revision: 2 }
   let revision = 2
   const notifications = []
   const session = { id: 's-current', title: 'old title' }
@@ -151,4 +151,98 @@ test('native tool honors control switches', async () => {
   const session = await sessionsOff.tool.execute({ action: 'session_inspect', sessionId: 's-current' })
   assert.equal(session.ok, false)
   assert.equal(session.code, 'session-controls-disabled')
+})
+
+test('native tool rejects malformed actions and plan inputs without touching the store', async () => {
+  const { tool } = setup()
+  assert.equal((await tool.execute({ action: 'unknown' })).code, 'invalid-action')
+  assert.equal((await tool.execute({ action: 'resolve' })).code, 'invalid-path')
+  assert.equal((await tool.execute({ action: 'plan', baseRevision: -1, operations: [{ op: 'group.rename' }] })).code, 'invalid-revision')
+  assert.equal((await tool.execute({ action: 'plan', baseRevision: 2, operations: [] })).code, 'operations-required')
+  assert.equal((await tool.execute({ action: 'apply', baseRevision: 2, operations: [{ op: 'group.rename' }] })).code, 'stale-plan')
+})
+
+test('native tool returns unsupported-version and internal failures as structured errors', async () => {
+  const unsupported = setup({
+    store: { async load() { return { kind: 'unsupported-version', version: 9 } } },
+  })
+  const version = await unsupported.tool.execute({ action: 'state' })
+  assert.equal(version.ok, false)
+  assert.equal(version.code, 'unsupported-version')
+  assert.equal(version.version, 9)
+
+  const thrown = setup({
+    store: { async load() { throw new Error('store exploded') } },
+  })
+  const internal = await thrown.tool.execute({ action: 'state' })
+  assert.equal(internal.ok, false)
+  assert.equal(internal.code, 'internal')
+  assert.match(internal.message, /store exploded/)
+})
+
+test('native tool exposes archived, missing and title-failure inspect states', async () => {
+  const state = setup()
+  state.registry.archivedSessionIds = ['s-archived']
+  const archived = await state.tool.execute({ action: 'session_inspect', sessionId: 's-archived' })
+  assert.equal(archived.ok, true)
+  assert.equal(archived.live, false)
+  assert.equal(archived.archived, true)
+  assert.equal(archived.title, null)
+
+  const missing = await state.tool.execute({ action: 'session_inspect', sessionId: 'missing' })
+  assert.equal(missing.ok, false)
+  assert.equal(missing.code, 'session-not-found')
+
+  const noServices = setup({ getService: (name) => (name === 'sessions' ? { get: () => null } : null) })
+  const unavailable = await noServices.tool.execute({ action: 'session_inspect', sessionId: 's-current' })
+  assert.equal(unavailable.code, 'service-unavailable')
+
+  const titleFailure = setup({
+    getService: (name) => (name === 'sessions' ? { get: () => ({ id: 's-current' }) } : name === 'sessionTitle' ? { get() { throw new Error('nope') } } : null),
+  })
+  const title = await titleFailure.tool.execute({ action: 'session_inspect', sessionId: 's-current' })
+  assert.equal(title.ok, true)
+  assert.equal(title.title, null)
+})
+
+test('native tool validates rename inputs, conflicts, no-op and failures', async () => {
+  const state = setup()
+  assert.equal((await state.tool.execute({ action: 'session_rename', sessionId: 's-current', title: '' })).code, 'invalid-title')
+  assert.equal((await state.tool.execute({ action: 'session_rename', sessionId: 's-current', title: 'x', expectedTitle: 1 })).code, 'invalid-title')
+  const mismatch = await state.tool.execute({ action: 'session_rename', sessionId: 's-current', title: 'x', expectedTitle: 'other' })
+  assert.equal(mismatch.code, 'title-changed')
+  assert.equal(mismatch.title, 'old title')
+  const same = await state.tool.execute({ action: 'session_rename', sessionId: 's-current', title: 'old title' })
+  assert.equal(same.ok, true)
+  const failed = setup({
+    getService: (name) => (name === 'sessions' ? { get: () => ({ id: 's-current', title: 'old' }) } : name === 'sessionTitle' ? { get: () => ({ title: 'old' }), rename() { throw new Error('rename failed') } } : null),
+  })
+  const failure = await failed.tool.execute({ action: 'session_rename', sessionId: 's-current', title: 'new' })
+  assert.equal(failure.code, 'session-operation-failed')
+  assert.match(failure.message, /rename failed/)
+})
+
+test('native tool validates archive inputs, conflicts, no-op and forwards stopActivity', async () => {
+  const state = setup()
+  assert.equal((await state.tool.execute({ action: 'session_archive', sessionId: 's-current', archived: 'yes' })).code, 'invalid-archived')
+  assert.equal((await state.tool.execute({ action: 'session_archive', sessionId: 's-current', archived: true, expectedArchived: 'yes' })).code, 'invalid-archived')
+  assert.equal((await state.tool.execute({ action: 'session_archive', sessionId: 's-current', archived: true, stopActivity: 'yes' })).code, 'invalid-stop-activity')
+  assert.equal((await state.tool.execute({ action: 'session_archive', sessionId: 's-current', archived: true, expectedArchived: true })).code, 'archive-changed')
+  assert.equal((await state.tool.execute({ action: 'session_archive', sessionId: 's-current', archived: false })).ok, true)
+  state.registry.archivedSessionIds = ['s-current']
+  assert.equal((await state.tool.execute({ action: 'session_archive', sessionId: 's-current', archived: false })).ok, true)
+  assert.deepEqual(state.registry.archiveCalls, undefined)
+  const archived = await state.tool.execute({ action: 'session_archive', sessionId: 's-current', archived: true, stopActivity: true })
+  assert.equal(archived.ok, true)
+  assert.deepEqual(state.registry.lastOptions, { stopActivity: true })
+  const failed = setup({
+    getService: (name) => (name === 'workspaceRegistry' ? {
+      archivedSessionIds: [],
+      archiveSession: async () => { throw new Error('archive failed') },
+      unarchiveSession: async () => {},
+    } : null),
+  })
+  const failure = await failed.tool.execute({ action: 'session_archive', sessionId: 's-current', archived: true })
+  assert.equal(failure.code, 'session-operation-failed')
+  assert.match(failure.message, /archive failed/)
 })

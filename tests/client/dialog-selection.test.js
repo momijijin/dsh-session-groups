@@ -103,6 +103,12 @@ test('validity: only offered options confirm; move-group rejects self and descen
   assert.equal(selectionIsValid({ kind: 'move-group', groupId: c }, 'missing', doc), false)
 })
 
+test('unknown dialog kinds are invalid and never produce a partial payload', () => {
+  assert.equal(selectionIsValid({ kind: 'unknown-dialog' }, 'x', {}), false)
+  assert.deepEqual(dialogConfirmPayload(null, 'x'), {})
+  assert.deepEqual(dialogConfirmPayload({ kind: 'unknown-dialog' }, 'x'), {})
+})
+
 test('confirm payloads map to the host/model contract', () => {
   assert.deepEqual(dialogConfirmPayload({ kind: 'icon' }, 'star'), { icon: 'star' })
   assert.deepEqual(dialogConfirmPayload({ kind: 'group-color' }, 'purple'), { color: 'purple' })

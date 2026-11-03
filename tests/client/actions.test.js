@@ -50,7 +50,7 @@ test('workspaceChoices puts the inferred workspace first', () => {
 })
 
 const makeActions = (overrides = {}) => {
-  const calls = { commits: [], opens: [], renames: [], archives: [], forks: [], copies: [] }
+  const calls = { commits: [], opens: [], renames: [], archives: [], forks: [], copies: [], retained: [], unarchived: [], toasts: [] }
   let doc = emptyDoc()
   doc = createGroup(doc, { name: 'G' })
   const groupId = doc.groups[0].id
@@ -63,6 +63,17 @@ const makeActions = (overrides = {}) => {
         return fn(reference)
       },
       list: { getSnapshot: () => snapshot },
+      retain: (id, options) => calls.retained.push([id, options]),
+    },
+    workspaces: {
+      list: {
+        getSnapshot: () => ({
+          items: [
+            { workspaceId: 'w1', title: 'One', sessionIds: ['existing'] },
+            { workspaceId: 'w2', title: 'Two', sessionIds: ['other'] },
+          ],
+        }),
+      },
     },
     uiWorkspace: {
       startSession: (workspaceId) => {
@@ -82,7 +93,7 @@ const makeActions = (overrides = {}) => {
         calls.archives.push({ id, options })
         if (overrides.archiveError) throw overrides.archiveError
       },
-      unarchiveSession: async (id) => calls.unarchived.push?.(id),
+      unarchiveSession: async (id) => calls.unarchived.push(id),
       forkSession: async (id, onCreated, options) => {
         calls.forks.push({ id, onCreated, options })
         onCreated?.('child')
@@ -181,4 +192,32 @@ test('moveSession to ungrouped removes the session from its group', async () => 
   const doc = getDoc()
   assert.deepEqual(doc.ungrouped, ['existing'])
   assert.equal(doc.groups[0].sessionIds.length, 0)
+})
+
+test('openSession falls back to sessions.retain and reports unavailable', () => {
+  const { actions, calls, services } = makeActions()
+  services.uiWorkspace.openSession = undefined
+  assert.equal(actions.openSession('s9'), true)
+  assert.deepEqual(calls.retained, [['s9', { source: 'mainView' }]])
+
+  services.sessions.retain = undefined
+  assert.equal(actions.openSession('s9'), false)
+})
+
+test('unarchiveSession delegates and surfaces failures through the wrapper', async () => {
+  const { actions, calls, services } = makeActions()
+  await actions.unarchiveSession('existing')
+  assert.deepEqual(calls.unarchived, ['existing'])
+
+  services.uiWorkspace.unarchiveSession = undefined
+  await assert.rejects(() => actions.unarchiveSession('existing'), /unarchive-unavailable/)
+  assert.deepEqual(calls.toasts, [{ kind: 'error', message: 'toast.unarchiveFailed' }])
+})
+
+test('workspaceForSession resolves the owning workspace and tolerates missing services', () => {
+  const { actions, services } = makeActions()
+  assert.equal(actions.workspaceForSession('existing').workspaceId, 'w1')
+  assert.equal(actions.workspaceForSession('missing'), null)
+  services.workspaces = undefined
+  assert.equal(actions.workspaceForSession('existing'), null)
 })

@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-groups",
-  "version": "0.3.0-beta.56",
+  "version": "0.3.0-beta.57",
   "description": "DSH left-sidebar global session groups: organize sessions across workspaces without moving them.",
   "author": "momiji-gz302ea <2648863351@qq.com>",
   "keywords": [
@@ -59,7 +59,7 @@
     "build": "node scripts/build-client.mjs",
     "test": "node --test \"tests/**/*.test.js\"",
     "check:core": "node --test \"tests/core/**/*.test.js\"",
-    "check:coverage": "node --experimental-test-coverage --test \"tests/**/*.test.js\"",
+    "check:coverage": "node --experimental-test-coverage --test-coverage-lines=92 --test-coverage-branches=80 --test-coverage-functions=85 --test \"tests/**/*.test.js\"",
     "test:isolated": "node e2e/isolated.spec.mjs",
     "check:all": "node scripts/check-all.mjs",
     "check": "node --check src/index.js && node --check src/shared/model.js && node --check src/client/index.js"

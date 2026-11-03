@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.57 (2026-11-03)
+
+- Coverage hardening: add boundary tests for control result validation, session routes, native tool session actions, optimistic failures/dispose, state storage/no-op/subscriber boundaries, perf instrumentation, and sidebar width DOM ownership. 429 tests; coverage 93.38% lines / 80.65% branches / 87.52% functions. Add a 92/80/85 coverage gate.
+
 ## 0.3.0-beta.56 (2026-11-03)
 
 - Split session-control HTTP routes into host/session-routes.js with an exact block-preserving extraction. Route ordering, status matrix, control gates and test paths are unchanged.

@@ -1,14 +1,14 @@
-# 0.3.0-beta.56 测试结果
+# 0.3.0-beta.57 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.56`  
+版本：`0.3.0-beta.57`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 单元/契约测试：**392/392 PASS**
-- Core 纯函数测试：**22/22 PASS**
-- Node 内置 coverage：**89.48% lines / 77.02% branches / 83.78% functions**
+- 单元/契约测试：**429/429 PASS**
+- Core 纯函数测试：**29/29 PASS**
+- Node 内置 coverage：**93.38% lines / 80.65% branches / 87.52% functions**
 - A+ 隔离 Playwright：**PASS**
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
@@ -70,7 +70,7 @@ npm run test:isolated   # 需先启动隔离 web
 ## 未决验证
 
 - 真实桌面回归（首次引导、侧栏宽度、主题、中文视觉）
-- 非空/有 access 会话的 Fork 成功路径真实 E2E（当前由 action/source 测试和显示门禁覆盖）
+- 非空会话 Fork 成功路径已在隔离实例真实 E2E 验证（beta.53）
 - 原生工具被真实模型发现并完成 state → plan → apply 的端到端链路
 - SSE 断线重连和多窗口并发
 - Windows 下 control token ACL 的实际审计

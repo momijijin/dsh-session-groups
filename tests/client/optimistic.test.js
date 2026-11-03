@@ -248,3 +248,57 @@ test('optimistic: strict writer defers a concurrent drop so it computes on the n
   await drop
   assert.equal(store.getSnapshot().revision, 4)
 })
+
+test('optimistic: updater errors and non-document returns reject without dispatching', async () => {
+  const base = seedDoc()
+  const store = makeStore(base, 1)
+  const queue = createOptimisticQueue({ store, commit: async () => ({ ok: true, doc: base, revision: 2 }) })
+  await assert.rejects(() => queue.commitOptimistic(() => { throw new Error('updater-failed') }), /updater-failed/)
+  await assert.rejects(() => queue.commitOptimistic(() => null), /doc-required/)
+  assert.equal(store.getSnapshot().doc, base)
+  assert.equal(store.getSnapshot().revision, 1)
+})
+
+test('optimistic: thrown commits roll back, report once and preserve the error code', async () => {
+  const base = seedDoc()
+  const store = makeStore(base, 4)
+  const toasts = []
+  const errors = []
+  const queue = createOptimisticQueue({
+    store,
+    commit: async () => { throw new Error('network-down') },
+    notify: (toast) => toasts.push(toast),
+    t: (key) => key,
+    onError: (error) => errors.push(error),
+  })
+  await assert.rejects(() => queue.commitOptimistic((doc) => doc), /network-down/)
+  assert.equal(store.getSnapshot().doc, base)
+  assert.equal(store.getSnapshot().optimistic, false)
+  assert.deepEqual(toasts, [{ kind: 'error', message: 'toast.dropFailed' }])
+  assert.equal(errors.length, 1)
+  assert.equal(errors[0].reported, true)
+})
+
+test('optimistic: strict commit failure dispatches commit-error and throws the server code', async () => {
+  const base = seedDoc()
+  const store = makeStore(base, 2)
+  const queue = createOptimisticQueue({
+    store,
+    commit: async () => ({ ok: false, code: 'fence-unavailable', message: 'fence down' }),
+  })
+  await assert.rejects(() => queue.commitStrict((doc) => doc), (error) => error.code === 'fence-unavailable')
+  assert.equal(store.getSnapshot().doc, base)
+})
+
+test('optimistic: dispose rejects a queued write and leaves the confirmed doc intact', async () => {
+  const base = seedDoc()
+  const store = makeStore(base, 1)
+  const queue = createOptimisticQueue({
+    store,
+    commit: () => new Promise(() => {}),
+  })
+  const pending = queue.commitOptimistic((doc) => doc)
+  queue.dispose()
+  await assert.rejects(() => pending, /optimistic-queue-disposed/)
+  assert.equal(store.getSnapshot().doc, base)
+})

@@ -21,6 +21,13 @@ test('context-menu pointer anchor offsets +2px and clamps at the edges', () => {
 
 test('keyboard anchor uses row left and row bottom + 8px', () => {
   assert.deepEqual(menuAnchorFromRow(row, { width: 500, height: 800 }), { x: 30, y: 98, anchorX: 30, anchorY: 98 })
+  assert.deepEqual(menuAnchorFromRow(null, { width: 500, height: 400 }), { x: 8, y: 8, anchorX: 0, anchorY: 0 })
+})
+
+test('menu anchors tolerate missing and non-finite viewport/client values', () => {
+  assert.deepEqual(clampMenuPosition({ x: Number.NaN, y: Infinity, width: -1, height: Number.NaN, viewportWidth: Number.NaN, viewportHeight: -1 }), { x: 8, y: 8 })
+  assert.deepEqual(clampMenuPosition({ x: 10, y: 10, width: 1, height: 1, viewportWidth: 50, viewportHeight: 50, padding: 2 }), { x: 10, y: 10 })
+  assert.deepEqual(menuAnchorFromEvent(undefined, {}), { x: 8, y: 8, anchorX: 2, anchorY: 2 })
 })
 
 test('Shift+F10 and ContextMenu are the only keyboard menu keys', () => {
