@@ -116,10 +116,19 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t, clipb
     await uiWorkspace.unarchiveSession(sessionId)
   }
 
-  const forkSession = async (sessionId) => {
+  const forkSession = async (sessionId, onCreated) => {
     const { uiWorkspace } = services()
     if (typeof uiWorkspace?.forkSession !== 'function') throw new Error('fork-unavailable')
-    await uiWorkspace.forkSession(sessionId, undefined, { allowMigration: false })
+    let childId = null
+    await uiWorkspace.forkSession(
+      sessionId,
+      (id) => {
+        childId = id
+        if (typeof onCreated === 'function') onCreated(id)
+      },
+      { allowMigration: false },
+    )
+    return childId
   }
 
   const copySessionId = async (sessionId) => {

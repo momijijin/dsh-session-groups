@@ -273,5 +273,8 @@
   "meta": {
     "title": "Free groups",
     "description": "Global session groups for the DSH left sidebar: organize sessions across workspaces without moving them."
-  }
+  },
+  "toast.forked": "Session forked and placed in the source group",
+  "toast.forkPlacementFailed": "Session forked, but could not be placed in the source group",
+  "toast.forkUnavailable": "This session cannot be forked (no completed turn or no access)"
 }

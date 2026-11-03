@@ -1925,7 +1925,7 @@ const MenuPopover = ({ store, handlers }) => {
     children.push(item('delete', t('group.delete'), () => handlers.openDeleteGroup(menu.groupId)))
   } else if (menu.kind === 'session') {
     children.push(item('rename', t('session.rename'), () => handlers.openRenameSession(menu.sessionId, menu.title)))
-    if (rt()?.capabilities.fork === true) {
+    if (menu.blank !== true && rt()?.capabilities.fork?.(menu.sessionId) === true) {
       children.push(item('fork', t('session.fork'), () => handlers.forkSession(menu.sessionId)))
     }
     children.push(
@@ -3355,6 +3355,7 @@ export const GroupsView = (props) => {
           sessionId: row.id,
           title: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
           archived: sessionNode.archived === true,
+          blank: sessionNode.session.blank === true,
         },
       })
     },
@@ -3371,6 +3372,7 @@ export const GroupsView = (props) => {
           sessionId: row.id,
           title: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
           archived: sessionNode.archived === true,
+          blank: sessionNode.session.blank === true,
         },
       })
     },

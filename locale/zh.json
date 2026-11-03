@@ -273,5 +273,8 @@
   "meta": {
     "title": "自由分组",
     "description": "DSH 左侧栏全局自由分组：跨工作区整理会话，不移动会话本身。"
-  }
+  },
+  "toast.forked": "已分叉会话并放入原分组",
+  "toast.forkPlacementFailed": "已分叉会话，但未能放入原分组",
+  "toast.forkUnavailable": "当前会话不能分叉（没有已完成轮次或无权限）"
 }

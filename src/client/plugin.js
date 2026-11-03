@@ -6,7 +6,7 @@
  * Cordis validates plugin return values as effects (Gate 0: returning an object
  * raises `TypeError: Invalid effect`).
  */
-import { createGroup, deleteGroup, deleteGroupTo, moveGroup, renameGroup, setGroupColor, setGroupColorHex, setGroupIcon } from '../shared/model.js'
+import { createGroup, assignSession, deleteGroup, deleteGroupTo, moveGroup, renameGroup, setGroupColor, setGroupColorHex, setGroupIcon } from '../shared/model.js'
 import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
@@ -90,12 +90,13 @@ export const createPlugin = () => {
 
   const services = () => {
     const ctx = ctxRef
-    if (!ctx) return { sessions: null, workspaces: null, uiWorkspace: null, layout: null }
+    if (!ctx) return { sessions: null, workspaces: null, uiWorkspace: null, layout: null, remoteAccess: null }
     return {
       sessions: safeGet(ctx, 'sessions'),
       workspaces: safeGet(ctx, 'workspaces'),
       uiWorkspace: safeGet(ctx, 'uiWorkspace'),
       layout: safeGet(ctx, 'layout'),
+      remoteAccess: safeGet(ctx, 'remoteAccess'),
     }
   }
 
@@ -376,9 +377,16 @@ export const createPlugin = () => {
   const actions = createActions({ getServices: services, getDoc, commitDoc, notify, t, clipboard: writeClipboard })
 
   const capabilities = () => {
-    const { uiWorkspace } = services()
+    const { uiWorkspace, remoteAccess } = services()
     return {
-      fork: typeof uiWorkspace?.forkSession === 'function',
+      fork: (sessionId) => {
+        if (typeof uiWorkspace?.forkSession !== 'function') return false
+        try {
+          return remoteAccess?.source?.('session', sessionId, 'session/fork') === true
+        } catch {
+          return false
+        }
+      },
       archive: typeof uiWorkspace?.archiveSession === 'function',
       unarchive: typeof uiWorkspace?.unarchiveSession === 'function',
       connect: typeof uiWorkspace?.connectWorkspace === 'function',
@@ -412,17 +420,34 @@ export const createPlugin = () => {
   }
 
   const forkSession = async (sessionId) => {
+    let childId = null
     try {
-      await actions.forkSession(sessionId)
-    } catch (error) {
-      const migrationRequired =
-        error instanceof Error &&
-        error.name === 'SessionForkError' &&
-        error.rpcError?.code === 'session/migration-required'
-      notify({
-        kind: 'error',
-        message: t(migrationRequired ? 'toast.forkRequiresOpen' : 'toast.forkFailed'),
+      childId = await actions.forkSession(sessionId, (id) => {
+        childId = id
       })
+    } catch (error) {
+      const code = error?.rpcError?.code
+      const messageKey =
+        code === 'session/migration-required'
+          ? 'toast.forkRequiresOpen'
+          : code === 'session/fork-unavailable'
+            ? 'toast.forkUnavailable'
+            : 'toast.forkFailed'
+      notify({ kind: 'error', message: t(messageKey) })
+      return
+    }
+    if (typeof childId !== 'string' || childId === '') {
+      notify({ kind: 'error', message: t('toast.forkFailed') })
+      return
+    }
+    try {
+      await commitDoc((latest) => {
+        const source = latest.groups.find((group) => group.sessionIds.includes(sessionId))
+        return assignSession(latest, childId, source?.id ?? null, 0)
+      })
+      notify({ kind: 'success', message: t('toast.forked') })
+    } catch {
+      notify({ kind: 'error', message: t('toast.forkPlacementFailed') })
     }
   }
 

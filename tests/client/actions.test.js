@@ -83,7 +83,10 @@ const makeActions = (overrides = {}) => {
         if (overrides.archiveError) throw overrides.archiveError
       },
       unarchiveSession: async (id) => calls.unarchived.push?.(id),
-      forkSession: async (id, onCreated, options) => calls.forks.push({ id, onCreated, options }),
+      forkSession: async (id, onCreated, options) => {
+        calls.forks.push({ id, onCreated, options })
+        onCreated?.('child')
+      },
     },
   }
   const actions = createActions({
@@ -131,10 +134,13 @@ test('archiveSession passes stopActivity:true when requested', async () => {
   assert.deepEqual(calls.archives, [{ id: 's1', options: { stopActivity: true } }])
 })
 
-test('forkSession uses uiWorkspace.forkSession without migration', async () => {
+test('forkSession forwards the host child callback and returns its id', async () => {
   const { actions, calls } = makeActions()
-  await actions.forkSession('s1')
-  assert.deepEqual(calls.forks, [{ id: 's1', onCreated: undefined, options: { allowMigration: false } }])
+  assert.equal(await actions.forkSession('s1'), 'child')
+  assert.equal(calls.forks.length, 1)
+  assert.equal(calls.forks[0].id, 's1')
+  assert.equal(typeof calls.forks[0].onCreated, 'function')
+  assert.deepEqual(calls.forks[0].options, { allowMigration: false })
   await assert.rejects(() => {
     const missing = makeActions()
     missing.services.uiWorkspace.forkSession = undefined
