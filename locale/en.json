@@ -276,5 +276,9 @@
   },
   "toast.forked": "Session forked and placed in the source group",
   "toast.forkPlacementFailed": "Session forked, but could not be placed in the source group",
-  "toast.forkUnavailable": "This session cannot be forked (no completed turn or no access)"
+  "toast.forkUnavailable": "This session cannot be forked (no completed turn or no access)",
+  "config.destructiveConfirmBody": "This lets AI delete groups, and deletion cannot be undone in the UI. Enable it only when you explicitly need AI to delete groups.",
+  "config.destructiveConfirmEnable": "I understand, enable",
+  "config.destructiveConfirmCancel": "Cancel",
+  "skill.repairUserOwned": "The skill is user-owned; overwrite was refused"
 }

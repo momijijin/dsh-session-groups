@@ -1150,7 +1150,16 @@ export const registerRoutes = (ctx, store, options = {}) => {
           return
         }
         try {
-          const result = repairManagedSkill({ dshHome: skillDshHome, force: true })
+          const result = repairManagedSkill({ dshHome: skillDshHome })
+          if (result.status === 'skipped-user-owned') {
+            sendJson(res, 409, {
+              ...result,
+              ok: false,
+              code: 'skill-user-owned',
+              message: 'the existing skill is user-owned; refusing to overwrite it',
+            })
+            return
+          }
           sendJson(res, 200, result)
         } catch (error) {
           sendJson(res, 503, {

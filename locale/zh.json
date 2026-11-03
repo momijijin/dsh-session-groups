@@ -276,5 +276,9 @@
   },
   "toast.forked": "已分叉会话并放入原分组",
   "toast.forkPlacementFailed": "已分叉会话，但未能放入原分组",
-  "toast.forkUnavailable": "当前会话不能分叉（没有已完成轮次或无权限）"
+  "toast.forkUnavailable": "当前会话不能分叉（没有已完成轮次或无权限）",
+  "config.destructiveConfirmBody": "这项设置会允许 AI 删除分组，且删除不可在界面中撤销。只有在你明确需要 AI 执行删除时才开启。",
+  "config.destructiveConfirmEnable": "我理解风险，开启",
+  "config.destructiveConfirmCancel": "取消",
+  "skill.repairUserOwned": "该 skill 是用户文件，已拒绝覆盖"
 }

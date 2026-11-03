@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import {
   COMMIT_PATH,
   DEBUG_PATH,
@@ -9,6 +10,7 @@ import {
   MAX_BODY_BYTES,
   MAX_DIAGNOSTICS_BODY_BYTES,
   MAX_DIAGNOSTICS_EVENTS,
+  SKILL_REPAIR_PATH,
 } from '../../src/host/constants.js'
 import {
   commitResponse,
@@ -89,6 +91,32 @@ test('the debug probe route mounts only when explicitly enabled', async (t) => {
   const mounted = await mountRoutes({ debugProbeEnabled: true })
   t.after(() => mounted.cleanup())
   assert.equal(mounted.mounted.routes.includes(DEBUG_PATH), true)
+})
+
+test('skill repair never overwrites a user-owned skill file', async (t) => {
+  const temp = await makeTempStore()
+  t.after(temp.cleanup)
+  const skillDir = join(temp.dir, 'skills', 'session-groups-control')
+  const skillPath = join(skillDir, 'SKILL.md')
+  await mkdir(skillDir, { recursive: true })
+  await writeFile(skillPath, 'my own skill\n', 'utf8')
+  const mounted = await mountRoutes({
+    store: temp.store,
+    dir: temp.dir,
+    filePath: temp.filePath,
+    connection: cookieConnection(),
+    controlApiEnabled: true,
+    skillDshHome: temp.dir,
+  })
+  t.after(() => mounted.cleanup())
+
+  const repaired = await mounted.call(
+    SKILL_REPAIR_PATH,
+    makeRequest({ method: 'POST', headers: { cookie: 'token=ok' } }),
+  )
+  assert.equal(repaired.res.statusCode, 409)
+  assert.equal(repaired.json.code, 'skill-user-owned')
+  assert.equal(await readFile(skillPath, 'utf8'), 'my own skill\n')
 })
 
 test('the fence runs first: no connection -> 503 fence-unavailable on both routes', async (t) => {

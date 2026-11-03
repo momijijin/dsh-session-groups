@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.40 (2026-11-03)
+
+- Harden destructive settings and skill repair: controlDestructive requires an inline explicit confirmation, and the repair route refuses to overwrite a user-owned SKILL.md (409 skill-user-owned).
+
 ## 0.3.0-beta.39 (2026-11-03)
 
 - Make diagnostics and debugProbe settings live: host route flags are read per request, the debug route is always registered but gated, and the client starts/stops diagnostics after a settings change.
@@ -207,6 +211,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

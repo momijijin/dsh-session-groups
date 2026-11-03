@@ -34,6 +34,7 @@ export const SkillRepairCard = ({ form }) => {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
   const [pending, setPending] = useState({})
+  const [destructivePrompt, setDestructivePrompt] = useState(false)
   const [formValue, setFormValue] = useState(() => readFormValue(form))
 
   useEffect(() => {
@@ -83,6 +84,62 @@ export const SkillRepairCard = ({ form }) => {
     }
   }
 
+  const requestFieldChange = (field, next) => {
+    if (field === 'controlDestructive' && next === true && config.controlDestructive !== true) {
+      setDestructivePrompt(true)
+      return
+    }
+    if (field === 'controlDestructive') setDestructivePrompt(false)
+    void setField(field, next)
+  }
+
+  const confirmDestructive = () => {
+    setDestructivePrompt(false)
+    void setField('controlDestructive', true)
+  }
+
+  const renderConfirm = (field) => {
+    if (field !== 'controlDestructive' || !destructivePrompt) return null
+    return h(
+      'div',
+      {
+        class: 'dsg-config-confirm',
+        role: 'alert',
+        'data-testid': 'session-groups-config-destructive-confirm',
+        onKeyDown: (event) => {
+          if (event.key === 'Escape') {
+            event.stopPropagation()
+            setDestructivePrompt(false)
+          }
+        },
+      },
+      h('div', { class: 'dsg-config-confirm-body' }, t('config.destructiveConfirmBody')),
+      h(
+        'div',
+        { class: 'dsg-config-confirm-actions' },
+        h(
+          Button,
+          {
+            variant: 'primary',
+            size: 'sm',
+            class: 'dsg-config-danger',
+            onClick: confirmDestructive,
+          },
+          t('config.destructiveConfirmEnable'),
+        ),
+        h(
+          Button,
+          {
+            variant: 'ghost',
+            size: 'sm',
+            onClick: () => setDestructivePrompt(false),
+          },
+          t('config.destructiveConfirmCancel'),
+        ),
+      ),
+    )
+  }
+
   return h(
     'div',
     { class: 'dsg-settings-panel', 'data-testid': 'session-groups-settings-panel' },
@@ -95,40 +152,45 @@ export const SkillRepairCard = ({ form }) => {
           ...CONFIG_FIELDS.map(([field, labelKey, hintKey, detailKey]) =>
             h(
               'div',
-              { class: 'dsg-config-row', key: field, 'data-testid': `session-groups-config-${field}` },
+              { class: 'dsg-config-item', key: field, 'data-testid': `session-groups-config-${field}` },
               h(
                 'div',
-                { class: 'dsg-config-copy' },
-                h('div', { class: 'dsg-config-label' }, t(labelKey)),
-                h('div', { class: 'dsg-config-proof' }, t(hintKey)),
+                { class: 'dsg-config-row' },
+                h(
+                  'div',
+                  { class: 'dsg-config-copy' },
+                  h('div', { class: 'dsg-config-label' }, t(labelKey)),
+                  h('div', { class: 'dsg-config-proof' }, t(hintKey)),
+                ),
+                h(
+                  'div',
+                  { class: 'dsg-config-control' },
+                  h(Tooltip, {
+                    label: t(detailKey),
+                    side: 'left',
+                    portal: true,
+                    openOnClick: true,
+                    delayMs: 250,
+                    maxWidth: 360,
+                    children: h(
+                      Button,
+                      {
+                        variant: 'ghost',
+                        size: 'sm',
+                        class: 'dsg-config-info',
+                        'aria-label': t('config.detailsLabel', { name: t(labelKey) }),
+                      },
+                      h(IconInfoOutlineRegular, { size: 16 }),
+                    ),
+                  }),
+                  h(Switch, {
+                    checked: config[field] === true,
+                    onChange: (next) => requestFieldChange(field, next),
+                    label: t(labelKey),
+                  }),
+                ),
               ),
-              h(
-                'div',
-                { class: 'dsg-config-control' },
-                h(Tooltip, {
-                  label: t(detailKey),
-                  side: 'left',
-                  portal: true,
-                  openOnClick: true,
-                  delayMs: 250,
-                  maxWidth: 360,
-                  children: h(
-                    Button,
-                    {
-                      variant: 'ghost',
-                      size: 'sm',
-                      class: 'dsg-config-info',
-                      'aria-label': t('config.detailsLabel', { name: t(labelKey) }),
-                    },
-                    h(IconInfoOutlineRegular, { size: 16 }),
-                  ),
-                }),
-                h(Switch, {
-                  checked: config[field] === true,
-                  onChange: (next) => setField(field, next),
-                  label: t(labelKey),
-                }),
-              ),
+              renderConfirm(field),
             ),
           ),
         )
@@ -161,7 +223,11 @@ export const SkillRepairCard = ({ form }) => {
               'data-ok': result.ok ? 'true' : 'false',
               'data-testid': 'session-groups-skill-repair-result',
             },
-            result.ok ? t('skill.repairOk') : t('skill.repairFailed'),
+            result.ok
+              ? t('skill.repairOk')
+              : result.code === 'skill-user-owned'
+                ? t('skill.repairUserOwned')
+                : t('skill.repairFailed'),
             result.code ? ` (${result.code})` : '',
           )
         : null,

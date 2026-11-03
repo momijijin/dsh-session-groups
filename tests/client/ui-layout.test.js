@@ -211,10 +211,16 @@ test('settings page is bundle-level and uses DSH primitives with option details'
   assert.match(skillRepair, /IconInfoOutlineRegular/)
   assert.match(skillRepair, /config\.details\.diagnostics/)
   assert.match(skillRepair, /config\.detailsLabel/)
+  assert.match(skillRepair, /destructivePrompt/)
+  assert.match(skillRepair, /renderConfirm/)
+  assert.match(skillRepair, /skill-user-owned/)
+  assert.match(CSS, /dsg-config-confirm/)
   assert.doesNotMatch(CSS, /dsg-config-checkbox/)
   assert.doesNotMatch(CSS, /dsg-skill-repair-button/)
   assert.equal(typeof zh['config.details.controlApi'], 'string')
   assert.equal(typeof en['config.details.controlApi'], 'string')
+  assert.equal(typeof zh['config.destructiveConfirmBody'], 'string')
+  assert.equal(typeof en['skill.repairUserOwned'], 'string')
 })
 
 test('session menu drops pin and adds fork, copy id and hover archive', () => {

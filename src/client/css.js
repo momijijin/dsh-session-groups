@@ -764,6 +764,11 @@ export const CSS = `
 .dsg-config-title { font-size: var(--dsg-font-14, 14px); line-height: 20px; color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-config-hint { margin: 2px 0 8px; font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-config-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.dsg-config-item { display: flex; flex-direction: column; gap: 0; }
+.dsg-config-confirm { margin: 0 0 6px; padding: 8px 10px; border: 0.5px solid var(--dsw-alias-state-danger, #f85149); border-radius: var(--dsw-radius-md, 8px); background: var(--dsw-alias-bg-module-platform, transparent); }
+.dsg-config-confirm-body { margin-bottom: 6px; font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-state-danger, #f85149); }
+.dsg-config-confirm-actions { display: flex; gap: 8px; }
+.dsg-config-danger { border-color: var(--dsw-alias-state-danger, #f85149); color: var(--dsw-alias-state-danger, #f85149); }
 .dsg-config-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
 .dsg-config-control { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 .dsg-config-info { width: 24px; height: 24px; padding: 0; color: var(--dsw-alias-label-tertiary, CanvasText); }
