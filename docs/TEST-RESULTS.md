@@ -1,14 +1,14 @@
-# 0.3.0-beta.43 测试结果
+# 0.3.0-beta.44 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.43`  
+版本：`0.3.0-beta.44`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 单元/契约测试：**378/378 PASS**
+- 单元/契约测试：**383/383 PASS**
 - Core 纯函数测试：**22/22 PASS**
-- Node 内置 coverage：**89.28% lines / 76.82% branches / 83.28% functions**
+- Node 内置 coverage：**89.36% lines / 76.93% branches / 83.43% functions**
 - A+ 隔离 Playwright：**PASS**
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
@@ -68,4 +68,6 @@ npm run test:isolated   # 需先启动隔离 web
 - 当前默认自动门禁是 `e2e/isolated.spec.mjs`。
 - `e2e/groups.spec.mjs` 是历史手工脚本，未纳入默认门禁。
 - 发布包 SHA256 以最终 `npm pack` 输出为准。
+
+
 

@@ -31,7 +31,7 @@ src/index.js     Cordis host 入口
   - `adapters` 只能依赖 `adapters` / `core` / `shared`
   - `client` 只能依赖 `client` / `core` / `shared` / `adapters`
   - `host` 只能依赖 `host` / `core` / `shared`
-  - `src/index.js` 只能依赖 `host` / `core` / `shared`
+  - `src/index.js` 是 composition root，可依赖 `host` / `core` / `shared` / `adapters`；`adapters` 只承载 DSH 版本相关能力检测，不向上依赖 client/host。
 - `npm run check:core` 独立加载全部核心模块，不启动 DSH。
 
 ## 当前核心

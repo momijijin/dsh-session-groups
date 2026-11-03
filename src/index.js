@@ -30,6 +30,7 @@ import { createStore } from './host/store.js'
 import { createChangeHub } from './host/change-hub.js'
 import { removeManagedSkill, repairManagedSkill } from './host/skill-install.js'
 import { createControlTool } from './host/tool.js'
+import { HOST_REQUIRED, compatibilityReport, detectHostCapabilities } from './adapters/dsh-capabilities.js'
 
 /** Cordis function-plugin name (matches the bundle patch row id). */
 export const name = 'dsh-session-groups'
@@ -71,6 +72,11 @@ export const inject = ['webServer']
 
 /** Cordis function plugin body. Must not return data (see module comment). */
 export const apply = (ctx, config = {}) => {
+  const hostCapabilities = detectHostCapabilities(ctx)
+  const hostCompatibility = compatibilityReport(hostCapabilities, HOST_REQUIRED)
+  if (!hostCompatibility.supported) {
+    logWarn(ctx, `dsh-session-groups: missing host capabilities: ${hostCompatibility.missing.join(', ')}`)
+  }
   const readFlag = (key) => {
     const value = config?.[key]
     if (value !== null && typeof value === 'object' && typeof value.get === 'function') return value.get() === true

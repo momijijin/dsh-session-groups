@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.44 (2026-11-03)
+
+- Add explicit DSH capability preflight and document the compatibility truth: package range + runtime capability detection, not per-version compiled switches. Required host/client capabilities are logged; optional services degrade.
+
 ## 0.3.0-beta.43 (2026-11-03)
 
 - Synchronize README, architecture, release and test-result docs with the current beta: first-layer settings, live config, Fork/Copy/archive actions, 378 tests, coverage baseline and the legacy groups.spec status.
@@ -223,6 +227,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

@@ -22,7 +22,7 @@ const allowed = {
   adapters: new Set(['adapters', 'core', 'shared']),
   client: new Set(['client', 'core', 'shared', 'adapters']),
   host: new Set(['host', 'core', 'shared']),
-  root: new Set(['host', 'core', 'shared']),
+  root: new Set(['host', 'core', 'shared', 'adapters']),
 }
 
 const walk = (dir) => {

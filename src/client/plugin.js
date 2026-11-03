@@ -26,6 +26,7 @@ import {
 } from './diagnostics.js'
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
 import { installClientRuntime } from '../adapters/client-runtime.js'
+import { CLIENT_REQUIRED, compatibilityReport, detectClientCapabilities } from '../adapters/dsh-capabilities.js'
 import { writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import { GroupsViewBoundary } from './components.js'
 import { SkillRepairCard } from './skill-repair.js'
@@ -595,6 +596,15 @@ export const createPlugin = () => {
     if (mounted) return
     mounted = true
     ctxRef = ctx
+    const clientCompatibility = compatibilityReport(
+      detectClientCapabilities(ctx, services()),
+      CLIENT_REQUIRED,
+    )
+    if (!clientCompatibility.supported) {
+      globalThis.console?.warn?.(
+        `[dsh-session-groups] missing client capabilities: ${clientCompatibility.missing.join(', ')}`,
+      )
+    }
     store = createStore({ storage: safeStorage() })
     if (perfEnabled()) perfDisposer = store.subscribe(() => perfCount('store:publish'))
     // Diagnostics are opt-in (0.2.18): either the generic plugin-config switch
@@ -699,6 +709,7 @@ export const createPlugin = () => {
       get capabilities() {
         return capabilities()
       },
+      compatibility: clientCompatibility,
     }
     installClientRuntime(bridge)
     startChangeStream()
