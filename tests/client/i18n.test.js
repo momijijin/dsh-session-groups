@@ -68,6 +68,7 @@ test('dynamic keys used by status, archive, settings and errors are present', ()
     'config.details.controlApi',
     'config.details.controlDestructive',
     'config.details.controlSessions',
+    'config.detailsLabel',
     'skill.repairTitle',
     'skill.repairBody',
     'skill.repairButton',
@@ -87,4 +88,8 @@ test('plugin manifest exposes localized title and description', () => {
   assert.equal(typeof manifest.title?.en, 'string')
   assert.equal(typeof manifest.description?.zh, 'string')
   assert.equal(typeof manifest.description?.en, 'string')
+  assert.equal(zh.title, '自由分组')
+  assert.equal(en.title, 'Free groups')
+  assert.equal(typeof zh.description, 'string')
+  assert.equal(typeof en.description, 'string')
 })
