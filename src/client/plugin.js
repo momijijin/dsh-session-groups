@@ -27,6 +27,7 @@ import {
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
 import { installClientRuntime } from '../adapters/client-runtime.js'
 import { CLIENT_REQUIRED, compatibilityReport, detectClientCapabilities } from '../adapters/dsh-capabilities.js'
+import { resolveDshVersion, selectDshAdapter } from '../adapters/dsh-selector.js'
 import { writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import { GroupsViewBoundary } from './components.js'
 import { SkillRepairCard } from './skill-repair.js'
@@ -596,9 +597,18 @@ export const createPlugin = () => {
     if (mounted) return
     mounted = true
     ctxRef = ctx
+    const declaredVersion = resolveDshVersion(ctx)
+    const selectedAdapter = selectDshAdapter(declaredVersion)
+    if (declaredVersion !== null && selectedAdapter === null) {
+      globalThis.console?.warn?.(`[dsh-session-groups] unsupported DSH runtime version ${declaredVersion}`)
+      return
+    }
+    const clientCapabilities = selectedAdapter === null
+      ? detectClientCapabilities(ctx, services())
+      : selectedAdapter.detectClient(ctx, services())
     const clientCompatibility = compatibilityReport(
-      detectClientCapabilities(ctx, services()),
-      CLIENT_REQUIRED,
+      clientCapabilities,
+      selectedAdapter?.requiredClient ?? CLIENT_REQUIRED,
     )
     if (!clientCompatibility.supported) {
       globalThis.console?.warn?.(
@@ -710,6 +720,8 @@ export const createPlugin = () => {
         return capabilities()
       },
       compatibility: clientCompatibility,
+      dshVersion: declaredVersion,
+      dshAdapter: selectedAdapter?.id ?? null,
     }
     installClientRuntime(bridge)
     startChangeStream()

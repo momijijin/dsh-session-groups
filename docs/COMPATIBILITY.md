@@ -75,13 +75,38 @@ client optional:
 
 但不会主动删除 `dsh-session-groups.json`；分组数据文件仍可作为恢复源。最坏情况下需要安装更新版本的插件或回滚 DSH。
 
-## 为什么不做多版本 switch
+## 版本适配器选择器
+
+已把多 release line 的扩展点独立出来：
+
+```text
+src/adapters/dsh-0.2.js      当前 release line 的适配器
+src/adapters/dsh-selector.js 显式注册表 + 精确版本选择
+tests/client/dsh-selector.test.js 版本矩阵
+```
+
+当前矩阵：
+
+```text
+dsh-0.2  >=0.2.0-rc.2 <0.3.0
+```
+
+选择规则：
+
+- 宿主暴露 `dshVersion` / `runtimeVersion` 时，按精确版本选择；
+- 版本存在但不在矩阵内：host 拒绝挂载，不猜测;
+- 当前 DSH 未暴露稳定版本 service，因此正常路径回退到 capability detection；
+- 未来新增 0.3 支持时，新增 `dsh-0.3.js` 并注册，不在主流程写 `if (version >= ...)`。
+
+这不是假装已经支持 0.3：0.3 适配器和真实矩阵尚未存在，选择器会对它返回 unsupported。
+
+## 为什么优先能力检测
 
 - 没有真实的第二套宿主可以验证，写版本分支等于发布未测试代码。
 - DSH 的扩展点本身是 service/slot 组合，能力检测比版本判断更精确。
 - 插件管理器已经承担版本范围拒绝；插件内部重复版本判断会制造双重真相源。
 
-如果未来确实需要平行支持两个 DSH release line，应该在 `adapters/` 下建立**按版本命名的适配器实现**，再由能力探测选择，而不是在主流程塞 `if (version >= ...)`。
+真正需要平行支持时，才补对应版本的独立适配器实现和测试矩阵。
 
 ## 升级检查清单
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.46 (2026-11-03)
+
+- Add an explicit versioned DSH adapter selector: dsh-0.2 adapter, exact-version selection, optional host version resolution, and a 0.2/0.3 test matrix. No version conditional is added to client/host business flow.
+
 ## 0.3.0-beta.45 (2026-11-03)
 
 - Add a two-page SSE convergence regression: an external commit must refresh both windows in the same browser context. Update the A+ coverage and release notes.
@@ -231,6 +235,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

@@ -31,6 +31,7 @@ import { createChangeHub } from './host/change-hub.js'
 import { removeManagedSkill, repairManagedSkill } from './host/skill-install.js'
 import { createControlTool } from './host/tool.js'
 import { HOST_REQUIRED, compatibilityReport, detectHostCapabilities } from './adapters/dsh-capabilities.js'
+import { resolveDshVersion, selectDshAdapter } from './adapters/dsh-selector.js'
 
 /** Cordis function-plugin name (matches the bundle patch row id). */
 export const name = 'dsh-session-groups'
@@ -72,8 +73,15 @@ export const inject = ['webServer']
 
 /** Cordis function plugin body. Must not return data (see module comment). */
 export const apply = (ctx, config = {}) => {
-  const hostCapabilities = detectHostCapabilities(ctx)
-  const hostCompatibility = compatibilityReport(hostCapabilities, HOST_REQUIRED)
+  const declaredVersion = resolveDshVersion(ctx)
+  const selectedAdapter = selectDshAdapter(declaredVersion)
+  if (declaredVersion !== null && selectedAdapter === null) {
+    logWarn(ctx, `dsh-session-groups: unsupported DSH runtime version ${declaredVersion}; refusing to mount`)
+    return
+  }
+  const hostCapabilities = selectedAdapter === null ? detectHostCapabilities(ctx) : selectedAdapter.detectHost(ctx)
+  const requiredHost = selectedAdapter?.requiredHost ?? HOST_REQUIRED
+  const hostCompatibility = compatibilityReport(hostCapabilities, requiredHost)
   if (!hostCompatibility.supported) {
     logWarn(ctx, `dsh-session-groups: missing host capabilities: ${hostCompatibility.missing.join(', ')}`)
   }
