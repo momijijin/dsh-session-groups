@@ -98,3 +98,4 @@
 
 - Baseline: 392 tests, 89.48% lines / 77.03% branches / 83.78% functions.
 - beta.57: 429 tests, 93.38% lines / 80.65% branches / 87.52% functions; core 29/29; coverage gate 92/80/85. A+ pass; beta.57 installed with lifecycle PASS.
+- beta.58: 432 tests, 93.69% lines / 81.19% branches / 87.52% functions; control HTTP error matrix added; A+ and lifecycle PASS; installed.

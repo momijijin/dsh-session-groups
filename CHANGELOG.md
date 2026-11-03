@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.58 (2026-11-03)
+
+- Final meaningful coverage round: control HTTP request matrix now covers unsupported media, oversized bodies, invalid JSON/body shapes, invalid revisions, missing/stale plan hashes, idempotency-key reuse and unsupported/IO document states. 432 tests; coverage 93.69% lines / 81.19% branches / 87.52% functions.
+
 ## 0.3.0-beta.57 (2026-11-03)
 
 - Coverage hardening: add boundary tests for control result validation, session routes, native tool session actions, optimistic failures/dispose, state storage/no-op/subscriber boundaries, perf instrumentation, and sidebar width DOM ownership. 429 tests; coverage 93.38% lines / 80.65% branches / 87.52% functions. Add a 92/80/85 coverage gate.

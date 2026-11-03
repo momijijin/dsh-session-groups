@@ -6,6 +6,7 @@ import {
   CONTROL_RESOLVE_PATH,
   CONTROL_STATE_PATH,
   LOAD_PATH,
+  MAX_CONTROL_BODY_BYTES,
 } from '../../src/host/constants.js'
 import { mountRoutes, sampleDoc, makeRequest } from './helpers.js'
 
@@ -225,4 +226,102 @@ test('destructive control operations require the separate switch', async (t) => 
   )
   assert.equal(applied.res.statusCode, 200)
   assert.equal(applied.json.doc.groups.some((group) => group.id === groupId), false)
+})
+
+test('control routes reject unsupported media, oversized bodies, invalid JSON and invalid revisions', async (t) => {
+  const mounted = await mountRoutes({ connection: connection(), controlApiEnabled: true })
+  t.after(() => mounted.cleanup())
+  await mounted.store.save(sampleDoc())
+
+  const wrongType = await mounted.call(CONTROL_PLAN_PATH, makeRequest({ method: 'POST', headers: { cookie: 'token=ok' }, body: '{}' }))
+  assert.equal(wrongType.res.statusCode, 415)
+  assert.equal(wrongType.json.code, 'unsupported-media-type')
+
+  const oversized = await mounted.call(CONTROL_PLAN_PATH, makeRequest({
+    method: 'POST',
+    headers: { cookie: 'token=ok', 'content-type': 'application/json' },
+    body: `"${'x'.repeat(MAX_CONTROL_BODY_BYTES)}"`,
+  }))
+  assert.equal(oversized.res.statusCode, 413)
+  assert.equal(oversized.json.code, 'payload-too-large')
+
+  for (const [body, code] of [['{', 'invalid'], ['null', 'invalid-body'], ['[]', 'invalid-body']]) {
+    const invalid = await mounted.call(CONTROL_PLAN_PATH, makeRequest({
+      method: 'POST',
+      headers: { cookie: 'token=ok', 'content-type': 'application/json' },
+      body,
+    }))
+    assert.equal(invalid.res.statusCode, 422)
+    assert.equal(invalid.json.code, code)
+  }
+
+  const badRevision = await mounted.call(CONTROL_PLAN_PATH, post({ baseRevision: -1, operations: [] }))
+  assert.equal(badRevision.res.statusCode, 422)
+  assert.equal(badRevision.json.code, 'invalid-revision')
+
+  const badApplyRevision = await mounted.call(CONTROL_APPLY_PATH, post({ baseRevision: '1', operations: [], planHash: 'x' }))
+  assert.equal(badApplyRevision.res.statusCode, 422)
+  assert.equal(badApplyRevision.json.code, 'invalid-revision')
+
+  const noPlan = await mounted.call(CONTROL_APPLY_PATH, post({ baseRevision: 1, operations: [] }))
+  assert.equal(noPlan.res.statusCode, 422)
+  assert.equal(noPlan.json.code, 'invalid-plan')
+
+  const stalePlan = await mounted.call(CONTROL_APPLY_PATH, post({ baseRevision: 1, operations: [], planHash: 'x'.repeat(64) }))
+  assert.equal(stalePlan.res.statusCode, 409)
+  assert.equal(stalePlan.json.code, 'stale-plan')
+})
+
+test('control apply rejects idempotency-key reuse for another plan', async (t) => {
+  const mounted = await mountRoutes({ connection: connection(), controlApiEnabled: true })
+  t.after(() => mounted.cleanup())
+  await mounted.store.save(sampleDoc())
+  const firstOperations = [{ op: 'group.create', name: 'First', parentId: null, index: 0 }]
+  const firstPlan = await mounted.call(CONTROL_PLAN_PATH, post({ baseRevision: 1, operations: firstOperations }))
+  const firstApply = await mounted.call(CONTROL_APPLY_PATH, post({
+    baseRevision: 1,
+    operations: firstOperations,
+    planHash: firstPlan.json.planHash,
+    idempotencyKey: 'same-key',
+  }))
+  assert.equal(firstApply.res.statusCode, 200)
+
+  const secondOperations = [{ op: 'group.create', name: 'Second', parentId: null, index: 0 }]
+  const secondPlan = await mounted.call(CONTROL_PLAN_PATH, post({ baseRevision: 2, operations: secondOperations }))
+  const conflict = await mounted.call(CONTROL_APPLY_PATH, post({
+    baseRevision: 2,
+    operations: secondOperations,
+    planHash: secondPlan.json.planHash,
+    idempotencyKey: 'same-key',
+  }))
+  assert.equal(conflict.res.statusCode, 409)
+  assert.equal(conflict.json.code, 'idempotency-conflict')
+})
+
+test('control routes fail closed on unsupported document versions and storage IO errors', async (t) => {
+  const unsupportedStore = {
+    async load() { return { kind: 'unsupported-version', version: 9 } },
+    async commit() { throw new Error('unreachable') },
+  }
+  const unsupported = await mountRoutes({
+    store: unsupportedStore,
+    connection: connection(),
+    controlApiEnabled: true,
+  })
+  t.after(() => unsupported.cleanup())
+  const unsupportedState = await unsupported.call(CONTROL_STATE_PATH, makeRequest({ headers }))
+  assert.equal(unsupportedState.res.statusCode, 409)
+  assert.equal(unsupportedState.json.code, 'unsupported-version')
+  assert.equal(unsupportedState.json.version, 9)
+
+  const ioStore = {
+    async load() { throw new Error('disk io') },
+    async commit() { throw new Error('unreachable') },
+  }
+  const io = await mountRoutes({ store: ioStore, connection: connection(), controlApiEnabled: true })
+  t.after(() => io.cleanup())
+  const ioState = await io.call(CONTROL_STATE_PATH, makeRequest({ headers }))
+  assert.equal(ioState.res.statusCode, 503)
+  assert.equal(ioState.json.code, 'io')
+  assert.match(ioState.json.message, /disk io/)
 })

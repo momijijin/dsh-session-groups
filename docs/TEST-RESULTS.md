@@ -1,14 +1,14 @@
-# 0.3.0-beta.57 测试结果
+# 0.3.0-beta.58 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.57`  
+版本：`0.3.0-beta.58`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 单元/契约测试：**429/429 PASS**
+- 单元/契约测试：**432/432 PASS**
 - Core 纯函数测试：**29/29 PASS**
-- Node 内置 coverage：**93.38% lines / 80.65% branches / 87.52% functions**
+- Node 内置 coverage：**93.69% lines / 81.19% branches / 87.52% functions**
 - A+ 隔离 Playwright：**PASS**
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
