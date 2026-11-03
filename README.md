@@ -9,10 +9,24 @@ Global session groups for the DSH Desktop left sidebar. It organizes sessions ac
 - the official workspace registry is never modified;
 - `workspace.json` is never written.
 
-Current version: **0.3.0-beta.63**  
+Current version: **0.3.0-beta.64**  
 Tested baseline: DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the `engines.dsh` range, the `dsh-0.2` adapter selector and runtime capability checks.
+
+### Platform support
+
+The runtime is platform-neutral JavaScript. It does not invoke PowerShell and has no `process.platform` or `child_process` branches in `src/`. The PowerShell files under `scripts/qa/` are maintainer-only test harnesses and are not shipped in the npm package.
+
+Current verification status:
+
+| Platform | Node/unit tests | Build/package | Real DSH UI |
+|---|---|---|---|
+| Windows | verified locally | verified locally | verified locally |
+| Linux | verified by GitHub Actions | verified by GitHub Actions | not verified |
+| macOS | not verified | not verified | not verified |
+
+The current CI is an Ubuntu Node-level gate, not a cross-platform certification. Treat Linux/macOS DSH UI support as experimental until a real host/UI pass exists. Ordinary users install through dshmarket; the local tarball and CLI are maintainer/debug paths only.
 
 ## Features
 
@@ -266,7 +280,7 @@ npm pack
 ```
 
 - `npm test`: 442 unit/contract tests;
-- `npm run check:coverage`: Node built-in coverage (currently about 93.49% lines / 81.96% branches / 88.40% functions, `src/**` scope);
+- `npm run check:coverage`: Node built-in coverage (currently about 93.49% lines / 81.99% branches / 88.40% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;
@@ -274,7 +288,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS;
 - build artifact: `lib/client.js`;
-- package: `dsh-session-groups-0.3.0-beta.63.tgz`;
+- package: `dsh-session-groups-0.3.0-beta.64.tgz`;
 - release steps: `docs/RELEASE.md`;
 - test summary: `docs/TEST-RESULTS.md`.
 

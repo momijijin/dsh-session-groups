@@ -1,12 +1,12 @@
-# 0.3.0-beta.63 发布与安装说明
+# 0.3.0-beta.64 发布与安装说明
 
-- 版本：`0.3.0-beta.63`
+- 版本：`0.3.0-beta.64`
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 - 状态：单元/契约测试 442/442；A+ 隔离回归通过；本轮真实桌面回归由用户执行
 - 范围：自由分组、跨工作区会话、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、Fork/Copy ID、第一层设置和配置安全
-- 发布包：`dsh-session-groups-0.3.0-beta.63.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.64.tgz`
 
-## 1. 发布重点（beta.60–beta.63）
+## 1. 发布重点（beta.60–beta.64）
 
 ### 兼容性与诊断
 
@@ -25,7 +25,7 @@
 ### 文档与发布
 
 - README 默认英文，中文移至 `README.zh.md`。
-- README、ARCHITECTURE、COMPATIBILITY、RELEASE、TEST-RESULTS 与 0.3.0-beta.63 对齐。
+- README、ARCHITECTURE、COMPATIBILITY、RELEASE、TEST-RESULTS 与 0.3.0-beta.64 对齐。
 - 历史 V1/V1.1 的 CONTRACTS、TEST-PLAN、V1-PLAN、GATE0-SUMMARY、SPIKE 已加历史声明，避免被误读为当前状态。
 - 当前发布验证：442/442 单元/契约；A+ 隔离回归通过；真实桌面回归由用户执行。
 - 当前 beta 通过本地 tarball 分发；dshmarket 目录条目尚未发布。
@@ -44,11 +44,11 @@ npm pack
 
 - `npm test`：442/442 PASS
 - 构建：`lib/client.js`
-- 包：`dsh-session-groups-0.3.0-beta.63.tgz`
+- 包：`dsh-session-groups-0.3.0-beta.64.tgz`
 
 ### 发布包信息
 
-- 文件：`dsh-session-groups-0.3.0-beta.63.tgz`
+- 文件：`dsh-session-groups-0.3.0-beta.64.tgz`
 - 大小与 SHA256：以最终 `npm pack` 输出和桌面安装记录为准（不写进包内文档，避免自引用）
 
 ## 3. 安装
@@ -72,7 +72,7 @@ dsh-session-groups
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.63.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.64.tgz"
 ```
 
 安装前备份：
@@ -117,7 +117,7 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.63.tgz"
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.64.tgz"
 ```
 
 - 使用 `%TEMP%` 下的独立 `DSH_HOME`，不会读写真实 `~/.dsh`
@@ -128,7 +128,7 @@ pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\lifecycle-isolated.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.63.tgz" `
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.64.tgz" `
   -Port 4417
 ```
 
@@ -142,7 +142,7 @@ pwsh -NoProfile -File .\scripts\qa\lifecycle-isolated.ps1 `
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\start-isolated-web.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.63.tgz" `
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.64.tgz" `
   -Port 4416
 
 $env:DSH_TEST_URL = "<web.json 中的 url>"
@@ -183,7 +183,7 @@ npm run test:isolated
 - 搜索最多 20 条
 - 宽度覆盖依赖宿主侧栏 DOM，失败时 fail-soft
 - 对话框拖动/缩放没有键盘操作
-- 0.3.0-beta.63 的 A+ 隔离 Playwright 已通过；真实桌面回归仍需用户执行
+- 0.3.0-beta.64 的 A+ 隔离 Playwright 已通过；真实桌面回归仍需用户执行
 - 完整历史 `groups.spec.mjs` 未纳入默认门禁，当前自动化入口是 `isolated.spec.mjs`
 - dshmarket 目录条目尚未发布，当前 beta 使用本地 tarball 或 GitHub Release
 
@@ -191,7 +191,7 @@ npm run test:isolated
 
 不要求在插件设置页实现自更新。更新由 dshmarket / 插件管理器负责。
 
-1. 创建公开 GitHub 仓库并推送 `dev`、`main` 与 `v0.3.0-beta.63` tag；
+1. 创建公开 GitHub 仓库并推送 `dev`、`main` 与 `v0.3.0-beta.64` tag；
 2. 创建 GitHub Release，上传 `npm pack` 生成的 tarball；
 3. 可选：发布 npm beta，优先使用带版本的 npm 源；
 4. 向 `awesome-dsh-plugin` 提交一个插件条目 PR（不是向 `dshmarket` 应用仓库提交）；

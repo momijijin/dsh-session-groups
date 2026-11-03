@@ -118,6 +118,29 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 6. 开启 `controlApi` 后调用一次 `session_groups_control` state。
 7. 运行 `npm test` 和 `npm run test:isolated`。
 
+## 平台支持矩阵
+
+插件 runtime 是纯 JS/Node + DSH，没有 PowerShell 运行时依赖；`scripts/qa/*.ps1` 只是维护者测试工具，不随 npm 包发布。
+
+| 平台 | Node/单测 | 构建/打包 | 真实 DSH UI |
+|---|---|---|---|
+| Windows | 本地已验证 | 本地已验证 | 本地已验证 |
+| Linux | GitHub Actions 已验证 | GitHub Actions 已验证 | 未验证 |
+| macOS | 未验证 | 未验证 | 未验证 |
+
+当前 CI 只覆盖 Ubuntu 的 Node 层：
+
+```text
+npm install
+语法检查
+442 项单元/契约测试
+客户端构建
+coverage gate
+npm pack --dry-run
+```
+
+它**不能**证明真实 DSH UI、真实 fence、sidebar slot、dshmarket 安装/更新在三个平台都可用。Linux/macOS 的真实 UI 在完成真实宿主回归前属于 experimental。
+
 ## 分发与更新
 
 当前 beta 通过本地 tarball 分发；dshmarket 目录条目尚未发布。

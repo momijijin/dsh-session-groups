@@ -1,7 +1,7 @@
 {
   "id": "dsh-session-groups",
   "name": "dsh-session-groups",
-  "version": "0.3.0-beta.63",
+  "version": "0.3.0-beta.64",
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": {

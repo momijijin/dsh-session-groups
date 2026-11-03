@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.3.0-beta.63**  
+当前实现：**0.3.0-beta.64**  
 支持宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2  
 分发状态：dshmarket 目录条目发布前，使用本地 beta tarball。
 

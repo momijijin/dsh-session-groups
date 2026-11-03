@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0-beta.64 (2026-11-03)
+
+- Documentation: English README is the public default and Chinese lives in `README.zh.md`. Local tarball/CLI instructions moved out of the user install path; dshmarket is the intended user entry.
+- Documentation: add an explicit platform verification matrix. Runtime is platform-neutral JavaScript with no PowerShell dependency; Windows has local UI verification, Linux has Node/CI verification, macOS is not verified. The Ubuntu CI is not presented as cross-platform UI certification.
+- CI: add a single Ubuntu Node 24 check for install, syntax, 442 tests, coverage gate, client build and `npm pack --dry-run`; it never publishes, tags or bumps versions.
+- Test: make the DSH_HOME path assertion platform-neutral so the suite can run on Linux.
+- No runtime feature or data-format changes.
+
 ## 0.3.0-beta.63 (2026-11-03)
 
 - Doctor CLI now acts as a compatibility gate: a 200 report with `host.compatibility.supported === false` exits non-zero while preserving the JSON report for post-upgrade scripts. A+ now also exercises two-window concurrent CAS (one 200, one 409, convergence). 442 tests; A+ passes.

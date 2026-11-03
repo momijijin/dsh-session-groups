@@ -9,10 +9,24 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 - 不修改官方工作区注册表
 - 不写入 `workspace.json`
 
-当前版本：**0.3.0-beta.63**  
+当前版本：**0.3.0-beta.64**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 兼容性说明见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)：使用 `engines.dsh`、`dsh-0.2` 适配器选择器和运行时能力检测；版本矩阵显式注册，主流程不写版本 `switch`。
+
+### 平台支持
+
+插件运行时是平台无关的 JavaScript，不调用 PowerShell，`src/` 中没有 `process.platform` 或 `child_process` 分支。`scripts/qa/` 下的 PowerShell 仅用于维护者测试，不随 npm 包发布。
+
+当前验证状态：
+
+| 平台 | Node/单元测试 | 构建/打包 | 真实 DSH UI |
+|---|---|---|---|
+| Windows | 本地已验证 | 本地已验证 | 本地已验证 |
+| Linux | GitHub Actions 已验证 | GitHub Actions 已验证 | 未验证 |
+| macOS | 未验证 | 未验证 | 未验证 |
+
+当前 CI 只是 Ubuntu 上的 Node 层门禁，不等于跨平台认证。Linux/macOS 的真实 DSH UI 支持在完成真实宿主/UI 验证前属于 experimental。普通用户通过 dshmarket 安装；本地 tarball 和 CLI 仅用于维护者/调试。
 
 ## 功能
 
@@ -280,7 +294,7 @@ npm pack
 ```
 
 - `npm test`：442 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.49% lines / 81.96% branches / 88.40% functions）
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.49% lines / 81.99% branches / 88.40% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH
@@ -292,7 +306,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.63.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.64.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 
