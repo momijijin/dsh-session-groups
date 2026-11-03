@@ -1,5 +1,7 @@
 # V1/V1.1 测试计划
 
+> **Historical test plan (V1/V1.1, 0.2.x).** It is not the current test inventory. Current results and gates are in `docs/TEST-RESULTS.md`; the active browser regression is `e2e/isolated.spec.mjs`.
+
 - 目标：证明“分组只改视图、不改宿主数据”，同时证明拖拽/嵌套/筛选/新建在真实 DSH 中可用；V1.1 追加证明左栏宽度、分组拖拽、会话搜索、官方侧栏排版对齐；0.2.4 追加证明拖拽行高插入占位与乐观 drop 提交（HTTP 未完成前 DOM 已移动）；0.2.5 追加证明官方 header 图标几何与拖拽诊断（HUD + NDJSON 落盘 + 分析器）；0.2.7 追加证明行 meta 布局、自定义颜色与右键/键盘菜单；0.2.8 追加证明官方会话状态（6 互斥 + subagents 次要）、空组 drop box 与单实例拖拽 label；0.2.9 追加证明删除分组目的地选择/循环与深度排除、空叶直接删除与颜色文案
 - 负责人：QA（计划、证据、验收结论）；Host/Client 各写自己模块的测试；Lead 做最终审计
 - 环境：先用独立 `DSH_HOME`（`.spike-homes/qa`）+ `groups-spike` profile，再 desktop profile 人工验收；profile 不隔离 `sessions/`/`storages/`，禁止用真实 `~/.dsh` 跑 E2E

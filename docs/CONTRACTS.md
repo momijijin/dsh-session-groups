@@ -1,5 +1,7 @@
 # V1/V1.1 契约（Host / Client / Shared）— Gate 0 修订稿
 
+> **Historical document (V1/V1.1 contract, frozen 2026-10-18).** This contract predates the 0.3 beta additions: the native `doctor` action, automatic `.bak` recovery, session-route extraction, and dshmarket distribution. For current behavior see `README.md`, `docs/ARCHITECTURE.md`, `docs/COMPATIBILITY.md` and `docs/TEST-RESULTS.md`.
+
 - 状态：**Frozen（Gate 0 PASS，2026-10-18）**；后续变更需 Gate 1 评审
 - V1.1（0.2.0，2026-10-28）：**additive** 扩展——左栏宽度覆盖、分组拖拽排序/改父级、会话搜索下拉；数据模型、Host 路由、存储路径均不变
 - V1.1（0.2.1，2026-10-28）：**typography/spacing-only patch**——分组视图排版/间距/图标对齐官方侧栏，消费宿主继承字体；无契约/数据/路由变化

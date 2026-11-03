@@ -6,29 +6,29 @@
 - 范围：自由分组、跨工作区会话、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、Fork/Copy ID、第一层设置和配置安全
 - 发布包：`dsh-session-groups-0.3.0-beta.63.tgz`
 
-## 1. 本轮变化（beta.39–beta.43）
+## 1. 发布重点（beta.60–beta.63）
 
-### 会话与设置
+### 兼容性与诊断
 
-- 移除自由分组中的 Pin/Unpin 菜单项
-- 会话菜单增加 Fork session（仅非空、access 允许时显示）和 Copy Session ID
-- Fork 成功后把子会话放到源分组组头，源会话未归组时放到未分组顶部
-- 行 hover 提供归档/取消归档，不再提供 hover 置顶
-- 设置卡移到 `plugins.bundle.config` 第一层
-- 使用标准 DSH Switch / Button / Tooltip，并补齐中英文和逐项安全详情
+- 原生工具增加只读 `doctor`：host capabilities、版本适配器、gates、storage health、services、routes。
+- 新增 `GET /dsh-session-groups/control/doctor`；受 fence 保护，`controlApi` 关闭时仍可用于诊断。
+- CLI `doctor` 交换 DSH web launch cookie 后读取诊断；compatibility 不支持时返回非零退出码。
+- doctor 同时报告 live 与 startup 能力快照，避免服务注入时序误报。
 
-### 配置与安全
+### 数据安全
 
-- `diagnostics` / `debugProbe` 开关改为请求时读取，切换后热生效
-- `controlDestructive` 开启前显示危险确认
-- skill repair 不再强制覆盖用户自有 `SKILL.md`；返回 `409 skill-user-owned`
-- 新增 `npm run check:coverage`，当前基线约 93.49% lines / 81.96% branches / 88.40% functions
+- 主记录损坏时先 quarantine；有有效 `.bak` 时自动恢复上一 revision。
+- 无有效 `.bak` 时保持空分组启动，原文件不删除。
+- 新增只读 storage health：`ok/missing/corrupt/unsupported-version/invalid/unreadable`、revision、backup、quarantine 数量。
+- 增加双窗口同 `baseRevision` 并发 CAS 的 A+ 场景：一个 200、一个 409，双方收敛。
 
-### 发布工程
+### 文档与发布
 
-- 补 README、ARCHITECTURE、RELEASE、TEST-RESULTS、CHANGELOG
-- README 移除陈旧的 Pin/“不修改标题”/路由未挂载描述
-- 记录 `e2e/groups.spec.mjs` 为历史手工脚本，默认自动门禁使用 `e2e/isolated.spec.mjs`
+- README 默认英文，中文移至 `README.zh.md`。
+- README、ARCHITECTURE、COMPATIBILITY、RELEASE、TEST-RESULTS 与 0.3.0-beta.63 对齐。
+- 历史 V1/V1.1 的 CONTRACTS、TEST-PLAN、V1-PLAN、GATE0-SUMMARY、SPIKE 已加历史声明，避免被误读为当前状态。
+- 当前发布验证：442/442 单元/契约；A+ 隔离回归通过；真实桌面回归由用户执行。
+- 当前 beta 通过本地 tarball 分发；dshmarket 目录条目尚未发布。
 
 ## 2. 构建与测试
 
@@ -169,16 +169,25 @@ npm run test:isolated
 - 状态统计只覆盖分组文档中已归组或显式未归组的会话
 - 自动派生的未归组会话不进入头部统计
 - 单窗口数据模型；多窗口冲突仅提示
+- 单进程写队列；多个 DSH 进程共用同一 profile 时没有跨进程锁
 - 搜索最多 20 条
 - 宽度覆盖依赖宿主侧栏 DOM，失败时 fail-soft
 - 对话框拖动/缩放没有键盘操作
 - 0.3.0-beta.63 的 A+ 隔离 Playwright 已通过；真实桌面回归仍需用户执行
 - 完整历史 `groups.spec.mjs` 未纳入默认门禁，当前自动化入口是 `isolated.spec.mjs`
+- dshmarket 目录条目尚未发布，当前 beta 使用本地 tarball 或 GitHub Release
 
-## 8. 后续
+## 8. 后续：dshmarket 发布
 
-0.3.0-beta.63 用于验证会话菜单、第一层设置、配置热生效与危险操作保护。  
-用户桌面回归通过后再考虑 0.3.0 正式版和插件市场发布。
+不要求在插件设置页实现自更新。更新由 dshmarket / 插件管理器负责。
+
+1. 创建公开 GitHub 仓库并推送 `dev`、`main` 与 `v0.3.0-beta.63` tag；
+2. 创建 GitHub Release，上传 `npm pack` 生成的 tarball；
+3. 可选：发布 npm beta，优先使用带版本的 npm 源；
+4. 向 `awesome-dsh-plugin` 提交一个插件条目 PR（不是向 `dshmarket` 应用仓库提交）；
+5. 在隔离 DSH 中用 dshmarket 安装；
+6. 发布下一版并验证市场 Update；
+7. 真实桌面回归通过后再考虑稳定版。
 
 
 

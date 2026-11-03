@@ -1,5 +1,7 @@
 # Gate 0 结论（2026-10-18）
 
+> **Historical Gate 0 record (2026-10-18).** This is evidence for the original design gate, not the current implementation status.
+
 ## 判定
 
 **PASS（带 2 个已接受的缺口）**，契约冻结，允许进入 V1 实现。

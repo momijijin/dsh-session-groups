@@ -117,3 +117,16 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 5. 调用 `session_groups_control` action `doctor`，或运行 `node scripts/session-groups-control.mjs doctor`，核对 host capabilities、storage、gates 和 routes。
 6. 开启 `controlApi` 后调用一次 `session_groups_control` state。
 7. 运行 `npm test` 和 `npm run test:isolated`。
+
+## 分发与更新
+
+当前 beta 通过本地 tarball 分发；dshmarket 目录条目尚未发布。
+
+更新责任属于 **dshmarket / 插件管理器**，不属于插件设置页：
+
+- 插件不实现自更新，也不内置下一版本下载地址；
+- dshmarket 从 `awesome-dsh-plugin` 精选目录获取条目；
+- 目录条目发布后，用户通过 dshmarket 安装和更新；
+- 不要混用本地 tarball 安装与市场更新：先通过市场重装一次，让安装来源绑定到市场。
+
+提交目录条目的位置是 `awesome-dsh-plugin/awesome-dsh-plugin`，不是 `dshmarket` 应用仓库。

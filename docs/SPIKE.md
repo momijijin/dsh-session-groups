@@ -1,5 +1,7 @@
 # Gate 0 — 可丢弃 DSH_HOME Spike（修订稿）
 
+> **Historical Gate 0 spike record.** It documents disposable-host capability experiments, not the current plugin state.
+
 - 目的：在不碰真实 `~/.dsh` 的前提下验证 V1 依赖的宿主能力
 - 关键修订：**profile 不隔离数据**；必须用独立 `DSH_HOME`，且 `dsh.cmd` 会硬编码 `DSH_HOME`，不能直接用 PATH 上的 wrapper
 - 产出：各 spike 的 `REPORT.md` + 证据 + 本文件的 Gate 结论
