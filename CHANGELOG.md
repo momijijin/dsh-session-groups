@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.56 (2026-11-03)
+
+- Split session-control HTTP routes into host/session-routes.js with an exact block-preserving extraction. Route ordering, status matrix, control gates and test paths are unchanged.
+
 ## 0.3.0-beta.55 (2026-11-03)
 
 - Continue the component split: extract DialogHost into dialog-host.js; keep dialog DOM, geometry and test ids unchanged. Update source-contract tests to include the new module.
