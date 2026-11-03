@@ -617,11 +617,17 @@ try {
   const configSwitch = page.locator('[data-testid="session-groups-config-diagnostics"] [role="switch"]').first()
   const switchBefore = await configSwitch.getAttribute('aria-checked')
   await configSwitch.click()
-  await page.waitForTimeout(400)
+  await page.waitForTimeout(600)
   const switchAfter = await configSwitch.getAttribute('aria-checked')
   if (switchBefore === switchAfter) throw new Error('standard settings switch did not toggle')
+  if ((await page.locator('[data-testid="session-groups-diagnostics-hud"]').count()) === 0) {
+    throw new Error('diagnostics HUD did not start after live config enable')
+  }
   await configSwitch.click()
-  await page.waitForTimeout(300)
+  await page.waitForTimeout(600)
+  if ((await page.locator('[data-testid="session-groups-diagnostics-hud"]').count()) !== 0) {
+    throw new Error('diagnostics HUD did not stop after live config disable')
+  }
 
   const destructiveRow = page.locator('[data-testid="session-groups-config-controlDestructive"]')
   const destructiveSwitch = destructiveRow.locator('[role="switch"]')
@@ -635,7 +641,7 @@ try {
     throw new Error('destructive setting enabled without confirmation')
   }
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, session actions, clipboard copy, search, first-layer settings, localized title, option details, switch interaction and destructive confirmation')
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, session actions, clipboard copy, search, first-layer settings, localized title, option details, live diagnostics HUD, switch interaction and destructive confirmation')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)

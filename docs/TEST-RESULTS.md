@@ -33,7 +33,7 @@ A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 - hover archive 控件存在
 - 第一层插件设置卡、本地化 `Free groups` 标题
 - 详情 Tooltip 打开
-- 标准 Switch 交互
+- 标准 Switch 交互；diagnostics 开关热启动/关闭 HUD
 - `controlDestructive` 打开前出现确认，取消后仍保持关闭
 
 ## 原生工具和隔离控制
