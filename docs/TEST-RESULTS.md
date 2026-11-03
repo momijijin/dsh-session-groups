@@ -1,7 +1,7 @@
-# 0.3.0-beta.44 测试结果
+# 0.3.0-beta.45 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.44`  
+版本：`0.3.0-beta.45`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
@@ -27,6 +27,7 @@ A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 - 搜索、归档 tri-state
 - 拖拽自动展开、分组边缘占位、弹窗拖动/缩放
 - 外部 commit 通过 SSE 触发刷新
+- 同浏览器上下文两个页面均收到外部 commit 的 SSE 刷新
 - 切到官方工作区再切回自由分组后重新 load
 - 快速连续 revision 收敛
 - 会话菜单无 Pin；Copy Session ID 写入真实剪贴板并显示 toast
@@ -68,6 +69,7 @@ npm run test:isolated   # 需先启动隔离 web
 - 当前默认自动门禁是 `e2e/isolated.spec.mjs`。
 - `e2e/groups.spec.mjs` 是历史手工脚本，未纳入默认门禁。
 - 发布包 SHA256 以最终 `npm pack` 输出为准。
+
 
 
 

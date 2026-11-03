@@ -641,7 +641,22 @@ try {
     throw new Error('destructive setting enabled without confirmation')
   }
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, session actions, clipboard copy, search, first-layer settings, localized title, option details, live diagnostics HUD, switch interaction and destructive confirmation')
+  const secondPage = await context.newPage()
+  try {
+    await secondPage.goto(process.env.DSH_TEST_URL, { waitUntil: 'domcontentloaded' })
+    await secondPage.waitForTimeout(1800)
+    await secondPage.locator('[data-testid="session-groups-view"]').waitFor({ state: 'visible', timeout: 8000 })
+    const multiWindowTitle = `双窗口 ${Date.now()}`
+    await externalRename(multiWindowTitle)
+    await Promise.all([
+      page.waitForFunction((name) => document.body.innerText.includes(name), multiWindowTitle, { timeout: 8000 }),
+      secondPage.waitForFunction((name) => document.body.innerText.includes(name), multiWindowTitle, { timeout: 8000 }),
+    ])
+  } finally {
+    await secondPage.close().catch(() => {})
+  }
+
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, multi-window SSE, session actions, clipboard copy, search, first-layer settings, localized title, option details, live diagnostics HUD, switch interaction and destructive confirmation')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)

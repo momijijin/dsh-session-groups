@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.45 (2026-11-03)
+
+- Add a two-page SSE convergence regression: an external commit must refresh both windows in the same browser context. Update the A+ coverage and release notes.
+
 ## 0.3.0-beta.44 (2026-11-03)
 
 - Add explicit DSH capability preflight and document the compatibility truth: package range + runtime capability detection, not per-version compiled switches. Required host/client capabilities are logged; optional services degrade.
@@ -227,6 +231,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 
