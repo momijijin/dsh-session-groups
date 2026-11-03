@@ -6,7 +6,8 @@
  * Cordis validates plugin return values as effects (Gate 0: returning an object
  * raises `TypeError: Invalid effect`).
  */
-import { createGroup, assignSession, deleteGroup, deleteGroupTo, moveGroup, renameGroup, setGroupColor, setGroupColorHex, setGroupIcon } from '../shared/model.js'
+import { createGroup, deleteGroup, deleteGroupTo, moveGroup, renameGroup, setGroupColor, setGroupColorHex, setGroupIcon } from '../shared/model.js'
+import { placeForkedSession } from '../core/fork.js'
 import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
@@ -449,10 +450,7 @@ export const createPlugin = () => {
       return
     }
     try {
-      await commitDoc((latest) => {
-        const source = latest.groups.find((group) => group.sessionIds.includes(sessionId))
-        return assignSession(latest, childId, source?.id ?? null, 0)
-      })
+      await commitDoc((latest) => placeForkedSession(latest, sessionId, childId))
       notify({ kind: 'success', message: t('toast.forked') })
     } catch {
       notify({ kind: 'error', message: t('toast.forkPlacementFailed') })

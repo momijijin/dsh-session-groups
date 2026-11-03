@@ -235,7 +235,7 @@ test('session menu drops pin and adds fork, copy id and hover archive', () => {
   assert.match(components, /menu\.blank !== true/)
   assert.match(components, /capabilities\.fork\?\./)
   assert.match(plugin, /remoteAccess/)
-  assert.match(plugin, /assignSession\(latest, childId/)
+  assert.match(plugin, /placeForkedSession\(latest, sessionId, childId\)/)
   assert.match(plugin, /toast\.forked/)
   assert.equal(typeof UI_GLYPHS.archive, 'string')
   assert.equal(typeof UI_GLYPHS.unarchive, 'string')

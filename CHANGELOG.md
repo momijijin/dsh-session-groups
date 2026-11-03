@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.49 (2026-11-03)
+
+- Extract fork placement into a pure core policy and test group-head, ungrouped-head, deterministic and non-mutating cases. Host-side real nonblank fork remains dependent on a deterministic fixture.
+
 ## 0.3.0-beta.48 (2026-11-03)
 
 - Add a forced EventSource disconnect/reconnect A+ check: the second page blocks the events route, an external commit lands while SSE is down, the route is restored, and onopen reloads the title.

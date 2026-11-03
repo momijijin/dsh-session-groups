@@ -1,14 +1,14 @@
-# 0.3.0-beta.48 测试结果
+# 0.3.0-beta.49 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.48`  
+版本：`0.3.0-beta.49`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 单元/契约测试：**389/389 PASS**
+- 单元/契约测试：**392/392 PASS**
 - Core 纯函数测试：**22/22 PASS**
-- Node 内置 coverage：**89.42% lines / 76.99% branches / 83.71% functions**
+- Node 内置 coverage：**89.44% lines / 77.03% branches / 83.76% functions**
 - A+ 隔离 Playwright：**PASS**
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
@@ -39,6 +39,11 @@ A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 - 详情 Tooltip 打开
 - 标准 Switch 交互；diagnostics 开关热启动/关闭 HUD
 - `controlDestructive` 打开前出现确认，取消后仍保持关闭
+
+## Fork 和核心策略
+
+- `placeForkedSession` 纯函数：源分组组头、未归组头部、确定性、不修改输入文档
+- 真实非空会话 Fork 成功路径仍需可控的非空 session fixture；当前未伪造该数据
 
 ## 原生工具和隔离控制
 
