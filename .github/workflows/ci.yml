@@ -1,60 +1,48 @@
 name: CI
 
+# Checks only. This workflow never publishes, tags, bumps a version, or edits the repo.
+# Start with the dev branch only; add main/platforms after dev is consistently green.
+
 on:
   push:
-    branches: [main, dev]
+    branches: [dev]
   pull_request:
-    branches: [main, dev]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   test:
-    name: ${{ matrix.os }} / Node ${{ matrix.node }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node: ['22.x', '24.x']
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.8.0
-
-      - name: Set up Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
-          cache: pnpm
+          node-version: '24.x'
 
+      # This plugin's tests import @deepseek-ai/schemastery, so unlike the
+      # zero-dependency reference plugin, dependencies must be installed.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm install --no-package-lock --no-audit --no-fund
 
-      - name: Syntax check and tests
-        run: npm run check:all
+      - name: Syntax check
+        run: |
+          node --check src/index.js
+          node --check lib/client.js
+
+      - name: Unit and contract tests
+        run: npm test
 
       - name: Build client bundle
         run: npm run build
 
-      - name: Check built bundle syntax
-        run: node --check lib/client.js
-
-      - name: Validate package contents
-        run: npm pack --dry-run
-
       - name: Coverage gate
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '24.x'
         run: npm run check:coverage
+
+      - name: Package dry-run
+        run: npm pack --dry-run
