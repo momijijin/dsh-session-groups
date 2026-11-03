@@ -566,6 +566,25 @@ const SessionRowImpl = ({
     h(
       'span',
       { class: 'dsg-session-actions' },
+      archived
+        ? rt()?.capabilities.unarchive === true
+          ? IconButton({
+              label: rt()?.t('session.unarchive'),
+              glyph: 'unarchive',
+              testId: 'session-groups-session-archive',
+              data: { 'data-session-id': sessionId, 'data-archived': 'true' },
+              onClick: () => handlers.unarchiveSession(sessionId),
+            })
+          : null
+        : rt()?.capabilities.archive === true
+          ? IconButton({
+              label: rt()?.t('session.archive'),
+              glyph: 'archive',
+              testId: 'session-groups-session-archive',
+              data: { 'data-session-id': sessionId, 'data-archived': 'false' },
+              onClick: () => handlers.archiveSession(sessionId),
+            })
+          : null,
       IconButton({
         label: rt()?.t('session.menu'),
         glyph: 'more',
@@ -1906,15 +1925,16 @@ const MenuPopover = ({ store, handlers }) => {
     children.push(item('delete', t('group.delete'), () => handlers.openDeleteGroup(menu.groupId)))
   } else if (menu.kind === 'session') {
     children.push(item('rename', t('session.rename'), () => handlers.openRenameSession(menu.sessionId, menu.title)))
+    if (rt()?.capabilities.fork === true) {
+      children.push(item('fork', t('session.fork'), () => handlers.forkSession(menu.sessionId)))
+    }
     children.push(
       menu.archived
         ? item('unarchive', t('session.unarchive'), () => handlers.unarchiveSession(menu.sessionId))
         : item('archive', t('session.archive'), () => handlers.archiveSession(menu.sessionId))
     )
+    children.push(item('copy-id', t('session.copyId'), () => handlers.copySessionId(menu.sessionId)))
     children.push(item('move', t('session.moveTo'), () => handlers.openMoveSession(menu.sessionId)))
-    if (rt()?.capabilities.pin === true) {
-      children.push(item(menu.pinned ? 'unpin' : 'pin', menu.pinned ? t('session.unpin') : t('session.pin'), () => handlers.pinSession(menu.sessionId, !menu.pinned)))
-    }
   }
   return h(
     'div',
@@ -3335,7 +3355,6 @@ export const GroupsView = (props) => {
           sessionId: row.id,
           title: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
           archived: sessionNode.archived === true,
-          pinned: false,
         },
       })
     },
@@ -3352,7 +3371,6 @@ export const GroupsView = (props) => {
           sessionId: row.id,
           title: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
           archived: sessionNode.archived === true,
-          pinned: false,
         },
       })
     },
@@ -3407,7 +3425,8 @@ export const GroupsView = (props) => {
       rt()?.openDialog({ kind: 'move-session', sessionId, titleKey: 'dialog.moveTo', currentId: currentGroupIdOf(store.doc, sessionId) }),
     archiveSession: (sessionId) => rt()?.archiveSession(sessionId),
     unarchiveSession: (sessionId) => rt()?.unarchiveSession(sessionId),
-    pinSession: (sessionId, pinned) => rt()?.pinSession(sessionId, pinned),
+    forkSession: (sessionId) => rt()?.forkSession(sessionId),
+    copySessionId: (sessionId) => rt()?.copySessionId(sessionId),
     closeMenu: () => dispatch('menu', { menu: null }),
     onDragStart: (sessionId) => {
       const row = byId[sessionId]

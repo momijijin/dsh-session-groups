@@ -377,7 +377,7 @@ export const createPlugin = () => {
   const capabilities = () => {
     const { uiWorkspace } = services()
     return {
-      pin: typeof uiWorkspace?.pinSession === 'function' && typeof uiWorkspace?.unpinSession === 'function',
+      fork: typeof uiWorkspace?.forkSession === 'function',
       archive: typeof uiWorkspace?.archiveSession === 'function',
       unarchive: typeof uiWorkspace?.unarchiveSession === 'function',
       connect: typeof uiWorkspace?.connectWorkspace === 'function',
@@ -410,9 +410,27 @@ export const createPlugin = () => {
     }
   }
 
-  const pinSession = async (sessionId, pinned) => {
-    const ok = await actions.pinSession(sessionId, pinned)
-    if (!ok) notify({ kind: 'error', message: t('toast.pinFailed') })
+  const forkSession = async (sessionId) => {
+    try {
+      await actions.forkSession(sessionId)
+    } catch (error) {
+      const migrationRequired =
+        error instanceof Error &&
+        error.name === 'SessionForkError' &&
+        error.rpcError?.code === 'session/migration-required'
+      notify({
+        kind: 'error',
+        message: t(migrationRequired ? 'toast.forkRequiresOpen' : 'toast.forkFailed'),
+      })
+    }
+  }
+
+  const copySessionId = async (sessionId) => {
+    const copied = await actions.copySessionId(sessionId)
+    notify({
+      kind: copied ? 'success' : 'error',
+      message: t(copied ? 'toast.sessionIdCopied' : 'toast.sessionIdCopyFailed'),
+    })
   }
 
   // --- dialogs --------------------------------------------------------------
@@ -618,7 +636,8 @@ export const createPlugin = () => {
       notify,
       archiveSession,
       unarchiveSession,
-      pinSession,
+      forkSession,
+      copySessionId,
       commitDoc,
       commitOptimistic,
       load,

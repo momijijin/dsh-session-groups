@@ -202,6 +202,23 @@ test('0.2.54 ungrouped body drop is position-aware and does not bubble invalid r
   assert.match(components, /event\.stopPropagation\(\)/)
 })
 
+test('session menu drops pin and adds fork, copy id and hover archive', () => {
+  assert.doesNotMatch(components, /t\('session\.pin'\)/)
+  assert.doesNotMatch(components, /t\('session\.unpin'\)/)
+  assert.doesNotMatch(components, /pinned:/)
+  assert.match(components, /t\('session\.fork'\)/)
+  assert.match(components, /t\('session\.copyId'\)/)
+  assert.match(components, /session-groups-session-archive/)
+  assert.match(components, /glyph: 'archive'/)
+  assert.match(components, /glyph: 'unarchive'/)
+  assert.equal(typeof UI_GLYPHS.archive, 'string')
+  assert.equal(typeof UI_GLYPHS.unarchive, 'string')
+  assert.equal(zh['session.fork'], '分叉会话')
+  assert.equal(zh['session.copyId'], '复制 Session ID')
+  assert.equal(en['session.fork'], 'Fork session')
+  assert.equal(en['session.copyId'], 'Copy Session ID')
+})
+
 test('0.3.0 beta exposes onboarding, reset layout and opaque status popovers', () => {
   assert.match(components, /session-groups-onboarding/)
   assert.match(components, /session-groups-empty-state/)

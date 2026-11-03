@@ -70,9 +70,10 @@ const assertRemoteOk = (result, fallback) => {
  *   commitDoc: (nextDoc: object) => Promise<object>,
  *   notify: (toast: { kind: string, message?: string }) => void,
  *   t: (key: string, params?: object) => string,
+ *   clipboard?: (text: string) => Promise<boolean>,
  * }} deps
  */
-export const createActions = ({ getServices, getDoc, commitDoc, notify, t }) => {
+export const createActions = ({ getServices, getDoc, commitDoc, notify, t, clipboard = null }) => {
   const services = () => getServices() ?? {}
 
   const renameSession = async (sessionId, title) => {
@@ -115,12 +116,21 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t }) => 
     await uiWorkspace.unarchiveSession(sessionId)
   }
 
-  const pinSession = async (sessionId, pinned) => {
+  const forkSession = async (sessionId) => {
     const { uiWorkspace } = services()
-    const method = pinned ? 'pinSession' : 'unpinSession'
-    if (typeof uiWorkspace?.[method] !== 'function') return false
-    await uiWorkspace[method](sessionId)
-    return true
+    if (typeof uiWorkspace?.forkSession !== 'function') throw new Error('fork-unavailable')
+    await uiWorkspace.forkSession(sessionId, undefined, { allowMigration: false })
+  }
+
+  const copySessionId = async (sessionId) => {
+    if (typeof clipboard === 'function') return (await clipboard(sessionId)) === true
+    try {
+      if (typeof globalThis.navigator?.clipboard?.writeText !== 'function') return false
+      await globalThis.navigator.clipboard.writeText(sessionId)
+      return true
+    } catch {
+      return false
+    }
   }
 
   /**
@@ -209,14 +219,8 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t }) => 
         throw error
       }
     },
-    pinSession: async (sessionId, pinned) => {
-      try {
-        return await pinSession(sessionId, pinned)
-      } catch (error) {
-        notifyFailure('toast.pinFailed', error)
-        return false
-      }
-    },
+    forkSession,
+    copySessionId,
     createSessionInGroup,
     moveSession,
     workspaceForSession,

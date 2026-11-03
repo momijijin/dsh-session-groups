@@ -50,7 +50,7 @@ test('workspaceChoices puts the inferred workspace first', () => {
 })
 
 const makeActions = (overrides = {}) => {
-  const calls = { commits: [], opens: [], renames: [], archives: [], pins: [] }
+  const calls = { commits: [], opens: [], renames: [], archives: [], forks: [], copies: [] }
   let doc = emptyDoc()
   doc = createGroup(doc, { name: 'G' })
   const groupId = doc.groups[0].id
@@ -83,8 +83,7 @@ const makeActions = (overrides = {}) => {
         if (overrides.archiveError) throw overrides.archiveError
       },
       unarchiveSession: async (id) => calls.unarchived.push?.(id),
-      pinSession: async (id) => calls.pins.push({ id, pinned: true }),
-      unpinSession: async (id) => calls.pins.push({ id, pinned: false }),
+      forkSession: async (id, onCreated, options) => calls.forks.push({ id, onCreated, options }),
     },
   }
   const actions = createActions({
@@ -98,6 +97,7 @@ const makeActions = (overrides = {}) => {
     },
     notify: (toast) => calls.toasts?.push?.(toast),
     t: (key) => key,
+    clipboard: overrides.clipboard ?? (async (text) => { calls.copies.push(text); return true }),
   })
   return { actions, calls, getDoc: () => doc, groupId, services }
 }
@@ -131,11 +131,23 @@ test('archiveSession passes stopActivity:true when requested', async () => {
   assert.deepEqual(calls.archives, [{ id: 's1', options: { stopActivity: true } }])
 })
 
-test('pin/unpin use uiWorkspace feature-detected methods', async () => {
+test('forkSession uses uiWorkspace.forkSession without migration', async () => {
   const { actions, calls } = makeActions()
-  assert.equal(await actions.pinSession('s1', true), true)
-  assert.equal(await actions.pinSession('s1', false), true)
-  assert.deepEqual(calls.pins, [{ id: 's1', pinned: true }, { id: 's1', pinned: false }])
+  await actions.forkSession('s1')
+  assert.deepEqual(calls.forks, [{ id: 's1', onCreated: undefined, options: { allowMigration: false } }])
+  await assert.rejects(() => {
+    const missing = makeActions()
+    missing.services.uiWorkspace.forkSession = undefined
+    return missing.actions.forkSession('s1')
+  }, /fork-unavailable/)
+})
+
+test('copySessionId delegates to the injected clipboard and reports failure', async () => {
+  const { actions, calls } = makeActions()
+  assert.equal(await actions.copySessionId('s1'), true)
+  assert.deepEqual(calls.copies, ['s1'])
+  const failed = makeActions({ clipboard: async () => false })
+  assert.equal(await failed.actions.copySessionId('s1'), false)
 })
 
 test('createSessionInGroup uses startSession and inserts the new id at the group head', async () => {

@@ -46,6 +46,8 @@
   "session.unarchive": "取消归档",
   "session.pin": "置顶",
   "session.unpin": "取消置顶",
+  "session.fork": "分叉会话",
+  "session.copyId": "复制 Session ID",
   "session.moveTo": "移动到分组…",
   "session.archivedBadge": "已归档",
   "session.open": "打开会话",
@@ -108,7 +110,10 @@
   "toast.renameFailed": "重命名失败",
   "toast.archiveFailed": "归档失败",
   "toast.unarchiveFailed": "取消归档失败",
-  "toast.pinFailed": "置顶失败",
+  "toast.forkFailed": "分叉会话失败",
+  "toast.forkRequiresOpen": "该会话需要先打开才能分叉",
+  "toast.sessionIdCopied": "Session ID 已复制",
+  "toast.sessionIdCopyFailed": "复制 Session ID 失败",
   "toast.sessionStillRunning": "会话仍在运行",
   "toast.createFailed": "新建会话失败",
   "toast.archivedFilterChanged": "当前筛选为“仅已归档”，已切换到“全部”。",
@@ -260,5 +265,6 @@
   "config.controlSessions": "允许会话操作",
   "config.controlSessionsHint": "允许会话改名和归档状态切换。"
 }
+
 
 

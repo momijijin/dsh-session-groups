@@ -46,6 +46,8 @@
   "session.unarchive": "Unarchive",
   "session.pin": "Pin",
   "session.unpin": "Unpin",
+  "session.fork": "Fork session",
+  "session.copyId": "Copy Session ID",
   "session.moveTo": "Move to group…",
   "session.archivedBadge": "Archived",
   "session.open": "Open session",
@@ -108,7 +110,10 @@
   "toast.renameFailed": "Rename failed",
   "toast.archiveFailed": "Archive failed",
   "toast.unarchiveFailed": "Unarchive failed",
-  "toast.pinFailed": "Pin failed",
+  "toast.forkFailed": "Forking the session failed",
+  "toast.forkRequiresOpen": "Open the session before forking it",
+  "toast.sessionIdCopied": "Session ID copied",
+  "toast.sessionIdCopyFailed": "Copying the Session ID failed",
   "toast.sessionStillRunning": "The session is still running",
   "toast.createFailed": "Creating the session failed",
   "toast.archivedFilterChanged": "The filter was “Archived only” — switched to “All”.",
@@ -260,5 +265,6 @@
   "config.controlSessions": "Allow session operations",
   "config.controlSessionsHint": "Allow session rename and archive-state changes."
 }
+
 
 
