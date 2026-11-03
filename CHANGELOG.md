@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0-beta.52 (2026-11-03)
+
+- Begin the large-file split: extract Toast and MenuPopover from components.js into session-menu.js with unchanged DOM/test ids and behavior. Update source-level layout tests to read the extracted module.
+
+## 0.3.0-beta.51 (2026-11-03)
+
+- Fix forked-child placement for host-derived ungrouped sources: leave the child outside the group document so buildRenderTree orders it first by recency, rather than assigning it to doc.ungrouped where it would render after derived sessions.
+
+## 0.3.0-beta.50 (2026-11-03)
+
+- Fix the Fork menu access check: `remoteAccess.source` is truthy for allowed access, not necessarily the boolean `true`. Use Boolean coercion so the menu matches the official useSessionAccess semantics.
+
 ## 0.3.0-beta.49 (2026-11-03)
 
 - Extract fork placement into a pure core policy and test group-head, ungrouped-head, deterministic and non-mutating cases. Host-side real nonblank fork remains dependent on a deterministic fixture.

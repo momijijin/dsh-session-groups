@@ -16,6 +16,7 @@ import { UI_GLYPHS, ICON_PATHS } from '../../src/client/icons.js'
 import { GROUP_COLORS, GROUP_ICONS } from '../../src/shared/constants.js'
 
 const components = readFileSync(new URL('../../src/client/components.js', import.meta.url), 'utf8')
+const sessionMenu = readFileSync(new URL('../../src/client/session-menu.js', import.meta.url), 'utf8')
 const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
 const workspaceToggle = readFileSync(new URL('../../src/client/workspace-toggle.js', import.meta.url), 'utf8')
 
@@ -227,14 +228,14 @@ test('session menu drops pin and adds fork, copy id and hover archive', () => {
   assert.doesNotMatch(components, /t\('session\.pin'\)/)
   assert.doesNotMatch(components, /t\('session\.unpin'\)/)
   assert.doesNotMatch(components, /pinned:/)
-  assert.match(components, /t\('session\.fork'\)/)
-  assert.match(components, /t\('session\.copyId'\)/)
+  assert.match(sessionMenu, /t\('session\.fork'\)/)
+  assert.match(sessionMenu, /t\('session\.copyId'\)/)
   assert.match(components, /session-groups-session-archive/)
   assert.match(components, /glyph: 'archive'/)
   assert.match(components, /glyph: 'unarchive'/)
-  assert.match(components, /menu\.blank !== true/)
-  assert.match(components, /capabilities\.fork\?\./)
-  assert.match(plugin, /remoteAccess/)
+  assert.match(sessionMenu, /menu\.blank !== true/)
+  assert.match(sessionMenu, /capabilities\.fork\?\./)
+  assert.match(plugin, /Boolean\(remoteAccess/)
   assert.match(plugin, /placeForkedSession\(latest, sessionId, childId\)/)
   assert.match(plugin, /toast\.forked/)
   assert.equal(typeof UI_GLYPHS.archive, 'string')
@@ -440,7 +441,7 @@ test('0.2.15 group palette: twelve distinct ids, color-token rules and a menu co
   // Color rules drive the icon and the child guide line.
   assert.match(block('.dsg-group-icon {'), /color:\s*var\(--dsg-group-color/)
   // Menu item opens the color dialog; the dialog renders palette swatches.
-  assert.match(components, /handlers\.openGroupColor\(menu\.groupId\)/)
+  assert.match(sessionMenu, /handlers\.openGroupColor\(menu\.groupId\)/)
   assert.match(components, /kind: 'group-color'/)
   assert.match(components, /'data-testid': 'session-groups-dialog-color'/)
   assert.match(components, /role: 'radiogroup'/)
@@ -648,7 +649,7 @@ test('0.2.7 right-click/keyboard menu wiring and clamped anchors', () => {
   assert.match(components, /isMenuKey\(event\)/)
   assert.match(components, /if \(dragRef\.current\) return/)
   // The mounted menu re-clamps with its real rect.
-  assert.match(components, /clampMenuPosition\(\{/)
+  assert.match(sessionMenu, /clampMenuPosition\(\{/)
   const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
   assert.match(plugin, /'scroll', closeMenuOnViewportChange, true/)
   assert.match(plugin, /'resize', closeMenuOnViewportChange/)
@@ -657,8 +658,8 @@ test('0.2.7 right-click/keyboard menu wiring and clamped anchors', () => {
 
 test('0.2.9 delete group: destination picker, empty direct path and move-and-delete footer', () => {
   // Group menu keeps the delete entry and the color entry now says 修改颜色/Change color.
-  assert.match(components, /t\('group\.delete'\)/)
-  assert.match(components, /t\('group\.color'\)/)
+  assert.match(sessionMenu, /t\('group\.delete'\)/)
+  assert.match(sessionMenu, /t\('group\.color'\)/)
   assert.equal(zh['group.color'], '修改颜色')
   assert.equal(en['group.color'], 'Change color')
   // Non-empty delete dialog: 删除分组 title, counts, destination list and root option.
