@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.60 (2026-11-03)
+
+- Expose doctor through `GET /dsh-session-groups/control/doctor` and `scripts/session-groups-control.mjs doctor`; it is fenced but available while controlApi is off. The CLI exchanges the DSH web launch-token cookie before sending the plugin bearer token. Doctor now reports live capabilities plus startup capabilities. Tighten coverage accounting to `src/**` only (tests/scripts excluded). 437 tests; 93.73% lines / 82.23% branches / 88.25% functions; A+ and lifecycle pass.
+
 ## 0.3.0-beta.59 (2026-11-03)
 
 - Add a read-only `session_groups_control` action `doctor`: live host capability/compatibility, adapter/range, control gates, storage paths, service presence and mounted routes. It is available even when controlApi is off so a broken upgrade can be diagnosed before enabling writes. 434 tests; A+ pass.

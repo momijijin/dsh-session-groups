@@ -19,6 +19,7 @@ export const DEBUG_PATH = `${BASE_PATH}/debug`
 
 /** Opt-in AI-control API (default off; registered only when enabled). */
 export const CONTROL_STATE_PATH = `${BASE_PATH}/control/state`
+export const CONTROL_DOCTOR_PATH = `${BASE_PATH}/control/doctor`
 export const CONTROL_RESOLVE_PATH = `${BASE_PATH}/control/resolve`
 export const CONTROL_PLAN_PATH = `${BASE_PATH}/control/plan`
 export const CONTROL_APPLY_PATH = `${BASE_PATH}/control/apply`

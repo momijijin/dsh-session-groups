@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   CONTROL_APPLY_PATH,
+  CONTROL_DOCTOR_PATH,
   CONTROL_PLAN_PATH,
   CONTROL_RESOLVE_PATH,
   CONTROL_STATE_PATH,
@@ -34,7 +35,7 @@ test('control routes stay behind the API switch without changing their paths', a
   t.after(() => on.cleanup())
   assert.deepEqual(
     on.mounted.routes.filter((path) => path.startsWith('/dsh-session-groups/control/') && !path.includes('/session/')),
-    [CONTROL_STATE_PATH, CONTROL_RESOLVE_PATH, CONTROL_PLAN_PATH, CONTROL_APPLY_PATH],
+    [CONTROL_DOCTOR_PATH, CONTROL_STATE_PATH, CONTROL_RESOLVE_PATH, CONTROL_PLAN_PATH, CONTROL_APPLY_PATH],
   )
 })
 
@@ -324,4 +325,26 @@ test('control routes fail closed on unsupported document versions and storage IO
   assert.equal(ioState.res.statusCode, 503)
   assert.equal(ioState.json.code, 'io')
   assert.match(ioState.json.message, /disk io/)
+})
+
+test('control doctor is a read-only GET available while controlApi is closed', async (t) => {
+  const report = { ok: true, protocol: 1, plugin: { version: 'test' }, gates: { controlApi: false } }
+  const mounted = await mountRoutes({
+    connection: connection(),
+    controlApiEnabled: false,
+    doctorReport: async () => report,
+  })
+  t.after(() => mounted.cleanup())
+  const doctor = await mounted.call(CONTROL_DOCTOR_PATH, makeRequest({ headers }))
+  assert.equal(doctor.res.statusCode, 200)
+  assert.deepEqual(doctor.json, report)
+
+  const post = await mounted.call(CONTROL_DOCTOR_PATH, makeRequest({ method: 'POST', headers }))
+  assert.equal(post.res.statusCode, 405)
+
+  const missing = await mountRoutes({ connection: connection(), controlApiEnabled: false })
+  t.after(() => missing.cleanup())
+  const unavailable = await missing.call(CONTROL_DOCTOR_PATH, makeRequest({ headers }))
+  assert.equal(unavailable.res.statusCode, 503)
+  assert.equal(unavailable.json.code, 'doctor-unavailable')
 })

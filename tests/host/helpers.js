@@ -161,6 +161,7 @@ export const mountRoutes = async (options = {}) => {
     controlSessionsEnabled: options.controlSessionsEnabled,
     controlToken: options.controlToken,
     skillDshHome: options.skillDshHome,
+    doctorReport: options.doctorReport,
   })
   return {
     ...temp,

@@ -25,6 +25,7 @@ import { registerSessionRoutes } from './session-routes.js'
 import {
   COMMIT_PATH,
   CONTROL_APPLY_PATH,
+  CONTROL_DOCTOR_PATH,
   CONTROL_PLAN_PATH,
   CONTROL_RESOLVE_PATH,
   CONTROL_SESSION_ARCHIVE_PATH,
@@ -575,6 +576,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
   )
 
   let controlStatePath = null
+  let controlDoctorPath = null
   let controlResolvePath = null
   let controlPlanPath = null
   let controlApplyPath = null
@@ -632,6 +634,36 @@ export const registerRoutes = (ctx, store, options = {}) => {
       idempotency.set(key, value)
       if (idempotency.size > 128) idempotency.delete(idempotency.keys().next().value)
     }
+
+    controlDoctorPath = register(
+      CONTROL_DOCTOR_PATH,
+      async (req, res) => {
+        if (controlDenied(req, res)) return
+        if (req.method !== 'GET') {
+          sendMethodNotAllowed(res, 'GET')
+          return
+        }
+        if (typeof options.doctorReport !== 'function') {
+          sendJson(res, 503, {
+            ok: false,
+            code: 'doctor-unavailable',
+            message: 'compatibility doctor is not configured',
+          })
+          return
+        }
+        try {
+          const report = await options.doctorReport()
+          sendJson(res, 200, report)
+        } catch (error) {
+          sendJson(res, 503, {
+            ok: false,
+            code: 'doctor-failed',
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
+      },
+      `dsh-session-groups: GET ${CONTROL_DOCTOR_PATH}`,
+    )
 
     controlStatePath = register(
       CONTROL_STATE_PATH,
@@ -999,6 +1031,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
       diagnosticsPath,
       ...(eventsPath === null ? [] : [eventsPath]),
       debugPath,
+      ...(controlDoctorPath === null ? [] : [controlDoctorPath]),
       ...(controlStatePath === null ? [] : [controlStatePath, controlResolvePath, controlPlanPath, controlApplyPath]),
       ...(sessionInspectPath === null ? [] : [sessionInspectPath, sessionRenamePath, sessionArchivePath]),
       ...(skillRepairPath === null ? [] : [skillRepairPath]),

@@ -114,6 +114,6 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 2. 打开 Plugins 详情，确认第一层设置卡出现。
 3. 做一次分组拖动/commit。
 4. 检查 `/load` 和 `/dsh-session-groups/events`。
-5. 调用 `session_groups_control` action `doctor`，核对 host capabilities、storage、gates 和 routes。
+5. 调用 `session_groups_control` action `doctor`，或运行 `node scripts/session-groups-control.mjs doctor`，核对 host capabilities、storage、gates 和 routes。
 6. 开启 `controlApi` 后调用一次 `session_groups_control` state。
 7. 运行 `npm test` 和 `npm run test:isolated`。

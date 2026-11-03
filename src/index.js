@@ -147,6 +147,7 @@ export const apply = (ctx, config = {}) => {
       logWarn(ctx, `dsh-session-groups: control token unavailable: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
+  let doctorReport = null
   const mounted = registerRoutes(ctx, store, {
     diagnosticsFilePath,
     debugFilePath: join(dirname(record.filePath), DEBUG_FILE_NAME),
@@ -158,8 +159,9 @@ export const apply = (ctx, config = {}) => {
     controlToken,
     skillDshHome: dshHome,
     changeHub,
+    doctorReport: () => doctorReport?.(),
   })
-  const doctorReport = async () => {
+  doctorReport = async () => {
     const serviceNames = ['sessions', 'workspaces', 'workspaceRegistry', 'sessionTitle', 'tools', 'locale', 'configForms']
     const services = {}
     for (const serviceName of serviceNames) {
@@ -170,6 +172,8 @@ export const apply = (ctx, config = {}) => {
       }
     }
     const probe = probeConnection(ctx)
+    const liveHostCapabilities = detectHostCapabilities(ctx)
+    const liveHostCompatibility = compatibilityReport(liveHostCapabilities, requiredHost)
     return {
       ok: true,
       protocol: 1,
@@ -181,9 +185,11 @@ export const apply = (ctx, config = {}) => {
       },
       host: {
         declaredVersion,
-        capabilities: hostCapabilities,
+        capabilities: liveHostCapabilities,
+        startupCapabilities: hostCapabilities,
         required: [...requiredHost],
-        compatibility: hostCompatibility,
+        compatibility: liveHostCompatibility,
+        startupCompatibility: hostCompatibility,
         connection: probe.connection === undefined ? 'deferred' : 'present',
         webServerPort: Number.isInteger(ctx?.webServer?.port) ? ctx.webServer.port : null,
       },
