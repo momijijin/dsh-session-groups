@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.55 (2026-11-03)
+
+- Continue the component split: extract DialogHost into dialog-host.js; keep dialog DOM, geometry and test ids unchanged. Update source-contract tests to include the new module.
+
 ## 0.3.0-beta.54 (2026-11-03)
 
 - Continue the component split: extract ScrollArea and GroupListPicker from components.js; update source layout tests. Behavior and DOM/test ids are unchanged.

@@ -15,7 +15,9 @@ import { en, zh } from '../../src/client/locale.js'
 import { UI_GLYPHS, ICON_PATHS } from '../../src/client/icons.js'
 import { GROUP_COLORS, GROUP_ICONS } from '../../src/shared/constants.js'
 
-const components = readFileSync(new URL('../../src/client/components.js', import.meta.url), 'utf8')
+const componentsSource = readFileSync(new URL('../../src/client/components.js', import.meta.url), 'utf8')
+const dialogHost = readFileSync(new URL('../../src/client/dialog-host.js', import.meta.url), 'utf8')
+const components = componentsSource + '\n' + dialogHost
 const sessionMenu = readFileSync(new URL('../../src/client/session-menu.js', import.meta.url), 'utf8')
 const scrollArea = readFileSync(new URL('../../src/client/scroll-area.js', import.meta.url), 'utf8')
 const groupPicker = readFileSync(new URL('../../src/client/group-list-picker.js', import.meta.url), 'utf8')

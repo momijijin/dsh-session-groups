@@ -162,6 +162,7 @@ test('client: stable data-testid names from CONTRACTS §4.1 are present in the s
   }
   const { readFile } = await import('node:fs/promises');
   const files = [join(clientDir, 'components.js')];
+  if (existsSync(join(clientDir, 'dialog-host.js'))) files.push(join(clientDir, 'dialog-host.js'));
   if (has('index.js')) files.push(join(clientDir, 'index.js'));
   const source = (await Promise.all(files.filter((file) => existsSync(file)).map((file) => readFile(file, 'utf8')))).join('\n');
   for (const testId of [
@@ -177,4 +178,5 @@ test('client: stable data-testid names from CONTRACTS §4.1 are present in the s
     assert.equal(source.includes(testId), true, `missing required data-testid "${testId}" (CONTRACTS §4.1)`);
   }
 });
+
 

@@ -7,7 +7,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 - 不修改官方工作区注册表
 - 不写入 `workspace.json`
 
-当前版本：**0.3.0-beta.54**  
+当前版本：**0.3.0-beta.55**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 兼容性说明见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)：使用 `engines.dsh`、`dsh-0.2` 适配器选择器和运行时能力检测；版本矩阵显式注册，主流程不写版本 `switch`。
@@ -93,7 +93,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 设置 → 插件 → 添加插件 → 选择：
 
 ```text
-dsh-session-groups-0.3.0-beta.54.tgz
+dsh-session-groups-0.3.0-beta.55.tgz
 ```
 
 启用后完整重启 DSH（或按宿主提示刷新）。
@@ -103,7 +103,7 @@ dsh-session-groups-0.3.0-beta.54.tgz
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.54.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.55.tgz"
 ```
 
 安装后重启 DSH。安装命令会改 `desktop` profile，请先备份 `~/.dsh/profiles/desktop/package.json`。
@@ -267,7 +267,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.54.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.55.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 
