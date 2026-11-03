@@ -1,36 +1,34 @@
-# 0.3.0-beta.38 发布与安装说明
+# 0.3.0-beta.43 发布与安装说明
 
-- 版本：`0.3.0-beta.38`（0.3.0-beta 加固版）
+- 版本：`0.3.0-beta.43`
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：单元/契约测试 375/375；本轮桌面回归由用户执行
-- 范围：自由分组、跨工作区会话、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、弹窗细滚动条
-- 发布包：`dsh-session-groups-0.3.0-beta.38.tgz`
+- 状态：单元/契约测试 378/378；A+ 隔离回归通过；本轮真实桌面回归由用户执行
+- 范围：自由分组、跨工作区会话、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、Fork/Copy ID、第一层设置和配置安全
+- 发布包：`dsh-session-groups-0.3.0-beta.43.tgz`
 
-## 1. 本轮变化
+## 1. 本轮变化（beta.39–beta.43）
 
-### 回滚
+### 会话与设置
 
-- 移除实验性“后台任务”状态位
-- 移除 `ctx.jobs` 订阅与逐会话 `watchRows`
-- 头部恢复为三个统计按钮：
-  - 执行中
-  - 等待用户介入
-  - 未读
+- 移除自由分组中的 Pin/Unpin 菜单项
+- 会话菜单增加 Fork session（仅非空、access 允许时显示）和 Copy Session ID
+- Fork 成功后把子会话放到源分组组头，源会话未归组时放到未分组顶部
+- 行 hover 提供归档/取消归档，不再提供 hover 置顶
+- 设置卡移到 `plugins.bundle.config` 第一层
+- 使用标准 DSH Switch / Button / Tooltip，并补齐中英文和逐项安全详情
 
-### 修复
+### 配置与安全
 
-- 三个状态下拉从半透明 `--dsw-specific-menu` 改为与搜索框一致的 `--dsw-alias-bg-layer-1`，底层会话行不再透出
-- 调试探针隔离到 `debugProbe` 配置，默认关闭；关闭时不注册 debug 路由
-- 首次进入分组视图显示一次性引导
-- 无分组/无会话时显示“新建第一个分组”空状态
-- 视图选项增加“恢复默认布局”和版本/范围说明
+- `diagnostics` / `debugProbe` 开关改为请求时读取，切换后热生效
+- `controlDestructive` 开启前显示危险确认
+- skill repair 不再强制覆盖用户自有 `SKILL.md`；返回 `409 skill-user-owned`
+- 新增 `npm run check:coverage`，当前基线约 89.28% lines / 76.79% branches / 83.28% functions
 
 ### 发布工程
 
-- 补 README、RELEASE、TEST-RESULTS、CHANGELOG
-- 补 `LICENSE`（MIT）
-- 补 `author`、`keywords`
-- locale 增加插件标题与描述，供插件管理器显示
+- 补 README、ARCHITECTURE、RELEASE、TEST-RESULTS、CHANGELOG
+- README 移除陈旧的 Pin/“不修改标题”/路由未挂载描述
+- 记录 `e2e/groups.spec.mjs` 为历史手工脚本，默认自动门禁使用 `e2e/isolated.spec.mjs`
 
 ## 2. 构建与测试
 
@@ -44,13 +42,13 @@ npm pack
 
 预期：
 
-- `npm test`：375/375 PASS
+- `npm test`：378/378 PASS
 - 构建：`lib/client.js`
-- 包：`dsh-session-groups-0.3.0-beta.38.tgz`
+- 包：`dsh-session-groups-0.3.0-beta.43.tgz`
 
 ### 发布包信息
 
-- 文件：`dsh-session-groups-0.3.0-beta.38.tgz`
+- 文件：`dsh-session-groups-0.3.0-beta.43.tgz`
 - 大小与 SHA256：以最终 `npm pack` 输出和桌面安装记录为准（不写进包内文档，避免自引用）
 
 ## 3. 安装
@@ -64,7 +62,7 @@ npm pack
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.38.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.43.tgz"
 ```
 
 安装前备份：
@@ -109,7 +107,7 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.38.tgz"
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.43.tgz"
 ```
 
 - 使用 `%TEMP%` 下的独立 `DSH_HOME`，不会读写真实 `~/.dsh`
@@ -120,7 +118,7 @@ pwsh -NoProfile -File .\scripts\qa\clean-profile.ps1 `
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\lifecycle-isolated.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.38.tgz" `
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.43.tgz" `
   -Port 4417
 ```
 
@@ -134,7 +132,7 @@ pwsh -NoProfile -File .\scripts\qa\lifecycle-isolated.ps1 `
 
 ```powershell
 pwsh -NoProfile -File .\scripts\qa\start-isolated-web.ps1 `
-  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.38.tgz" `
+  -Tarball "C:\Users\Momiji\Projects\dsh-session-groups\dsh-session-groups-0.3.0-beta.43.tgz" `
   -Port 4416
 
 $env:DSH_TEST_URL = "<web.json 中的 url>"
@@ -151,7 +149,7 @@ npm run test:isolated
 
 发布前必须确认：
 
-- [ ] `npm test` 375/375
+- [ ] `npm test` 378/378
 - [ ] `npm run check:all`
 - [ ] `node --check lib/client.js`
 - [ ] `npm pack` 包含 README、LICENSE、CHANGELOG、locale
@@ -174,12 +172,14 @@ npm run test:isolated
 - 搜索最多 20 条
 - 宽度覆盖依赖宿主侧栏 DOM，失败时 fail-soft
 - 对话框拖动/缩放没有键盘操作
-- 0.3.0-beta.38 尚未记录完整 E2E 结果；以单元/契约测试 + 用户桌面回归为准
+- 0.3.0-beta.43 的 A+ 隔离 Playwright 已通过；真实桌面回归仍需用户执行
+- 完整历史 `groups.spec.mjs` 未纳入默认门禁，当前自动化入口是 `isolated.spec.mjs`
 
 ## 8. 后续
 
-0.3.0-beta.38 用于验证首次引导、状态弹层可读性与发布工程。  
+0.3.0-beta.43 用于验证会话菜单、第一层设置、配置热生效与危险操作保护。  
 用户桌面回归通过后再考虑 0.3.0 正式版和插件市场发布。
+
 
 
 

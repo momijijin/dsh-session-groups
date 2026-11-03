@@ -1,142 +1,70 @@
-# 0.3.0-beta.38 测试结果
+# 0.3.0-beta.43 测试结果
 
-日期：2026-11-02  
-版本：`0.3.0-beta.38`  
+日期：2026-11-03  
+版本：`0.3.0-beta.43`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 单元/契约测试：**375/375 PASS**
-- 原生工具：`session_groups_control` 注册、state/resolve/plan/apply/CAS、session 动作、开关门禁
-- A+ 隔离 Playwright 冒烟：**PASS**（独立 `DSH_HOME` + `sg-e2e` + 4419）
-  - 首次引导出现/关闭后刷新不重现
-  - 三状态按钮存在，后台任务按钮不存在
-  - 通过“移动到分组”移动分组后，目标组的第一个子分组就是被移动组
-  - 通过“移动到分组”移动会话后，目标组 `sessionIds[0]` 是被移动会话
-  - 目标组收起/展开后，会话 head 顺序保持不变
-  - 264px 侧栏无横向溢出，仍显示三个状态按钮
-  - 英文宿主下插件标题为 `Free groups`，移动/子分组菜单使用英文
-  - 头部搜索能按分组名找到目标并正常关闭
-  - 归档 tri-state 切换 `only/all/hidden` 时 popover 关闭且筛选状态持久化
-  - 把组外会话拖到已收起目标组上时，目标组自动展开
-  - 分组头部上/下边缘分别生成 `group-before` / `group-after` 占位
-  - 弹窗标题栏可拖动、resizer 可改变尺寸、backdrop 点击不关闭
-  - 宿主侧栏收起后 Rail 宽度 ≤64px，宽度 override 已释放`n  - Plugins 页五个配置开关实际出现；controlApi 切换后控制路由 404/200 热生效`n  - 外部 commit 通过 SSE 触发侧栏刷新；切到官方工作区再切回自由分组后重新 load
-- 隔离 control E2E：state/resolve/plan/apply、icon/color、同名歧义、未知字段
-- 隔离 session E2E：inspect / rename / archive / unarchive 实际 CLI 通过（HTTP/CLI 仍受 Host 浏览器 fence 限制；AI 使用原生工具）
-- 设置页修复卡：实际打开 Plugins 页并点击按钮，返回 `Skill is ready`
-- 自动 skill 安装：`controlApi` 开启后写入 `<DSH_HOME>/skills/session-groups-control/SKILL.md`
-  - 亮色头部标题对比度 ≥ 4.5，0 计数状态按钮 ≥ 3.0
-  - 深色主题 token 切换且 264px 下无溢出
-  - 宿主 sidebar 收起后进入 Rail，无 React #300，展开后分组视图恢复
-- 隔离生命周期：**PASS**（install → uninstall → reinstall，分组记录 hash 不变）
-- 深色/浅色与中文：英文/深色已自动覆盖；中文视觉仍待人工
-- 构建：`lib/client.js` 生成成功
+- 单元/契约测试：**378/378 PASS**
+- Core 纯函数测试：**22/22 PASS**
+- Node 内置 coverage：**89.28% lines / 76.79% branches / 83.28% functions**
+- A+ 隔离 Playwright：**PASS**
+- 隔离生命周期 install → uninstall → reinstall：**PASS**
+- 构建：`lib/client.js` 成功
 - 语法检查：通过
-- 桌面 E2E：完整 22 步尚未记录；本轮先完成隔离冒烟
 - 真实 `~/.dsh`：隔离测试未写入真实分组记录
 
-## 本轮覆盖
+## A+ 覆盖
 
-### 回滚
+A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 
-- 移除 background jobs 状态桶
-- 移除 `ctx.jobs` 订阅与 `watchRows`
-- 三个状态按钮顺序恢复
-- 状态弹层背景改为 layer-1，与搜索框一致
-- 移除对应 locale 键和测试
+- 首次引导出现/关闭后刷新不重现
+- 三状态按钮存在，后台任务按钮不存在
+- 移动分组/会话后的 head 顺序
+- 收起/展开后的会话顺序
+- 264px 窄侧栏、深色、宿主 Rail
+- 搜索、归档 tri-state
+- 拖拽自动展开、分组边缘占位、弹窗拖动/缩放
+- 外部 commit 通过 SSE 触发刷新
+- 切到官方工作区再切回自由分组后重新 load
+- 快速连续 revision 收敛
+- 会话菜单无 Pin；Copy Session ID 写入真实剪贴板并显示 toast
+- hover archive 控件存在
+- 第一层插件设置卡、本地化 `Free groups` 标题
+- 详情 Tooltip 打开
+- 标准 Switch 交互
+- `controlDestructive` 打开前出现确认，取消后仍保持关闭
 
-### 调试隔离
+## 原生工具和隔离控制
 
-- `Config.debugProbe` 默认 false
-- `debugProbe` 关闭时 debug 路由不挂载
-- `/load` 返回 `debugProbe` 能力标记
-- 客户端探针仅在 `rt().debugProbe === true` 时发送
-- 默认 `/load` 返回 `debugProbe: false`
-
-### 引导与重置
-
-- 首次引导卡可见且可 dismiss
-- `onboarding` localStorage 持久化
-- 空状态“新建第一个分组”入口
-- `reset-collapsed` action
-- `clearDialogGeometries`
-- 视图选项中的恢复默认布局
-- About/version/scope 文案
-
-### 回归
-
-- 分组、会话、拖拽、未归组目标、搜索、归档、弹窗、滚动条测试继续通过
-- locale 源字典与 JSON 镜像一致
+- `session_groups_control`：注册、state/resolve/plan/apply/CAS、session 动作、开关门禁
+- 隔离 control E2E：state/resolve/plan/apply、icon/color、同名歧义、未知字段
+- 隔离 session E2E：inspect / rename / archive / unarchive 实际 CLI 通过；HTTP/CLI 仍受 Host 浏览器 fence 限制，AI 使用原生工具
+- 自动 skill 安装：`controlApi` 开启后写入 `<DSH_HOME>/skills/session-groups-control/SKILL.md`
+- skill repair：managed skill 可修复；用户自有同名文件返回 `409 skill-user-owned`，不被覆盖
 
 ## 运行方式
 
 ```powershell
 cd C:\Users\Momiji\Projects\dsh-session-groups
 npm test
-```
-
-最近一次结果：
-
-```text
-tests 359
-pass 359
-fail 0
+npm run check:core
+npm run check:coverage
+npm run build
+npm run test:isolated   # 需先启动隔离 web
 ```
 
 ## 未决验证
 
-以下项目需要桌面环境人工确认：
-
-- 首次引导在真实侧栏宽度下的排版
-- 状态下拉背景不透明度的实际观感
-- 恢复默认布局后的宽度/展开/弹窗几何
-- 264px 窄侧栏、深浅色、中英文
-- 干净 desktop profile 安装与卸载
-- 插件升级覆盖安装
+- 真实桌面回归（首次引导、侧栏宽度、主题、中文视觉）
+- 非空/有 access 会话的 Fork 成功路径真实 E2E（当前由 action/source 测试和显示门禁覆盖）
+- 原生工具被真实模型发现并完成 state → plan → apply 的端到端链路
+- SSE 断线重连和多窗口并发
+- Windows 下 control token ACL 的实际审计
 
 ## 备注
 
-- 0.3.0-beta.1 不再包含后台任务状态监控，因此本次没有 `ctx.jobs` 流相关性能验证项。
-- 发布包 SHA256 以构建后的 `npm pack` 输出为准。
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- 当前默认自动门禁是 `e2e/isolated.spec.mjs`。
+- `e2e/groups.spec.mjs` 是历史手工脚本，未纳入默认门禁。
+- 发布包 SHA256 以最终 `npm pack` 输出为准。

@@ -2,12 +2,12 @@
 
 DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会话，但只改变显示位置：
 
-- 不修改会话标题
-- 不移动会话日志
+- 分组本身不移动或改写会话日志
+- 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变
 - 不修改官方工作区注册表
 - 不写入 `workspace.json`
 
-当前版本：**0.3.0-beta.38**  
+当前版本：**0.3.0-beta.43**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 功能
@@ -34,7 +34,10 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 
 - 跨工作区把会话拖入分组
 - 拖出分组进入未归组
-- 打开、重命名、归档/取消归档、置顶/取消置顶、移动到分组
+- 打开、重命名、归档/取消归档、移动到分组
+- 行 hover 提供归档/取消归档
+- 会话菜单提供分叉会话、复制 Session ID
+- 分叉会以最后一个已完成轮次为分叉点；成功后将子会话放到源会话所在分组顶部（源会话未归组时放到未分组顶部）
 - 官方会话状态显示
 - 未归组列表虚拟化
 
@@ -88,7 +91,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 设置 → 插件 → 添加插件 → 选择：
 
 ```text
-dsh-session-groups-0.3.0-beta.38.tgz
+dsh-session-groups-0.3.0-beta.43.tgz
 ```
 
 启用后完整重启 DSH（或按宿主提示刷新）。
@@ -98,7 +101,7 @@ dsh-session-groups-0.3.0-beta.38.tgz
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.38.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.43.tgz"
 ```
 
 安装后重启 DSH。安装命令会改 `desktop` profile，请先备份 `~/.dsh/profiles/desktop/package.json`。
@@ -130,19 +133,27 @@ $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
 
 ## 配置
 
-插件管理器提供五个开关，默认都关闭：
+插件管理器提供五个开关，默认都关闭。设置卡位于 **Plugins → dsh-session-groups 插件详情第一层**，无需进入组件行。所有开关使用标准 DSH `Switch`，信息按钮使用标准 `Tooltip`。
 
 | 配置 | 默认 | 作用 |
 |---|---|---|
-| `diagnostics` | 关闭 | 拖拽 HUD 与本地 NDJSON trace |
+| `diagnostics` | 关闭 | 拖拽 HUD 与本地 NDJSON trace；切换后热生效 |
 | `debugProbe` | 关闭 | 临时弹窗布局探针与 `.debug.ndjson` 路由；生产使用不要开启 |
 | `controlApi` | 关闭 | AI 控制总开关：原生 `session_groups_control` 工具 + 浏览器/调试 HTTP 路由 |
-| `controlDestructive` | 关闭 | 允许 AI 控制接口执行删除等破坏性操作 |
+| `controlDestructive` | 关闭 | 允许 AI 控制接口执行删除等破坏性操作；开启前需二次确认 |
 | `controlSessions` | 关闭 | 允许会话改名、归档状态切换；需同时开启 `controlApi` |
 
-`debugProbe` 关闭时不会挂载 `/dsh-session-groups/debug` 路由，也不会写调试文件。  
-`controlApi` 关闭时不会挂载 control 路由。开启后仅本地可用，并复用 host connection fence。  
+`debugProbe` 路由始终注册，但关闭时返回 `404 debug-disabled`，且不会写调试文件。  
+`diagnostics` 路由始终注册，但关闭时拒绝写入；开启/关闭会在下一次配置刷新时更新客户端 HUD。  
+`controlApi` 关闭时 control 路由仍注册，但返回 `404 control-disabled`；开启后仅本地可用，并复用 host connection fence。  
 后台任务监控已在 0.3.0-beta.1 回滚，不订阅 `ctx.jobs`、不额外开启 job 流。
+
+## 设置卡
+
+- 配置卡在第一层插件详情页，不再依赖第二层组件行入口。
+- 五个选项均有 `[ⓘ]` 详情入口，内容包括功能、何时开启、安全风险、其他影响。
+- `controlDestructive` 不是普通开关：开启时先显示危险确认，必须显式点击“我理解风险，开启”。
+- 第二层组件行保留来源/状态等元数据，但不作为配置入口。
 
 ## AI 控制
 
@@ -156,7 +167,9 @@ session_groups_control
 control token，也不依赖 CLI。`controlApi` 必须是开启状态；`controlSessions`
 控制会话改名/归档；`controlDestructive` 控制删除。
 
-Host 在每次分组 commit（原生工具或 HTTP）后通过 `/dsh-session-groups/events` 广播新 revision；浏览器收到后重新 load 对账。切回自由分组视图时也会主动重新 load。`n`n工具动作：
+Host 在每次分组 commit（原生工具或 HTTP）后通过 `/dsh-session-groups/events` 广播新 revision；浏览器收到后重新 load 对账。切回自由分组视图时也会主动重新 load。
+
+工具动作：
 
 ```text
 state
@@ -204,7 +217,7 @@ Bearer token 的 CLI 会被 403 拒绝。因此 AI 不要再走 HTTP/CLI，改�
 <dshHome>/storages/dsh-session-groups.control-token
 ```
 
-包内置 skill：`skills/session-groups-control/SKILL.md`。开启 `controlApi` 后，插件会自动安装到 `<dshHome>/skills/session-groups-control/SKILL.md`；Plugins 页对应插件行提供“校验 / 重装技能”按钮，可修复丢失或损坏的 skill，无需卸载整个插件。
+包内置 skill：`skills/session-groups-control/SKILL.md`。开启 `controlApi` 后，插件会自动安装到 `<dshHome>/skills/session-groups-control/SKILL.md`；插件详情页设置卡提供“校验 / 重装技能”按钮，可修复丢失或损坏的 managed skill，无需卸载整个插件。用户自己创建的同名 skill 不会被强制覆盖。
 
 诊断文件位置：
 
@@ -227,34 +240,39 @@ Bearer token 的 CLI 会被 403 拒绝。因此 AI 不要再走 HTTP/CLI，改�
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
-- 当前发布验证以 375 项单元/契约测试和用户桌面回归为准；仓库保留 E2E 脚本，但尚未记录 0.3.0-beta.38 的完整 E2E 结果。
+- 当前发布验证以 **378 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
 
 ## 开发
 
 ```powershell
 npm test
+npm run check:coverage
 npm run build
 node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：375 项单元/契约测试
+- `npm test`：378 项单元/契约测试
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 89.28% lines / 76.79% branches / 83.28% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
-- `npm run check:all`：全文件语法检查 + 测试`n- `npm run check:core`：只加载并测试 src/core，不启动 DSH
+- `npm run check:all`：全文件语法检查 + 测试
+- `npm run check:core`：只加载并测试 src/core，不启动 DSH
 - `scripts/qa/clean-profile.ps1`：隔离 profile 安装/卸载验证，不碰真实 `~/.dsh`
 - `scripts/qa/lifecycle-isolated.ps1`：隔离 install → uninstall → reinstall，校验分组记录 hash 不变
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`：A+ 隔离 Playwright 冒烟
   - 覆盖首次引导、搜索、归档筛选、拖拽自动展开、拖拽边缘、弹窗拖动/缩放、三状态按钮、移动到分组 head、收起/展开顺序、264px、英文/深色、宿主侧栏 Rail、亮色对比度
+  - 覆盖会话菜单 Copy Session ID（真实剪贴板 + toast）、hover archive 存在、第一层设置、本地化标题、详情 tooltip、Switch 交互、destructive 二次确认取消
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.38.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.43.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 
 ## 许可
 
 MIT，见 `LICENSE`。
+
 
 
 

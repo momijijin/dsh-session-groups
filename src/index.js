@@ -2,10 +2,13 @@
  * Cordis host plugin entry for dsh-session-groups.
  *
  * Frozen contract: docs/CONTRACTS.md §2 / §6.5.
- * - Host half only: mounts GET /dsh-session-groups/load and
- *   POST /dsh-session-groups/commit, guarded by the host connection fence.
+ * - Host half mounts load/commit, diagnostics/debug, control/session routes,
+ *   skill repair and the SSE revision stream; every route is guarded by the
+ *   host connection fence and the relevant config gate.
  * - Records live under `dshHomePath('storages')` (fallback chain logged).
- * - Never writes workspace.json, session headers/logs, or any other host state.
+ * - Never writes workspace.json, session logs, or the official workspace
+ *   registry. Session title/archive changes go through Host session services
+ *   only when `controlSessions` is enabled.
  * - `apply` returns void: Cordis 4.0.5 treats a plugin's return value as its
  *   effect list, so returning data would unload the plugin. The entry is also
  *   synchronous (home resolution is sync) so route registration happens before
