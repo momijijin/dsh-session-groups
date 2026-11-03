@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.63 (2026-11-03)
+
+- Doctor CLI now acts as a compatibility gate: a 200 report with `host.compatibility.supported === false` exits non-zero while preserving the JSON report for post-upgrade scripts. 442 tests; A+ passes.
+
 ## 0.3.0-beta.62 (2026-11-03)
 
 - Recover a valid `.bak` automatically when the live record is corrupt/invalid: quarantine the bad file, restore the previous revision atomically, and surface `recovered-backup` (localized). If no valid backup exists, keep the existing empty-document fallback. 441 tests; 93.49% lines / 81.99% branches / 88.40% functions; A+ and lifecycle pass.

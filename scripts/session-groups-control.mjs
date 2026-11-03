@@ -126,4 +126,5 @@ try {
 } catch {
   parsed = { ok: false, code: 'invalid-response', message: text.slice(0, 500) }
 }
-print(parsed, response.ok ? 0 : 1)
+const compatibilityFailed = command === 'doctor' && parsed?.host?.compatibility?.supported === false
+print(parsed, response.ok && !compatibilityFailed ? 0 : 1)

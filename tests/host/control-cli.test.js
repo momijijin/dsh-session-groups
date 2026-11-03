@@ -80,3 +80,24 @@ test('control CLI doctor exits non-zero and preserves the server error payload',
     await new Promise((resolve) => server.close(resolve))
   }
 })
+
+test('control CLI doctor exits non-zero when host compatibility is unsupported', async () => {
+  const report = {
+    ok: true,
+    protocol: 1,
+    host: { compatibility: { supported: false, missing: ['webServerRegister'] } },
+  }
+  const { server, port } = await startServer({ body: report })
+  try {
+    const result = await runCli(['doctor'], {
+      ...process.env,
+      DSH_HOME: await mkdtemp(join(tmpdir(), 'dsg-cli-')),
+      DSH_WEB_URL: `http://127.0.0.1:${port}`,
+      DSH_CONTROL_TOKEN: 'test-token',
+    })
+    assert.equal(result.status, 1)
+    assert.deepEqual(JSON.parse(result.stdout), report)
+  } finally {
+    await new Promise((resolve) => server.close(resolve))
+  }
+})
