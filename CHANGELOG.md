@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.53 (2026-11-03)
+
+- Fix Fork access truthiness and host-derived ungrouped placement discovered by a real isolated model turn; record real Fork and native-tool E2E evidence. Split Toast/MenuPopover into session-menu.js.
+
 ## 0.3.0-beta.52 (2026-11-03)
 
 - Begin the large-file split: extract Toast and MenuPopover from components.js into session-menu.js with unchanged DOM/test ids and behavior. Update source-level layout tests to read the extracted module.

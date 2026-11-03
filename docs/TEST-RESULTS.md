@@ -1,7 +1,7 @@
-# 0.3.0-beta.52 测试结果
+# 0.3.0-beta.53 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.52`  
+版本：`0.3.0-beta.53`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
@@ -14,6 +14,8 @@
 - 构建：`lib/client.js` 成功
 - 语法检查：通过
 - 真实 `~/.dsh`：隔离测试未写入真实分组记录
+- 真实非空会话 Fork（隔离 DSH home + 临时独立 API key）：**PASS**，源会话 `Greeting` 生成子会话 `Greeting (1)`
+- 真实模型原生工具（隔离实例）：**PASS**，session log 记录 `tool/call` / `tool/result`，返回 `protocol: 1` 和成功 state
 
 ## A+ 覆盖
 

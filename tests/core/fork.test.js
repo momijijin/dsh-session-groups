@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { placeForkedSession } from '../../src/core/fork.js'
-import { createGroup, assignSession, emptyDoc } from '../../src/shared/model.js'
+import { buildRenderTree, createGroup, assignSession, emptyDoc } from '../../src/shared/model.js'
 
 test('fork child is inserted at the source group head', () => {
   let doc = emptyDoc()
@@ -15,11 +15,18 @@ test('fork child is inserted at the source group head', () => {
   assert.deepEqual(next.ungrouped, [])
 })
 
-test('source outside groups places the fork at the ungrouped head', () => {
+test('source outside groups keeps the fork host-derived so it renders first', () => {
   let doc = emptyDoc()
   doc = createGroup(doc, { name: 'G' })
   const next = placeForkedSession(doc, 'derived-source', 'child')
-  assert.deepEqual(next.ungrouped, ['child'])
+  assert.deepEqual(next.ungrouped, [])
+  const tree = buildRenderTree(
+    next,
+    { 'derived-source': { id: 'derived-source', updatedAt: 1 }, child: { id: 'child', updatedAt: 2 } },
+    [],
+    {},
+  )
+  assert.deepEqual(tree.ungrouped.map((node) => node.session.id), ['child', 'derived-source'])
 })
 
 test('fork placement is deterministic and does not mutate the input document', () => {

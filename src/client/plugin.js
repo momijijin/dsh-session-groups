@@ -391,7 +391,7 @@ export const createPlugin = () => {
       fork: (sessionId) => {
         if (typeof uiWorkspace?.forkSession !== 'function') return false
         try {
-          return remoteAccess?.source?.('session', sessionId, 'session/fork') === true
+          return Boolean(remoteAccess?.source?.('session', sessionId, 'session/fork'))
         } catch {
           return false
         }
