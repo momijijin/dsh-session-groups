@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.48 (2026-11-03)
+
+- Add a forced EventSource disconnect/reconnect A+ check: the second page blocks the events route, an external commit lands while SSE is down, the route is restored, and onopen reloads the title.
+
 ## 0.3.0-beta.47 (2026-11-03)
 
 - Extract the EventSource revision stream into an injectable adapter and add reconnect/cleanup tests. No transport behavior change; reconnect onopen still forces a refresh.

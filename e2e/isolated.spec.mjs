@@ -656,7 +656,31 @@ try {
     await secondPage.close().catch(() => {})
   }
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, multi-window SSE, session actions, clipboard copy, search, first-layer settings, localized title, option details, live diagnostics HUD, switch interaction and destructive confirmation')
+  // Force the EventSource route to fail, commit externally while it is down,
+  // then restore the route and prove onopen recovery reloads the page.
+  const reconnectPage = await context.newPage()
+  let blockEvents = true
+  await reconnectPage.route('**/dsh-session-groups/events', (route) =>
+    blockEvents ? route.abort() : route.continue(),
+  )
+  try {
+    await reconnectPage.goto(process.env.DSH_TEST_URL, { waitUntil: 'domcontentloaded' })
+    await reconnectPage.waitForTimeout(1800)
+    await reconnectPage.locator('[data-testid="session-groups-view"]').waitFor({ state: 'visible', timeout: 8000 })
+    const reconnectTitle = `重连 ${Date.now()}`
+    await externalRename(reconnectTitle)
+    blockEvents = false
+    await reconnectPage.unroute('**/dsh-session-groups/events')
+    await reconnectPage.waitForFunction(
+      (name) => document.body.innerText.includes(name),
+      reconnectTitle,
+      { timeout: 15000 },
+    )
+  } finally {
+    await reconnectPage.close().catch(() => {})
+  }
+
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, multi-window SSE, forced reconnect, session actions, clipboard copy, search, first-layer settings, localized title, option details, live diagnostics HUD, switch interaction and destructive confirmation')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
