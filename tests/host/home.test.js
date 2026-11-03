@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dshHomePath, resolveRecordPath, resolveStorageDir } from '../../src/host/home.js'
@@ -88,7 +88,9 @@ test('resolveRecordPath joins the frozen record file name and keeps an explicit 
 test('dshHomePath is re-exported and honours $DSH_HOME (no hard-coded real home)', () => {
   assert.equal(typeof dshHomePath, 'function')
   const saved = process.env.DSH_HOME
-  const fakeHome = join('X:\\fake-homes', 'host')
+  const fakeHome = process.platform === 'win32'
+    ? join('X:\\fake-homes', 'host')
+    : join(tmpdir(), 'dsg-fake-home')
   try {
     process.env.DSH_HOME = fakeHome
     assert.equal(dshHomePath('storages'), join(fakeHome, 'storages'))
