@@ -84,34 +84,21 @@ The top-right view options contain:
 
 ## Installation
 
-### dsh-market
+### dshmarket (recommended)
 
-A **dshmarket catalog listing is not published yet**. Until the catalog entry is live, install the beta from the GitHub Release tarball.
-
-After the listing is live, install and update the plugin through dshmarket. Do not mix a local tarball install with market updates: first reinstall from the market so the installed source is bound to the catalog.
-
-### Local tarball
-
-DSH Desktop → Settings → Plugins → Add plugin → select:
+Install from **dshmarket** and search for:
 
 ```text
-dsh-session-groups-0.3.0-beta.63.tgz
+dsh-session-groups
 ```
 
-Enable it and fully restart DSH (or follow the host refresh prompt).
+The market entry is being prepared. Once it is listed, install and update the plugin entirely through dshmarket; users should not need a local path or a terminal command.
 
-### Command line
+Updates are owned by dshmarket / the plugin manager. The plugin does not self-update and does not know where its next version is hosted. If you previously installed a local tarball, reinstall once from the market so the installed source is bound to the catalog.
 
-```powershell
-$desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
-$cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
+### Maintainer/developer install
 
-& $desktop --expose-internals $cli plugin `
-  --profile desktop add --force `
-  "file:C:\path\to\dsh-session-groups-0.3.0-beta.63.tgz"
-```
-
-Restart DSH after installation. This changes the `desktop` profile; back up `~/.dsh/profiles/desktop/package.json` first.
+Local tarball and command-line installation are maintainer/debug workflows only. They are documented in [docs/RELEASE.md](docs/RELEASE.md); ordinary users should use the market entry.
 
 ## Data
 
@@ -257,6 +244,16 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - large-list lazy rendering remains deferred; the current Ungrouped list is virtualized, but a collapsed subtree is still built by `buildRenderTree`;
 - the dshmarket catalog entry is not published yet; local tarball installs are for the beta period;
 - current release validation is **442 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
+
+## Documentation
+
+- [Current documentation index](docs/INDEX.md)
+- [Compatibility policy](docs/COMPATIBILITY.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Release and verification](docs/RELEASE.md)
+- [Test results](docs/TEST-RESULTS.md)
+
+Historical V1/V1.1 contracts and plans are indexed separately and are not current behavior.
 
 ## Development
 

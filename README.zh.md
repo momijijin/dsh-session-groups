@@ -90,33 +90,21 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 
 ## 安装
 
-### dsh-market
+### dshmarket（推荐）
 
-当前 **dshmarket 目录条目尚未发布**；在目录上架前，请从 GitHub Release 下载 tarball 安装 beta。
-
-目录上架后，请通过 dshmarket 安装和更新。不要混用本地 tarball 安装与市场更新：先通过市场重新安装一次，让安装来源绑定到目录。
-
-### 本地 tarball
-
-DSH Desktop 插件管理器
-
-设置 → 插件 → 添加插件 → 选择：
+在 **dshmarket** 中搜索并安装：
 
 ```text
-dsh-session-groups-0.3.0-beta.63.tgz
+dsh-session-groups
 ```
 
-启用后完整重启 DSH（或按宿主提示刷新）。
+市场条目正在准备中。上架后，普通用户应完全通过 dshmarket 安装和更新，不需要本地路径或命令行。
 
-### 命令行安装
+更新由 dshmarket / 插件管理器负责。插件不做自更新，也不知道下一版本的下载地址。如果之前用本地 tarball 安装，需要通过市场重新安装一次，让安装来源绑定到目录。
 
-```powershell
-$desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
-$cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.63.tgz"
-```
+### 维护者/开发者安装
 
-安装后重启 DSH。安装命令会改 `desktop` profile，请先备份 `~/.dsh/profiles/desktop/package.json`。
+本地 tarball 和命令行安装只用于开发调试，步骤见 [docs/RELEASE.md](docs/RELEASE.md)；普通用户不需要使用。
 
 ## 数据
 
@@ -270,6 +258,16 @@ node scripts/session-groups-control.mjs doctor
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
 - 当前发布验证以 **442 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
+
+## 文档
+
+- [当前文档索引](docs/INDEX.md)
+- [兼容策略](docs/COMPATIBILITY.md)
+- [架构](docs/ARCHITECTURE.md)
+- [发布与验证](docs/RELEASE.md)
+- [测试结果](docs/TEST-RESULTS.md)
+
+历史 V1/V1.1 契约与计划单独索引，不代表当前行为。
 
 ## 开发
 

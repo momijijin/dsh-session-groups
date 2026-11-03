@@ -53,7 +53,17 @@ npm pack
 
 ## 3. 安装
 
-### DSH Desktop 插件管理器
+### 普通用户：dshmarket
+
+在 **dshmarket** 中搜索并安装：
+
+```text
+dsh-session-groups
+```
+
+目录条目上架后，更新也由 dshmarket 完成。普通用户不需要本地 tarball 或命令行。
+
+### 维护者/开发者：本地 tarball（普通用户跳过）
 
 设置 → 插件 → 添加插件 → 选择 `.tgz` → 启用 → 完整重启 DSH。
 
