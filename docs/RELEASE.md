@@ -22,7 +22,7 @@
 - `diagnostics` / `debugProbe` 开关改为请求时读取，切换后热生效
 - `controlDestructive` 开启前显示危险确认
 - skill repair 不再强制覆盖用户自有 `SKILL.md`；返回 `409 skill-user-owned`
-- 新增 `npm run check:coverage`，当前基线约 93.69% lines / 81.13% branches / 87.52% functions
+- 新增 `npm run check:coverage`，当前基线约 93.69% lines / 81.13% branches / 87.54% functions
 
 ### 发布工程
 
