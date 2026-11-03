@@ -4,31 +4,12 @@
   "version": "0.3.0-beta.33",
   "entry": "src/index.js",
   "client": "lib/client.js",
-  "description": "Global session groups for the DSH left sidebar."
+  "description": {
+    "en": "Global session groups for the DSH left sidebar: organize sessions across workspaces without moving them.",
+    "zh": "DSH 左侧栏全局自由分组：跨工作区整理会话，不移动会话本身。"
+  },
+  "title": {
+    "en": "Free groups",
+    "zh": "自由分组"
+  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

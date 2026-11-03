@@ -44,8 +44,6 @@
   "session.rename": "重命名",
   "session.archive": "归档",
   "session.unarchive": "取消归档",
-  "session.pin": "置顶",
-  "session.unpin": "取消置顶",
   "session.fork": "分叉会话",
   "session.copyId": "复制 Session ID",
   "session.moveTo": "移动到分组…",
@@ -263,8 +261,12 @@
   "config.controlDestructive": "允许破坏性操作",
   "config.controlDestructiveHint": "允许 AI 控制接口删除分组。",
   "config.controlSessions": "允许会话操作",
-  "config.controlSessionsHint": "允许会话改名和归档状态切换。"
+  "config.controlSessionsHint": "允许会话改名和归档状态切换。",
+  "session.archived": "已归档",
+  "banner.registration-failed": "自由分组侧栏注册失败",
+  "config.details.diagnostics": "功能：在侧栏显示拖拽目标 HUD，并把分组操作、拖拽、渲染和修订号写入本地 NDJSON 诊断文件。\n何时开启：仅在排查拖拽、锚点、虚拟列表或布局问题时临时开启；正常使用保持关闭。\n安全风险：诊断文件保存在本机 DSH storages 目录，可能包含分组 ID、会话 ID、路径、视口尺寸和操作序列；默认不记录会话正文，但本地其他程序仍可能读取该文件。\n其他影响：会增加少量内存、CPU 和磁盘写入；关闭后停止写入，但已有诊断文件不会自动删除。",
+  "config.details.debugProbe": "功能：为弹窗布局调试开放本地 .debug.ndjson 探针，记录弹窗尺寸、位置和布局计算。\n何时开启：只在开发或复现弹窗几何、拖拽、缩放问题时开启；生产环境不要开启。\n安全风险：会暴露本地调试端点和布局数据，可能包含会话/分组 ID 与窗口尺寸；不要在不可信环境长期开启。\n其他影响：增加调试文件写入和请求；关闭后调试端点停用。",
+  "config.details.controlApi": "功能：启用原生 session_groups_control 工具，并保留浏览器/调试用 HTTP 控制路由；可读取分组状态、预览和提交分组操作。\n何时开启：只有当你希望 AI 或受信任的本地自动化管理分组时才开启；普通手动使用保持关闭。\n安全风险：调用方可枚举和修改分组、读写会话归属；若模型被提示注入或本地进程被冒用，可能执行非预期改组。原生工具在 Host 进程内运行，不经过浏览器 fence；HTTP 路由仍受浏览器会话 fence 保护。请只让可信 AI/本地调用方使用。\n其他影响：会生成并维护本地控制 token，并注册原生工具；关闭后工具和路由立即拒绝操作，但已有分组数据不会回滚。",
+  "config.details.controlDestructive": "功能：允许 AI 控制接口删除分组；删除非空分组时必须先把会话和子组移动到目标位置，不会删除或归档会话本身。\n何时开启：仅在明确要求 AI 执行分组删除时临时开启；正常使用保持关闭。\n安全风险：这是高权限操作；一次错误调用可能永久移除分组层级并改变会话归属。删除前必须确认目标和移动目的地，建议保留分组文件备份。\n其他影响：UI 不提供撤销；恢复通常需要从 dsh-session-groups.json 备份重建分组，因此不要把此开关当作日常功能。",
+  "config.details.controlSessions": "功能：允许 AI/工具读取会话标题、重命名会话、归档或恢复会话。\n何时开启：只有当你希望 AI 管理会话标题或归档状态时才开启；仅管理分组时保持关闭。\n安全风险：改名会改变会话在列表中的显示；归档运行中的会话可能停止正在进行的活动（需要显式 stopActivity）。归档可逆，但错误改名/归档会影响会话识别和可见性。必须用 sessionId 明确指定目标，不要猜测。\n其他影响：标题和归档属于 DSH 核心会话状态，不属于分组文档；不能与分组移动组成单一事务。"
 }
-
-
-
