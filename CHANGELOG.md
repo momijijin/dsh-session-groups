@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.54 (2026-11-03)
+
+- Continue the component split: extract ScrollArea and GroupListPicker from components.js; update source layout tests. Behavior and DOM/test ids are unchanged.
+
 ## 0.3.0-beta.53 (2026-11-03)
 
 - Fix Fork access truthiness and host-derived ungrouped placement discovered by a real isolated model turn; record real Fork and native-tool E2E evidence. Split Toast/MenuPopover into session-menu.js.

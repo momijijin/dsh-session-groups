@@ -1,7 +1,7 @@
-# 0.3.0-beta.53 测试结果
+# 0.3.0-beta.54 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.53`  
+版本：`0.3.0-beta.54`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
@@ -46,7 +46,7 @@ A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 
 - `placeForkedSession` 纯函数：源分组组头、未归组头部、确定性、不修改输入文档
 - 真实非空会话 Fork 成功路径仍需可控的非空 session fixture；当前未伪造该数据
-- 组件拆分第一刀：`Toast` / `MenuPopover` 已从 `components.js` 移到 `session-menu.js`，DOM/test id 不变
+- 组件拆分：`Toast`/`MenuPopover` -> `session-menu.js`，`ScrollArea` -> `scroll-area.js`，`GroupListPicker` -> `group-list-picker.js`，DOM/test id 不变
 
 ## 原生工具和隔离控制
 

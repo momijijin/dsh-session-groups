@@ -17,6 +17,8 @@ import { GROUP_COLORS, GROUP_ICONS } from '../../src/shared/constants.js'
 
 const components = readFileSync(new URL('../../src/client/components.js', import.meta.url), 'utf8')
 const sessionMenu = readFileSync(new URL('../../src/client/session-menu.js', import.meta.url), 'utf8')
+const scrollArea = readFileSync(new URL('../../src/client/scroll-area.js', import.meta.url), 'utf8')
+const groupPicker = readFileSync(new URL('../../src/client/group-list-picker.js', import.meta.url), 'utf8')
 const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
 const workspaceToggle = readFileSync(new URL('../../src/client/workspace-toggle.js', import.meta.url), 'utf8')
 
@@ -127,10 +129,10 @@ test('0.2.50 dialog scroll areas use a persistent draggable thin thumb', () => {
   assert.match(CSS, /\.dsg-scroll-thumb:hover/)
   assert.match(CSS, /\.dsg-dialog-content, \.dsg-dialog-list, \.dsg-icon-sections \{ scrollbar-width:\s*none/s)
   assert.match(CSS, /\.dsg-dialog-content::-webkit-scrollbar,[^{]*\{ width:\s*0; height:\s*0; display:\s*none; \}/s)
-  assert.match(components, /const ScrollArea =/)
-  assert.match(components, /class: 'dsg-scroll-rail'/)
-  assert.match(components, /class: 'dsg-scroll-thumb'/)
-  assert.match(components, /onPointerDown: startDrag/)
+  assert.match(scrollArea, /const ScrollArea =/)
+  assert.match(scrollArea, /class: 'dsg-scroll-rail'/)
+  assert.match(scrollArea, /class: 'dsg-scroll-thumb'/)
+  assert.match(scrollArea, /onPointerDown: startDrag/)
   assert.equal(CSS.includes('dsg-scroll-fade'), false)
   assert.equal(components.includes('ScrollFade'), false)
   assert.match(CSS, /\.dsg-dialog-input \{[^}]*height:\s*32px/s)
@@ -140,7 +142,7 @@ test('0.2.50 dialog scroll areas use a persistent draggable thin thumb', () => {
 })
 
 test('0.2.42 top-level group destinations keep separators', () => {
-  assert.match(components, /dsg-dialog-group-separator/)
+  assert.match(groupPicker, /dsg-dialog-group-separator/)
   assert.match(CSS, /\.dsg-dialog-group-separator \{[^}]*border-top/s)
   assert.match(CSS, /\.dsg-dialog-list \{[^}]*z-index:\s*auto/s)
 })
@@ -471,12 +473,12 @@ test('0.2.6 selection dialogs only highlight; Confirm applies, Cancel closes unc
   // Every selection dialog exposes a stable test id + ARIA state.
   for (const testId of [
     'session-groups-dialog-workspace',
-    'session-groups-dialog-group',
     'session-groups-dialog-icon',
     'session-groups-dialog-color',
   ]) {
     assert.equal(components.includes(testId), true, `missing ${testId}`)
   }
+  assert.equal(groupPicker.includes('session-groups-dialog-group'), true)
   assert.match(components, /'aria-selected': active \? 'true' : 'false'/)
   assert.match(components, /'aria-checked': active \? 'true' : 'false'/)
   // Input/delete/archive dialogs keep their existing behavior.
@@ -728,7 +730,7 @@ test('0.2.14 dialog options use roomy padding and standard depth indent', () => 
   const footer = CSS.slice(CSS.indexOf('.dsg-dialog-confirm {'), CSS.indexOf('.dsg-dialog-confirm {') + 260)
   assert.match(footer, /height:\s*32px/)
   assert.match(footer, /padding:\s*0 16px/)
-  assert.match(components, /paddingLeft:\s*`\$\{12 \+ depth \* 16\}px`/)
+  assert.match(groupPicker, /paddingLeft:\s*`\$\{12 \+ depth \* 16\}px`/)
   assert.match(CSS, /\.dsg-dialog-list \{[^}]*padding:\s*8px/s)
   assert.match(CSS, /\.dsg-color-option \{[^}]*height:\s*36px/s)
 })

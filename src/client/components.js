@@ -38,6 +38,8 @@ import {
 } from '../core/dialog-selection.js'
 import { createActions, formatActivity, workspaceChoices, workspaceLabel } from './actions.js'
 import { MenuPopover, Toast } from './session-menu.js'
+import { GroupListPicker } from './group-list-picker.js'
+import { ScrollArea } from './scroll-area.js'
 import { sessionViewEqual, statusMapEqual, workspaceViewEqual } from './session-equality.js'
 import {
   centeredDialogRect,
@@ -140,97 +142,6 @@ const usePerfCommit = (name, renderStartedAt) => {
     const frame = globalThis.requestAnimationFrame(() => perfMark(`frame:${name}`))
     return () => globalThis.cancelAnimationFrame?.(frame)
   })
-}
-
-/**
- * Dialog scroll region with a persistent 5px custom thumb. Native scrollbars
- * are hidden; the thumb is above the list in the stacking order and can be
- * dragged to scroll.
- */
-const ScrollArea = ({ className, children, ...rest }) => {
-  const scrollerRef = useRef(null)
-  const dragCleanupRef = useRef(null)
-  const [bar, setBar] = useState(null)
-  const update = useCallback(() => {
-    const element = scrollerRef.current
-    if (!element) {
-      setBar(null)
-      return
-    }
-    const max = element.scrollHeight - element.clientHeight
-    if (max <= 1) {
-      setBar(null)
-      return
-    }
-    const railHeight = Math.max(0, element.clientHeight - 12)
-    const height = Math.max(20, Math.round((railHeight * element.clientHeight) / element.scrollHeight))
-    const top = Math.round((element.scrollTop / max) * Math.max(0, railHeight - height))
-    setBar((previous) => (previous?.height === height && previous?.top === top ? previous : { height, top }))
-  }, [])
-  const startDrag = (event) => {
-    const element = scrollerRef.current
-    if (!element || !bar || event.button !== 0) return
-    event.preventDefault()
-    event.stopPropagation()
-    const max = element.scrollHeight - element.clientHeight
-    const railHeight = Math.max(1, element.clientHeight - 12)
-    const track = Math.max(1, railHeight - bar.height)
-    const startY = event.clientY
-    const startTop = element.scrollTop
-    const doc = event.currentTarget?.ownerDocument ?? globalThis.document
-    const onMove = (moveEvent) => {
-      element.scrollTop = Math.max(0, Math.min(max, startTop + ((moveEvent.clientY - startY) * max) / track))
-      update()
-    }
-    const onEnd = () => {
-      doc?.removeEventListener?.('pointermove', onMove)
-      doc?.removeEventListener?.('pointerup', onEnd)
-      doc?.removeEventListener?.('pointercancel', onEnd)
-      dragCleanupRef.current = null
-    }
-    doc?.addEventListener?.('pointermove', onMove)
-    doc?.addEventListener?.('pointerup', onEnd)
-    doc?.addEventListener?.('pointercancel', onEnd)
-    dragCleanupRef.current = onEnd
-  }
-  useLayoutEffect(() => {
-    const element = scrollerRef.current
-    if (!element) return undefined
-    update()
-    const frame = globalThis.requestAnimationFrame?.(update)
-    const timer = globalThis.setTimeout?.(update, 50)
-    element.addEventListener('scroll', update, { passive: true })
-    globalThis.addEventListener?.('resize', update)
-    let observer = null
-    if (typeof globalThis.ResizeObserver === 'function') {
-      observer = new globalThis.ResizeObserver(update)
-      observer.observe(element)
-    }
-    return () => {
-      globalThis.cancelAnimationFrame?.(frame)
-      globalThis.clearTimeout?.(timer)
-      element.removeEventListener('scroll', update)
-      globalThis.removeEventListener?.('resize', update)
-      observer?.disconnect()
-    }
-  }, [update])
-  useEffect(() => () => dragCleanupRef.current?.(), [])
-  return h(
-    'div',
-    { class: 'dsg-scroll-area' },
-    h('div', { ref: scrollerRef, class: className, ...rest }, children),
-    bar
-      ? h(
-          'div',
-          { class: 'dsg-scroll-rail', 'aria-hidden': 'true' },
-          h('div', {
-            class: 'dsg-scroll-thumb',
-            style: { height: `${bar.height}px`, top: `${bar.top}px` },
-            onPointerDown: startDrag,
-          })
-        )
-      : null
-  )
 }
 
 /** Dispatch helper bound to the live store. */
@@ -1845,63 +1756,6 @@ const Banner = ({ store, handlers }) => {
     h('span', { class: 'dsg-banner-text' }, message === key ? t('banner.loadFailed') : message),
     retryable ? TextButton({ label: t('banner.retry'), onClick: () => handlers.retryLoad(), testId: 'session-groups-banner-retry' }) : null,
     TextButton({ label: t('banner.dismiss'), onClick: () => dispatch('banner', { banner: null }), testId: 'session-groups-banner-dismiss' })
-  )
-}
-
-/**
- * Move-to-group option list (0.2.6). A click only highlights the row
- * (`aria-selected`); the shared dialog footer owns the actual move, so a stray
- * click can never move a session or group by itself.
- */
-const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaLabel, allowRoot = true, testId = 'session-groups-dialog-options' }) => {
-  const t = rt()?.t
-  const option = (key, value, label, depth) =>
-    h(
-      'button',
-      {
-        key,
-        type: 'button',
-        role: 'option',
-        'aria-selected': selection === value ? 'true' : 'false',
-        class: 'dsg-menu-item dsg-dialog-option',
-        'data-testid': 'session-groups-dialog-group',
-        'data-group-id': value ?? '',
-        'data-selected': selection === value ? 'true' : 'false',
-        style: { paddingLeft: `${12 + depth * 16}px` },
-        onClick: (event) => {
-          event.stopPropagation()
-          onSelect(value)
-        },
-      },
-      h('span', { class: 'dsg-dialog-option-label' }, label),
-      selection === value
-        ? h('span', { class: 'dsg-dialog-option-check', 'aria-hidden': 'true' }, renderGlyph(h, 'check', 16))
-        : null
-    )
-  return h(
-    ScrollArea,
-    {
-      className: 'dsg-menu dsg-dialog-list',
-      role: 'listbox',
-      'data-testid': testId,
-      'aria-label': ariaLabel ?? t('dialog.moveTo'),
-    },
-    allowRoot ? option('ungrouped', null, rootLabel ?? t('ungrouped.title'), 0) : null,
-    ...options.flatMap((group, index) => {
-      const nodes = []
-      if (group.depth === 0 && index > 0) {
-        nodes.push(
-          h('div', {
-            key: `separator:${group.id}`,
-            class: 'dsg-dialog-group-separator',
-            role: 'presentation',
-            'aria-hidden': 'true',
-          })
-        )
-      }
-      nodes.push(option(group.id, group.id, group.name, group.depth + 1))
-      return nodes
-    })
   )
 }
 
