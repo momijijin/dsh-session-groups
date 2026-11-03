@@ -759,20 +759,19 @@ export const CSS = `
 .dsg-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; }
 .dsg-rail-button { width: 36px; height: 36px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.08)); color: var(--dsw-alias-label-secondary, CanvasText); border-radius: var(--dsw-radius-md, 8px); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .dsg-rail-label { font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-label-tertiary, CanvasText); }
-.dsg-skill-repair { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0 2px; }
+.dsg-skill-repair { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 12px 0 2px; border-top: 0.5px solid var(--dsw-alias-border-l2, rgba(128,128,128,.2)); }
 .dsg-config-list { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 14px; }
 .dsg-config-title { font-size: var(--dsg-font-14, 14px); line-height: 20px; color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-config-hint { margin: 2px 0 8px; font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-label-tertiary, CanvasText); }
-.dsg-config-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; cursor: pointer; }
-.dsg-config-checkbox { width: 16px; height: 16px; margin: 2px 0 0; flex: none; accent-color: var(--dsw-alias-brand-primary, CanvasText); }
-.dsg-config-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dsg-config-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.dsg-config-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.dsg-config-control { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.dsg-config-info { width: 24px; height: 24px; padding: 0; color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-config-label { font-size: var(--dsg-font-13, 13px); line-height: 20px; color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-config-proof { font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-skill-repair-copy { flex: 1; min-width: 180px; }
 .dsg-skill-repair-title { font-size: var(--dsg-font-14, 14px); line-height: 20px; color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-skill-repair-body { margin-top: 2px; font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-label-tertiary, CanvasText); }
-.dsg-skill-repair-button { appearance: none; height: 28px; padding: 0 10px; border: 0.5px solid var(--dsw-alias-border-l3, rgba(128,128,128,.35)); border-radius: var(--dsw-radius-md, 8px); background: var(--dsw-alias-bg-module-platform, transparent); color: var(--dsw-alias-label-primary, CanvasText); font: inherit; cursor: pointer; }
-.dsg-skill-repair-button:disabled { opacity: .55; cursor: default; }
 .dsg-skill-repair-result { flex-basis: 100%; font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-state-success, #3fb950); }
 .dsg-skill-repair-result[data-ok="false"] { color: var(--dsw-alias-state-danger, #f85149); }
 .dsg-flat { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 1; padding: 2px 4px 8px 2px; }

@@ -202,6 +202,21 @@ test('0.2.54 ungrouped body drop is position-aware and does not bubble invalid r
   assert.match(components, /event\.stopPropagation\(\)/)
 })
 
+test('settings page is bundle-level and uses DSH primitives with option details', () => {
+  const skillRepair = readFileSync(new URL('../../src/client/skill-repair.js', import.meta.url), 'utf8')
+  assert.match(plugin, /plugins\.bundle\.config/)
+  assert.doesNotMatch(plugin, /plugins\.row\.config/)
+  assert.match(skillRepair, /Switch/)
+  assert.match(skillRepair, /Tooltip/)
+  assert.match(skillRepair, /IconInfoOutlineRegular/)
+  assert.match(skillRepair, /config\.details\.diagnostics/)
+  assert.match(skillRepair, /config\.detailsLabel/)
+  assert.doesNotMatch(CSS, /dsg-config-checkbox/)
+  assert.doesNotMatch(CSS, /dsg-skill-repair-button/)
+  assert.equal(typeof zh['config.details.controlApi'], 'string')
+  assert.equal(typeof en['config.details.controlApi'], 'string')
+})
+
 test('session menu drops pin and adds fork, copy id and hover archive', () => {
   assert.doesNotMatch(components, /t\('session\.pin'\)/)
   assert.doesNotMatch(components, /t\('session\.unpin'\)/)

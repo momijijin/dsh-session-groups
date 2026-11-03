@@ -25,6 +25,7 @@ import {
 } from './diagnostics.js'
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
 import { installClientRuntime } from '../adapters/client-runtime.js'
+import { writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import { GroupsViewBoundary } from './components.js'
 import { SkillRepairCard } from './skill-repair.js'
 import {
@@ -372,7 +373,7 @@ export const createPlugin = () => {
 
   // --- host actions ---------------------------------------------------------
   const getDoc = () => store.getSnapshot().doc
-  const actions = createActions({ getServices: services, getDoc, commitDoc, notify, t })
+  const actions = createActions({ getServices: services, getDoc, commitDoc, notify, t, clipboard: writeClipboard })
 
   const capabilities = () => {
     const { uiWorkspace } = services()
@@ -594,12 +595,24 @@ export const createPlugin = () => {
     })
 
     styleDisposer = installStyles(globalThis.document)
-    // The Plugins page renders a row-config slot keyed by bundle#row. Keep the
-    // repair card optional so synthetic compositions without that slot still work.
+    // The package detail page renders plugins.bundle.config. Use the bundle
+    // slot so settings are one click from the plugin list; the row page should
+    // not be the only path to configuration.
+    const currentConfigForm = () => {
+      try {
+        return ctx.get?.('configForms')?.get?.('dsh-session-groups') ?? null
+      } catch {
+        return null
+      }
+    }
     try {
-      configSlotDisposer = ctx.slots?.inject?.('plugins.row.config', () =>
+      configSlotDisposer = ctx.slots?.inject?.('plugins.bundle.config', () =>
         ctx.slots.register(
-          { name: 'plugins.row.config', key: 'dsh-session-groups#dsh-session-groups' },
+          {
+            name: 'plugins.bundle.config',
+            key: 'dsh-session-groups',
+            inject: () => ({ form: currentConfigForm() }),
+          },
           SkillRepairCard,
         ),
       )

@@ -568,7 +568,41 @@ try {
   await externalRename(`${rapidBase}-2`)
   await page.waitForFunction((name) => document.body.innerText.includes(name), `${rapidBase}-2`, { timeout: 6000 })
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence')
+  // Session actions must preserve the official core set: no no-op pin item,
+  // plus fork/copy ID and a hover archive control.
+  const sessionMenuButton = page.locator('[data-testid="session-groups-session-menu"]').first()
+  if ((await sessionMenuButton.count()) === 0) throw new Error('session menu button missing')
+  await sessionMenuButton.click({ force: true })
+  const menuText = await page.locator('[data-testid="session-groups-menu"]').innerText()
+  if (!/Fork session/i.test(menuText) || !/Copy Session ID/i.test(menuText)) {
+    throw new Error(`session menu missing fork/copy ID: ${menuText}`)
+  }
+  if (/^(?:Pin|Unpin)$/im.test(menuText)) throw new Error(`session menu still exposes pin: ${menuText}`)
+  await page.keyboard.press('Escape')
+  const hoverArchive = page.locator('[data-testid="session-groups-session-archive"]').first()
+  if ((await hoverArchive.count()) === 0) throw new Error('session hover archive control missing')
+
+  // Settings must be on the package detail page, use DSH switches and expose a
+  // standard click-pinned tooltip with the long-form risk/usage copy.
+  await page.evaluate(() => [...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Plugins')?.click())
+  await page.waitForTimeout(700)
+  const packageRow = page.locator('[data-plugin-package="dsh-session-groups"]').first()
+  await packageRow.waitFor({ state: 'visible', timeout: 5000 })
+  await packageRow.click()
+  await page.waitForTimeout(1200)
+  const settingsPanel = page.locator('[data-testid="session-groups-settings-panel"]').first()
+  if ((await settingsPanel.count()) === 0) throw new Error('settings panel is not on the package detail page')
+  if ((await page.locator('[role="switch"]').count()) < 5) throw new Error('settings switches are missing')
+  const infoButton = page.locator('.dsg-config-info').first()
+  if ((await infoButton.count()) === 0) throw new Error('configuration details button missing')
+  await infoButton.click()
+  await page.waitForTimeout(300)
+  const detailsText = await page.locator('[role="tooltip"]').first().innerText()
+  if (!/What it does:/i.test(detailsText) || !/Security:/i.test(detailsText)) {
+    throw new Error(`configuration details tooltip is incomplete: ${detailsText.slice(0, 300)}`)
+  }
+
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, session actions, first-layer settings and option details')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
