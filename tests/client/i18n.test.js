@@ -84,6 +84,8 @@ test('dynamic keys used by status, archive, settings and errors are present', ()
 
 test('plugin manifest exposes localized title and description', () => {
   const manifest = JSON.parse(readFileSync(join(root, 'dsh.plugin.json'), 'utf8'))
+  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+  assert.equal(pkg.exports['./locale/*.json'], './locale/*.json')
   assert.equal(typeof manifest.title?.zh, 'string')
   assert.equal(typeof manifest.title?.en, 'string')
   assert.equal(typeof manifest.description?.zh, 'string')
