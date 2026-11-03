@@ -87,6 +87,7 @@
   "banner.conflict": "Group data changed elsewhere — the latest version was loaded.",
   "banner.corrupt-file": "The group file was corrupt; started with an empty document (original preserved).",
   "banner.invalid-file": "The group data was invalid; started with an empty document.",
+  "banner.recovered-backup": "The group file was corrupt; recovered the previous backup (corrupt file preserved).",
   "banner.retry": "Retry",
   "banner.dismiss": "Dismiss",
   "onboarding.title": "Welcome to Free groups",

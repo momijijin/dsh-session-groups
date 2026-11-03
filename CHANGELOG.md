@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.62 (2026-11-03)
+
+- Recover a valid `.bak` automatically when the live record is corrupt/invalid: quarantine the bad file, restore the previous revision atomically, and surface `recovered-backup` (localized). If no valid backup exists, keep the existing empty-document fallback. 441 tests; 93.49% lines / 81.99% branches / 88.40% functions; A+ and lifecycle pass.
+
 ## 0.3.0-beta.61 (2026-11-03)
 
 - Doctor now includes a read-only storage health report (`ok`/`missing`/`corrupt`/`unsupported-version`/`invalid`/`unreadable`, revision, `.bak`, quarantine count) without triggering the store’s quarantine or writing a new record. 439 tests; 93.61% lines / 82.05% branches / 88.36% functions; A+ and lifecycle pass.

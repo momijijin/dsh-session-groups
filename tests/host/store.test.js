@@ -87,7 +87,7 @@ test('H4: invalid documents are rejected by shared validateDoc and the file is u
   assert.equal(await sha256(temp.filePath), before)
 })
 
-test('0.2.7: load normalizes a hand-edited valid custom hex, invalid values quarantine', async (t) => {
+test('0.2.7: load normalizes valid custom hex and recovers a valid backup after invalid input', async (t) => {
   const temp = await makeTempStore()
   t.after(temp.cleanup)
   const doc = {
@@ -111,9 +111,9 @@ test('0.2.7: load normalizes a hand-edited valid custom hex, invalid values quar
   const invalid = { ...doc, groups: [{ ...doc.groups[0], colorHex: '#abcd' }] }
   await writeFile(temp.filePath, JSON.stringify(invalid), 'utf8')
   const quarantined = await temp.store.load()
-  assert.equal(quarantined.warning, 'invalid-file')
+  assert.equal(quarantined.warning, 'recovered-backup')
   assert.match(quarantined.detail, /group-color-hex:g-a/)
-  assert.equal(quarantined.doc.groups.length, 0)
+  assert.equal(quarantined.doc.groups[0].colorHex, '#a1b2c3')
 })
 
 test('icon is opaque: an unknown short icon id is accepted and stored verbatim (C7)', async (t) => {
@@ -153,6 +153,46 @@ test('H6: bad JSON is quarantined as .corrupt-* and degrades to empty + corrupt-
   const recovered = await temp.store.commit(0, sampleDoc())
   assert.equal(recovered.kind, 'ok')
   assert.equal(recovered.revision, 1)
+})
+
+test('H6a: a corrupt record recovers the previous valid .bak and preserves the corrupt file', async (t) => {
+  const temp = await makeTempStore()
+  t.after(temp.cleanup)
+  const first = await temp.store.commit(0, sampleDoc())
+  assert.equal(first.kind, 'ok')
+  assert.equal(first.revision, 1)
+  const second = await temp.store.commit(1, { ...sampleDoc(), ungrouped: ['s-4', 's-5'] })
+  assert.equal(second.kind, 'ok')
+  assert.equal(second.revision, 2)
+  const garbage = '{"version":1,"revision":2,"groups":[' 
+  await writeFile(temp.filePath, garbage, 'utf8')
+
+  const result = await temp.store.load()
+  assert.equal(result.kind, 'ok')
+  assert.equal(result.warning, 'recovered-backup')
+  assert.equal(result.revision, 1)
+  assert.deepEqual(result.doc.groups, sampleDoc().groups)
+  assert.match(result.quarantinedTo, /dsh-session-groups\.corrupt-.*\.json$/)
+  assert.equal(await readFile(result.quarantinedTo, 'utf8'), garbage)
+  assert.equal(JSON.parse(await readFile(temp.filePath, 'utf8')).revision, 1)
+
+  const next = await temp.store.commit(1, { ...result.doc, ungrouped: [] })
+  assert.equal(next.kind, 'ok')
+  assert.equal(next.revision, 2)
+})
+
+test('H6a2: a corrupt record with a corrupt backup still degrades to empty without deleting either copy', async (t) => {
+  const temp = await makeTempStore()
+  t.after(temp.cleanup)
+  await writeFile(temp.filePath, '{broken', 'utf8')
+  await writeFile(`${temp.filePath}.bak`, '{also-broken', 'utf8')
+
+  const result = await temp.store.load()
+  assert.equal(result.warning, 'corrupt-file')
+  assert.equal(result.revision, 0)
+  assert.deepEqual(result.doc, emptyDoc())
+  assert.match(result.quarantinedTo, /dsh-session-groups\.corrupt-.*\.json$/)
+  assert.equal(await readFile(`${temp.filePath}.bak`, 'utf8'), '{also-broken')
 })
 
 test('H6b: parseable but invariant-breaking JSON is quarantined as invalid-file', async (t) => {

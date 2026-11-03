@@ -6,8 +6,10 @@
  *
  * - missing file -> empty document, revision 0;
  * - JSON parse failure -> quarantine as `dsh-session-groups.corrupt-<ts>.json`,
- *   empty doc + warning `corrupt-file`;
- * - shape/invariant failure -> same quarantine, warning `invalid-file`;
+ *   restore a valid `.bak` with warning `recovered-backup`, otherwise empty
+ *   doc + warning `corrupt-file`;
+ * - shape/invariant failure -> same recovery/quarantine policy, warning
+ *   `recovered-backup` or `invalid-file`;
  * - `version > 1` -> `unsupported-version`, never overwritten;
  * - write path: unique temp name -> fsync -> copy previous to `.bak` ->
  *   rename -> directory fsync (where supported); Windows EPERM/EBUSY retried
@@ -160,6 +162,67 @@ export const createStore = (options = {}) => {
     return { kind: 'ok', doc: emptyDoc(), revision: 0, exists: false, warning: reason, detail, quarantinedTo }
   }
 
+  /** Read a valid previous record, without touching the live record. */
+  const readBackupCandidate = async () => {
+    let text
+    try {
+      text = await readFile(backupPath, 'utf8')
+    } catch {
+      return null
+    }
+    let parsed
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      return null
+    }
+    if (!isObject(parsed) || parsed.version !== DOC_VERSION) return null
+    parsed.groups = normalizeGroupColorHex(parsed.groups)
+    const verdict = validateDoc(parsed)
+    if (!verdict.ok) return null
+    return parsed
+  }
+
+  /**
+   * Quarantine a bad live record and, when possible, replace it with the last
+   * valid `.bak`. A corrupt current file must not force an empty document when
+   * the atomic write path left a good previous revision behind.
+   */
+  const quarantineWithBackupRecovery = async (reason, detail) => {
+    const backup = await readBackupCandidate()
+    if (backup === null) return await quarantine(reason, detail)
+    const moved = await quarantine(reason, detail)
+    if (moved.quarantinedTo === null) {
+      return {
+        ...moved,
+        warning: reason,
+        detail: `${detail}; backup recovery skipped because the corrupt record could not be quarantined`,
+        recoveredFrom: null,
+      }
+    }
+    try {
+      const persisted = await writeDoc(backup, backup.revision)
+      return {
+        kind: 'ok',
+        doc: persisted,
+        revision: persisted.revision,
+        exists: true,
+        warning: 'recovered-backup',
+        detail: `${detail}; restored ${backupPath} revision ${String(backup.revision)}`,
+        quarantinedTo: moved.quarantinedTo,
+        recoveredFrom: backupPath,
+      }
+    } catch (error) {
+      return {
+        ...moved,
+        warning: reason,
+        detail: `${detail}; backup recovery failed: ${errorMessage(error)}`,
+        recoveredFrom: backupPath,
+        recoveryFailed: true,
+      }
+    }
+  }
+
   /** Read and classify the current file. Never mutates a trusted document. */
   const readState = async () => {
     let text
@@ -174,16 +237,16 @@ export const createStore = (options = {}) => {
     try {
       parsed = JSON.parse(text)
     } catch (error) {
-      return await quarantine('corrupt-file', `invalid JSON: ${errorMessage(error)}`)
+      return await quarantineWithBackupRecovery('corrupt-file', `invalid JSON: ${errorMessage(error)}`)
     }
     if (!isObject(parsed)) {
-      return await quarantine('corrupt-file', 'document is not a JSON object')
+      return await quarantineWithBackupRecovery('corrupt-file', 'document is not a JSON object')
     }
     if (typeof parsed.version === 'number' && parsed.version > DOC_VERSION) {
       return { kind: 'unsupported-version', version: parsed.version, path: filePath }
     }
     if (parsed.version !== DOC_VERSION) {
-      return await quarantine(
+      return await quarantineWithBackupRecovery(
         'invalid-file',
         `version must be ${String(DOC_VERSION)} (got ${JSON.stringify(parsed.version)})`,
       )
@@ -195,7 +258,7 @@ export const createStore = (options = {}) => {
     parsed.groups = normalizeGroupColorHex(parsed.groups)
     const verdict = validateDoc(parsed)
     if (!verdict.ok) {
-      return await quarantine('invalid-file', verdict.errors.join('; '))
+      return await quarantineWithBackupRecovery('invalid-file', verdict.errors.join('; '))
     }
     return { kind: 'ok', doc: parsed, revision: parsed.revision, exists: true }
   }

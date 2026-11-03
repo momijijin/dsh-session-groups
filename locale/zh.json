@@ -87,6 +87,7 @@
   "banner.conflict": "分组数据已在别处更新，已加载最新版本。",
   "banner.corrupt-file": "分组记录文件损坏，已按空分组启动（原文件已保留）。",
   "banner.invalid-file": "分组记录内容异常，已按空分组启动。",
+  "banner.recovered-backup": "分组记录文件损坏，已从上一份备份恢复（损坏文件已保留）。",
   "banner.retry": "重试",
   "banner.dismiss": "关闭",
   "onboarding.title": "欢迎使用自由分组",
