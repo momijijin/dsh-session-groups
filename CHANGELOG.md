@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.38 (2026-11-03)
+
+- Make Fork session behavior visible and complete: access/blank gating, child insertion at the source group head, and explicit success/placement/failure feedback.
+
 ## 0.3.0-beta.37 (2026-11-03)
 
 - Publish locale meta.title/meta.description so the plugin-manager row and package page use localized display text.
@@ -199,6 +203,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 
