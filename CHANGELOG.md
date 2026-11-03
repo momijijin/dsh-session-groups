@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.47 (2026-11-03)
+
+- Extract the EventSource revision stream into an injectable adapter and add reconnect/cleanup tests. No transport behavior change; reconnect onopen still forces a refresh.
+
 ## 0.3.0-beta.46 (2026-11-03)
 
 - Add an explicit versioned DSH adapter selector: dsh-0.2 adapter, exact-version selection, optional host version resolution, and a 0.2/0.3 test matrix. No version conditional is added to client/host business flow.

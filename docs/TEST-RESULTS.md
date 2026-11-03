@@ -1,14 +1,14 @@
-# 0.3.0-beta.46 测试结果
+# 0.3.0-beta.47 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.46`  
+版本：`0.3.0-beta.47`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 单元/契约测试：**387/387 PASS**
+- 单元/契约测试：**389/389 PASS**
 - Core 纯函数测试：**22/22 PASS**
-- Node 内置 coverage：**89.42% lines / 76.90% branches / 83.58% functions**
+- Node 内置 coverage：**89.42% lines / 76.99% branches / 83.71% functions**
 - A+ 隔离 Playwright：**PASS**
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
@@ -28,6 +28,8 @@ A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 - 拖拽自动展开、分组边缘占位、弹窗拖动/缩放
 - 外部 commit 通过 SSE 触发刷新
 - 同浏览器上下文两个页面均收到外部 commit 的 SSE 刷新
+- change stream adapter 单测：revision 回调、onopen 重连回调、关闭清理
+- 中文 locale 隔离页面：插件设置/标题/选项文案为中文，未出现英文控件回退
 - 切到官方工作区再切回自由分组后重新 load
 - 快速连续 revision 收敛
 - 会话菜单无 Pin；Copy Session ID 写入真实剪贴板并显示 toast

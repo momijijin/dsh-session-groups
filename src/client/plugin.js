@@ -26,6 +26,7 @@ import {
 } from './diagnostics.js'
 import { perfCount, perfEnabled, perfMark, perfNow, perfSample } from './perf.js'
 import { installClientRuntime } from '../adapters/client-runtime.js'
+import { createChangeStream } from '../adapters/change-stream.js'
 import { CLIENT_REQUIRED, compatibilityReport, detectClientCapabilities } from '../adapters/dsh-capabilities.js'
 import { resolveDshVersion, selectDshAdapter } from '../adapters/dsh-selector.js'
 import { writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -252,23 +253,23 @@ export const createPlugin = () => {
     }
     const EventSourceImpl = globalThis.EventSource
     if (typeof EventSourceImpl !== 'function' || changeSource !== null) return
-    try {
-      changeSource = new EventSourceImpl('/dsh-session-groups/events', { withCredentials: true })
-      changeSource.addEventListener?.('revision', (event) => {
+    const stream = createChangeStream({
+      EventSourceImpl,
+      url: '/dsh-session-groups/events',
+      onRevision: (event) => {
         try {
           const payload = JSON.parse(event.data)
           acceptExternalRevision(payload?.revision)
         } catch {
           /* ignore malformed invalidation */
         }
-      })
-      changeSource.onopen = () => {
+      },
+      onOpen: () => {
         // Reconnect recovery: catch revisions committed while the stream was down.
         requestRefresh({ force: true })
-      }
-    } catch {
-      changeSource = null
-    }
+      },
+    })
+    if (stream !== null) changeSource = stream
   }
 
   // --- slot lifecycle -------------------------------------------------------
