@@ -1,12 +1,12 @@
-# 0.3.0-beta.33 测试结果
+# 0.3.0-beta.37 测试结果
 
 日期：2026-11-02  
-版本：`0.3.0-beta.33`  
+版本：`0.3.0-beta.37`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 单元/契约测试：**368/368 PASS**
+- 单元/契约测试：**375/375 PASS**
 - 原生工具：`session_groups_control` 注册、state/resolve/plan/apply/CAS、session 动作、开关门禁
 - A+ 隔离 Playwright 冒烟：**PASS**（独立 `DSH_HOME` + `sg-e2e` + 4419）
   - 首次引导出现/关闭后刷新不重现
@@ -99,6 +99,9 @@ fail 0
 
 - 0.3.0-beta.1 不再包含后台任务状态监控，因此本次没有 `ctx.jobs` 流相关性能验证项。
 - 发布包 SHA256 以构建后的 `npm pack` 输出为准。
+
+
+
 
 
 

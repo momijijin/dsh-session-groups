@@ -592,6 +592,8 @@ try {
   await page.waitForTimeout(1200)
   const settingsPanel = page.locator('[data-testid="session-groups-settings-panel"]').first()
   if ((await settingsPanel.count()) === 0) throw new Error('settings panel is not on the package detail page')
+  const pluginHead = await page.locator('[data-plugin-detail="dsh-session-groups"]').innerText()
+  if (!/Free groups/.test(pluginHead)) throw new Error(`localized plugin title missing: ${pluginHead.slice(0, 120)}`)
   if ((await page.locator('[role="switch"]').count()) < 5) throw new Error('settings switches are missing')
   const infoButton = page.locator('.dsg-config-info').first()
   if ((await infoButton.count()) === 0) throw new Error('configuration details button missing')
@@ -601,8 +603,17 @@ try {
   if (!/What it does:/i.test(detailsText) || !/Security:/i.test(detailsText)) {
     throw new Error(`configuration details tooltip is incomplete: ${detailsText.slice(0, 300)}`)
   }
+  await page.keyboard.press('Escape')
+  const configSwitch = page.locator('[data-testid="session-groups-config-diagnostics"] [role="switch"]').first()
+  const switchBefore = await configSwitch.getAttribute('aria-checked')
+  await configSwitch.click()
+  await page.waitForTimeout(400)
+  const switchAfter = await configSwitch.getAttribute('aria-checked')
+  if (switchBefore === switchAfter) throw new Error('standard settings switch did not toggle')
+  await configSwitch.click()
+  await page.waitForTimeout(300)
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, session actions, first-layer settings and option details')
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, session actions, first-layer settings, localized title, option details and switch interaction')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)

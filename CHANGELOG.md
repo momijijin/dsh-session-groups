@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0-beta.37 (2026-11-03)
+
+- Publish locale meta.title/meta.description so the plugin-manager row and package page use localized display text.
+
+## 0.3.0-beta.36 (2026-11-03)
+
+- Export locale JSON so the Plugins page resolves the localized plugin title/description from locale dictionaries.
+
+## 0.3.0-beta.35 (2026-11-03)
+
+- Finalize the session-menu alignment (fork/copy ID, archive hover, no pin), complete locale coverage and localized metadata, and move standard-control settings with detailed option tooltips to the package detail page.
+
+## 0.3.0-beta.34 (2026-11-03)
+
+- Move plugin settings to the package-level bundle slot, replace bespoke controls with DSH Switch/Button/Tooltip, and add detailed per-option security/usage tooltips.
+
 ## 0.3.0-beta.33 (2026-11-03)
 
 - Clarify reset-display copy, replace the search X with a neutral collapse chevron, and close the refresh convergence races: latest-revision tracking, deferred refresh during loads/optimistic writes, and forced reload on workspace return.
@@ -183,6 +199,10 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
+
+
+
 
 
 
