@@ -30,6 +30,7 @@ import { createStore } from './host/store.js'
 import { createChangeHub } from './host/change-hub.js'
 import { removeManagedSkill, repairManagedSkill } from './host/skill-install.js'
 import { createControlTool } from './host/tool.js'
+import { inspectStorageHealth } from './host/storage-health.js'
 import { HOST_REQUIRED, SUPPORTED_DSH_RANGE, compatibilityReport, detectHostCapabilities } from './adapters/dsh-capabilities.js'
 import { resolveDshVersion, selectDshAdapter } from './adapters/dsh-selector.js'
 import { PLUGIN_VERSION } from './shared/constants.js'
@@ -174,6 +175,18 @@ export const apply = (ctx, config = {}) => {
     const probe = probeConnection(ctx)
     const liveHostCapabilities = detectHostCapabilities(ctx)
     const liveHostCompatibility = compatibilityReport(liveHostCapabilities, requiredHost)
+    let storageHealth
+    try {
+      storageHealth = await inspectStorageHealth(record.filePath)
+    } catch (error) {
+      storageHealth = {
+        status: 'unreadable',
+        revision: null,
+        error: error instanceof Error ? error.message : String(error),
+        backup: false,
+        quarantined: 0,
+      }
+    }
     return {
       ok: true,
       protocol: 1,
@@ -202,6 +215,7 @@ export const apply = (ctx, config = {}) => {
         filePath: record.filePath,
         storageDir: record.storageDir,
         source: record.storageSource,
+        health: storageHealth,
       },
       services,
       routes: [...mounted.routes],

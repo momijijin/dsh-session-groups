@@ -7,7 +7,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 - 不修改官方工作区注册表
 - 不写入 `workspace.json`
 
-当前版本：**0.3.0-beta.60**  
+当前版本：**0.3.0-beta.61**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 兼容性说明见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)：使用 `engines.dsh`、`dsh-0.2` 适配器选择器和运行时能力检测；版本矩阵显式注册，主流程不写版本 `switch`。
@@ -93,7 +93,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 设置 → 插件 → 添加插件 → 选择：
 
 ```text
-dsh-session-groups-0.3.0-beta.60.tgz
+dsh-session-groups-0.3.0-beta.61.tgz
 ```
 
 启用后完整重启 DSH（或按宿主提示刷新）。
@@ -103,7 +103,7 @@ dsh-session-groups-0.3.0-beta.60.tgz
 ```powershell
 $desktop = "$env:LOCALAPPDATA\Programs\DSH Desktop\DSH Desktop.exe"
 $cli = "$env:LOCALAPPDATA\Programs\DSH Desktop\resources\app\lib\desktop-cli.js"
-& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.60.tgz"
+& $desktop --expose-internals $cli plugin --profile desktop add --force "file:C:\path\to\dsh-session-groups-0.3.0-beta.61.tgz"
 ```
 
 安装后重启 DSH。安装命令会改 `desktop` profile，请先备份 `~/.dsh/profiles/desktop/package.json`。
@@ -172,7 +172,7 @@ control token，也不依赖 CLI。`controlApi` 必须是开启状态；`control
 Host 在每次分组 commit（原生工具或 HTTP）后通过 `/dsh-session-groups/events` 广播新 revision；浏览器收到后重新 load 对账。切回自由分组视图时也会主动重新 load。
 
 `doctor` 是只读兼容性诊断，可在 `controlApi` 关闭时调用；
-它返回宿主能力、适配器/版本范围、控制门禁、存储路径、服务存在性与已挂载路由。
+它返回宿主能力、适配器/版本范围、控制门禁、存储路径、存储健康（status/revision/.bak/quarantine）、服务存在性与已挂载路由。
 
 工具动作：
 
@@ -256,7 +256,7 @@ node scripts/session-groups-control.mjs doctor
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
-- 当前发布验证以 **437 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
+- 当前发布验证以 **439 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
 
 ## 开发
 
@@ -268,8 +268,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：437 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.73% lines / 82.23% branches / 88.25% functions）
+- `npm test`：439 项单元/契约测试
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.61% lines / 82.05% branches / 88.36% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH
@@ -281,7 +281,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.60.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.61.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 

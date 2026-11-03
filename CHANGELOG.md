@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.61 (2026-11-03)
+
+- Doctor now includes a read-only storage health report (`ok`/`missing`/`corrupt`/`unsupported-version`/`invalid`/`unreadable`, revision, `.bak`, quarantine count) without triggering the store’s quarantine or writing a new record. 439 tests; 93.61% lines / 82.05% branches / 88.36% functions; A+ and lifecycle pass.
+
 ## 0.3.0-beta.60 (2026-11-03)
 
 - Expose doctor through `GET /dsh-session-groups/control/doctor` and `scripts/session-groups-control.mjs doctor`; it is fenced but available while controlApi is off. The CLI exchanges the DSH web launch-token cookie before sending the plugin bearer token. Doctor now reports live capabilities plus startup capabilities. Tighten coverage accounting to `src/**` only (tests/scripts excluded). 437 tests; 93.73% lines / 82.23% branches / 88.25% functions; A+ and lifecycle pass.

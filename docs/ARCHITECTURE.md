@@ -93,6 +93,8 @@ src/index.js     Cordis host 入口
   - 本地 bearer token（0600）+ host fence；token 目前会预生成，合法 token 在插件内部放行 control 路由，但不绕过 Host 外层浏览器 fence
   - revision CAS、planHash、idempotency、审计日志
   - `change-hub` 在每次 commit 后广播 revision；浏览器通过 `/events` SSE 重新 load
+- `src/host/storage-health.js`
+  - doctor 的只读存储健康检查；不使用 store.load，不触发 quarantine 或写入
 - `src/host/tool.js`
   - 原生 `session_groups_control`；Host 进程内执行，不经过 HTTP fence
   - action 门禁：`controlApi` / `controlSessions` / `controlDestructive`；`doctor` 只读且不受 write gates 阻挡
