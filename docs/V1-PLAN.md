@@ -1,6 +1,6 @@
 # DSH 全局会话分组视图 — V1/V1.1 方案（已对齐）
 
-> **Historical design/plan (V1/V1.1).** V1.1 is delivered; the current implementation is `0.3.0-beta.64`. See `README.md`, `docs/ARCHITECTURE.md` and `docs/TEST-RESULTS.md` for current behavior.
+> **Historical design/plan (V1/V1.1).** V1.1 is delivered; the current implementation is `0.3.0-beta.68`. See `README.md`, `docs/ARCHITECTURE.md` and `docs/TEST-RESULTS.md` for current behavior.
 
 - 状态：V1 已交付（0.1.0）；**V1.1 已实现（0.2.4，2026-10-29）：左栏宽度、分组拖拽、会话搜索、官方侧栏排版对齐、单按钮视图切换/header 操作区/主题感知 surfaces、未归组列表虚拟化、拖拽行高插入占位与乐观 drop 提交**；待用户验收后才安装 desktop profile
 - 日期：2026-10-18（V1）；2026-10-28（V1.1 增补）；2026-10-29（0.2.3 虚拟化 patch；0.2.4 占位/乐观提交 patch）

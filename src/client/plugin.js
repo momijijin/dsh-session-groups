@@ -15,6 +15,7 @@ import { dictionaries, createTranslator, LOCALE_NS } from './locale.js'
 import { createFloatingLabel } from './floating-label.js'
 import { installStyles } from './css.js'
 import { createOptimisticQueue } from './optimistic.js'
+import { shouldShowLoading } from './load-mode.js'
 import {
   diagContext,
   diagEnabled,
@@ -178,11 +179,16 @@ export const createPlugin = () => {
   const commitOptimistic = (nextDocOrUpdater) => queue.commitOptimistic(nextDocOrUpdater)
 
   // --- document load ---------------------------------------------------------
-  const load = () => {
+  const load = ({ background = false } = {}) => {
     if (loadPromise !== null) return loadPromise
+    const showLoading = shouldShowLoading({ background, docState: store.getSnapshot().docState })
     loadPromise = (async () => {
-      store.dispatch('load-start')
+      if (showLoading) store.dispatch('load-start')
       let loadedOk = false
+      const fail = (code) => {
+        if (showLoading) store.dispatch('load-error', { code })
+        else store.dispatch('banner', { banner: { kind: 'error', code } })
+      }
       try {
         const result = await api.load()
         if (result.ok === true) {
@@ -196,9 +202,9 @@ export const createPlugin = () => {
           loadedOk = true
           return
         }
-        store.dispatch('load-error', { code: result.routeUnavailable ? 'route-unavailable' : result.code ?? 'load-failed' })
+        fail(result.routeUnavailable ? 'route-unavailable' : result.code ?? 'load-failed')
       } catch (error) {
-        store.dispatch('load-error', { code: 'load-failed' })
+        fail('load-failed')
         if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] load failed', error)
       } finally {
         loadPromise = null
@@ -233,7 +239,7 @@ export const createPlugin = () => {
     }
     refreshPending = false
     refreshForced = false
-    return load()
+    return load({ background: true })
   }
 
   const acceptExternalRevision = (revision) => {

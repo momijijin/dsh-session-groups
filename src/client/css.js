@@ -771,7 +771,7 @@ export const CSS = `
 .dsg-config-danger { border-color: var(--dsw-alias-state-danger, #f85149); color: var(--dsw-alias-state-danger, #f85149); }
 .dsg-config-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
 .dsg-config-control { display: inline-flex; align-items: center; gap: 4px; flex: none; }
-.dsg-config-info { width: 24px; height: 24px; padding: 0; color: var(--dsw-alias-label-tertiary, CanvasText); }
+.dsg-config-info { width: 24px; height: 24px; padding: 0; color: var(--dsw-alias-label-tertiary, CanvasText); background: transparent; border-color: transparent; box-shadow: none; }
 .dsg-config-label { font-size: var(--dsg-font-13, 13px); line-height: 20px; color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-config-proof { font-size: var(--dsg-font-12, 12px); line-height: 18px; color: var(--dsw-alias-label-tertiary, CanvasText); }
 .dsg-skill-repair-copy { flex: 1; min-width: 180px; }

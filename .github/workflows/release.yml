@@ -1,0 +1,45 @@
+name: Release
+
+# Tag-only release. Normal branch pushes do not publish anything.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+
+      - name: Install dependencies
+        run: npm install --no-package-lock --no-audit --no-fund
+
+      - name: Verify release
+        run: |
+          npm test
+          npm run build
+          node --check lib/client.js
+          npm pack --dry-run
+
+      - name: Pack asset
+        run: npm pack
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            dsh-session-groups-*.tgz \
+            --title "dsh-session-groups ${GITHUB_REF_NAME#v}" \
+            --notes-file "docs/release-notes/v0.3.0-beta.68.md" \
+            --prerelease

@@ -1,16 +1,17 @@
-# 0.3.0-beta.64 测试结果
+# 0.3.0-beta.68 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.64`  
+版本：`0.3.0-beta.68`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 单元/契约测试：**442/442 PASS**
+- 本地候选 0.3.0-beta.68：**446/446 PASS**（新增 4 项后台刷新回归测试）
+- 0.3.0-beta.64 基线：**442/442 PASS**
 - Linux CI（Ubuntu Node 24）：**442/442 PASS**；build / coverage / `npm pack --dry-run` PASS；未运行真实 DSH UI
 - Core 纯函数测试：**29/29 PASS**
 - Node 内置 coverage：**93.49% lines / 81.99% branches / 88.40% functions**
-- A+ 隔离 Playwright：**PASS**
+- A+ 隔离 Playwright（.64 基线）：**PASS**；.65 本地候选待验证
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
 - 语法检查：通过

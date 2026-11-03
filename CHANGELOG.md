@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0-beta.65 (local candidate, not tagged)
+
+- Fix sidebar flash when an external revision (native tool / HTTP control) moves a session: a background refresh no longer dispatches `load-start` while a ready tree exists. The current tree stays mounted until the new document arrives; a background failure keeps the tree and reports a banner instead of replacing it with the error state.
+- Add `shouldShowLoading` regression coverage. 446 tests pass locally; local user/A+ verification pending. No tag or push yet.
+
 ## 0.3.0-beta.64 (2026-11-03)
 
 - Documentation: English README is the public default and Chinese lives in `README.zh.md`. Local tarball/CLI instructions moved out of the user install path; dshmarket is the intended user entry.
