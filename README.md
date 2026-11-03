@@ -253,7 +253,7 @@ npm pack
 ```
 
 - `npm test`：378 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 89.28% lines / 76.79% branches / 83.28% functions）
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 89.28% lines / 76.82% branches / 83.28% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH
@@ -272,6 +272,7 @@ npm pack
 ## 许可
 
 MIT，见 `LICENSE`。
+
 
 
 

@@ -6,7 +6,7 @@
 
 ## 0.3.0-beta.42 (2026-11-03)
 
-- Add `npm run check:coverage` using Node's built-in test coverage; current report is 89.28% lines, 76.79% branches and 83.28% functions (378 tests).
+- Add `npm run check:coverage` using Node's built-in test coverage; current report is 89.28% lines, 76.82% branches and 83.28% functions (378 tests).
 
 ## 0.3.0-beta.41 (2026-11-03)
 
@@ -223,6 +223,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

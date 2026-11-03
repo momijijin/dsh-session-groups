@@ -8,7 +8,7 @@
 
 - 单元/契约测试：**378/378 PASS**
 - Core 纯函数测试：**22/22 PASS**
-- Node 内置 coverage：**89.28% lines / 76.79% branches / 83.28% functions**
+- Node 内置 coverage：**89.28% lines / 76.82% branches / 83.28% functions**
 - A+ 隔离 Playwright：**PASS**
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
@@ -68,3 +68,4 @@ npm run test:isolated   # 需先启动隔离 web
 - 当前默认自动门禁是 `e2e/isolated.spec.mjs`。
 - `e2e/groups.spec.mjs` 是历史手工脚本，未纳入默认门禁。
 - 发布包 SHA256 以最终 `npm pack` 输出为准。
+
