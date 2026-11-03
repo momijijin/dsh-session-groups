@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.33 (2026-11-03)
+
+- Clarify reset-display copy, replace the search X with a neutral collapse chevron, and close the refresh convergence races: latest-revision tracking, deferred refresh during loads/optimistic writes, and forced reload on workspace return.
+
 ## 0.3.0-beta.32 (2026-11-02)
 
 - Add the Host SSE revision stream: native-tool and HTTP commits publish the new revision; browser clients refetch and reconcile. Switching back to the groups workspace now always reloads the Host snapshot.
@@ -179,6 +183,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

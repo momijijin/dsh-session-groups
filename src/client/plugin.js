@@ -82,7 +82,9 @@ export const createPlugin = () => {
   let bridge = null
   let debugProbe = false
   let changeSource = null
-  let pendingExternalReload = false
+  let refreshPending = false
+  let refreshForced = false
+  let latestSeenRevision = 0
   let storeSubscriptionDisposer = null
 
   const services = () => {
@@ -173,12 +175,14 @@ export const createPlugin = () => {
     if (loadPromise !== null) return loadPromise
     loadPromise = (async () => {
       store.dispatch('load-start')
+      let loadedOk = false
       try {
         const result = await api.load()
         if (result.ok === true) {
           debugProbe = result.debugProbe === true
           if (result.diagnostics === true && !diagEnabled()) initDiagnostics({ enabled: true })
           store.dispatch('load-success', { doc: result.doc, revision: result.revision, warning: result.warning })
+          loadedOk = true
           return
         }
         store.dispatch('load-error', { code: result.routeUnavailable ? 'route-unavailable' : result.code ?? 'load-failed' })
@@ -187,6 +191,13 @@ export const createPlugin = () => {
         if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] load failed', error)
       } finally {
         loadPromise = null
+        // A newer revision may have arrived while this read was in flight, or
+        // a refresh may have been deferred behind an optimistic write. Re-check
+        // against the just-loaded snapshot before declaring the view settled.
+        if (loadedOk && (refreshPending || latestSeenRevision > store.getSnapshot().revision)) {
+          const pendingForce = refreshForced
+          queueMicrotask(() => requestRefresh({ force: pendingForce }))
+        }
       }
     })()
     return loadPromise
@@ -197,20 +208,39 @@ export const createPlugin = () => {
     return load()
   }
 
+  const requestRefresh = ({ force = false } = {}) => {
+    const snapshot = store.getSnapshot()
+    if (loadPromise !== null || snapshot.docState === 'loading' || snapshot.optimistic) {
+      refreshPending = true
+      refreshForced = refreshForced || force
+      return loadPromise
+    }
+    if (!force && latestSeenRevision <= snapshot.revision) {
+      refreshPending = false
+      refreshForced = false
+      return null
+    }
+    refreshPending = false
+    refreshForced = false
+    return load()
+  }
+
   const acceptExternalRevision = (revision) => {
     if (!Number.isInteger(revision) || revision < 0) return
-    const snapshot = store.getSnapshot()
-    if (revision <= snapshot.revision) return
-    if (snapshot.optimistic) {
-      // A local optimistic write is still pending. Let it settle first; the
-      // store subscription below retries the load once that write is confirmed.
-      pendingExternalReload = true
-      return
-    }
-    if (snapshot.docState !== 'loading') retryLoad()
+    latestSeenRevision = Math.max(latestSeenRevision, revision)
+    if (revision <= store.getSnapshot().revision) return
+    requestRefresh()
   }
 
   const startChangeStream = () => {
+    if (storeSubscriptionDisposer === null) {
+      storeSubscriptionDisposer = store.subscribe(() => {
+        if (!refreshPending) return
+        const snapshot = store.getSnapshot()
+        if (snapshot.optimistic || snapshot.docState === 'loading') return
+        requestRefresh({ force: refreshForced })
+      })
+    }
     const EventSourceImpl = globalThis.EventSource
     if (typeof EventSourceImpl !== 'function' || changeSource !== null) return
     try {
@@ -225,15 +255,8 @@ export const createPlugin = () => {
       })
       changeSource.onopen = () => {
         // Reconnect recovery: catch revisions committed while the stream was down.
-        if (store.getSnapshot().docState === 'ready') retryLoad()
+        requestRefresh({ force: true })
       }
-      storeSubscriptionDisposer = store.subscribe(() => {
-        if (!pendingExternalReload) return
-        const snapshot = store.getSnapshot()
-        if (snapshot.optimistic || snapshot.docState === 'loading') return
-        pendingExternalReload = false
-        retryLoad()
-      })
     } catch {
       changeSource = null
     }
@@ -337,10 +360,9 @@ export const createPlugin = () => {
     }
     if (next === 'groups') {
       registerOccupant()
-      // Re-read the Host document every time the groups view becomes active:
-      // native-tool/HTTP commits may have advanced the revision while the
-      // official workspace view was displayed.
-      retryLoad()
+      // Re-read the Host document every time the groups view becomes active.
+      // requestRefresh defers while an optimistic write is still unsettled.
+      requestRefresh({ force: true })
     } else {
       disposeOccupant()
     }
@@ -678,7 +700,9 @@ export const createPlugin = () => {
         storeSubscriptionDisposer = null
         changeSource?.close?.()
         changeSource = null
-        pendingExternalReload = false
+        refreshPending = false
+        refreshForced = false
+        latestSeenRevision = 0
         if (typeof perfDisposer === 'function') perfDisposer()
         perfDisposer = null
         if (typeof styleDisposer === 'function') styleDisposer()

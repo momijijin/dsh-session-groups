@@ -279,6 +279,7 @@ export const renderHeaderIcon = (h, name, size = 16) => {
 /** Small UI glyphs that are not part of the group icon set. */
 export const UI_GLYPHS = Object.freeze({
   chevronDown: 'M4 6.2l4 4 4-4',
+  chevronUp: 'M4 9.8l4-4 4 4',
   chevronRight: 'M6.2 4l4 4-4 4',
   plus: 'M8 3.2v9.6M3.2 8h9.6',
   more: 'M3.4 8h.01M8 8h.01M12.6 8h.01',

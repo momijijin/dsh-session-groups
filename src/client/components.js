@@ -1815,8 +1815,8 @@ const Header = ({ store, handlers, sessionsById, workspaces, archivedSessionIds,
             onDismiss: () => setSearchOpen(false),
           }),
           IconButton({
-            label: t('search.close'),
-            glyph: 'close',
+            label: t('search.collapse'),
+            glyph: 'chevronUp',
             testId: 'session-groups-search-close',
             onClick: () => setSearchOpen(false),
           })

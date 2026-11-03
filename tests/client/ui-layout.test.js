@@ -213,7 +213,12 @@ test('0.3.0 beta exposes onboarding, reset layout and opaque status popovers', (
   assert.match(CSS, /\.dsg-empty-state \{/)
   assert.match(CSS, /\.dsg-running-popover \{[^}]*background:\s*var\(--dsw-alias-bg-layer-1/s)
   assert.equal(zh['onboarding.title'], '欢迎使用自由分组')
-  assert.equal(zh['about.resetLayout'], '恢复默认布局')
+  assert.match(components, /search\.collapse/)
+  assert.match(components, /glyph: 'chevronUp'/)
+  assert.equal(zh['about.resetLayout'], '恢复默认显示')
+  assert.match(zh['about.scope'], /不会删除或调整分组/)
+  assert.match(zh['about.scope'], /会话归属/)
+  assert.match(en['about.scope'], /does not delete or change groups/i)
   assert.equal(en['onboarding.title'], 'Welcome to Free groups')
 })
 

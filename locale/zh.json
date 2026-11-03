@@ -96,9 +96,9 @@
   "empty.groupsTitle": "还没有分组",
   "empty.groupsBody": "新建一个分组，然后把会话拖进来。",
   "empty.createGroup": "新建第一个分组",
-  "about.resetLayout": "恢复默认布局",
-  "about.scope": "仅改变显示，不改会话与工作区",
-  "toast.layoutReset": "布局已恢复默认",
+  "about.resetLayout": "恢复默认显示",
+  "about.scope": "仅重置侧栏宽度、分组展开状态和弹窗位置；不会删除或调整分组、会话归属、工作区配置",
+  "toast.layoutReset": "显示布局已恢复默认",
   "flat.title": "会话（扁平列表）",
   "rail.expand": "打开侧边栏（分组视图）",
   "rail.groups": "分组",
@@ -124,7 +124,7 @@
   "search.placeholder": "搜索会话…",
   "search.results": "搜索结果",
   "search.empty": "没有匹配的会话",
-  "search.close": "关闭搜索",
+  "search.collapse": "收起搜索",
   "search.archivedDisabled": "已归档会话不可打开",
   "color.blue": "蓝色",
   "color.green": "绿色",
@@ -260,4 +260,5 @@
   "config.controlSessions": "允许会话操作",
   "config.controlSessionsHint": "允许会话改名和归档状态切换。"
 }
+
 

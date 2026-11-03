@@ -96,9 +96,9 @@
   "empty.groupsTitle": "No groups yet",
   "empty.groupsBody": "Create a group, then drag sessions into it.",
   "empty.createGroup": "Create first group",
-  "about.resetLayout": "Reset layout",
-  "about.scope": "Display only — sessions and workspaces are unchanged",
-  "toast.layoutReset": "Layout reset to defaults",
+  "about.resetLayout": "Reset display",
+  "about.scope": "Resets only sidebar width, group expansion, and dialog positions. It does not delete or change groups, session ownership, or workspace configuration.",
+  "toast.layoutReset": "Display layout reset to defaults",
   "flat.title": "Sessions (flat list)",
   "rail.expand": "Open sidebar (group view)",
   "rail.groups": "Groups",
@@ -124,7 +124,7 @@
   "search.placeholder": "Search sessions…",
   "search.results": "Search results",
   "search.empty": "No matching sessions",
-  "search.close": "Close search",
+  "search.collapse": "Collapse search",
   "search.archivedDisabled": "Archived sessions cannot be opened",
   "color.blue": "Blue",
   "color.green": "Green",
@@ -260,4 +260,5 @@
   "config.controlSessions": "Allow session operations",
   "config.controlSessionsHint": "Allow session rename and archive-state changes."
 }
+
 

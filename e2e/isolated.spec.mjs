@@ -562,7 +562,13 @@ try {
   await page.waitForTimeout(1000)
   await page.waitForFunction((name) => document.body.innerText.includes(name), hiddenName, { timeout: 6000 })
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh')
+  // Rapid successive external revisions must converge on the newest snapshot.
+  const rapidBase = `快速刷新 ${Date.now()}`
+  await externalRename(`${rapidBase}-1`)
+  await externalRename(`${rapidBase}-2`)
+  await page.waitForFunction((name) => document.body.innerText.includes(name), `${rapidBase}-2`, { timeout: 6000 })
+
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)
