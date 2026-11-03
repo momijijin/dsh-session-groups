@@ -21,6 +21,7 @@ const ACTIONS = [
   'resolve',
   'plan',
   'apply',
+  'doctor',
   'session_inspect',
   'session_rename',
   'session_archive',
@@ -65,6 +66,7 @@ const toolOutput = (value) => {
 export const createControlTool = (options) => {
   const { store, getService } = options
   const onCommit = typeof options.onCommit === 'function' ? options.onCommit : () => {}
+  const doctorReport = typeof options.doctorReport === 'function' ? options.doctorReport : null
   const enabled = () => options.controlApiEnabled() === true
   const sessionsEnabled = () => enabled() && options.controlSessionsEnabled() === true
   const destructive = () => options.controlDestructiveEnabled() === true
@@ -100,6 +102,14 @@ export const createControlTool = (options) => {
   const execute = async (args) => {
     const action = args?.action
     if (!ACTIONS.includes(action)) return failure('invalid-action', `action must be one of: ${ACTIONS.join(', ')}`)
+    if (action === 'doctor') {
+      if (doctorReport === null) return failure('doctor-unavailable', 'compatibility doctor is not configured')
+      try {
+        return await doctorReport()
+      } catch (error) {
+        return failure('doctor-failed', error instanceof Error ? error.message : String(error))
+      }
+    }
     if (!enabled()) return failure('control-disabled', 'enable controlApi before using session_groups_control')
 
     if (action === 'state') {
@@ -276,6 +286,7 @@ export const createControlTool = (options) => {
     description:
       'Read and safely change the DSH free-groups sidebar and session title/archive state in-process. ' +
       'Use action=state or resolve first; use plan then apply with the returned planHash and baseRevision for group writes. ' +
+      'Use action=doctor to inspect host compatibility, gates, storage and service availability. ' +
       'Session actions require an explicit live sessionId. Destructive group deletion requires controlDestructive.',
     parameters: controlParameters,
     output: {

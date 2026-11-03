@@ -95,7 +95,7 @@ src/index.js     Cordis host 入口
   - `change-hub` 在每次 commit 后广播 revision；浏览器通过 `/events` SSE 重新 load
 - `src/host/tool.js`
   - 原生 `session_groups_control`；Host 进程内执行，不经过 HTTP fence
-  - action 门禁：`controlApi` / `controlSessions` / `controlDestructive`
+  - action 门禁：`controlApi` / `controlSessions` / `controlDestructive`；`doctor` 只读且不受 write gates 阻挡
   - 分组写走同一套 core control + CAS；session 动作走 Host registry
 - `src/client/skill-repair.js`
   - `plugins.bundle.config` 第一层设置卡

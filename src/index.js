@@ -30,8 +30,9 @@ import { createStore } from './host/store.js'
 import { createChangeHub } from './host/change-hub.js'
 import { removeManagedSkill, repairManagedSkill } from './host/skill-install.js'
 import { createControlTool } from './host/tool.js'
-import { HOST_REQUIRED, compatibilityReport, detectHostCapabilities } from './adapters/dsh-capabilities.js'
+import { HOST_REQUIRED, SUPPORTED_DSH_RANGE, compatibilityReport, detectHostCapabilities } from './adapters/dsh-capabilities.js'
 import { resolveDshVersion, selectDshAdapter } from './adapters/dsh-selector.js'
+import { PLUGIN_VERSION } from './shared/constants.js'
 
 /** Cordis function-plugin name (matches the bundle patch row id). */
 export const name = 'dsh-session-groups'
@@ -158,6 +159,48 @@ export const apply = (ctx, config = {}) => {
     skillDshHome: dshHome,
     changeHub,
   })
+  const doctorReport = async () => {
+    const serviceNames = ['sessions', 'workspaces', 'workspaceRegistry', 'sessionTitle', 'tools', 'locale', 'configForms']
+    const services = {}
+    for (const serviceName of serviceNames) {
+      try {
+        services[serviceName] = ctx.get?.(serviceName) !== undefined
+      } catch {
+        services[serviceName] = false
+      }
+    }
+    const probe = probeConnection(ctx)
+    return {
+      ok: true,
+      protocol: 1,
+      plugin: {
+        name,
+        version: PLUGIN_VERSION,
+        supportedRange: SUPPORTED_DSH_RANGE,
+        adapter: selectedAdapter?.id ?? null,
+      },
+      host: {
+        declaredVersion,
+        capabilities: hostCapabilities,
+        required: [...requiredHost],
+        compatibility: hostCompatibility,
+        connection: probe.connection === undefined ? 'deferred' : 'present',
+        webServerPort: Number.isInteger(ctx?.webServer?.port) ? ctx.webServer.port : null,
+      },
+      gates: {
+        controlApi: readFlag('controlApi'),
+        controlDestructive: readFlag('controlDestructive'),
+        controlSessions: readFlag('controlSessions'),
+      },
+      storage: {
+        filePath: record.filePath,
+        storageDir: record.storageDir,
+        source: record.storageSource,
+      },
+      services,
+      routes: [...mounted.routes],
+    }
+  }
   const registerControlTool = (toolCtx) => {
     if (toolCtx?.tools === undefined || typeof toolCtx.tools.register !== 'function') return
     const effect = toolCtx.effect ?? ctx.effect
@@ -177,6 +220,7 @@ export const apply = (ctx, config = {}) => {
             controlSessionsEnabled: () => readFlag('controlSessions'),
             controlDestructiveEnabled: () => readFlag('controlDestructive'),
             onCommit: (revision, source) => changeHub.publish(revision, source),
+            doctorReport,
           }),
         ),
       'dsh-session-groups: register control tool',

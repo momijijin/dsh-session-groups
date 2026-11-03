@@ -53,7 +53,37 @@ test('apply registers the native control tool when the tools service is present'
   apply(ctx, { filePath: temp.filePath })
   assert.equal(registered?.name, 'session_groups_control')
   assert.equal(registered.parameters.required.includes('action'), true)
+  assert.equal(registered.parameters.properties.action.enum.includes('doctor'), true)
   assert.equal(typeof registered.execute, 'function')
+})
+
+test('native control tool doctor reports live host compatibility, gates, storage and routes', async (t) => {
+  const temp = await makeTempStore()
+  t.after(temp.cleanup)
+  let registered = null
+  const tools = {
+    register(tool) {
+      registered = tool
+      return () => {
+        registered = null
+      }
+    },
+  }
+  const { ctx } = makeContext({ services: { tools } })
+  apply(ctx, { filePath: temp.filePath })
+  const report = await registered.execute({ action: 'doctor' })
+  assert.equal(report.ok, true)
+  assert.equal(report.protocol, 1)
+  assert.equal(typeof report.plugin.version, 'string')
+  assert.equal(report.plugin.supportedRange, '>=0.2.0-rc.2 <0.3.0')
+  assert.equal(report.host.compatibility.supported, true)
+  assert.equal(report.host.capabilities.webServerRegister, true)
+  assert.equal(report.gates.controlApi, false)
+  assert.equal(report.gates.controlDestructive, false)
+  assert.equal(report.gates.controlSessions, false)
+  assert.equal(report.storage.filePath, temp.filePath)
+  assert.equal(typeof report.storage.source, 'string')
+  assert.equal(report.routes.includes('/dsh-session-groups/load'), true)
 })
 
 test('apply() returns void synchronously and mounts the host routes inside ctx.effect', async (t) => {

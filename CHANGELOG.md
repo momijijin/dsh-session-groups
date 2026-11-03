@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0-beta.59 (2026-11-03)
+
+- Add a read-only `session_groups_control` action `doctor`: live host capability/compatibility, adapter/range, control gates, storage paths, service presence and mounted routes. It is available even when controlApi is off so a broken upgrade can be diagnosed before enabling writes. 434 tests; A+ pass.
+
 ## 0.3.0-beta.58 (2026-11-03)
 
 - Final meaningful coverage round: control HTTP request matrix now covers unsupported media, oversized bodies, invalid JSON/body shapes, invalid revisions, missing/stale plan hashes, idempotency-key reuse and unsupported/IO document states. 432 tests; coverage 93.69% lines / 81.19% branches / 87.52% functions.

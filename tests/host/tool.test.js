@@ -57,9 +57,27 @@ test('native tool exposes a raw registry-ready definition without HTTP', () => {
   assert.equal(tool.name, TOOL_NAME)
   assert.equal(tool.parameters.type, 'object')
   assert.equal(tool.parameters.required.includes('action'), true)
+  assert.equal(tool.parameters.properties.action.enum.includes('doctor'), true)
   assert.equal(typeof tool.execute, 'function')
   assert.equal(tool.output.schema.type, 'object')
   assert.equal(tool.output.render({}, { ok: true }).at(0).type, 'text')
+})
+
+test('native tool doctor returns the injected live compatibility report and can diagnose a closed control API', async () => {
+  const report = {
+    ok: true,
+    protocol: 1,
+    plugin: { version: 'test' },
+    host: { compatibility: { supported: true, missing: [] } },
+    gates: { controlApi: false, controlDestructive: false, controlSessions: false },
+  }
+  const { tool } = setup({ controlApiEnabled: () => false, doctorReport: async () => report })
+  assert.deepEqual(await tool.execute({ action: 'doctor' }), report)
+
+  const unavailable = setup()
+  const missing = await unavailable.tool.execute({ action: 'doctor' })
+  assert.equal(missing.ok, false)
+  assert.equal(missing.code, 'doctor-unavailable')
 })
 
 test('native tool reads state and resolves full paths', async () => {
