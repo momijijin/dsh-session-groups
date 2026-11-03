@@ -37,6 +37,7 @@ A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 - 拖拽自动展开、分组边缘占位、弹窗拖动/缩放
 - 外部 commit 通过 SSE 触发刷新
 - 同浏览器上下文两个页面均收到外部 commit 的 SSE 刷新
+- 两页面在同一 baseRevision 上并发 commit：一个 200、一个 409，双方收敛到胜者
 - EventSource 路由强制断开后恢复，onopen 触发强制 reload
 - change stream adapter 单测：revision 回调、onopen 重连回调、关闭清理
 - 中文 locale 隔离页面：插件设置/标题/选项文案为中文，未出现英文控件回退

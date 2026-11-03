@@ -544,6 +544,26 @@ try {
       return body.revision
     }, name)
 
+  const prepareRename = (targetPage) =>
+    targetPage.evaluate(async () => {
+      const loaded = await fetch('/dsh-session-groups/load').then((response) => response.json())
+      if (!Array.isArray(loaded.doc?.groups) || loaded.doc.groups.length === 0) {
+        throw new Error('no group for concurrent commit')
+      }
+      return { baseRevision: loaded.revision, doc: loaded.doc }
+    })
+
+  const commitPreparedRename = (targetPage, prepared, name) =>
+    targetPage.evaluate(async ({ baseRevision, doc, name: nextName }) => {
+      doc.groups[0].name = nextName
+      const response = await fetch('/dsh-session-groups/commit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ baseRevision, doc }),
+      })
+      return { status: response.status, body: await response.json() }
+    }, { ...prepared, name })
+
   const liveName = `SSE 外部刷新 ${Date.now()}`
   await externalRename(liveName)
   await page.waitForFunction((name) => document.body.innerText.includes(name), liveName, { timeout: 6000 })
@@ -652,6 +672,30 @@ try {
       page.waitForFunction((name) => document.body.innerText.includes(name), multiWindowTitle, { timeout: 8000 }),
       secondPage.waitForFunction((name) => document.body.innerText.includes(name), multiWindowTitle, { timeout: 8000 }),
     ])
+
+    // Both windows read the same revision before committing. Exactly one CAS
+    // may win; the other must receive 409, and both must converge on the winner.
+    const preparedOne = await prepareRename(page)
+    const preparedTwo = await prepareRename(secondPage)
+    const concurrentA = `并发 A ${Date.now()}`
+    const concurrentB = `并发 B ${Date.now()}`
+    const [resultA, resultB] = await Promise.all([
+      commitPreparedRename(page, preparedOne, concurrentA),
+      commitPreparedRename(secondPage, preparedTwo, concurrentB),
+    ])
+    const statuses = [resultA.status, resultB.status].sort((left, right) => left - right)
+    if (statuses[0] !== 200 || statuses[1] !== 409) {
+      throw new Error(`concurrent CAS expected one 200 and one 409, got ${JSON.stringify({ a: resultA, b: resultB })}`)
+    }
+    const winner = resultA.status === 200 ? concurrentA : concurrentB
+    const final = await page.evaluate(() => fetch('/dsh-session-groups/load').then((response) => response.json()))
+    if (final.doc.groups[0].name !== winner) {
+      throw new Error(`concurrent winner not persisted: expected ${winner}, got ${final.doc.groups[0].name}`)
+    }
+    await Promise.all([
+      page.waitForFunction((name) => document.body.innerText.includes(name), winner, { timeout: 8000 }),
+      secondPage.waitForFunction((name) => document.body.innerText.includes(name), winner, { timeout: 8000 }),
+    ])
   } finally {
     await secondPage.close().catch(() => {})
   }
@@ -680,7 +724,7 @@ try {
     await reconnectPage.close().catch(() => {})
   }
 
-  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, multi-window SSE, forced reconnect, session actions, clipboard copy, search, first-layer settings, localized title, option details, live diagnostics HUD, switch interaction and destructive confirmation')
+  console.log('PASS: isolated onboarding, search, archive filter, drag auto-expand, group edges, dialog geometry, status buttons, head insertion, collapse/expand, 264px, dark, host rail, external SSE refresh, workspace round-trip refresh, rapid revision convergence, multi-window SSE, concurrent CAS, forced reconnect, session actions, clipboard copy, search, first-layer settings, localized title, option details, live diagnostics HUD, switch interaction and destructive confirmation')
 } catch (error) {
   await screenshot()
   console.error(`FAIL: ${error instanceof Error ? error.message : String(error)}`)

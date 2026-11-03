@@ -2,7 +2,7 @@
 
 ## 0.3.0-beta.63 (2026-11-03)
 
-- Doctor CLI now acts as a compatibility gate: a 200 report with `host.compatibility.supported === false` exits non-zero while preserving the JSON report for post-upgrade scripts. 442 tests; A+ passes.
+- Doctor CLI now acts as a compatibility gate: a 200 report with `host.compatibility.supported === false` exits non-zero while preserving the JSON report for post-upgrade scripts. A+ now also exercises two-window concurrent CAS (one 200, one 409, convergence). 442 tests; A+ passes.
 
 ## 0.3.0-beta.62 (2026-11-03)
 
