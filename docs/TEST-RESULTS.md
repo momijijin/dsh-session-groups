@@ -8,7 +8,7 @@
 
 - 单元/契约测试：**392/392 PASS**
 - Core 纯函数测试：**22/22 PASS**
-- Node 内置 coverage：**89.44% lines / 77.03% branches / 83.76% functions**
+- Node 内置 coverage：**89.48% lines / 77.02% branches / 83.78% functions**
 - A+ 隔离 Playwright：**PASS**
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
