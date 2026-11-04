@@ -35,7 +35,7 @@ DSH 的 plugin client 是 **单个客户端 bundle**，没有为插件准备 `#i
   community DSH NEXT (-next channel)
 ```
 
-包级声明是 `package.json` 的 `engines.dsh`；插件管理器使用同一 DSH 兼容性检查。
+包级声明是 `package.json` 的 `engines.dsh`；插件管理器使用同一 DSH 兼容性检查。官方 `@deepseek-ai/*` 运行时包（包括 `@deepseek-ai/schemastery`）使用 `peerDependencies`，由 DSH 宿主提供；插件安装时不再携带重复副本。
 
 **兼容目标不是桌面壳名字。** 壳提供窗口和安装容器，插件实际依赖的是壳内置的 DSH core、Host service 和 client slot。官方版和社区 Stable 可能内置不同 DSH 版本或不同插件组合，因此必须分别实测。
 
