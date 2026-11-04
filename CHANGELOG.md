@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0-beta.69 (local batch, no release tag)
+
+- Copy: split the shared move dialog title into `dialog.moveGroup` and `dialog.moveSession`; describe grouping as a plugin-owned layer that leaves official workspace membership and logs unchanged.
+- AI docs: add copy-paste prompts for batch project/group creation and rename-then-assign.
+- CI: track `package-lock.json`, use `npm ci`, and add Windows/macOS/Linux Node 24 checks with coverage on Ubuntu only.
+- Data: validate the backup record read-only (`backupStatus`/`backupRevision`/`backupError`).
+- Settings: make `controlSessions` depend on `controlApi` and visually nest it under the API switch.
+- Market: add a 180×180 icon and validated storefront YAML. No release tag; Release stays deferred until a stable beta is chosen.
+
+## 0.3.0-beta.68 (2026-11-03)
+
+- Fix the AI/HTTP external-revision refresh so the ready tree is not replaced with a loading placeholder.
+- Make the settings info icon transparent.
+- Add English README default, Chinese `README.zh.md`, platform verification matrix, isolated A+ evidence, and tag-only release workflow. 446 tests; A+ pass; release published.
+
 ## 0.3.0-beta.65 (local candidate, not tagged)
 
 - Fix sidebar flash when an external revision (native tool / HTTP control) moves a session: a background refresh no longer dispatches `load-start` while a ready tree exists. The current tree stays mounted until the new document arrives; a background failure keeps the tree and reports a banner instead of replacing it with the error state.

@@ -49,13 +49,14 @@ git branch -d feature/<slug>
 
 ### 3.1 在 dev 上准备
 
-1. 更新版本号，四处保持一致：
+1. 更新版本号，五处保持一致：
    - `package.json`
    - `dsh.plugin.json`
    - `src/shared/constants.js`
+   - `package-lock.json`（`npm install --package-lock-only`）
    - 当前文档中的版本引用
 2. 更新 `CHANGELOG.md`。
-3. 新建或更新 `docs/release-notes/v<version>.md`。
+3. 仅当这一批确定要发 Release 时，才新建或更新 `docs/release-notes/v<version>.md`。
 4. 运行：
    ```bash
    npm test
@@ -65,6 +66,14 @@ git branch -d feature/<slug>
    npm pack --dry-run
    ```
 5. UI/行为改动必须有用户本地验收或对应 A+ 证据。
+
+### 3.1.1 版本号消费策略
+
+- **每个改动批次消费一个新的 beta 版本号**，即使这一批不打 tag、不触发 Release。
+- 未发布的版本号不回收、不复用；后续批次继续顺延。
+- 只有用户选定一个“认为稳定可推出”的 beta 时，才走 3.2 合并到 main 并打版本 tag。
+- 中间跳过的版本号允许永久没有 tag/Release；它们代表真实的本地改动批次，不是空洞号。
+- Release workflow 只接受 `v<major>.<minor>.<patch>[-prerelease]`；`archive/*` 永不触发。
 
 ### 3.2 环形合并到 main
 

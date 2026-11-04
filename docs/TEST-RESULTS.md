@@ -1,12 +1,12 @@
-# 0.3.0-beta.68 测试结果
+# 0.3.0-beta.69 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.68`  
+版本：`0.3.0-beta.69`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 本地候选 0.3.0-beta.68：**447/447 PASS**（新增 4 项后台刷新回归测试）
+- 本地候选 0.3.0-beta.69：**447/447 PASS**（新增 4 项后台刷新回归测试）
 - 0.3.0-beta.64 基线：**442/442 PASS**
 - Linux CI（Ubuntu Node 24）：**442/442 PASS**；build / coverage / `npm pack --dry-run` PASS；未运行真实 DSH UI
 - Core 纯函数测试：**29/29 PASS**
