@@ -730,6 +730,13 @@ test('0.3.0-beta.71 group menu supports roving keyboard focus', () => {
 })
 
 
+test('0.3.0-beta.73 ungrouped scroll caches layout reads', () => {
+  assert.match(componentUngrouped, /scheduleScroll/)
+  assert.match(componentUngrouped, /measureLayout/)
+  assert.match(componentUngrouped, /ResizeObserver/)
+  assert.match(componentUngrouped, /addEventListener\('scroll', scheduleScroll, \{ passive: true \}\)/)
+})
+
 test('0.2.9 delete group: destination picker, empty direct path and move-and-delete footer', () => {
   // Group menu keeps the delete entry and the color entry now says 修改颜色/Change color.
   assert.match(sessionMenu, /t\('group\.delete'\)/)
