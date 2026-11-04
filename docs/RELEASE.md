@@ -2,7 +2,7 @@
 
 - 版本：`0.3.0-beta.68`
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：单元/契约测试 446/446；本地候选；A+ 隔离与真实桌面回归待用户执行
+- 状态：单元/契约测试 447/447；A+ 隔离回归通过；真实桌面回归待用户执行
 - 范围：自由分组、跨工作区分组、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、Fork/Copy ID、第一层设置和配置安全
 - 发布包：`dsh-session-groups-0.3.0-beta.68.tgz`
 
@@ -19,7 +19,7 @@
 
 - 主记录损坏时先 quarantine；有有效 `.bak` 时自动恢复上一 revision。
 - 无有效 `.bak` 时保持空分组启动，原文件不删除。
-- 新增只读 storage health：`ok/missing/corrupt/unsupported-version/invalid/unreadable`、revision、backup、quarantine 数量。
+- 新增只读 storage health：`ok/missing/corrupt/unsupported-version/invalid/unreadable`、revision、backupStatus/backupRevision/backupError、quarantine 数量。
 - 增加双窗口同 `baseRevision` 并发 CAS 的 A+ 场景：一个 200、一个 409，双方收敛。
 
 ### 文档与发布
@@ -27,7 +27,7 @@
 - README 默认英文，中文移至 `README.zh.md`。
 - README、ARCHITECTURE、COMPATIBILITY、RELEASE、TEST-RESULTS 与 0.3.0-beta.68 对齐。
 - 历史 V1/V1.1 的 CONTRACTS、TEST-PLAN、V1-PLAN、GATE0-SUMMARY、SPIKE 已加历史声明，避免被误读为当前状态。
-- 当前发布验证：446/446 单元/契约；A+ 隔离与真实桌面回归待用户执行。
+- 当前发布验证：447/447 单元/契约；A+ 隔离回归通过；真实桌面回归待用户执行。
 - 当前 beta 通过本地 tarball 分发；dshmarket 目录条目尚未发布。
 
 ## 2. 构建与测试
@@ -42,7 +42,7 @@ npm pack
 
 预期：
 
-- `npm test`：446/446 PASS
+- `npm test`：447/447 PASS
 - 构建：`lib/client.js`
 - 包：`dsh-session-groups-0.3.0-beta.68.tgz`
 
@@ -159,7 +159,7 @@ npm run test:isolated
 
 发布前必须确认：
 
-- [ ] `npm test` 446/446
+- [ ] `npm test` 447/447
 - [ ] `npm run check:all`
 - [ ] `node --check lib/client.js`
 - [ ] `npm pack` 包含 README、LICENSE、CHANGELOG、locale
@@ -183,7 +183,7 @@ npm run test:isolated
 - 搜索最多 20 条
 - 宽度覆盖依赖宿主侧栏 DOM，失败时 fail-soft
 - 对话框拖动/缩放没有键盘操作
-- 0.3.0-beta.68 为本地候选；A+ 隔离与真实桌面回归待用户执行
+- 0.3.0-beta.68 为本地候选；A+ 隔离回归通过；真实桌面回归待用户执行
 - 完整历史 `groups.spec.mjs` 未纳入默认门禁，当前自动化入口是 `isolated.spec.mjs`
 - dshmarket 目录条目尚未发布，当前 beta 使用本地 tarball 或 GitHub Release
 
