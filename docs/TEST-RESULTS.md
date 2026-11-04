@@ -1,12 +1,12 @@
-# 0.3.0-beta.73 测试结果
+# 0.3.0-beta.74 测试结果
 
 日期：2026-11-04  
-版本：`0.3.0-beta.73`  
+版本：`0.3.0-beta.74`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 本地候选 0.3.0-beta.73：**459/459 PASS**（G6a a11y + G6b 维护性拆分 + 性能热路径回归）
+- 本地候选 0.3.0-beta.74：**459/459 PASS**（G6a a11y + G6b 维护性拆分 + 性能热路径 + 包图标/标题修正回归）
 - 0.3.0-beta.64 基线：**442/442 PASS**
 - Linux CI（Ubuntu Node 24）：**442/442 PASS**；build / coverage / `npm pack --dry-run` PASS；未运行真实 DSH UI
 - Core 纯函数测试：**29/29 PASS**
@@ -27,6 +27,7 @@
 - 真实模型原生工具（隔离实例）：**PASS**，session log 记录 `tool/call` / `tool/result`，返回 `protocol: 1` 和成功 state
 
 - 跨进程锁：两个独立 Node 进程竞争同一记录时一个成功、一个 conflict；过期锁自动回收；活跃锁超时返回 `store-busy`
+- 包图标：`package.json` 根部 `icon` + `assets/icon-180.png` 打包，A+ 验证插件管理器实际渲染 data URL；英文标题统一为 Free Groups。
 - A11y：对话框有 `aria-labelledby` 标题、初始/返回焦点、Tab 焦点陷阱、Escape；标题栏和右下 resizer 支持键盘移动/缩放；分组菜单支持 Arrow/Home/End。A+ 键盘路径 PASS
 - 性能：spinner 只旋转外层 transform，弧线不再逐帧重绘；会话订阅先裁到主会话 + 当前 retained 子代理；未归组滚动只在挂载/resize 时读取布局。
 - 维护性拆分：`components.js` 3051→1366 行；`routes.js` 1040→520 行；客户端模块、route-contract 和 control-routes 均有完整测试与 A+ 回归
@@ -52,7 +53,7 @@ A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 - 快速连续 revision 收敛
 - 会话菜单无 Pin；Copy Session ID 写入真实剪贴板并显示 toast
 - hover archive 控件存在
-- 第一层插件设置卡、本地化 `Free groups` 标题
+- 第一层插件设置卡、本地化 `Free Groups` 标题
 - 详情 Tooltip 打开
 - 标准 Switch 交互；diagnostics 开关热启动/关闭 HUD
 - `controlDestructive` 打开前出现确认，取消后仍保持关闭
