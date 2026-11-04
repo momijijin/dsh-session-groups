@@ -1,9 +1,9 @@
 # Changelog
 
-## 0.3.0-beta.73 (local batch, no release tag)
+## 0.3.0-beta.73 (2026-11-04)
 
 - Performance: rotate only the spinner wrapper so the static SVG arc stays compositor-friendly; narrow the session subscription to main rows plus the retained current subagent; cache the ungrouped list offset on mount/resize instead of reading layout during every scroll frame.
-- Verification: 459 unit/contract tests and isolated A+ pass. No tag or Release.
+- Verification: 459 unit/contract tests and isolated A+ pass. Stable beta selected for release.
 
 ## 0.3.0-beta.72 (local batch, no release tag)
 

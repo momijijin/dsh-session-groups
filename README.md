@@ -301,7 +301,7 @@ npm pack
 ```
 
 - `npm test`: 459 unit/contract tests;
-- `npm run check:coverage`: Node built-in coverage (currently about 93.63% lines / 82.24% branches / 88.73% functions, `src/**` scope);
+- `npm run check:coverage`: Node built-in coverage (currently about 93.63% lines / 82.22% branches / 88.73% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;

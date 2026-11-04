@@ -10,7 +10,7 @@
 - 0.3.0-beta.64 基线：**442/442 PASS**
 - Linux CI（Ubuntu Node 24）：**442/442 PASS**；build / coverage / `npm pack --dry-run` PASS；未运行真实 DSH UI
 - Core 纯函数测试：**29/29 PASS**
-- Node 内置 coverage：**93.63% lines / 82.24% branches / 88.73% functions**
+- Node 内置 coverage：**93.63% lines / 82.22% branches / 88.73% functions**
 - A+ 隔离 Playwright（本地候选 .73）：**PASS**；使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，未写入真实 `~/.dsh`
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
