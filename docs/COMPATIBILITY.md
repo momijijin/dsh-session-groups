@@ -22,12 +22,38 @@ DSH 的 plugin client 是 **单个客户端 bundle**，没有为插件准备 `#i
 ## 当前支持线
 
 ```text
-DSH Desktop 2.0.18
-@deepseek-ai/dsh 0.2.1-rc.2
+主支持：@deepseek-ai/dsh 0.2.1-rc.2
 插件 engines.dsh: >=0.2.0-rc.2 <0.3.0
+
+支持目标：
+  community DSH Desktop Stable (stable channel)
+  official DeepSeek Harness desktop
+
+已验证：
+  community DSH Desktop Stable 2.0.18 (anywhere-labs)
+
+待独立回归：
+  official DeepSeek Harness desktop
+
+明确不官方支持、不承诺兼容：
+  community DSH Desktop Beta
+  community DSH NEXT (-next channel)
 ```
 
 包级声明是 `package.json` 的 `engines.dsh`；插件管理器使用同一 DSH 兼容性检查。
+
+**兼容目标不是桌面壳名字。** 壳提供窗口和安装容器，插件实际依赖的是壳内置的 DSH core、Host service 和 client slot。官方版和社区 Stable 可能内置不同 DSH 版本或不同插件组合，因此必须分别实测。
+
+## 桌面壳验证矩阵
+
+| 桌面端/通道 | 支持状态 | 内置 DSH | 是否发布门禁 |
+|---|---|---|---|
+| community DSH Desktop Stable 2.0.18（anywhere-labs） | 支持；已验证 | `@deepseek-ai/dsh` 0.2.1-rc.2 | 是 |
+| official DeepSeek Harness desktop | 目标支持；待独立回归 | 以实际安装包为准 | 待定 |
+| community DSH Desktop Beta (`DSH Desktop Beta`, `.dsh-beta`) | **不支持；不承诺兼容** | 可能不同 | 否 |
+| community DSH NEXT (`DSH NEXT`, `-next`) | **不支持；不承诺兼容** | 可能不同 | 否 |
+
+Beta 和 NEXT 是社区自己的实验通道。即使插件在某个 Beta/NEXT 构建里能加载，也不构成兼容承诺，不能替代 Stable 或官方桌面版的回归。
 
 ## 运行时检测
 
@@ -102,7 +128,7 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 
 ## 为什么优先能力检测
 
-- 没有真实的第二套宿主可以验证，写版本分支等于发布未测试代码。
+- 目前只有一个已验证的壳组合；在官方壳完成独立实例回归前，不为“壳名”写版本分支，写死分支等于发布未测试代码。
 - DSH 的扩展点本身是 service/slot 组合，能力检测比版本判断更精确。
 - 插件管理器已经承担版本范围拒绝；插件内部重复版本判断会制造双重真相源。
 
@@ -133,7 +159,7 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 ```text
 npm install
 语法检查
-442 项单元/契约测试
+442 项 → 459 项单元/契约测试
 客户端构建
 coverage gate
 npm pack --dry-run

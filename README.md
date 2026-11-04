@@ -4,15 +4,18 @@
 
 A free-form grouping layer over the shipped DSH Desktop workspace/session sidebar. Official workspace and session management remain authoritative: each session keeps its workspace membership and log, while this plugin stores a separate group assignment. A group can therefore contain sessions from different workspaces.
 
-- assigning a session to a group changes only this plugin's group record and its placement in the Free groups view;
+- assigning a session to a group changes only this plugin's group record and its placement in the Free Groups view;
 - official workspace membership, the workspace registry and session logs are never changed;
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
 - `workspace.json` is never written.
 
-Current version: **0.3.0-beta.73**  
-Tested baseline: DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
+Current version: **0.3.0-beta.74**  
+Primary support: **DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2** (`engines.dsh: >=0.2.0-rc.2 <0.3.0`)  
+Verified shell: **community DSH Desktop Stable 2.0.18 (anywhere-labs)**  
+Target shell: **official DeepSeek Harness desktop** — pending independent regression  
+Not supported or promised: **community DSH Desktop Beta** and **community DSH NEXT (`-next` channel)**
 
-See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the `engines.dsh` range, the `dsh-0.2` adapter selector and runtime capability checks.
+See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the support contract, the `engines.dsh` range, the `dsh-0.2` adapter selector and runtime capability checks.
 
 ### Platform support
 
@@ -28,11 +31,24 @@ Current verification status:
 
 The current CI is an Ubuntu Node-level gate, not a cross-platform certification. Treat Linux/macOS DSH UI support as experimental until a real host/UI pass exists. Ordinary users install through dshmarket; the local tarball and CLI are maintainer/debug paths only.
 
+Compatibility is defined by the bundled DSH core/API, not by the desktop shell name. The official and community desktop clients bundle their own DSH versions and plugin compositions; both supported desktop families must be tested separately against this plugin.
+
+Supported desktop scope:
+
+| Desktop | Status |
+|---|---|
+| community DSH Desktop **Stable** 2.0.18 | verified |
+| official DeepSeek Harness desktop | target; pending independent regression |
+| community DSH Desktop **Beta** | not supported; no compatibility promise |
+| community DSH **NEXT** (`-next` channel) | not supported; no compatibility promise |
+
+Beta and NEXT may happen to load the plugin, but their results are not a release gate and do not extend the support contract.
+
 ## Features
 
 ### View
 
-- switch between Free groups and the shipped Workspace view;
+- switch between Free Groups and the shipped Workspace view;
 - drag-resize the sidebar from 264px to 80% of the viewport (default 420px);
 - double-click the resize handle to restore the default width;
 - persist view mode, width, collapsed groups, archive filter and dialog geometry.
@@ -309,7 +325,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS;
 - build artifact: `lib/client.js`;
-- package: `dsh-session-groups-0.3.0-beta.73.tgz`;
+- package: `dsh-session-groups-0.3.0-beta.74.tgz`;
 - release steps: `docs/RELEASE.md`;
 - test summary: `docs/TEST-RESULTS.md`.
 

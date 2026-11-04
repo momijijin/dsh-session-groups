@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0-beta.74 (local batch, no release tag)
+
+- UI metadata: normalize the English display title to “Free Groups” and the onboarding title to “Welcome to Free Groups”.
+- Icon: declare `assets/icon-180.png` as the package-root icon and include it in the npm tarball, so DSH plugin manager can render it instead of the host default. The market YAML still points at the GitHub raw asset.
+- Verification: 459 unit/contract tests and isolated A+ (including a real package-icon DOM assertion) pass. No tag or Release.
+
 ## 0.3.0-beta.73 (2026-11-04)
 
 - Performance: rotate only the spinner wrapper so the static SVG arc stays compositor-friendly; narrow the session subscription to main rows plus the retained current subagent; cache the ungrouped list offset on mount/resize instead of reading layout during every scroll frame.

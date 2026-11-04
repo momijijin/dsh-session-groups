@@ -24,11 +24,11 @@ test('formatMessage substitutes {name} placeholders and falls back to keys', () 
 
 test('createTranslator follows the host locale snapshot active field', () => {
   const english = createTranslator(() => ({ active: 'en-US' }))
-  assert.equal(english('view.title'), 'Free groups')
+  assert.equal(english('view.title'), 'Free Groups')
   const chinese = createTranslator(() => ({ active: 'zh-CN' }))
   assert.equal(chinese('view.title'), '自由分组')
   const legacy = createTranslator(() => ({ id: 'en' }))
-  assert.equal(legacy('view.title'), 'Free groups')
+  assert.equal(legacy('view.title'), 'Free Groups')
   const broken = createTranslator(() => {
     throw new Error('boom')
   })

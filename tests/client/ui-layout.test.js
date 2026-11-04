@@ -288,7 +288,7 @@ test('0.3.0 beta exposes onboarding, reset layout and opaque status popovers', (
   assert.match(zh['about.scope'], /不会删除或调整分组/)
   assert.match(zh['about.scope'], /分组归属/)
   assert.match(en['about.scope'], /does not delete or change groups/i)
-  assert.equal(en['onboarding.title'], 'Welcome to Free groups')
+  assert.equal(en['onboarding.title'], 'Welcome to Free Groups')
 })
 
 test('0.2.26 running-session action counts all spinners and groups its menu by parent', () => {

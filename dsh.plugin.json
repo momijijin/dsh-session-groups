@@ -1,7 +1,7 @@
 {
   "id": "dsh-session-groups",
   "name": "dsh-session-groups",
-  "version": "0.3.0-beta.73",
+  "version": "0.3.0-beta.74",
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": {
@@ -9,7 +9,7 @@
     "zh": "DSH Desktop 侧栏上的自由分组层：可把不同工作区的会话归入同一分组，不改变会话的官方工作区归属或日志。"
   },
   "title": {
-    "en": "Free groups",
+    "en": "Free Groups",
     "zh": "自由分组"
   }
 }
