@@ -283,5 +283,6 @@
   "skill.repairUserOwned": "The skill is user-owned; overwrite was refused",
   "dialog.moveGroup": "Move group",
   "dialog.moveSession": "Assign session to group",
-  "dialog.destinationGroup": "Choose destination group"
+  "dialog.destinationGroup": "Choose destination group",
+  "config.requiresControlApi": "Requires AI control API"
 }
