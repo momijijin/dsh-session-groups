@@ -283,5 +283,6 @@
   "skill.repairUserOwned": "该 skill 是用户文件，已拒绝覆盖",
   "dialog.moveGroup": "移动分组",
   "dialog.moveSession": "归入分组",
-  "dialog.destinationGroup": "选择目标分组"
+  "dialog.destinationGroup": "选择目标分组",
+  "config.requiresControlApi": "需要先开启 AI 控制接口"
 }
