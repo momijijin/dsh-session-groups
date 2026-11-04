@@ -1,11 +1,11 @@
 # Changelog
 
-## 0.3.0-beta.76 (release candidate, no tag yet)
+## 0.3.0-beta.76 (2026-11-04)
 
 - Compatibility: support the official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5`; prefer `sessions.create` for a new group session, with the rc.2 `startSession`/snapshot-diff/`connectWorkspace` fallback preserved.
 - Session menu: add Move up/Move down aligned with the group menu.
 - Metadata: Free Groups title, package icon, CI action updates and Ubuntu 24.04 pinning carried from the .74/.75 batches.
-- Verification: 462/462 unit/contract tests; community rc.2 A+ PASS; official rc.5 A+ PASS. Release preparation only; no tag or Release created yet.
+- Verification: 462/462 unit/contract tests; community rc.2 A+ PASS; official rc.5 A+ PASS; maintainer desktop-window acceptance PASS.
 
 ## 0.3.0-beta.75 (local batch, no release tag)
 

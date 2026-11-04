@@ -37,11 +37,11 @@
 | 桌面端 | 状态 |
 |---|---|
 | 社区版 DSH Desktop **Stable** 2.0.18 | 已验证（rc.2） |
-| 官方 DeepSeek Harness 桌面版 0.2.1.0 | 运行时已验证（rc.5，隔离 A+）；桌面窗口 profile 待人工确认 |
+| 官方 DeepSeek Harness 桌面版 0.2.1.0 | 已验证（rc.5，隔离 A+ + 维护者桌面窗口验收） |
 | 社区版 DSH Desktop **Beta** | 不官方支持；不承诺兼容 |
 | 社区版 DSH **NEXT**（`-next` 通道） | 不官方支持；不承诺兼容 |
 
-官方验证覆盖官方 bundle 的 DSH host/core 隔离 web profile；不代表官方桌面 profile 的所有插件组合都已认证，后者仍需真实桌面窗口人工确认。
+官方验证覆盖官方 bundle 的 DSH host/core 隔离 web profile，以及已安装桌面 profile 的维护者验收；不代表官方 profile 内所有第三方插件组合都已认证。
 
 Beta 和 NEXT 即使能加载插件，也不构成发布门禁，不扩大支持承诺。
 

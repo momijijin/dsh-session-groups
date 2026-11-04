@@ -37,11 +37,11 @@ Supported desktop scope:
 | Desktop | Status |
 |---|---|
 | community DSH Desktop **Stable** 2.0.18 | verified (rc.2) |
-| official DeepSeek Harness desktop 0.2.1.0 | verified runtime (rc.5, isolated A+); desktop-window profile pass pending |
+| official DeepSeek Harness desktop 0.2.1.0 | verified (rc.5, isolated A+ and maintainer desktop-window acceptance) |
 | community DSH Desktop **Beta** | not supported; no compatibility promise |
 | community DSH **NEXT** (`-next` channel) | not supported; no compatibility promise |
 
-The official verification covers the official bundle's DSH host/core in an isolated web-profile instance. It does not certify every official desktop-profile plugin combination; that remains a manual desktop-window check.
+The official verification covers the official bundle's DSH host/core in an isolated web-profile instance plus maintainer acceptance on the installed desktop profile. It is not a certification of every third-party plugin combination in that profile.
 
 Beta and NEXT may happen to load the plugin, but their results are not a release gate and do not extend the support contract.
 
