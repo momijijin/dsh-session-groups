@@ -44,6 +44,7 @@ export const DialogHost = ({ store, props }) => {
   const [hexInput, setHexInput] = useState('')
   const inputRef = useRef(null)
   const dialogRef = useRef(null)
+  const restoreFocusRef = useRef(null)
   const [dialogRect, setDialogRect] = useState(null)
   const dialogRectRef = useRef(null)
   const gestureRef = useRef(null)
@@ -58,6 +59,43 @@ export const DialogHost = ({ store, props }) => {
     const saved = readDialogGeometries()[dialog.kind]
     setDialogRect(saved ? clampDialogRect(saved, globalThis.innerWidth, globalThis.innerHeight) : null)
   }, [dialog?.kind])
+
+  useEffect(() => {
+    if (!dialog) {
+      const previous = restoreFocusRef.current
+      restoreFocusRef.current = null
+      if (previous && typeof previous.focus === 'function') {
+        const active = globalThis.document?.activeElement
+        if (!active || active === globalThis.document?.body || dialogRef.current?.contains?.(active)) {
+          previous.focus({ preventScroll: true })
+        }
+      }
+      return undefined
+    }
+    if (!restoreFocusRef.current) {
+      const active = globalThis.document?.activeElement
+      if (active && active !== globalThis.document?.body) restoreFocusRef.current = active
+    }
+    const needsTextInput =
+      dialog.kind === 'new-group' || dialog.kind === 'rename-group' || dialog.kind === 'rename-session'
+    const timer = setTimeout(() => {
+      if (needsTextInput) {
+        inputRef.current?.focus()
+        return
+      }
+      const element = dialogRef.current
+      if (!element) return
+      const focusable = element.querySelector(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable instanceof globalThis.HTMLElement && !focusable.closest('[aria-hidden="true"]')) {
+        focusable.focus({ preventScroll: true })
+      } else {
+        element.focus?.({ preventScroll: true })
+      }
+    }, 10)
+    return () => clearTimeout(timer)
+  }, [dialog])
 
   // Measure the natural dialog once when there is no saved geometry; after that
   // the explicit rect is the single source of truth for drag/resize.
@@ -561,7 +599,9 @@ export const DialogHost = ({ store, props }) => {
         ref: dialogRef,
         class: 'dsg-dialog',
         role: 'dialog',
+        tabindex: '-1',
         'aria-modal': 'true',
+        'aria-labelledby': 'dsg-dialog-title',
         'data-testid': 'session-groups-dialog',
         'data-kind': dialog.kind,
         'data-positioned': dialogRect ? 'true' : 'false',
@@ -580,7 +620,7 @@ export const DialogHost = ({ store, props }) => {
           class: 'dsg-dialog-titlebar',
           onPointerDown: (event) => beginDialogGesture(event),
         },
-        h('div', { class: 'dsg-dialog-title' }, title)
+        h('div', { id: 'dsg-dialog-title', class: 'dsg-dialog-title' }, title)
       ),
       h(
         ScrollArea,

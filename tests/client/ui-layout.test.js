@@ -680,6 +680,12 @@ test('0.3.0-beta.70 group menu starts with new session and reuses the group plus
   assert.equal(en['group.addSession'], 'New session in this group')
 })
 
+test('0.3.0-beta.71 dialog has an accessible name and restores opener focus', () => {
+  assert.match(dialogHost, /'aria-labelledby': 'dsg-dialog-title'/)
+  assert.match(dialogHost, /id: 'dsg-dialog-title'/)
+  assert.match(dialogHost, /restoreFocusRef/)
+})
+
 
 test('0.2.9 delete group: destination picker, empty direct path and move-and-delete footer', () => {
   // Group menu keeps the delete entry and the color entry now says 修改颜色/Change color.
