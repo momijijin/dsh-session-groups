@@ -10,7 +10,9 @@ A free-form grouping layer over the shipped DSH Desktop workspace/session sideba
 - `workspace.json` is never written.
 
 Current version: **0.3.0-beta.74**  
-Tested baseline: DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
+Primary support: **DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2** (`engines.dsh: >=0.2.0-rc.2 <0.3.0`)  
+Verified shell combination: **community DSH Desktop 2.0.18 (anywhere-labs)**  
+Official DeepSeek Harness desktop shell: **pending independent regression**
 
 See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the `engines.dsh` range, the `dsh-0.2` adapter selector and runtime capability checks.
 
@@ -27,6 +29,8 @@ Current verification status:
 | macOS | not verified | not verified | not verified |
 
 The current CI is an Ubuntu Node-level gate, not a cross-platform certification. Treat Linux/macOS DSH UI support as experimental until a real host/UI pass exists. Ordinary users install through dshmarket; the local tarball and CLI are maintainer/debug paths only.
+
+Compatibility is defined by the bundled DSH core/API, not by the desktop shell name. The official and community desktop clients bundle their own DSH versions and plugin compositions; both shells must be tested separately against this plugin.
 
 ## Features
 
