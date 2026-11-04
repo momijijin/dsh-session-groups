@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0-beta.73 (local batch, no release tag)
+
+- Performance: rotate only the spinner wrapper so the static SVG arc stays compositor-friendly; narrow the session subscription to main rows plus the retained current subagent; cache the ungrouped list offset on mount/resize instead of reading layout during every scroll frame.
+- Verification: 459 unit/contract tests and isolated A+ pass. No tag or Release.
+
 ## 0.3.0-beta.72 (local batch, no release tag)
 
 - Maintainability: split `components.js` (3051→1366 lines) into primitives, rows, ungrouped, resize-handle, search-box and header modules; split `routes.js` (1040→520 lines) into route-contract and control-routes modules.
@@ -347,6 +352,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

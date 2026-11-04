@@ -167,39 +167,60 @@ const UngroupedSection = ({ node, store, props, handlers, virtualRef }) => {
     const body = bodyRef.current
     const tree = body?.closest?.('.dsg-tree')
     if (!tree) return undefined
-    let frame = null
+    let scrollFrame = null
+    let layoutFrame = null
     let disposed = false
-    const measure = () => {
-      frame = null
+    let listTop = VIRTUAL_HEADER_HEIGHT + 4
+    let viewportHeight = tree.clientHeight || estimatedTreeHeight(globalThis.innerHeight)
+    const setIfChanged = (scrollTop) => {
+      setMetrics((previous) =>
+        previous.scrollTop === scrollTop &&
+        previous.viewportHeight === viewportHeight &&
+        previous.listTop === listTop
+          ? previous
+          : { scrollTop, viewportHeight, listTop }
+      )
+    }
+    const measureScroll = () => {
+      scrollFrame = null
+      if (disposed) return
+      setIfChanged(tree.scrollTop)
+    }
+    const measureLayout = () => {
+      layoutFrame = null
       if (disposed) return
       const current = bodyRef.current
       if (!current || current.isConnected === false) return
+      // Layout reads run only on mount/resize. Scrolling reuses this cached
+      // offset instead of forcing getBoundingClientRect() every frame.
       const treeRect = tree.getBoundingClientRect()
       const bodyRect = current.getBoundingClientRect()
-      const next = {
-        scrollTop: tree.scrollTop,
-        viewportHeight: tree.clientHeight,
-        listTop: bodyRect.top - treeRect.top + tree.scrollTop,
-      }
-      setMetrics((previous) =>
-        previous.scrollTop === next.scrollTop &&
-        previous.viewportHeight === next.viewportHeight &&
-        previous.listTop === next.listTop
-          ? previous
-          : next
-      )
+      listTop = bodyRect.top - treeRect.top + tree.scrollTop
+      viewportHeight = tree.clientHeight
+      setIfChanged(tree.scrollTop)
     }
-    const schedule = () => {
-      if (frame === null) frame = requestAnimationFrame(measure)
+    const scheduleScroll = () => {
+      if (scrollFrame === null) scrollFrame = requestAnimationFrame(measureScroll)
     }
-    measure()
-    tree.addEventListener('scroll', schedule, { passive: true })
-    globalThis.addEventListener('resize', schedule)
+    const scheduleLayout = () => {
+      if (layoutFrame === null) layoutFrame = requestAnimationFrame(measureLayout)
+    }
+    measureLayout()
+    tree.addEventListener('scroll', scheduleScroll, { passive: true })
+    globalThis.addEventListener('resize', scheduleLayout)
+    const resizeObserver =
+      typeof globalThis.ResizeObserver === 'function'
+        ? new globalThis.ResizeObserver(scheduleLayout)
+        : null
+    resizeObserver?.observe(tree)
+    resizeObserver?.observe(body)
     return () => {
       disposed = true
-      if (frame !== null) cancelAnimationFrame(frame)
-      tree.removeEventListener('scroll', schedule)
-      globalThis.removeEventListener('resize', schedule)
+      if (scrollFrame !== null) cancelAnimationFrame(scrollFrame)
+      if (layoutFrame !== null) cancelAnimationFrame(layoutFrame)
+      tree.removeEventListener('scroll', scheduleScroll)
+      globalThis.removeEventListener('resize', scheduleLayout)
+      resizeObserver?.disconnect()
       if (virtualRef) virtualRef.current = null
     }
   }, [expanded, total, virtualRef])

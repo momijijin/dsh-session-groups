@@ -38,6 +38,7 @@ import {
 } from '../core/dialog-selection.js'
 import { createActions, formatActivity, workspaceChoices, workspaceLabel } from './actions.js'
 import { MenuPopover, Toast } from './session-menu.js'
+import { selectMainSessionView } from './main-session-view.js'
 import { GroupListPicker } from './group-list-picker.js'
 import { ScrollArea } from './scroll-area.js'
 import { DialogHost } from './dialog-host.js'
@@ -190,7 +191,7 @@ export const GroupsView = (props) => {
   )
 
   // Framework standard hooks: always called (rules of hooks), feature-detected.
-  const sessions = typeof props?.useSessions === 'function' ? props.useSessions((snapshot) => snapshot, sessionViewEqual) : null
+  const sessions = typeof props?.useSessions === 'function' ? props.useSessions(selectMainSessionView, sessionViewEqual) : null
   const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot, workspaceViewEqual) : null
   const statuses = typeof props?.useSessionStatus === 'function' ? props.useSessionStatus((snapshot) => snapshot, statusMapEqual) : null
   const subagentCounts = useMemo(() => runningSubagentCounts(sessions, statuses), [sessions, statuses])
