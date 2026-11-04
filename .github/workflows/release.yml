@@ -21,6 +21,16 @@ jobs:
         with:
           node-version: '24.x'
 
+      - name: Require a version tag
+        run: |
+          case "$GITHUB_REF_NAME" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *)
+              echo "::error::Release only accepts version tags like v1.2.3 or v1.2.3-beta.1; got $GITHUB_REF_NAME"
+              exit 1
+              ;;
+          esac
+
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
