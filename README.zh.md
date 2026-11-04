@@ -9,10 +9,9 @@
 - 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
 - 不写入 `workspace.json`。
 
-当前版本：**0.3.0-beta.75**  
-主要支持：**DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2**（`engines.dsh: >=0.2.0-rc.2 <0.3.0`）  
-已验证桌面壳：**社区版 DSH Desktop Stable 2.0.18（anywhere-labs）**  
-目标桌面壳：**官方 DeepSeek Harness 桌面版**——待独立回归  
+当前版本：**0.3.0-beta.76**  
+主要支持：**DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 与 0.2.1-rc.5**（`engines.dsh: >=0.2.0-rc.2 <0.3.0`）  
+已验证桌面壳：**社区版 DSH Desktop Stable 2.0.18**（rc.2）与**官方 DeepSeek Harness 桌面版 0.2.1.0**（rc.5，隔离运行时 A+）  
 不官方支持、不承诺兼容：**社区版 DSH Desktop Beta**、**社区版 DSH NEXT（`-next` 通道）**
 
 兼容性说明见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)：支持范围、`engines.dsh`、`dsh-0.2` 适配器选择器和运行时能力检测。
@@ -37,10 +36,12 @@
 
 | 桌面端 | 状态 |
 |---|---|
-| 社区版 DSH Desktop **Stable** 2.0.18 | 已验证 |
-| 官方 DeepSeek Harness 桌面版 | 目标支持；待独立回归 |
+| 社区版 DSH Desktop **Stable** 2.0.18 | 已验证（rc.2） |
+| 官方 DeepSeek Harness 桌面版 0.2.1.0 | 运行时已验证（rc.5，隔离 A+）；桌面窗口 profile 待人工确认 |
 | 社区版 DSH Desktop **Beta** | 不官方支持；不承诺兼容 |
 | 社区版 DSH **NEXT**（`-next` 通道） | 不官方支持；不承诺兼容 |
+
+官方验证覆盖官方 bundle 的 DSH host/core 隔离 web profile；不代表官方桌面 profile 的所有插件组合都已认证，后者仍需真实桌面窗口人工确认。
 
 Beta 和 NEXT 即使能加载插件，也不构成发布门禁，不扩大支持承诺。
 
@@ -308,7 +309,7 @@ node scripts/session-groups-control.mjs doctor
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框移动/缩放已有键盘支持；全量 axe/对比度审计和整棵树的键盘拖拽仍为 deferred。
-- 当前发布验证以 **459 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
+- 当前发布验证以 **462 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
 
 ## 文档
 
@@ -330,7 +331,7 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：459 项单元/契约测试
+- `npm test`：462 项单元/契约测试
 - `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.63% lines / 82.22% branches / 88.73% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
@@ -343,7 +344,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.75.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.76.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 

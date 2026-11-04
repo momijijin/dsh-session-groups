@@ -22,18 +22,16 @@ DSH 的 plugin client 是 **单个客户端 bundle**，没有为插件准备 `#i
 ## 当前支持线
 
 ```text
-主支持：@deepseek-ai/dsh 0.2.1-rc.2
+主支持：@deepseek-ai/dsh 0.2.1-rc.2 / 0.2.1-rc.5
 插件 engines.dsh: >=0.2.0-rc.2 <0.3.0
 
-支持目标：
-  community DSH Desktop Stable (stable channel)
-  official DeepSeek Harness desktop
-
 已验证：
-  community DSH Desktop Stable 2.0.18 (anywhere-labs)
+  community DSH Desktop Stable 2.0.18 (anywhere-labs) / DSH 0.2.1-rc.2
+  official DeepSeek Harness desktop 0.2.1.0 / DSH 0.2.1-rc.5
+    （官方 bundle 的 DSH host/core 隔离 web profile A+）
 
-待独立回归：
-  official DeepSeek Harness desktop
+待人工确认（不是 DSH core 兼容性问题）：
+  official desktop-window profile 的完整插件组合
 
 明确不官方支持、不承诺兼容：
   community DSH Desktop Beta
@@ -49,9 +47,11 @@ DSH 的 plugin client 是 **单个客户端 bundle**，没有为插件准备 `#i
 | 桌面端/通道 | 支持状态 | 内置 DSH | 是否发布门禁 |
 |---|---|---|---|
 | community DSH Desktop Stable 2.0.18（anywhere-labs） | 支持；已验证 | `@deepseek-ai/dsh` 0.2.1-rc.2 | 是 |
-| official DeepSeek Harness desktop | 目标支持；待独立回归 | 以实际安装包为准 | 待定 |
+| official DeepSeek Harness desktop 0.2.1.0 | 支持；运行时已验证（隔离 A+） | `@deepseek-ai/dsh` 0.2.1-rc.5 | 是 |
 | community DSH Desktop Beta (`DSH Desktop Beta`, `.dsh-beta`) | **不支持；不承诺兼容** | 可能不同 | 否 |
 | community DSH NEXT (`DSH NEXT`, `-next`) | **不支持；不承诺兼容** | 可能不同 | 否 |
+
+官方 rc.5 验证覆盖官方 bundle 的 DSH host/core 与隔离 web profile；官方桌面窗口 profile 的实际插件组合仍需人工确认。rc.5 启动时可能记录一次 client `sessions service` 能力警告，但会话创建、分组与 A+ 全量路径均已通过；插件优先使用 `sessions.create`，并保留 rc.2 的 `startSession`/快照差分/`connectWorkspace` fallback。
 
 Beta 和 NEXT 是社区自己的实验通道。即使插件在某个 Beta/NEXT 构建里能加载，也不构成兼容承诺，不能替代 Stable 或官方桌面版的回归。
 
@@ -159,7 +159,7 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 ```text
 npm install
 语法检查
-442 项 → 459 项单元/契约测试
+462 项单元/契约测试
 客户端构建
 coverage gate
 npm pack --dry-run

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0-beta.76 (release candidate, no tag yet)
+
+- Compatibility: support the official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5`; prefer `sessions.create` for a new group session, with the rc.2 `startSession`/snapshot-diff/`connectWorkspace` fallback preserved.
+- Session menu: add Move up/Move down aligned with the group menu.
+- Metadata: Free Groups title, package icon, CI action updates and Ubuntu 24.04 pinning carried from the .74/.75 batches.
+- Verification: 462/462 unit/contract tests; community rc.2 A+ PASS; official rc.5 A+ PASS. Release preparation only; no tag or Release created yet.
+
+## 0.3.0-beta.75 (local batch, no release tag)
+
+- Session menu: add Move up/Move down aligned with the group menu, using stored group/ungrouped order with edge-disabled states.
+- Verification: 461 unit/contract tests and the community isolated A+ pass. No tag or Release.
+
 ## 0.3.0-beta.74 (local batch, no release tag)
 
 - UI metadata: normalize the English display title to “Free Groups” and the onboarding title to “Welcome to Free Groups”.
