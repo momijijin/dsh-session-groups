@@ -686,6 +686,31 @@ test('0.3.0-beta.71 dialog has an accessible name and restores opener focus', ()
   assert.match(dialogHost, /restoreFocusRef/)
 })
 
+test('0.3.0-beta.71 dialog traps Tab and handles Escape at the dialog boundary', () => {
+  assert.match(dialogHost, /addEventListener\('keydown', onKeyDown, true\)/)
+  assert.match(dialogHost, /event\.key === 'Escape'/)
+  assert.match(dialogHost, /event\.key !== 'Tab'/)
+  assert.match(dialogHost, /event\.shiftKey/)
+  assert.match(dialogHost, /focusableSelector/)
+})
+
+test('0.3.0-beta.71 dialog exposes keyboard move and resize controls', () => {
+  assert.match(dialogHost, /dialog\.moveDialog/)
+  assert.match(dialogHost, /dialog\.resizeDialog/)
+  assert.match(dialogHost, /session-groups-dialog-titlebar/)
+  assert.match(dialogHost, /session-groups-dialog-resizer/)
+  assert.match(dialogHost, /dialogKeyboardDelta/)
+})
+
+test('0.3.0-beta.71 group menu supports roving keyboard focus', () => {
+  assert.match(sessionMenu, /role: 'menuitem'/)
+  assert.match(sessionMenu, /event\.key === 'ArrowDown'/)
+  assert.match(sessionMenu, /event\.key === 'ArrowUp'/)
+  assert.match(sessionMenu, /event\.key === 'Home'/)
+  assert.match(sessionMenu, /event\.key === 'End'/)
+  assert.match(sessionMenu, /\.focus\(/)
+})
+
 
 test('0.2.9 delete group: destination picker, empty direct path and move-and-delete footer', () => {
   // Group menu keeps the delete entry and the color entry now says 修改颜色/Change color.

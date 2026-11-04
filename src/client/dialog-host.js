@@ -29,12 +29,24 @@ import {
   resizeDialogRect,
   saveDialogGeometry,
 } from './dialog-geometry.js'
+import { dialogKeyboardDelta } from './dialog-keyboard.js'
 import { GroupListPicker } from './group-list-picker.js'
 import { ICON_GROUPS, renderGlyph, renderIcon } from './icons.js'
 import { ScrollArea } from './scroll-area.js'
 
 const h = createElement
 const dispatch = (action, payload) => rt()?.store.dispatch(action, payload)
+const focusableSelector =
+  'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+
+const focusableIn = (element) =>
+  Array.from(element?.querySelectorAll?.(focusableSelector) ?? []).filter(
+    (candidate) =>
+      candidate instanceof globalThis.HTMLElement &&
+      !candidate.closest('[aria-hidden="true"]') &&
+      candidate.getClientRects().length > 0
+  )
+
 
 export const DialogHost = ({ store, props }) => {
   const dialog = store.dialog
@@ -85,16 +97,50 @@ export const DialogHost = ({ store, props }) => {
       }
       const element = dialogRef.current
       if (!element) return
-      const focusable = element.querySelector(
-        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
-      )
-      if (focusable instanceof globalThis.HTMLElement && !focusable.closest('[aria-hidden="true"]')) {
+      const focusable = focusableIn(element)[0]
+      if (focusable) {
         focusable.focus({ preventScroll: true })
       } else {
         element.focus?.({ preventScroll: true })
       }
     }, 10)
     return () => clearTimeout(timer)
+  }, [dialog])
+
+  useEffect(() => {
+    if (!dialog) return undefined
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        dispatch('dialog', { dialog: null })
+        return
+      }
+      if (event.key !== 'Tab') return
+      const element = dialogRef.current
+      if (!element) return
+      const focusables = focusableIn(element)
+      if (focusables.length === 0) {
+        event.preventDefault()
+        element.focus?.({ preventScroll: true })
+        return
+      }
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = globalThis.document?.activeElement
+      const inside = element.contains(active)
+      if (event.shiftKey) {
+        if (!inside || active === first) {
+          event.preventDefault()
+          last.focus({ preventScroll: true })
+        }
+      } else if (!inside || active === last) {
+        event.preventDefault()
+        first.focus({ preventScroll: true })
+      }
+    }
+    globalThis.document?.addEventListener('keydown', onKeyDown, true)
+    return () => globalThis.document?.removeEventListener('keydown', onKeyDown, true)
   }, [dialog])
 
   // Measure the natural dialog once when there is no saved geometry; after that
@@ -321,6 +367,39 @@ export const DialogHost = ({ store, props }) => {
   if (!dialog) return null
   const close = () => dispatch('dialog', { dialog: null })
   const confirm = (payload) => rt()?.confirmDialog(dialog, payload)
+  const persistDialogRect = () => {
+    if (dialogRectRef.current) saveDialogGeometry(dialog.kind, dialogRectRef.current)
+  }
+  const moveDialogByKeyboard = (event) => {
+    const delta = dialogKeyboardDelta(event.key, event.shiftKey)
+    if (delta.dx === 0 && delta.dy === 0) return false
+    event.preventDefault()
+    const current = dialogRectRef.current
+    if (!current) return true
+    const next = dragDialogRect(current, delta.dx, delta.dy, globalThis.innerWidth, globalThis.innerHeight)
+    dialogRectRef.current = next
+    setDialogRect(next)
+    return true
+  }
+  const resizeDialogByKeyboard = (event) => {
+    const delta = dialogKeyboardDelta(event.key, event.shiftKey)
+    if (delta.dx === 0 && delta.dy === 0) return false
+    event.preventDefault()
+    const current = dialogRectRef.current
+    if (!current) return true
+    const next = resizeDialogRect(current, 'se', delta.dx, delta.dy, globalThis.innerWidth, globalThis.innerHeight)
+    dialogRectRef.current = next
+    setDialogRect(next)
+    return true
+  }
+  const resetDialogRect = () => {
+    const current = dialogRectRef.current
+    if (!current) return
+    const next = centeredDialogRect(current.width, current.height, globalThis.innerWidth, globalThis.innerHeight)
+    dialogRectRef.current = next
+    setDialogRect(next)
+    saveDialogGeometry(dialog.kind, next)
+  }
   const errorText = dialog.error ? t(dialog.error === 'name-required' ? 'dialog.namePlaceholder' : dialog.error) : null
   const title = t(dialog.titleKey)
   const optionCheck = () => h('span', { class: 'dsg-dialog-option-check', 'aria-hidden': 'true' }, renderGlyph(h, 'check', 16))
@@ -618,7 +697,21 @@ export const DialogHost = ({ store, props }) => {
         'div',
         {
           class: 'dsg-dialog-titlebar',
+          'data-testid': 'session-groups-dialog-titlebar',
+          tabindex: '0',
+          'aria-label': t('dialog.moveDialog'),
           onPointerDown: (event) => beginDialogGesture(event),
+          onKeyDown: (event) => {
+            if (event.key === 'Home') {
+              event.preventDefault()
+              resetDialogRect()
+              return
+            }
+            moveDialogByKeyboard(event)
+          },
+          onKeyUp: (event) => {
+            if (/^Arrow(?:Up|Down|Left|Right)$/.test(event.key)) persistDialogRect()
+          },
         },
         h('div', { id: 'dsg-dialog-title', class: 'dsg-dialog-title' }, title)
       ),
@@ -637,7 +730,6 @@ export const DialogHost = ({ store, props }) => {
               onChange: (event) => setValue(event.target.value),
               onKeyDown: (event) => {
                 if (event.key === 'Enter' && canConfirm) confirm({ value: value.trim() })
-                if (event.key === 'Escape') close()
               },
             })
           : null,
@@ -661,15 +753,38 @@ export const DialogHost = ({ store, props }) => {
           danger ? (dialog.kind === 'delete-group' ? t('dialog.moveAndDelete') : t('dialog.stopAndArchive')) : t('dialog.confirm')
         )
       ),
-      ...['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'].map((dir) =>
-        h('div', {
+      ...['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'].map((dir) => {
+        const keyboardResizable = dir === 'se'
+        return h('div', {
           key: dir,
           class: 'dsg-dialog-resizer',
           'data-dir': dir,
-          'aria-hidden': 'true',
+          ...(keyboardResizable
+            ? {
+                'data-testid': 'session-groups-dialog-resizer',
+                tabindex: '0',
+                role: 'separator',
+                'aria-label': t('dialog.resizeDialog'),
+              }
+            : { 'aria-hidden': 'true' }),
+          onKeyDown: keyboardResizable
+            ? (event) => {
+                if (event.key === 'Home') {
+                  event.preventDefault()
+                  resetDialogRect()
+                  return
+                }
+                resizeDialogByKeyboard(event)
+              }
+            : undefined,
+          onKeyUp: keyboardResizable
+            ? (event) => {
+                if (/^Arrow(?:Up|Down|Left|Right)$/.test(event.key)) persistDialogRect()
+              }
+            : undefined,
           onPointerDown: (event) => beginDialogGesture(event, dir),
         })
-      )
+      })
     )
   )
 }

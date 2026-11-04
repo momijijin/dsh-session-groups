@@ -257,9 +257,52 @@ try {
     throw new Error('group menu new-session label is missing')
   }
   await firstGroupMenuItem.click()
-  await page.locator('[data-testid="session-groups-dialog"]').waitFor({ state: 'visible' })
-  await page.evaluate(() => document.querySelector('[data-testid="session-groups-dialog-cancel"]')?.click())
-  await page.locator('[data-testid="session-groups-dialog"]').waitFor({ state: 'hidden' })
+  const a11yDialog = page.locator('[data-testid="session-groups-dialog"]')
+  await a11yDialog.waitFor({ state: 'visible' })
+  const labelledBy = await a11yDialog.getAttribute('aria-labelledby')
+  if (!labelledBy || (await page.locator(`#${labelledBy}`).count()) !== 1) {
+    throw new Error('dialog has no single accessible title reference')
+  }
+  for (let index = 0; index < 8; index += 1) await page.keyboard.press('Tab')
+  const tabStayedInside = await page.evaluate(() =>
+    document.activeElement?.closest?.('[data-testid="session-groups-dialog"]') !== null
+  )
+  if (!tabStayedInside) throw new Error('Tab escaped the modal dialog')
+  const keyboardTitlebar = page.locator('[data-testid="session-groups-dialog-titlebar"]')
+  await keyboardTitlebar.focus()
+  const beforeMove = await a11yDialog.boundingBox()
+  await page.keyboard.press('ArrowRight')
+  await page.waitForTimeout(120)
+  const afterMove = await a11yDialog.boundingBox()
+  if (!beforeMove || !afterMove || afterMove.x <= beforeMove.x) throw new Error('keyboard dialog move did not move right')
+  const keyboardResizer = page.locator('[data-testid="session-groups-dialog-resizer"]')
+  await keyboardResizer.focus()
+  const beforeResize = await a11yDialog.boundingBox()
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('ArrowDown')
+  await page.waitForTimeout(120)
+  const afterResize = await a11yDialog.boundingBox()
+  if (!beforeResize || !afterResize || afterResize.width <= beforeResize.width || afterResize.height <= beforeResize.height) {
+    throw new Error('keyboard dialog resize did not grow the dialog')
+  }
+  await page.keyboard.press('Escape')
+  await a11yDialog.waitFor({ state: 'hidden' })
+  const restored = await page.evaluate(() => ({
+    testid: document.activeElement?.getAttribute?.('data-testid'),
+    groupId: document.activeElement?.getAttribute?.('data-group-id'),
+  }))
+  if (restored.testid !== 'session-groups-group' || restored.groupId !== targetId) {
+    throw new Error(`dialog did not restore focus to the originating group row: ${JSON.stringify(restored)}`)
+  }
+
+  await groupRowById(targetId).locator('[data-testid="session-groups-group-menu"]').click({ force: true })
+  const rovingMenu = page.locator('[data-testid="session-groups-menu"]')
+  await rovingMenu.waitFor({ state: 'visible' })
+  await page.keyboard.press('ArrowDown')
+  const rovingLabel = await page.evaluate(() => document.activeElement?.textContent ?? '')
+  if (!/新建子分组|New subgroup/.test(rovingLabel)) throw new Error(`menu ArrowDown did not move focus: ${rovingLabel}`)
+  await page.keyboard.press('Escape')
+  await rovingMenu.waitFor({ state: 'hidden' })
 
   await moveGroup(sourceId, targetId)
   const ordered = await groupRows().evaluateAll((rows) => rows.map((row) => row.getAttribute('data-group-id')))
