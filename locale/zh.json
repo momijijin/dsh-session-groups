@@ -14,6 +14,7 @@
   "archive.label": "归档筛选",
   "group.empty": "空分组，拖入会话或分组",
   "group.addSession": "在分组内新建会话",
+  "group.newSession": "新建会话",
   "group.menu": "分组操作",
   "group.rename": "重命名分组",
   "group.delete": "删除分组",

@@ -606,7 +606,7 @@ export const DialogHost = ({ store, props }) => {
       h(
         'div',
         { class: 'dsg-dialog-actions' },
-        h('button', { type: 'button', class: 'dsg-dialog-cancel', onClick: close }, t('dialog.cancel')),
+        h('button', { type: 'button', class: 'dsg-dialog-cancel', 'data-testid': 'session-groups-dialog-cancel', onClick: close }, t('dialog.cancel')),
         h(
           'button',
           {
