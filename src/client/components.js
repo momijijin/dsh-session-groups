@@ -13,6 +13,7 @@ import { estimatedTreeHeight } from '../core/layout.js'
 import { sessionRowPropsEqual, statusLabel } from '../core/session-row.js'
 import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME, PLUGIN_VERSION, SESSION_WATERMARK_BASE, SESSION_WATERMARK_AUTO_MAX } from '../shared/constants.js'
 import {
+  assignSession,
   childrenOf,
   findGroup,
   groupColor,
@@ -114,6 +115,7 @@ import {
   runningSubagentCounts,
   statusSectionsByGroup,
   sessionStatuses,
+  sessionContainer,
 } from '../core/tree.js'
 
 import {
@@ -576,6 +578,23 @@ export const GroupsView = (props) => {
     })
   }
 
+  /** Menu move-up/move-down for a stored session inside its group or ungrouped list. */
+  const moveSessionStep = (sessionId, delta) => {
+    const task = rt()?.commitOptimistic((latest) => {
+      const container = sessionContainer(latest, sessionId)
+      if (!container.ids) throw GROUP_DROP_NOOP
+      const currentIndex = container.ids.indexOf(sessionId)
+      const nextIndex = currentIndex + delta
+      if (currentIndex === -1 || nextIndex < 0 || nextIndex >= container.ids.length) throw GROUP_DROP_NOOP
+      return assignSession(latest, sessionId, container.groupId, nextIndex)
+    })
+    task?.catch((error) => {
+      if (error === GROUP_DROP_NOOP || error?.reported === true) return
+      toast('error', t('toast.dropFailed'))
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] session move failed', error)
+    })
+  }
+
   const clearAutoExpand = () => {
     const current = autoExpandRef.current
     if (current.timer !== null) clearTimeout(current.timer)
@@ -765,6 +784,7 @@ export const GroupsView = (props) => {
       dispatch('toggle-group', { id })
     },
     moveGroupStep,
+    moveSessionStep,
     retryLoad: () => rt()?.retryLoad(),
     openSession: (id) => rt()?.actions.openSession(id),
     setArchiveFilter: (filter) => dispatch('archive-filter', { filter }),

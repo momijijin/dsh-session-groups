@@ -17,6 +17,8 @@ import {
   statusSectionsByGroup,
   sessionStatuses,
   siblingNeighbors,
+  sessionContainer,
+  sessionNeighbors,
 } from '../../src/core/tree.js'
 import { assignSession, createGroup, emptyDoc } from '../../src/shared/model.js'
 
@@ -250,4 +252,22 @@ test('blocked and unread status projections use the same grouped shape', () => {
   assert.equal(all.blocked.count, 1)
   assert.equal(all.unread.count, 1)
   assert.equal(all.running.count, 1)
+})
+
+test('session move neighbors follow the stored group or ungrouped order', () => {
+  let doc = emptyDoc()
+  doc = createGroup(doc, { name: 'A' })
+  const groupId = doc.groups[0].id
+  doc = assignSession(doc, 's1', groupId)
+  doc = assignSession(doc, 's2', groupId)
+  doc = assignSession(doc, 's3', groupId)
+  doc = assignSession(doc, 'u1', null)
+  doc = assignSession(doc, 'u2', null)
+  assert.deepEqual(sessionContainer(doc, 's2'), { groupId, ids: ['s1', 's2', 's3'] })
+  assert.deepEqual(sessionNeighbors(doc, 's1'), { previous: null, next: 's2' })
+  assert.deepEqual(sessionNeighbors(doc, 's2'), { previous: 's1', next: 's3' })
+  assert.deepEqual(sessionNeighbors(doc, 's3'), { previous: 's2', next: null })
+  assert.deepEqual(sessionContainer(doc, 'u2'), { groupId: null, ids: ['u1', 'u2'] })
+  assert.deepEqual(sessionNeighbors(doc, 'u2'), { previous: 'u1', next: null })
+  assert.deepEqual(sessionNeighbors(doc, 'derived'), { previous: null, next: null })
 })

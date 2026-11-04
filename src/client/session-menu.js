@@ -7,7 +7,7 @@
 import { createElement, useEffect, useLayoutEffect, useRef } from 'react'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
 import { clampMenuPosition } from '../core/menu-position.js'
-import { siblingNeighbors } from '../core/tree.js'
+import { sessionNeighbors, siblingNeighbors } from '../core/tree.js'
 
 const h = createElement
 
@@ -111,6 +111,16 @@ export const MenuPopover = ({ store, handlers }) => {
     )
     children.push(item('copy-id', t('session.copyId'), () => handlers.copySessionId(menu.sessionId)))
     children.push(item('move', t('session.moveTo'), () => handlers.openMoveSession(menu.sessionId)))
+    const { previous, next } = sessionNeighbors(store.doc, menu.sessionId)
+    const sessionMoveItem = (key, label, testid, disabled, delta) =>
+      item(key, label, () => handlers.moveSessionStep(menu.sessionId, delta), {
+        'data-testid': testid,
+        'data-session-id': menu.sessionId,
+        'data-disabled': disabled ? 'true' : 'false',
+        ...(disabled ? { disabled: true } : {}),
+      })
+    children.push(sessionMoveItem('move-up', t('session.moveUp'), 'session-groups-session-move-up', previous === null, -1))
+    children.push(sessionMoveItem('move-down', t('session.moveDown'), 'session-groups-session-move-down', next === null, 1))
   }
   return h(
     'div',

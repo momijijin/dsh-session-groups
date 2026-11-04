@@ -1,14 +1,14 @@
-# 0.3.0-beta.74 测试结果
+# 0.3.0-beta.75 测试结果
 
 日期：2026-11-04  
-版本：`0.3.0-beta.74`  
+版本：`0.3.0-beta.75`  
 宿主基线：`@deepseek-ai/dsh` 0.2.1-rc.2  
 已验证壳：community DSH Desktop **Stable** 2.0.18（anywhere-labs）；official DeepSeek Harness desktop 待独立回归  
 不官方支持：community DSH Desktop Beta、community DSH NEXT（`-next`）
 
 ## 结论
 
-- 本地候选 0.3.0-beta.74：**459/459 PASS**（G6a a11y + G6b 维护性拆分 + 性能热路径 + 包图标/标题修正回归）
+- 本地候选 0.3.0-beta.75：**459/459 PASS**（G6a a11y + G6b 维护性拆分 + 性能热路径 + 包图标/标题修正回归）
 - 0.3.0-beta.64 基线：**442/442 PASS**
 - Linux CI（Ubuntu Node 24）：**442/442 PASS**；build / coverage / `npm pack --dry-run` PASS；未运行真实 DSH UI
 - Core 纯函数测试：**29/29 PASS**

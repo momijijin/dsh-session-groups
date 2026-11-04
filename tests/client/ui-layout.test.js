@@ -876,3 +876,18 @@ test('0.2.16 icon set covers devices/actions', () => {
   assert.equal(zh['icon.mail'], '邮箱')
   assert.equal(zh['iconGroup.devices'], '设备')
 })
+
+test('0.3.0-beta.74 session menu aligns move-up/down with the group menu', () => {
+  const up = sessionMenu.indexOf("t('session.moveUp')")
+  const down = sessionMenu.indexOf("t('session.moveDown')")
+  assert.ok(up >= 0, 'session menu must contain Move up')
+  assert.ok(down > up, 'session menu must place Move down after Move up')
+  assert.match(sessionMenu, /handlers\.moveSessionStep\(menu\.sessionId, delta\)/)
+  assert.match(sessionMenu, /'data-testid': testid/)
+  assert.equal(zh['session.moveUp'], '上移')
+  assert.equal(zh['session.moveDown'], '下移')
+  assert.equal(en['session.moveUp'], 'Move up')
+  assert.equal(en['session.moveDown'], 'Move down')
+  assert.match(components, /const moveSessionStep = \(sessionId, delta\)/)
+  assert.match(components, /assignSession\(latest, sessionId, container\.groupId, nextIndex\)/)
+})
