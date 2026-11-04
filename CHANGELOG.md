@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0-beta.77 (local batch, no release tag)
+
+- Packaging: move `@deepseek-ai/schemastery` from `dependencies` to `peerDependencies` (and keep it as a devDependency for tests), matching the market recommendation that official `@deepseek-ai/*` packages be host-provided instead of bundled. No runtime behavior change; no tag or Release.
+- Verification: 462/462 unit/contract tests; community rc.2 A+ PASS; official rc.5 A+ PASS.
+
 ## 0.3.0-beta.76 (2026-11-04)
 
 - Compatibility: support the official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5`; prefer `sessions.create` for a new group session, with the rc.2 `startSession`/snapshot-diff/`connectWorkspace` fallback preserved.

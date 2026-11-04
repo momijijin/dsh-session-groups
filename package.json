@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-groups",
-  "version": "0.3.0-beta.76",
+  "version": "0.3.0-beta.77",
   "description": "A free-form grouping layer for the DSH Desktop sidebar: assign sessions from different workspaces to the same group without changing their official workspace membership or logs.",
   "icon": "assets/icon-180.png",
   "author": "momiji-gz302ea <2648863351@qq.com>",
@@ -70,16 +70,15 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.5",
-    "@deepseek-ai/dsh-home-paths": ">=0.2.1-rc.2 <0.3.0"
+    "@deepseek-ai/dsh-home-paths": ">=0.2.1-rc.2 <0.3.0",
+    "@deepseek-ai/schemastery": "~3.18.5"
   },
   "devDependencies": {
+    "@deepseek-ai/schemastery": "~3.18.5",
     "esbuild": "^0.25.0",
     "playwright": "^1.62.1"
   },
-  "license": "MIT",
-  "dependencies": {
-    "@deepseek-ai/schemastery": "~3.18.5"
-  }
+  "license": "MIT"
 }
 
 
