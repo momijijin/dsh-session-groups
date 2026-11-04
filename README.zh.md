@@ -2,12 +2,12 @@
 
 [English](README.md) | [中文](README.zh.md)
 
-DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会话，但只改变显示位置：
+在 DSH Desktop 官方工作区/会话侧栏之上增加一层独立的自由分组。官方工作区/会话管理仍是底层来源：会话仍属于原工作区，日志也不因分组而改变；插件只保存自己的分组归属，因此同一分组可以包含来自不同工作区的会话。
 
-- 分组本身不移动或改写会话日志
-- 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变
-- 不修改官方工作区注册表
-- 不写入 `workspace.json`
+- 把会话归入分组只更新插件自己的分组记录，以及它在自由分组视图中的位置；
+- 不改变会话所属的官方工作区、官方工作区注册表和会话日志；
+- 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
+- 不写入 `workspace.json`。
 
 当前版本：**0.3.0-beta.68**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
@@ -50,9 +50,9 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 
 ### 会话
 
-- 跨工作区把会话拖入分组
-- 拖出分组进入未归组
-- 打开、重命名、归档/取消归档、移动到分组
+- 把不同工作区的会话归入同一个分组
+- 把会话拖出分组，回到未归组
+- 打开、重命名、归档/取消归档、归入分组
 - 行 hover 提供归档/取消归档
 - 会话菜单提供分叉会话、复制 Session ID
 - 分叉会以最后一个已完成轮次为分叉点；成功后将子会话放到源会话所在分组顶部（源会话未归组时放到未分组顶部）
@@ -88,7 +88,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 
 首次进入自由分组视图会显示一次性说明卡：
 
-- 分组只改变显示位置，不移动会话
+- 分组只改变会话在自由分组视图中的编排，不改变官方工作区归属和日志
 - 如何新建分组、拖拽会话与组头
 
 说明卡可 dismiss，状态写入 `localStorage`。  
@@ -208,6 +208,27 @@ doctor
 改名用 `expectedTitle`，归档用 `expectedArchived`；运行中的会话归档需要显式
 `stopActivity: true`。
 
+### 可直接复制的 AI 提示词
+
+先开启 **AI 控制接口**；改名提示还需要开启 **会话操作**。不需要命令行、HTTP、Cookie 或 token——把下面的话发给会话里的 AI，让它调用 `session_groups_control`。
+
+#### 批量创建项目分组架构
+
+> 用 `session_groups_control` 创建或复用以下分组层级：
+>
+> `〈项目名〉项目组` — 图标 `server`，颜色 `blue`
+> - `设计中` — 图标 `book`，颜色 `purple`
+> - `开发中` — 图标 `play-circle`，颜色 `blue`
+> - `已挂起` — 图标 `clock`，颜色 `orange`
+> - `已完成` — 图标 `check-circle`，颜色 `green`
+> - `已取消` — 图标 `x-circle`，颜色 `red`
+>
+> 已有分组复用，只补缺失的子组。先查 `state`/`resolve`；路径不存在或有歧义就停下来问我。再 `plan`，把 `changes` 和 `planHash` 给我看，最后用同一个 `planHash` 和 `baseRevision` 执行 `apply`。
+
+#### 改名并归入分组，一条指令完成
+
+> 把当前会话改名为「〈新名称〉」，然后归入「〈项目名〉项目组 / 开发中」。使用 `session_groups_control`；先拿到当前会话明确的 `sessionId`，不要猜。先改名，再用 `plan`/`apply` 执行 `session.assign`。任一步失败就停止，并告诉我卡在哪一步。这是一条指令里的两个连续操作，不是单个事务。
+
 ### HTTP 路由（浏览器/调试）
 
 以下路由保留给浏览器设置页和本地调试，不作为 AI CLI 的主通道：
@@ -294,14 +315,14 @@ npm pack
 ```
 
 - `npm test`：446 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.50% lines / 82.01% branches / 88.42% functions）
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.50% lines / 82.03% branches / 88.42% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH
 - `scripts/qa/clean-profile.ps1`：隔离 profile 安装/卸载验证，不碰真实 `~/.dsh`
 - `scripts/qa/lifecycle-isolated.ps1`：隔离 install → uninstall → reinstall，校验分组记录 hash 不变
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`：A+ 隔离 Playwright 冒烟
-  - 覆盖首次引导、搜索、归档筛选、拖拽自动展开、拖拽边缘、弹窗拖动/缩放、三状态按钮、移动到分组 head、收起/展开顺序、264px、英文/深色、宿主侧栏 Rail、亮色对比度
+  - 覆盖首次引导、搜索、归档筛选、拖拽自动展开、拖拽边缘、弹窗拖动/缩放、三状态按钮、归入分组 head、收起/展开顺序、264px、英文/深色、宿主侧栏 Rail、亮色对比度
   - 覆盖外部 commit SSE 刷新、同上下文双页面同步、同 baseRevision 并发 CAS（一胜一 409）、EventSource 强制重连、会话菜单 Copy Session ID（真实剪贴板 + toast）、hover archive 存在、第一层设置、本地化标题、详情 tooltip、Switch 交互、live diagnostics HUD、destructive 二次确认取消
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`

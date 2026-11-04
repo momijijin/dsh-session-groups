@@ -2478,7 +2478,7 @@ export const GroupsView = (props) => {
         currentHex: currentColorHexOf(store.doc, groupId),
       }),
     openMoveGroup: (groupId) =>
-      rt()?.openDialog({ kind: 'move-group', groupId, titleKey: 'dialog.moveTo', currentId: currentParentOf(store.doc, groupId) }),
+      rt()?.openDialog({ kind: 'move-group', groupId, titleKey: 'dialog.moveGroup', currentId: currentParentOf(store.doc, groupId) }),
     openDeleteGroup: (groupId) => {
       const group = findGroup(store.doc, groupId)
       if (!group) return undefined
@@ -2576,7 +2576,7 @@ export const GroupsView = (props) => {
     },
     openRenameSession: (sessionId, title) => rt()?.openDialog({ kind: 'rename-session', sessionId, titleKey: 'dialog.renameSession', value: title ?? '' }),
     openMoveSession: (sessionId) =>
-      rt()?.openDialog({ kind: 'move-session', sessionId, titleKey: 'dialog.moveTo', currentId: currentGroupIdOf(store.doc, sessionId) }),
+      rt()?.openDialog({ kind: 'move-session', sessionId, titleKey: 'dialog.moveSession', currentId: currentGroupIdOf(store.doc, sessionId) }),
     archiveSession: (sessionId) => rt()?.archiveSession(sessionId),
     unarchiveSession: (sessionId) => rt()?.unarchiveSession(sessionId),
     forkSession: (sessionId) => rt()?.forkSession(sessionId),

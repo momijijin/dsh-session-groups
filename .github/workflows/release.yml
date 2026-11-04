@@ -38,8 +38,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          NOTES_FILE="docs/release-notes/${GITHUB_REF_NAME}.md"
+          test -f "$NOTES_FILE"
           gh release create "$GITHUB_REF_NAME" \
             dsh-session-groups-*.tgz \
             --title "dsh-session-groups ${GITHUB_REF_NAME#v}" \
-            --notes-file "docs/release-notes/v0.3.0-beta.68.md" \
+            --notes-file "$NOTES_FILE" \
             --prerelease

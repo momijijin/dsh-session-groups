@@ -2,11 +2,11 @@
 
 [English](README.md) | [中文](README.zh.md)
 
-Global session groups for the DSH Desktop left sidebar. It organizes sessions across workspaces without moving the sessions themselves:
+A free-form grouping layer over the shipped DSH Desktop workspace/session sidebar. Official workspace and session management remain authoritative: each session keeps its workspace membership and log, while this plugin stores a separate group assignment. A group can therefore contain sessions from different workspaces.
 
-- group membership does not move or rewrite session logs;
+- assigning a session to a group changes only this plugin's group record and its placement in the Free groups view;
+- official workspace membership, the workspace registry and session logs are never changed;
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
-- the official workspace registry is never modified;
 - `workspace.json` is never written.
 
 Current version: **0.3.0-beta.68**  
@@ -50,9 +50,9 @@ The current CI is an Ubuntu Node-level gate, not a cross-platform certification.
 
 ### Sessions
 
-- drag sessions across workspaces into groups;
-- drag out of a group back to Ungrouped;
-- open, rename, archive/unarchive and move to a group;
+- assign sessions from different workspaces to the same group;
+- drag a session out of a group back to Ungrouped;
+- open, rename, archive/unarchive and assign to a group;
 - hover archive/unarchive action;
 - session menu fork and Copy Session ID;
 - fork uses the last completed turn and places the child at the head of the source group (or at the top of Ungrouped when the source is ungrouped);
@@ -196,6 +196,27 @@ doctor
 
 Session actions require an explicit `sessionId`; a missing id is `invalid-session-id` and the plugin never guesses the "most recent" session. Rename supports `expectedTitle`; archive supports `expectedArchived`; archiving a running session requires explicit `stopActivity: true`.
 
+### Copy-paste AI prompts
+
+Enable **AI control API** first; the rename prompt also needs **session operations**. No CLI, HTTP request, cookie or token is involved — paste the prompt into a DSH session and let the agent call `session_groups_control`.
+
+#### Batch-create a project hierarchy
+
+> Use `session_groups_control` to create (or reuse) this hierarchy:
+>
+> `<Project> project group` — icon `server`, color `blue`
+> - `Designing` — icon `book`, color `purple`
+> - `In development` — icon `play-circle`, color `blue`
+> - `Paused` — icon `clock`, color `orange`
+> - `Done` — icon `check-circle`, color `green`
+> - `Cancelled` — icon `x-circle`, color `red`
+>
+> Reuse existing groups and add only missing children. Run `state`/`resolve` first; if a path is missing or ambiguous, ask me. Then `plan`, show me the changes and `planHash`, and `apply` with the same `planHash` and `baseRevision`.
+
+#### Rename and assign in one instruction
+
+> Rename the current session to `<new title>` and assign it to `<Project> project group / In development` using `session_groups_control`. Use the current session's explicit `sessionId`; never guess it. Rename first, then plan/apply `session.assign`. If either step fails, stop and report which step failed. This is two sequential operations, not one transaction.
+
 ### HTTP routes (browser/debug)
 
 These routes are for browser settings pages and local debugging, not the primary AI path:
@@ -280,7 +301,7 @@ npm pack
 ```
 
 - `npm test`: 446 unit/contract tests;
-- `npm run check:coverage`: Node built-in coverage (currently about 93.50% lines / 82.01% branches / 88.42% functions, `src/**` scope);
+- `npm run check:coverage`: Node built-in coverage (currently about 93.50% lines / 82.03% branches / 88.42% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;

@@ -151,7 +151,7 @@ const createChildGroup = async (parentId, name) => {
 const moveGroup = async (sourceId, targetId) => {
   const source = groupRowById(sourceId)
   await source.locator('[data-testid="session-groups-group-menu"]').click({ force: true })
-  await menuItem(/移动到分组|Move to group/).click()
+  await menuItem(/移到其他分组|Move to another group/).click()
   await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
   await page.waitForTimeout(500)
@@ -160,7 +160,7 @@ const moveGroup = async (sourceId, targetId) => {
 const moveSessionToGroup = async (sessionId, targetId) => {
   const session = page.locator(`[data-testid="session-groups-session"][data-session-id="${sessionId}"]`).first()
   await session.locator('[data-testid="session-groups-session-menu"]').click({ force: true })
-  await menuItem(/移动到分组|Move to group/).click()
+  await menuItem(/归入分组|Assign to group/).click()
   await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
   await page.waitForTimeout(500)
