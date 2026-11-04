@@ -31,7 +31,6 @@ npm run build
 
 git switch dev
 git merge --no-ff feature/<slug> -m "merge: <简述> (feature/<slug>)"
-# 可选，仅需要归档边界时：
 git tag -a archive/feature/<slug> -m "archive feature/<slug>" feature/<slug>
 git branch -d feature/<slug>
 ```
@@ -40,7 +39,8 @@ git branch -d feature/<slug>
 
 - 每个问题/需求一个分支，不把无关改动塞进同一批。
 - 合并前至少运行受影响测试；UI/设置/拖拽类改动还必须跑对应 A+ 回归。
-- 功能分支合并后删除；归档 tag 默认留本地，除非用户明确要求推送。
+- **合并后必须先打 `archive/feature/<slug>` 归档 tag，再删除本地 feature 分支**；归档 tag 用来替代已删除分支的历史入口。
+- 归档 tag 默认只留本地，除非用户明确要求推送；它永远不触发 Release。
 - 不为了“同步”把 main 合回 dev；只有在 main 产生热修复时，才按热修复流程回收。
 
 ## 3. 发布：dev → main → tag
@@ -97,22 +97,24 @@ git switch -c hotfix/<slug>
 # 修复 + 测试
 git switch main
 git merge --no-ff hotfix/<slug> -m "hotfix: <简述>"
+git tag -a archive/hotfix/<slug> -m "archive hotfix/<slug>" hotfix/<slug>
 git tag -a v<version> -m "dsh-session-groups <version>"
 git push origin main v<version>
+git branch -d hotfix/<slug>
 
 # 把这次修复回收进 dev，避免下一次发布丢失
 git switch dev
 git merge --no-ff main -m "merge: hotfix v<version> back to dev"
 ```
 
-热修复也必须有独立 tag 和 release；不能只改 main 不回收 dev。
+热修复也必须有独立版本 tag 和 release；不能只改 main 不回收 dev。`archive/hotfix/<slug>` 与 `archive/feature/<slug>` 一样只是分支归档，不是版本 tag。
 
 ## 5. CI / Release 边界
 
 - `.github/workflows/ci.yml`：只检查 dev push / PR，不发布、不 bump 版本。
-- `.github/workflows/release.yml`：只监听 `v*` tag；tag 才构建并创建 GitHub Release。
+- `.github/workflows/release.yml`：只监听 `v<semver>` 形态的版本 tag；`archive/*` 等分支归档 tag 永不触发发布。
 - CI 不自动决定版本号；版本号由发布准备阶段人工写入并验证。
-- release notes 文件名必须与 tag 对应；发布前检查 workflow 引用的 notes 路径。
+- release notes 文件名必须与版本 tag 对应；发布前检查 workflow 引用的 notes 路径。
 - 当前 repo 若仍是 `main` 为 GitHub 默认分支，建议在仓库设置中把默认分支改为 `dev`；main 保持发布视图。
 
 ## 6. 当前基线
