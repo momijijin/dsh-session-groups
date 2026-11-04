@@ -226,6 +226,8 @@ test('settings page is bundle-level and uses DSH primitives with option details'
   assert.equal(typeof en['config.details.controlApi'], 'string')
   assert.match(skillRepair, /field === 'controlSessions' && config\.controlApi !== true/)
   assert.match(skillRepair, /disabled: dependencyBlocked/)
+  assert.match(skillRepair, /dsg-config-dependent/)
+  assert.match(CSS, /\.dsg-config-dependent \{[^}]*margin-left:\s*18px/)
   assert.equal(zh['config.requiresControlApi'], '需要先开启 AI 控制接口')
   assert.equal(en['config.requiresControlApi'], 'Requires AI control API')
   assert.equal(typeof zh['config.destructiveConfirmBody'], 'string')
