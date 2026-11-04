@@ -13,8 +13,8 @@ const CONFIG_FIELDS = [
   ['diagnostics', 'config.diagnostics', 'config.diagnosticsHint', 'config.details.diagnostics'],
   ['debugProbe', 'config.debugProbe', 'config.debugProbeHint', 'config.details.debugProbe'],
   ['controlApi', 'config.controlApi', 'config.controlApiHint', 'config.details.controlApi'],
-  ['controlDestructive', 'config.controlDestructive', 'config.controlDestructiveHint', 'config.details.controlDestructive'],
   ['controlSessions', 'config.controlSessions', 'config.controlSessionsHint', 'config.details.controlSessions'],
+  ['controlDestructive', 'config.controlDestructive', 'config.controlDestructiveHint', 'config.details.controlDestructive'],
 ]
 
 const readFormValue = (form) => {
@@ -157,7 +157,7 @@ export const SkillRepairCard = ({ form }) => {
             const dependencyBlocked = field === 'controlSessions' && config.controlApi !== true
             return h(
               'div',
-              { class: 'dsg-config-item', key: field, 'data-testid': `session-groups-config-${field}` },
+              { class: `dsg-config-item${field === 'controlSessions' ? ' dsg-config-dependent' : ''}`, key: field, 'data-testid': `session-groups-config-${field}` },
               h(
                 'div',
                 { class: 'dsg-config-row' },
