@@ -142,6 +142,7 @@ const createGroup = async (name) => {
 const createChildGroup = async (parentId, name) => {
   const parent = groupRowById(parentId)
   await parent.locator('[data-testid="session-groups-group-menu"]').click({ force: true })
+  await page.locator('[data-testid="session-groups-menu"]').waitFor({ state: 'visible' })
   await menuItem(/新建子分组|New subgroup/).click()
   await page.locator('[data-testid="session-groups-dialog-input"]').fill(name)
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
@@ -151,6 +152,7 @@ const createChildGroup = async (parentId, name) => {
 const moveGroup = async (sourceId, targetId) => {
   const source = groupRowById(sourceId)
   await source.locator('[data-testid="session-groups-group-menu"]').click({ force: true })
+  await page.locator('[data-testid="session-groups-menu"]').waitFor({ state: 'visible' })
   await menuItem(/移到其他分组|Move to another group/).click()
   await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
@@ -160,6 +162,7 @@ const moveGroup = async (sourceId, targetId) => {
 const moveSessionToGroup = async (sessionId, targetId) => {
   const session = page.locator(`[data-testid="session-groups-session"][data-session-id="${sessionId}"]`).first()
   await session.locator('[data-testid="session-groups-session-menu"]').click({ force: true })
+  await page.locator('[data-testid="session-groups-menu"]').waitFor({ state: 'visible' })
   await menuItem(/归入分组|Assign to group/).click()
   await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
@@ -167,6 +170,7 @@ const moveSessionToGroup = async (sessionId, targetId) => {
 }
 
 const addSessionToGroup = async (groupId) => {
+  const before = groupSessionIds(groupId).length
   const addButton = groupRowById(groupId).locator('[data-testid="session-groups-group-add"]')
   await addButton.click({ force: true })
   await page.locator('[data-testid="session-groups-dialog"]').waitFor({ state: 'visible' })
@@ -175,7 +179,15 @@ const addSessionToGroup = async (groupId) => {
   const confirm = page.locator('[data-testid="session-groups-dialog-confirm"]')
   if (!(await confirm.isEnabled())) throw new Error('new-session dialog has no enabled workspace/confirm')
   await confirm.click()
-  await page.waitForTimeout(1500)
+  // DSH 0.2.1-rc.5 may not expose the optional `sessions` client service at
+  // mount, so the plugin falls back to connectWorkspace and the commit can take
+  // longer than the rc.2 path. Wait for the persisted placement, not a fixed
+  // sleep.
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (groupSessionIds(groupId).length > before) return
+    await page.waitForTimeout(250)
+  }
+  throw new Error(`new session did not land in group ${groupId}`)
 }
 
 const readTestDoc = () => JSON.parse(readFileSync(resolve(testHome, 'storages', 'dsh-session-groups.json'), 'utf8'))

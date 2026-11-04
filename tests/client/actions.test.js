@@ -58,6 +58,14 @@ const makeActions = (overrides = {}) => {
   const snapshot = { ids: ['existing'], byId: { existing: { id: 'existing' } } }
   const services = {
     sessions: {
+      ...(overrides.directCreate
+        ? {
+            create: async (request) => {
+              calls.directCreate = request
+              return overrides.directCreateReturns ?? 'direct'
+            },
+          }
+        : {}),
       using: async (id, options, fn) => {
         const reference = { binding: { session: { rename: async (title) => { calls.renames.push({ id, title, source: options.source }); return { ok: true } } } } }
         return fn(reference)
@@ -176,6 +184,16 @@ test('createSessionInGroup uses startSession and inserts the new id at the group
   assert.equal(calls.started, 'w2')
   assert.equal(calls.commits.length, 1)
   assert.deepEqual(calls.opens, ['fresh'])
+})
+
+test('createSessionInGroup prefers explicit Session Controller create on rc.5', async () => {
+  const { actions, calls, groupId, getDoc } = makeActions({ directCreate: true, directCreateReturns: 'direct' })
+  const result = await actions.createSessionInGroup({ groupId, workspaceId: 'w1' })
+  assert.equal(result.sessionId, 'direct')
+  assert.deepEqual(calls.directCreate, { workspaceId: 'w1' })
+  assert.equal(calls.started, undefined, 'direct create must not reuse the blank via startSession')
+  assert.deepEqual(findGroup(getDoc(), groupId).sessionIds, ['direct', 'existing'])
+  assert.deepEqual(calls.opens, ['direct'])
 })
 
 test('createSessionInGroup refuses to steal an already-placed blank via the connect fallback', async () => {

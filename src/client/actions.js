@@ -155,30 +155,48 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t, clipb
     const group = findGroup(getDoc(), groupId)
     if (!group) throw new Error('group-not-found')
 
-    // `connectWorkspace` may REUSE an existing blank, which would steal a blank
-    // that already belongs to another group instead of creating a new one.
-    // `startSession` creates and navigates but returns void, so diff the session
-    // snapshot to learn the new id (Gate 0 S3: delta +1).
-    const snapshot = () => sessions?.list?.getSnapshot?.() ?? { ids: [], byId: {} }
-    const before = new Set(snapshot().ids ?? [])
-    uiWorkspace.startSession(workspaceId)
+    // DSH 0.2.1-rc.5 reuses the workspace's single reusable blank in
+    // `startSession`/`connectWorkspace`; that is correct for normal navigation
+    // but would steal a blank already placed in another group. Prefer the
+    // Session Controller's explicit create when the host exposes it, then fall
+    // back to the rc.2 startSession/diff path.
     let sessionId = null
-    for (let attempt = 0; attempt < 60; attempt += 1) {
-      const now = snapshot()
-      const found = (now.ids ?? []).find((id) => !before.has(id) && now.byId?.[id])
-      if (found) { sessionId = found; break }
-      await new Promise((resolve) => setTimeout(resolve, 50))
+    const snapshot = () => sessions?.list?.getSnapshot?.() ?? { ids: [], byId: {} }
+    const createDirectly = async (controller) => {
+      const create = controller?.create
+      if (typeof create !== 'function') return null
+      try {
+        const created = await create.call(controller, { workspaceId })
+        return typeof created === 'string' && created !== '' ? created : null
+      } catch {
+        return null
+      }
     }
-    if (!sessionId) {
-      // Fallback: connectWorkspace returns an id but may reuse a blank. Only use
-      // it when it is not already placed in a group; otherwise fail visibly.
-      if (typeof uiWorkspace.connectWorkspace !== 'function') throw new Error('create-failed')
-      const fallback = await uiWorkspace.connectWorkspace(workspaceId)
-      const docNow = getDoc()
-      const placed = new Set([...docNow.ungrouped, ...docNow.groups.flatMap((entry) => entry.sessionIds)])
-      if (typeof fallback === 'string' && fallback !== '' && !placed.has(fallback)) sessionId = fallback
+    sessionId = (await createDirectly(sessions)) ?? (await createDirectly(uiWorkspace?.sessions))
+    if (sessionId === null) {
+      // `connectWorkspace` may REUSE an existing blank, which would steal a blank
+      // that already belongs to another group instead of creating a new one.
+      // `startSession` creates and navigates but returns void, so diff the session
+      // snapshot to learn the new id (Gate 0 S3: delta +1).
+      const before = new Set(snapshot().ids ?? [])
+      uiWorkspace.startSession(workspaceId)
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const now = snapshot()
+        const found = (now.ids ?? []).find((id) => !before.has(id) && now.byId?.[id])
+        if (found) { sessionId = found; break }
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      if (sessionId === null) {
+        // Fallback: connectWorkspace returns an id but may reuse a blank. Only use
+        // it when it is not already placed in a group; otherwise fail visibly.
+        if (typeof uiWorkspace.connectWorkspace !== 'function') throw new Error('create-failed')
+        const fallback = await uiWorkspace.connectWorkspace(workspaceId)
+        const docNow = getDoc()
+        const placed = new Set([...docNow.ungrouped, ...docNow.groups.flatMap((entry) => entry.sessionIds)])
+        if (typeof fallback === 'string' && fallback !== '' && !placed.has(fallback)) sessionId = fallback
+      }
     }
-    if (!sessionId) throw new Error('create-failed')
+    if (sessionId === null) throw new Error('create-failed')
 
     const nextDoc = await commitDoc((latest) => assignSession(latest, sessionId, groupId, 0))
     openSession(sessionId)
