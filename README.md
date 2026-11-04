@@ -9,7 +9,7 @@ A free-form grouping layer over the shipped DSH Desktop workspace/session sideba
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
 - `workspace.json` is never written.
 
-Current version: **0.3.0-beta.74**  
+Current version: **0.3.0-beta.75**  
 Primary support: **DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2** (`engines.dsh: >=0.2.0-rc.2 <0.3.0`)  
 Verified shell: **community DSH Desktop Stable 2.0.18 (anywhere-labs)**  
 Target shell: **official DeepSeek Harness desktop** — pending independent regression  
@@ -325,7 +325,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS;
 - build artifact: `lib/client.js`;
-- package: `dsh-session-groups-0.3.0-beta.74.tgz`;
+- package: `dsh-session-groups-0.3.0-beta.75.tgz`;
 - release steps: `docs/RELEASE.md`;
 - test summary: `docs/TEST-RESULTS.md`.
 
