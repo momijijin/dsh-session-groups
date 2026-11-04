@@ -13,8 +13,8 @@ const CONFIG_FIELDS = [
   ['diagnostics', 'config.diagnostics', 'config.diagnosticsHint', 'config.details.diagnostics'],
   ['debugProbe', 'config.debugProbe', 'config.debugProbeHint', 'config.details.debugProbe'],
   ['controlApi', 'config.controlApi', 'config.controlApiHint', 'config.details.controlApi'],
-  ['controlDestructive', 'config.controlDestructive', 'config.controlDestructiveHint', 'config.details.controlDestructive'],
   ['controlSessions', 'config.controlSessions', 'config.controlSessionsHint', 'config.details.controlSessions'],
+  ['controlDestructive', 'config.controlDestructive', 'config.controlDestructiveHint', 'config.details.controlDestructive'],
 ]
 
 const readFormValue = (form) => {
@@ -85,11 +85,15 @@ export const SkillRepairCard = ({ form }) => {
   }
 
   const requestFieldChange = (field, next) => {
+    if (field === 'controlSessions' && config.controlApi !== true) return
     if (field === 'controlDestructive' && next === true && config.controlDestructive !== true) {
       setDestructivePrompt(true)
       return
     }
     if (field === 'controlDestructive') setDestructivePrompt(false)
+    if (field === 'controlApi' && next === false && config.controlSessions === true) {
+      void setField('controlSessions', false)
+    }
     void setField(field, next)
   }
 
@@ -149,10 +153,11 @@ export const SkillRepairCard = ({ form }) => {
           { class: 'dsg-config-list', 'data-testid': 'session-groups-config-list' },
           h('div', { class: 'dsg-config-title' }, t('config.title')),
           h('div', { class: 'dsg-config-hint' }, t('config.hint')),
-          ...CONFIG_FIELDS.map(([field, labelKey, hintKey, detailKey]) =>
-            h(
+          ...CONFIG_FIELDS.map(([field, labelKey, hintKey, detailKey]) => {
+            const dependencyBlocked = field === 'controlSessions' && config.controlApi !== true
+            return h(
               'div',
-              { class: 'dsg-config-item', key: field, 'data-testid': `session-groups-config-${field}` },
+              { class: `dsg-config-item${field === 'controlSessions' ? ' dsg-config-dependent' : ''}`, key: field, 'data-testid': `session-groups-config-${field}` },
               h(
                 'div',
                 { class: 'dsg-config-row' },
@@ -161,6 +166,9 @@ export const SkillRepairCard = ({ form }) => {
                   { class: 'dsg-config-copy' },
                   h('div', { class: 'dsg-config-label' }, t(labelKey)),
                   h('div', { class: 'dsg-config-proof' }, t(hintKey)),
+                  dependencyBlocked
+                    ? h('div', { class: 'dsg-config-proof dsg-config-dependency' }, t('config.requiresControlApi'))
+                    : null,
                 ),
                 h(
                   'div',
@@ -185,14 +193,15 @@ export const SkillRepairCard = ({ form }) => {
                   }),
                   h(Switch, {
                     checked: config[field] === true,
+                    disabled: dependencyBlocked,
                     onChange: (next) => requestFieldChange(field, next),
                     label: t(labelKey),
                   }),
                 ),
               ),
               renderConfirm(field),
-            ),
-          ),
+            )
+          }),
         )
       : null,
     h(

@@ -21,8 +21,24 @@ jobs:
         with:
           node-version: '24.x'
 
+      - name: Require a version tag
+        run: |
+          case "$GITHUB_REF_NAME" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *)
+              echo "::error::Release only accepts version tags like v1.2.3 or v1.2.3-beta.1; got $GITHUB_REF_NAME"
+              exit 1
+              ;;
+          esac
+
+      - name: Require the tag commit on main
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main
+          echo "tag commit is reachable from main"
+
       - name: Install dependencies
-        run: npm install --no-package-lock --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Verify release
         run: |
@@ -38,8 +54,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          NOTES_FILE="docs/release-notes/${GITHUB_REF_NAME}.md"
+          test -f "$NOTES_FILE"
           gh release create "$GITHUB_REF_NAME" \
             dsh-session-groups-*.tgz \
             --title "dsh-session-groups ${GITHUB_REF_NAME#v}" \
-            --notes-file "docs/release-notes/v0.3.0-beta.68.md" \
+            --notes-file "$NOTES_FILE" \
             --prerelease

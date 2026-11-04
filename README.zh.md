@@ -2,14 +2,14 @@
 
 [English](README.md) | [中文](README.zh.md)
 
-DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会话，但只改变显示位置：
+在 DSH Desktop 官方工作区/会话侧栏之上增加一层独立的自由分组。官方工作区/会话管理仍是底层来源：会话仍属于原工作区，日志也不因分组而改变；插件只保存自己的分组归属，因此同一分组可以包含来自不同工作区的会话。
 
-- 分组本身不移动或改写会话日志
-- 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变
-- 不修改官方工作区注册表
-- 不写入 `workspace.json`
+- 把会话归入分组只更新插件自己的分组记录，以及它在自由分组视图中的位置；
+- 不改变会话所属的官方工作区、官方工作区注册表和会话日志；
+- 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
+- 不写入 `workspace.json`。
 
-当前版本：**0.3.0-beta.68**  
+当前版本：**0.3.0-beta.73**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 兼容性说明见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)：使用 `engines.dsh`、`dsh-0.2` 适配器选择器和运行时能力检测；版本矩阵显式注册，主流程不写版本 `switch`。
@@ -50,9 +50,9 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 
 ### 会话
 
-- 跨工作区把会话拖入分组
-- 拖出分组进入未归组
-- 打开、重命名、归档/取消归档、移动到分组
+- 把不同工作区的会话归入同一个分组
+- 把会话拖出分组，回到未归组
+- 打开、重命名、归档/取消归档、归入分组
 - 行 hover 提供归档/取消归档
 - 会话菜单提供分叉会话、复制 Session ID
 - 分叉会以最后一个已完成轮次为分叉点；成功后将子会话放到源会话所在分组顶部（源会话未归组时放到未分组顶部）
@@ -88,7 +88,7 @@ DSH Desktop 左侧栏的**全局会话分组**插件。它跨工作区组织会�
 
 首次进入自由分组视图会显示一次性说明卡：
 
-- 分组只改变显示位置，不移动会话
+- 分组只改变会话在自由分组视图中的编排，不改变官方工作区归属和日志
 - 如何新建分组、拖拽会话与组头
 
 说明卡可 dismiss，状态写入 `localStorage`。  
@@ -184,7 +184,7 @@ control token，也不依赖 CLI。`controlApi` 必须是开启状态；`control
 Host 在每次分组 commit（原生工具或 HTTP）后通过 `/dsh-session-groups/events` 广播新 revision；浏览器收到后重新 load 对账。切回自由分组视图时也会主动重新 load。
 
 `doctor` 是只读兼容性诊断，可在 `controlApi` 关闭时调用；
-它返回宿主能力、适配器/版本范围、控制门禁、存储路径、存储健康（status/revision/.bak/quarantine）、服务存在性与已挂载路由。
+它返回宿主能力、适配器/版本范围、控制门禁、存储路径、存储健康（status/revision、backupStatus/backupRevision/backupError、quarantine）、服务存在性与已挂载路由。
 
 工具动作：
 
@@ -207,6 +207,27 @@ doctor
 会话动作必须显式传 `sessionId`；缺失就是 `invalid-session-id`，不猜最近会话。
 改名用 `expectedTitle`，归档用 `expectedArchived`；运行中的会话归档需要显式
 `stopActivity: true`。
+
+### 可直接复制的 AI 提示词
+
+先开启 **AI 控制接口**；改名提示还需要开启 **会话操作**。不需要命令行、HTTP、Cookie 或 token——把下面的话发给会话里的 AI，让它调用 `session_groups_control`。
+
+#### 批量创建项目分组架构
+
+> 用 `session_groups_control` 创建或复用以下分组层级：
+>
+> `〈项目名〉项目组` — 图标 `server`，颜色 `blue`
+> - `设计中` — 图标 `book`，颜色 `purple`
+> - `开发中` — 图标 `play-circle`，颜色 `blue`
+> - `已挂起` — 图标 `clock`，颜色 `orange`
+> - `已完成` — 图标 `check-circle`，颜色 `green`
+> - `已取消` — 图标 `x-circle`，颜色 `red`
+>
+> 已有分组复用，只补缺失的子组。先查 `state`/`resolve`；路径不存在或有歧义就停下来问我。再 `plan`，把 `changes` 和 `planHash` 给我看，最后用同一个 `planHash` 和 `baseRevision` 执行 `apply`。
+
+#### 改名并归入分组，一条指令完成
+
+> 把当前会话改名为「〈新名称〉」，然后归入「〈项目名〉项目组 / 开发中」。使用 `session_groups_control`；先拿到当前会话明确的 `sessionId`，不要猜。先改名，再用 `plan`/`apply` 执行 `session.assign`。任一步失败就停止，并告诉我卡在哪一步。这是一条指令里的两个连续操作，不是单个事务。
 
 ### HTTP 路由（浏览器/调试）
 
@@ -265,13 +286,13 @@ node scripts/session-groups-control.mjs doctor
 
 - 状态统计只覆盖分组文档中已归组或显式未归组的会话；自动派生的未归组会话不进入头部计数。
 - 分组、折叠状态与弹窗位置是单窗口本地状态；多窗口冲突通过 409 提示，不做实时合并。
-- store 只在一个进程内串行写；多个 DSH 进程共用同一 profile 时没有跨进程锁。
+- 写入使用进程内队列 + 短生命周期 `<record>.lock` 文件做跨进程串行化；持有者 PID 消失或锁文件超过 30 秒时会自动回收。
 - 大列表懒渲染仍在 deferred；当前只虚拟化未归组列表，折叠子树的 React 节点仍会构建。
 - dshmarket 目录条目尚未发布；当前 beta 阶段使用本地 tarball。
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
-- 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
-- 当前发布验证以 **446 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
+- 对话框移动/缩放已有键盘支持；全量 axe/对比度审计和整棵树的键盘拖拽仍为 deferred。
+- 当前发布验证以 **459 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
 
 ## 文档
 
@@ -293,20 +314,20 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：446 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.50% lines / 82.01% branches / 88.42% functions）
+- `npm test`：459 项单元/契约测试
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.63% lines / 82.22% branches / 88.73% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH
 - `scripts/qa/clean-profile.ps1`：隔离 profile 安装/卸载验证，不碰真实 `~/.dsh`
 - `scripts/qa/lifecycle-isolated.ps1`：隔离 install → uninstall → reinstall，校验分组记录 hash 不变
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`：A+ 隔离 Playwright 冒烟
-  - 覆盖首次引导、搜索、归档筛选、拖拽自动展开、拖拽边缘、弹窗拖动/缩放、三状态按钮、移动到分组 head、收起/展开顺序、264px、英文/深色、宿主侧栏 Rail、亮色对比度
+  - 覆盖首次引导、搜索、归档筛选、拖拽自动展开、拖拽边缘、弹窗拖动/缩放、三状态按钮、归入分组 head、收起/展开顺序、264px、英文/深色、宿主侧栏 Rail、亮色对比度
   - 覆盖外部 commit SSE 刷新、同上下文双页面同步、同 baseRevision 并发 CAS（一胜一 409）、EventSource 强制重连、会话菜单 Copy Session ID（真实剪贴板 + toast）、hover archive 存在、第一层设置、本地化标题、详情 tooltip、Switch 交互、live diagnostics HUD、destructive 二次确认取消
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.68.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.73.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 

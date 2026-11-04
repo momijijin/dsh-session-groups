@@ -41,7 +41,7 @@ export const GroupListPicker = ({ options, selection, onSelect, rootLabel, ariaL
       className: 'dsg-menu dsg-dialog-list',
       role: 'listbox',
       'data-testid': testId,
-      'aria-label': ariaLabel ?? t('dialog.moveTo'),
+      'aria-label': ariaLabel ?? t('dialog.destinationGroup'),
     },
     allowRoot ? option('ungrouped', null, rootLabel ?? t('ungrouped.title'), 0) : null,
     ...options.flatMap((group, index) => {

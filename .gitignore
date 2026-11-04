@@ -21,8 +21,8 @@ spike/**/evidence/*.zip
 # Local SDD/review artifacts (kept outside the release history)
 .superpowers/
 
-# Stray npm lockfile; this repo uses pnpm-lock.yaml
-package-lock.json
+# Lockfiles: package-lock.json is tracked for reproducible CI/release installs.
+# pnpm-lock.yaml remains the local-development lockfile.
 
 # OS
 Thumbs.db

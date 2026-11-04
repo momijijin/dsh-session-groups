@@ -151,7 +151,7 @@ const createChildGroup = async (parentId, name) => {
 const moveGroup = async (sourceId, targetId) => {
   const source = groupRowById(sourceId)
   await source.locator('[data-testid="session-groups-group-menu"]').click({ force: true })
-  await menuItem(/移动到分组|Move to group/).click()
+  await menuItem(/移到其他分组|Move to another group/).click()
   await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
   await page.waitForTimeout(500)
@@ -160,7 +160,7 @@ const moveGroup = async (sourceId, targetId) => {
 const moveSessionToGroup = async (sessionId, targetId) => {
   const session = page.locator(`[data-testid="session-groups-session"][data-session-id="${sessionId}"]`).first()
   await session.locator('[data-testid="session-groups-session-menu"]').click({ force: true })
-  await menuItem(/移动到分组|Move to group/).click()
+  await menuItem(/归入分组|Assign to group/).click()
   await page.locator(`[data-testid="session-groups-dialog-group"][data-group-id="${targetId}"]`).click()
   await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
   await page.waitForTimeout(500)
@@ -243,6 +243,67 @@ try {
   const targetId = await createGroup(targetName)
   await createChildGroup(targetId, childName)
   const sourceId = await createGroup(sourceName)
+
+  // The group menu's first action must be the same new-session entry as the
+  // group row's first + button; checking the dialog proves the handler wiring
+  // without creating a throwaway session.
+  await groupRowById(targetId).locator('[data-testid="session-groups-group-menu"]').click({ force: true })
+  const firstGroupMenuItem = page.locator('[role="menuitem"]').first()
+  await firstGroupMenuItem.waitFor({ state: 'visible' })
+  if ((await firstGroupMenuItem.getAttribute('data-testid')) !== 'session-groups-group-new-session') {
+    throw new Error('group menu first item is not the new-session action')
+  }
+  if (!/新建会话|New session/.test((await firstGroupMenuItem.textContent()) ?? '')) {
+    throw new Error('group menu new-session label is missing')
+  }
+  await firstGroupMenuItem.click()
+  const a11yDialog = page.locator('[data-testid="session-groups-dialog"]')
+  await a11yDialog.waitFor({ state: 'visible' })
+  const labelledBy = await a11yDialog.getAttribute('aria-labelledby')
+  if (!labelledBy || (await page.locator(`#${labelledBy}`).count()) !== 1) {
+    throw new Error('dialog has no single accessible title reference')
+  }
+  for (let index = 0; index < 8; index += 1) await page.keyboard.press('Tab')
+  const tabStayedInside = await page.evaluate(() =>
+    document.activeElement?.closest?.('[data-testid="session-groups-dialog"]') !== null
+  )
+  if (!tabStayedInside) throw new Error('Tab escaped the modal dialog')
+  const keyboardTitlebar = page.locator('[data-testid="session-groups-dialog-titlebar"]')
+  await keyboardTitlebar.focus()
+  const beforeMove = await a11yDialog.boundingBox()
+  await page.keyboard.press('ArrowRight')
+  await page.waitForTimeout(120)
+  const afterMove = await a11yDialog.boundingBox()
+  if (!beforeMove || !afterMove || afterMove.x <= beforeMove.x) throw new Error('keyboard dialog move did not move right')
+  const keyboardResizer = page.locator('[data-testid="session-groups-dialog-resizer"]')
+  await keyboardResizer.focus()
+  const beforeResize = await a11yDialog.boundingBox()
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('ArrowDown')
+  await page.waitForTimeout(120)
+  const afterResize = await a11yDialog.boundingBox()
+  if (!beforeResize || !afterResize || afterResize.width <= beforeResize.width || afterResize.height <= beforeResize.height) {
+    throw new Error('keyboard dialog resize did not grow the dialog')
+  }
+  await page.keyboard.press('Escape')
+  await a11yDialog.waitFor({ state: 'hidden' })
+  const restored = await page.evaluate(() => ({
+    testid: document.activeElement?.getAttribute?.('data-testid'),
+    groupId: document.activeElement?.getAttribute?.('data-group-id'),
+  }))
+  if (restored.testid !== 'session-groups-group' || restored.groupId !== targetId) {
+    throw new Error(`dialog did not restore focus to the originating group row: ${JSON.stringify(restored)}`)
+  }
+
+  await groupRowById(targetId).locator('[data-testid="session-groups-group-menu"]').click({ force: true })
+  const rovingMenu = page.locator('[data-testid="session-groups-menu"]')
+  await rovingMenu.waitFor({ state: 'visible' })
+  await page.keyboard.press('ArrowDown')
+  const rovingLabel = await page.evaluate(() => document.activeElement?.textContent ?? '')
+  if (!/新建子分组|New subgroup/.test(rovingLabel)) throw new Error(`menu ArrowDown did not move focus: ${rovingLabel}`)
+  await page.keyboard.press('Escape')
+  await rovingMenu.waitFor({ state: 'hidden' })
+
   await moveGroup(sourceId, targetId)
   const ordered = await groupRows().evaluateAll((rows) => rows.map((row) => row.getAttribute('data-group-id')))
   const targetAt = ordered.indexOf(targetId)
@@ -615,9 +676,9 @@ try {
   // Settings must be on the package detail page, use DSH switches and expose a
   // standard click-pinned tooltip with the long-form risk/usage copy.
   await page.evaluate(() => [...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Plugins')?.click())
-  await page.waitForTimeout(700)
+  await page.waitForTimeout(1500)
   const packageRow = page.locator('[data-plugin-package="dsh-session-groups"]').first()
-  await packageRow.waitFor({ state: 'visible', timeout: 5000 })
+  await packageRow.waitFor({ state: 'visible', timeout: 15000 })
   await packageRow.click()
   await page.waitForTimeout(1200)
   const settingsPanel = page.locator('[data-testid="session-groups-settings-panel"]').first()
@@ -641,10 +702,13 @@ try {
   const switchAfter = await configSwitch.getAttribute('aria-checked')
   if (switchBefore === switchAfter) throw new Error('standard settings switch did not toggle')
   if ((await page.locator('[data-testid="session-groups-diagnostics-hud"]').count()) === 0) {
+    await page.locator('[data-testid="session-groups-diagnostics-hud"]').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+  }
+  if ((await page.locator('[data-testid="session-groups-diagnostics-hud"]').count()) === 0) {
     throw new Error('diagnostics HUD did not start after live config enable')
   }
   await configSwitch.click()
-  await page.waitForTimeout(600)
+  await page.locator('[data-testid="session-groups-diagnostics-hud"]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {})
   if ((await page.locator('[data-testid="session-groups-diagnostics-hud"]').count()) !== 0) {
     throw new Error('diagnostics HUD did not stop after live config disable')
   }

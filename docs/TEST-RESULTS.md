@@ -1,17 +1,17 @@
-# 0.3.0-beta.68 测试结果
+# 0.3.0-beta.73 测试结果
 
-日期：2026-11-03  
-版本：`0.3.0-beta.68`  
+日期：2026-11-04  
+版本：`0.3.0-beta.73`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 本地候选 0.3.0-beta.68：**446/446 PASS**（新增 4 项后台刷新回归测试）
+- 本地候选 0.3.0-beta.73：**459/459 PASS**（G6a a11y + G6b 维护性拆分 + 性能热路径回归）
 - 0.3.0-beta.64 基线：**442/442 PASS**
 - Linux CI（Ubuntu Node 24）：**442/442 PASS**；build / coverage / `npm pack --dry-run` PASS；未运行真实 DSH UI
 - Core 纯函数测试：**29/29 PASS**
-- Node 内置 coverage：**93.49% lines / 81.99% branches / 88.40% functions**
-- A+ 隔离 Playwright（.64 基线）：**PASS**；.65 本地候选待验证
+- Node 内置 coverage：**93.63% lines / 82.22% branches / 88.73% functions**
+- A+ 隔离 Playwright（本地候选 .73）：**PASS**；使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，未写入真实 `~/.dsh`
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
 - 语法检查：通过
@@ -20,11 +20,16 @@
 - 损坏记录 + 有效 `.bak`：隔离坏文件并自动恢复上一 revision，warning `recovered-backup`
 - 真实恢复演练（隔离实例）：主文件 rev15 损坏 → 自动恢复 `.bak` rev14，4 个分组保留，坏文件进入 `.corrupt-*`
 - 损坏记录 + 无效 `.bak`：降级为空分组，保持两份原文件不删除
-- 原生工具 `doctor` 只读兼容性报告（host capabilities/adapter/gates/storage-health/services/routes）：442 项套件覆盖
+- 原生工具 `doctor` 只读兼容性报告（host capabilities/adapter/gates/storage-health/services/routes）：459 项套件覆盖
 - 真实 CLI `doctor` 返回 storage.health.status=ok、revision、backup=true、quarantined=0
 - doctor CLI compatibility gate：host compatibility 不支持时退出非零，JSON 报告保留
 - 真实 CLI `doctor`（隔离实例，交换 DSH web launch cookie + 插件 bearer token）：**PASS**，返回 14 条路由与 host 服务状态
 - 真实模型原生工具（隔离实例）：**PASS**，session log 记录 `tool/call` / `tool/result`，返回 `protocol: 1` 和成功 state
+
+- 跨进程锁：两个独立 Node 进程竞争同一记录时一个成功、一个 conflict；过期锁自动回收；活跃锁超时返回 `store-busy`
+- A11y：对话框有 `aria-labelledby` 标题、初始/返回焦点、Tab 焦点陷阱、Escape；标题栏和右下 resizer 支持键盘移动/缩放；分组菜单支持 Arrow/Home/End。A+ 键盘路径 PASS
+- 性能：spinner 只旋转外层 transform，弧线不再逐帧重绘；会话订阅先裁到主会话 + 当前 retained 子代理；未归组滚动只在挂载/resize 时读取布局。
+- 维护性拆分：`components.js` 3051→1366 行；`routes.js` 1040→520 行；客户端模块、route-contract 和 control-routes 均有完整测试与 A+ 回归
 
 ## A+ 覆盖
 
@@ -32,7 +37,7 @@ A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 
 - 首次引导出现/关闭后刷新不重现
 - 三状态按钮存在，后台任务按钮不存在
-- 移动分组/会话后的 head 顺序
+- 分组移动/会话归入后的 head 顺序
 - 收起/展开后的会话顺序
 - 264px 窄侧栏、深色、宿主 Rail
 - 搜索、归档 tri-state

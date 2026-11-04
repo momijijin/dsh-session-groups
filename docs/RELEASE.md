@@ -1,10 +1,20 @@
-# 0.3.0-beta.68 发布与安装说明
+# 0.3.0-beta.73 发布与安装说明
 
-- 版本：`0.3.0-beta.68`
+- 版本：`0.3.0-beta.73`
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：单元/契约测试 446/446；本地候选；A+ 隔离与真实桌面回归待用户执行
-- 范围：自由分组、跨工作区会话、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、Fork/Copy ID、第一层设置和配置安全
-- 发布包：`dsh-session-groups-0.3.0-beta.68.tgz`
+- 状态：单元/契约测试 459/459；A+ 隔离回归通过；真实桌面回归通过（含 7–8 个 running 会话滚动/性能验收）
+- 范围：自由分组、跨工作区分组、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、Fork/Copy ID、第一层设置和配置安全、键盘可达性、主会话视图收窄
+- 发布包：`dsh-session-groups-0.3.0-beta.73.tgz`
+
+## 0. 本版新增（beta.69–beta.73）
+
+- 分组右键菜单第一项“新建会话”，复用分组右侧 `+` 的新建会话动作。
+- 对话框和分组菜单的键盘可达性：可访问名称、焦点陷阱、Escape、焦点返回、移动/缩放、roving focus。
+- 短事务跨进程锁 + 自动回收过期锁。
+- `controlSessions` 依赖 `controlApi`，设置页显示依赖态。
+- `components.js` 和 `routes.js` 维护性拆分。
+- spinner 合成器动画、主会话视图收窄、滚动布局缓存；本地实测 GPU 约 −49%，主线程约 −29 个点。
+- 市场截图按用户决定取消，不进入发布包。
 
 ## 1. 发布重点（beta.60–beta.64）
 
@@ -19,7 +29,7 @@
 
 - 主记录损坏时先 quarantine；有有效 `.bak` 时自动恢复上一 revision。
 - 无有效 `.bak` 时保持空分组启动，原文件不删除。
-- 新增只读 storage health：`ok/missing/corrupt/unsupported-version/invalid/unreadable`、revision、backup、quarantine 数量。
+- 新增只读 storage health：`ok/missing/corrupt/unsupported-version/invalid/unreadable`、revision、backupStatus/backupRevision/backupError、quarantine 数量。
 - 增加双窗口同 `baseRevision` 并发 CAS 的 A+ 场景：一个 200、一个 409，双方收敛。
 
 ### 文档与发布
@@ -27,7 +37,7 @@
 - README 默认英文，中文移至 `README.zh.md`。
 - README、ARCHITECTURE、COMPATIBILITY、RELEASE、TEST-RESULTS 与 0.3.0-beta.68 对齐。
 - 历史 V1/V1.1 的 CONTRACTS、TEST-PLAN、V1-PLAN、GATE0-SUMMARY、SPIKE 已加历史声明，避免被误读为当前状态。
-- 当前发布验证：446/446 单元/契约；A+ 隔离与真实桌面回归待用户执行。
+- 当前发布验证：450/450 单元/契约；A+ 隔离回归通过；真实桌面回归待用户执行。
 - 当前 beta 通过本地 tarball 分发；dshmarket 目录条目尚未发布。
 
 ## 2. 构建与测试
@@ -42,7 +52,7 @@ npm pack
 
 预期：
 
-- `npm test`：446/446 PASS
+- `npm test`：450/450 PASS
 - 构建：`lib/client.js`
 - 包：`dsh-session-groups-0.3.0-beta.68.tgz`
 
@@ -152,14 +162,14 @@ npm run test:isolated
 
 - 只访问独立端口和独立 `DSH_HOME`
 - 测试脚本拒绝真实 43120 和真实 `~/.dsh`
-- 当前冒烟覆盖首次引导、三状态按钮、移动到分组 head、收起/展开顺序、264px、英文、深色、宿主侧栏 Rail
+- 当前冒烟覆盖首次引导、三状态按钮、归入分组 head、收起/展开顺序、264px、英文、深色、宿主侧栏 Rail
 - 不连接真实 DSH 窗口
 
 ## 6. 验证清单
 
 发布前必须确认：
 
-- [ ] `npm test` 446/446
+- [ ] `npm test` 450/450
 - [ ] `npm run check:all`
 - [ ] `node --check lib/client.js`
 - [ ] `npm pack` 包含 README、LICENSE、CHANGELOG、locale
@@ -179,11 +189,11 @@ npm run test:isolated
 - 状态统计只覆盖分组文档中已归组或显式未归组的会话
 - 自动派生的未归组会话不进入头部统计
 - 单窗口数据模型；多窗口冲突仅提示
-- 单进程写队列；多个 DSH 进程共用同一 profile 时没有跨进程锁
+- 写入使用进程内队列 + 短生命周期锁文件；持有者 PID 消失或锁超过 30 秒会自动回收
 - 搜索最多 20 条
 - 宽度覆盖依赖宿主侧栏 DOM，失败时 fail-soft
 - 对话框拖动/缩放没有键盘操作
-- 0.3.0-beta.68 为本地候选；A+ 隔离与真实桌面回归待用户执行
+- 0.3.0-beta.68 为本地候选；A+ 隔离回归通过；真实桌面回归待用户执行
 - 完整历史 `groups.spec.mjs` 未纳入默认门禁，当前自动化入口是 `isolated.spec.mjs`
 - dshmarket 目录条目尚未发布，当前 beta 使用本地 tarball 或 GitHub Release
 

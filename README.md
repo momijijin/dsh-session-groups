@@ -2,14 +2,14 @@
 
 [English](README.md) | [中文](README.zh.md)
 
-Global session groups for the DSH Desktop left sidebar. It organizes sessions across workspaces without moving the sessions themselves:
+A free-form grouping layer over the shipped DSH Desktop workspace/session sidebar. Official workspace and session management remain authoritative: each session keeps its workspace membership and log, while this plugin stores a separate group assignment. A group can therefore contain sessions from different workspaces.
 
-- group membership does not move or rewrite session logs;
+- assigning a session to a group changes only this plugin's group record and its placement in the Free groups view;
+- official workspace membership, the workspace registry and session logs are never changed;
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
-- the official workspace registry is never modified;
 - `workspace.json` is never written.
 
-Current version: **0.3.0-beta.68**  
+Current version: **0.3.0-beta.73**  
 Tested baseline: DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the `engines.dsh` range, the `dsh-0.2` adapter selector and runtime capability checks.
@@ -50,9 +50,9 @@ The current CI is an Ubuntu Node-level gate, not a cross-platform certification.
 
 ### Sessions
 
-- drag sessions across workspaces into groups;
-- drag out of a group back to Ungrouped;
-- open, rename, archive/unarchive and move to a group;
+- assign sessions from different workspaces to the same group;
+- drag a session out of a group back to Ungrouped;
+- open, rename, archive/unarchive and assign to a group;
 - hover archive/unarchive action;
 - session menu fork and Copy Session ID;
 - fork uses the last completed turn and places the child at the head of the source group (or at the top of Ungrouped when the source is ungrouped);
@@ -175,7 +175,7 @@ It runs in the DSH Host process, without HTTP, a browser cookie, the control tok
 
 After every group commit (native tool or HTTP), the Host publishes the new revision through `/dsh-session-groups/events`; browsers reload and reconcile. Returning to the groups view also reloads the latest snapshot.
 
-`doctor` is a read-only compatibility diagnostic available even when `controlApi` is off. It returns host capabilities, adapter/version range, control gates, storage paths, storage health (status/revision/.bak/quarantine), service presence and mounted routes.
+`doctor` is a read-only compatibility diagnostic available even when `controlApi` is off. It returns host capabilities, adapter/version range, control gates, storage paths, storage health (status/revision, backupStatus/backupRevision/backupError, quarantine), service presence and mounted routes.
 
 Tool actions:
 
@@ -195,6 +195,27 @@ doctor
 `plan` returns `changes` and `planHash`; `apply` must send the same `planHash` and `baseRevision` and commits with CAS.
 
 Session actions require an explicit `sessionId`; a missing id is `invalid-session-id` and the plugin never guesses the "most recent" session. Rename supports `expectedTitle`; archive supports `expectedArchived`; archiving a running session requires explicit `stopActivity: true`.
+
+### Copy-paste AI prompts
+
+Enable **AI control API** first; the rename prompt also needs **session operations**. No CLI, HTTP request, cookie or token is involved — paste the prompt into a DSH session and let the agent call `session_groups_control`.
+
+#### Batch-create a project hierarchy
+
+> Use `session_groups_control` to create (or reuse) this hierarchy:
+>
+> `<Project> project group` — icon `server`, color `blue`
+> - `Designing` — icon `book`, color `purple`
+> - `In development` — icon `play-circle`, color `blue`
+> - `Paused` — icon `clock`, color `orange`
+> - `Done` — icon `check-circle`, color `green`
+> - `Cancelled` — icon `x-circle`, color `red`
+>
+> Reuse existing groups and add only missing children. Run `state`/`resolve` first; if a path is missing or ambiguous, ask me. Then `plan`, show me the changes and `planHash`, and `apply` with the same `planHash` and `baseRevision`.
+
+#### Rename and assign in one instruction
+
+> Rename the current session to `<new title>` and assign it to `<Project> project group / In development` using `session_groups_control`. Use the current session's explicit `sessionId`; never guess it. Rename first, then plan/apply `session.assign`. If either step fails, stop and report which step failed. This is two sequential operations, not one transaction.
 
 ### HTTP routes (browser/debug)
 
@@ -253,11 +274,11 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - group, collapsed and dialog state are per-window; multi-window conflicts show 409 and are not merged live;
 - search returns at most 20 matches and matches titles/workspaces/group paths only;
 - the width override depends on the DSH sidebar DOM; if the host changes the layout it fails soft and group functionality is unaffected;
-- dialog drag/resize uses pointer input; there is no keyboard move/resize;
-- the store serializes writes in one process; there is no cross-process lock if multiple DSH processes share one profile;
+- dialog move/resize has keyboard support; a full automated axe/contrast audit and keyboard drag for the whole tree remain deferred;
+- writes use an in-process queue plus a short-lived `<record>.lock` file for cross-process serialization; stale locks are reclaimed after the owner PID dies or the lock is 30 seconds old;
 - large-list lazy rendering remains deferred; the current Ungrouped list is virtualized, but a collapsed subtree is still built by `buildRenderTree`;
 - the dshmarket catalog entry is not published yet; local tarball installs are for the beta period;
-- current release validation is **446 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
+- current release validation is **459 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
 
 ## Documentation
 
@@ -279,8 +300,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`: 446 unit/contract tests;
-- `npm run check:coverage`: Node built-in coverage (currently about 93.50% lines / 82.01% branches / 88.42% functions, `src/**` scope);
+- `npm test`: 459 unit/contract tests;
+- `npm run check:coverage`: Node built-in coverage (currently about 93.63% lines / 82.22% branches / 88.73% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;
@@ -288,7 +309,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS;
 - build artifact: `lib/client.js`;
-- package: `dsh-session-groups-0.3.0-beta.68.tgz`;
+- package: `dsh-session-groups-0.3.0-beta.73.tgz`;
 - release steps: `docs/RELEASE.md`;
 - test summary: `docs/TEST-RESULTS.md`.
 

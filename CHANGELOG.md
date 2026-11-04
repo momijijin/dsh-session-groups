@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.3.0-beta.73 (2026-11-04)
+
+- Performance: rotate only the spinner wrapper so the static SVG arc stays compositor-friendly; narrow the session subscription to main rows plus the retained current subagent; cache the ungrouped list offset on mount/resize instead of reading layout during every scroll frame.
+- Verification: 459 unit/contract tests and isolated A+ pass. Stable beta selected for release.
+
+## 0.3.0-beta.72 (local batch, no release tag)
+
+- Maintainability: split `components.js` (3051→1366 lines) into primitives, rows, ungrouped, resize-handle, search-box and header modules; split `routes.js` (1040→520 lines) into route-contract and control-routes modules.
+- Behavior-neutral: DOM, testids, styles, routes, storage and wire contracts are unchanged. 456 tests and isolated A+ pass. No tag or Release.
+
+## 0.3.0-beta.71 (local batch, no release tag)
+
+- Accessibility: dialogs now expose an accessible title, focus the first useful control, restore opener focus, trap Tab/Shift+Tab and close on Escape. The titlebar and bottom-right resizer support keyboard movement/resizing; the group menu supports ArrowUp/ArrowDown/Home/End roving focus.
+- Verification: 456 unit/contract tests plus the isolated A+ keyboard path pass. No tag or Release.
+
+## 0.3.0-beta.70 (local batch, no release tag)
+
+- Group context menu: add “New session” as the first action, above “New subgroup”; it reuses the group row’s first `+` action and the existing workspace-choice dialog.
+- Locales: add `group.newSession` for English and Chinese while keeping the explanatory `group.addSession` tooltip.
+- Tests: add a source contract for menu order/wiring and an isolated A+ assertion that the first menu item opens the new-session dialog.
+
+## 0.3.0-beta.69 (local batch, no release tag)
+
+- Copy: split the shared move dialog title into `dialog.moveGroup` and `dialog.moveSession`; describe grouping as a plugin-owned layer that leaves official workspace membership and logs unchanged.
+- AI docs: add copy-paste prompts for batch project/group creation and rename-then-assign.
+- CI: track `package-lock.json`, use `npm ci`, and add Windows/macOS/Linux Node 24 checks with coverage on Ubuntu only.
+- Data: validate the backup record read-only (`backupStatus`/`backupRevision`/`backupError`).
+- Settings: make `controlSessions` depend on `controlApi` and visually nest it under the API switch.
+- Market: add a 180×180 icon and validated storefront YAML. No release tag; Release stays deferred until a stable beta is chosen.
+
+## 0.3.0-beta.68 (2026-11-03)
+
+- Fix the AI/HTTP external-revision refresh so the ready tree is not replaced with a loading placeholder.
+- Make the settings info icon transparent.
+- Add English README default, Chinese `README.zh.md`, platform verification matrix, isolated A+ evidence, and tag-only release workflow. 446 tests; A+ pass; release published.
+
 ## 0.3.0-beta.65 (local candidate, not tagged)
 
 - Fix sidebar flash when an external revision (native tool / HTTP control) moves a session: a background refresh no longer dispatches `load-start` while a ready tree exists. The current tree stays mounted until the new document arrives; a background failure keeps the tree and reports a banner instead of replacing it with the error state.
@@ -316,6 +352,7 @@ First public beta cut.
 ## 0.2.30
 
 - Restored the compact pre-drag dialog geometry and sizing.
+
 
 
 

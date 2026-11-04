@@ -63,6 +63,19 @@ export const MenuPopover = ({ store, handlers }) => {
   const t = rt()?.t
   const item = (key, label, onClick, extra = {}) =>
     h('button', { key, type: 'button', role: 'menuitem', class: 'dsg-menu-item', onClick: (event) => { event.stopPropagation(); handlers.closeMenu(); onClick() }, ...extra }, label)
+  const onMenuKeyDown = (event) => {
+    const items = Array.from(menuRef.current?.querySelectorAll?.('[role="menuitem"]:not([disabled])') ?? [])
+    if (items.length === 0) return
+    const current = items.indexOf(globalThis.document?.activeElement)
+    let next = -1
+    if (event.key === 'ArrowDown') next = current < 0 ? 0 : (current + 1) % items.length
+    else if (event.key === 'ArrowUp') next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = items.length - 1
+    if (next < 0) return
+    event.preventDefault()
+    items[next].focus()
+  }
   const children = []
   if (menu.kind === 'group') {
     const { previous, next } = siblingNeighbors(store.doc, menu.groupId)
@@ -73,6 +86,10 @@ export const MenuPopover = ({ store, handlers }) => {
         'data-disabled': disabled ? 'true' : 'false',
         ...(disabled ? { disabled: true } : {}),
       })
+    children.push(item('new-session', t('group.newSession'), () => handlers.openNewSession(null, menu.groupId), {
+      'data-testid': 'session-groups-group-new-session',
+      'data-group-id': menu.groupId,
+    }))
     children.push(item('new-subgroup', t('group.newSubgroup'), () => handlers.openNewGroup(null, menu.groupId)))
     children.push(item('rename', t('group.rename'), () => handlers.openRenameGroup(menu.groupId)))
     children.push(item('icon', t('group.icon'), () => handlers.openIconGroup(menu.groupId)))
@@ -107,6 +124,7 @@ export const MenuPopover = ({ store, handlers }) => {
       'data-source-id': menu.kind === 'group' ? menu.groupId : menu.sessionId,
       style: { left: `${menu.x}px`, top: `${menu.y}px` },
       onClick: (event) => event.stopPropagation(),
+      onKeyDown: onMenuKeyDown,
     },
     ...children
   )

@@ -16,8 +16,23 @@ import { UI_GLYPHS, ICON_PATHS } from '../../src/client/icons.js'
 import { GROUP_COLORS, GROUP_ICONS } from '../../src/shared/constants.js'
 
 const componentsSource = readFileSync(new URL('../../src/client/components.js', import.meta.url), 'utf8')
+const componentPrimitives = readFileSync(new URL('../../src/client/components-primitives.js', import.meta.url), 'utf8')
+const componentRows = readFileSync(new URL('../../src/client/components-rows.js', import.meta.url), 'utf8')
+const componentUngrouped = readFileSync(new URL('../../src/client/components-ungrouped.js', import.meta.url), 'utf8')
+const componentResize = readFileSync(new URL('../../src/client/components-resize-handle.js', import.meta.url), 'utf8')
+const componentSearch = readFileSync(new URL('../../src/client/components-search-box.js', import.meta.url), 'utf8')
+const componentHeader = readFileSync(new URL('../../src/client/components-header.js', import.meta.url), 'utf8')
 const dialogHost = readFileSync(new URL('../../src/client/dialog-host.js', import.meta.url), 'utf8')
-const components = componentsSource + '\n' + dialogHost
+const components = [
+  componentsSource,
+  componentPrimitives,
+  componentRows,
+  componentUngrouped,
+  componentResize,
+  componentSearch,
+  componentHeader,
+  dialogHost,
+].join('\n')
 const sessionMenu = readFileSync(new URL('../../src/client/session-menu.js', import.meta.url), 'utf8')
 const scrollArea = readFileSync(new URL('../../src/client/scroll-area.js', import.meta.url), 'utf8')
 const groupPicker = readFileSync(new URL('../../src/client/group-list-picker.js', import.meta.url), 'utf8')
@@ -224,6 +239,12 @@ test('settings page is bundle-level and uses DSH primitives with option details'
   assert.doesNotMatch(CSS, /dsg-skill-repair-button/)
   assert.equal(typeof zh['config.details.controlApi'], 'string')
   assert.equal(typeof en['config.details.controlApi'], 'string')
+  assert.match(skillRepair, /field === 'controlSessions' && config\.controlApi !== true/)
+  assert.match(skillRepair, /disabled: dependencyBlocked/)
+  assert.match(skillRepair, /dsg-config-dependent/)
+  assert.match(CSS, /\.dsg-config-dependent \{[^}]*margin-left:\s*18px/)
+  assert.equal(zh['config.requiresControlApi'], '需要先开启 AI 控制接口')
+  assert.equal(en['config.requiresControlApi'], 'Requires AI control API')
   assert.equal(typeof zh['config.destructiveConfirmBody'], 'string')
   assert.equal(typeof en['skill.repairUserOwned'], 'string')
 })
@@ -265,7 +286,7 @@ test('0.3.0 beta exposes onboarding, reset layout and opaque status popovers', (
   assert.match(components, /glyph: 'chevronUp'/)
   assert.equal(zh['about.resetLayout'], '恢复默认显示')
   assert.match(zh['about.scope'], /不会删除或调整分组/)
-  assert.match(zh['about.scope'], /会话归属/)
+  assert.match(zh['about.scope'], /分组归属/)
   assert.match(en['about.scope'], /does not delete or change groups/i)
   assert.equal(en['onboarding.title'], 'Welcome to Free groups')
 })
@@ -552,11 +573,14 @@ test('0.2.8 session status: official 16x20 slot, spinner, dots, hidden labels an
   assert.match(components, /class: 'dsg-status-spinner-arc'/)
   const spinner = block('.dsg-status-spinner-motion {')
   assert.match(spinner, /animation:\s*dsg-state-dot-spin 1\.5s linear infinite/)
-  assert.match(CSS, /\.dsg-status-spinner-arc \{ stroke-dasharray:\s*12 150;/)
-  assert.match(CSS, /\.dsg-status-spinner-arc \{[^}]*animation:\s*dsg-state-dot-dash 1\.5s ease-in-out infinite/)
+  // Only the outer transform rotates; the arc stays static so the compositor
+  // does not repaint the SVG stroke every frame.
+  assert.equal(CSS.includes('dsg-state-dot-dash'), false)
+  assert.match(CSS, /\.dsg-status-spinner-arc \{ stroke-dasharray:\s*18 150;/)
+  assert.doesNotMatch(block('.dsg-status-spinner-arc {'), /animation:/)
   assert.match(CSS, /stroke-width:\s*2/)
   assert.match(block('.dsg-status-spinner-track {'), /opacity:\s*\.25/)
-  assert.match(CSS, /@media \(prefers-reduced-motion: reduce\) \{\s*\.dsg-status-spinner-motion, \.dsg-status-spinner-arc \{ animation: none; \}/)
+  assert.match(CSS, /@media \(prefers-reduced-motion: reduce\) \{\s*\.dsg-status-spinner-motion \{ animation: none; \}/)
   // 10px dot with 6px core (inset 20%) and official warn/success aliases.
   assert.match(block('.dsg-status-dot {'), /width:\s*10px/)
   assert.match(block('.dsg-status-dot {'), /height:\s*10px/)
@@ -659,6 +683,59 @@ test('0.2.7 right-click/keyboard menu wiring and clamped anchors', () => {
   assert.match(plugin, /'resize', closeMenuOnViewportChange/)
 })
 
+test('0.3.0-beta.70 group menu starts with new session and reuses the group plus action', () => {
+  assert.equal(zh['group.newSession'], '新建会话')
+  assert.equal(en['group.newSession'], 'New session')
+  const newSessionIndex = sessionMenu.indexOf("t('group.newSession')")
+  const newSubgroupIndex = sessionMenu.indexOf("t('group.newSubgroup')")
+  assert.ok(newSessionIndex >= 0, 'group menu must contain group.newSession')
+  assert.ok(newSubgroupIndex >= 0, 'group menu must keep group.newSubgroup')
+  assert.ok(newSessionIndex < newSubgroupIndex, 'new session must be the first group menu action')
+  assert.match(sessionMenu, /handlers\.openNewSession\(null, menu\.groupId\)/)
+  assert.match(sessionMenu, /'data-testid': 'session-groups-group-new-session'/)
+  // The plus tooltip keeps its explanatory wording.
+  assert.equal(zh['group.addSession'], '在分组内新建会话')
+  assert.equal(en['group.addSession'], 'New session in this group')
+})
+
+test('0.3.0-beta.71 dialog has an accessible name and restores opener focus', () => {
+  assert.match(dialogHost, /'aria-labelledby': 'dsg-dialog-title'/)
+  assert.match(dialogHost, /id: 'dsg-dialog-title'/)
+  assert.match(dialogHost, /restoreFocusRef/)
+})
+
+test('0.3.0-beta.71 dialog traps Tab and handles Escape at the dialog boundary', () => {
+  assert.match(dialogHost, /addEventListener\('keydown', onKeyDown, true\)/)
+  assert.match(dialogHost, /event\.key === 'Escape'/)
+  assert.match(dialogHost, /event\.key !== 'Tab'/)
+  assert.match(dialogHost, /event\.shiftKey/)
+  assert.match(dialogHost, /focusableSelector/)
+})
+
+test('0.3.0-beta.71 dialog exposes keyboard move and resize controls', () => {
+  assert.match(dialogHost, /dialog\.moveDialog/)
+  assert.match(dialogHost, /dialog\.resizeDialog/)
+  assert.match(dialogHost, /session-groups-dialog-titlebar/)
+  assert.match(dialogHost, /session-groups-dialog-resizer/)
+  assert.match(dialogHost, /dialogKeyboardDelta/)
+})
+
+test('0.3.0-beta.71 group menu supports roving keyboard focus', () => {
+  assert.match(sessionMenu, /role: 'menuitem'/)
+  assert.match(sessionMenu, /event\.key === 'ArrowDown'/)
+  assert.match(sessionMenu, /event\.key === 'ArrowUp'/)
+  assert.match(sessionMenu, /event\.key === 'Home'/)
+  assert.match(sessionMenu, /event\.key === 'End'/)
+  assert.match(sessionMenu, /\.focus\(/)
+})
+
+
+test('0.3.0-beta.73 ungrouped scroll caches layout reads', () => {
+  assert.match(componentUngrouped, /scheduleScroll/)
+  assert.match(componentUngrouped, /measureLayout/)
+  assert.match(componentUngrouped, /ResizeObserver/)
+  assert.match(componentUngrouped, /addEventListener\('scroll', scheduleScroll, \{ passive: true \}\)/)
+})
 
 test('0.2.9 delete group: destination picker, empty direct path and move-and-delete footer', () => {
   // Group menu keeps the delete entry and the color entry now says 修改颜色/Change color.
@@ -674,10 +751,19 @@ test('0.2.9 delete group: destination picker, empty direct path and move-and-del
   assert.match(components, /deleteGroupOptions\(store\.doc, dialog\.groupId\)/)
   assert.match(components, /rootLabel: t\('dialog\.rootDestination'\)/)
   assert.match(components, /session-groups-dialog-delete-options/)
-  // Footer is danger-styled and says 移动并删除 / Move and delete only for this dialog.
+  // Group and session moves use separate titles; neither claims to move the session.
+  assert.equal(zh['dialog.moveGroup'], '移动分组')
+  assert.equal(zh['dialog.moveSession'], '归入分组')
+  assert.equal(en['dialog.moveGroup'], 'Move group')
+  assert.equal(en['dialog.moveSession'], 'Assign session to group')
+  assert.equal(Object.hasOwn(zh, 'dialog.moveTo'), false)
+  assert.equal(Object.hasOwn(en, 'dialog.moveTo'), false)
+  assert.match(components, /titleKey: 'dialog\.moveGroup'/)
+  assert.match(components, /titleKey: 'dialog\.moveSession'/)
+  // Footer is danger-styled and says 转移后删除 / Reassign and delete only for this dialog.
   assert.match(components, /dialog\.kind === 'delete-group' \? t\('dialog\.moveAndDelete'\)/)
-  assert.equal(zh['dialog.moveAndDelete'], '移动并删除')
-  assert.equal(en['dialog.moveAndDelete'], 'Move and delete')
+  assert.equal(zh['dialog.moveAndDelete'], '转移后删除')
+  assert.equal(en['dialog.moveAndDelete'], 'Reassign and delete')
   assert.match(components, /data-variant': danger \? 'danger' : 'primary'/)
   // Empty leaf: no dialog, direct runtime commit + toast.
   assert.match(components, /deleteGroupNeedsDialog\(store\.doc, groupId\)/)
