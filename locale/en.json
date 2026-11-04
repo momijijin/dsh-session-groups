@@ -48,6 +48,8 @@
   "session.fork": "Fork session",
   "session.copyId": "Copy Session ID",
   "session.moveTo": "Assign to group…",
+  "session.moveUp": "Move up",
+  "session.moveDown": "Move down",
   "session.archivedBadge": "Archived",
   "session.open": "Open session",
   "status.idle": "Idle",

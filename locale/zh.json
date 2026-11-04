@@ -48,6 +48,8 @@
   "session.fork": "分叉会话",
   "session.copyId": "复制 Session ID",
   "session.moveTo": "归入分组…",
+  "session.moveUp": "上移",
+  "session.moveDown": "下移",
   "session.archivedBadge": "已归档",
   "session.open": "打开会话",
   "status.idle": "空闲",

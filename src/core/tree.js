@@ -287,3 +287,27 @@ export const siblingNeighbors = (doc, groupId) => {
     next: index >= 0 && index < siblings.length - 1 ? siblings[index + 1].id : null,
   }
 }
+
+/** Stored session container: a group's sessionIds or the explicit ungrouped list. */
+export const sessionContainer = (doc, sessionId) => {
+  for (const group of Array.isArray(doc?.groups) ? doc.groups : []) {
+    if (Array.isArray(group.sessionIds) && group.sessionIds.includes(sessionId)) {
+      return { groupId: group.id, ids: group.sessionIds }
+    }
+  }
+  if (Array.isArray(doc?.ungrouped) && doc.ungrouped.includes(sessionId)) {
+    return { groupId: null, ids: doc.ungrouped }
+  }
+  return { groupId: null, ids: null }
+}
+
+/** Next/previous stored session neighbor; derived ungrouped rows have no stored order. */
+export const sessionNeighbors = (doc, sessionId) => {
+  const { ids } = sessionContainer(doc, sessionId)
+  if (!ids) return { previous: null, next: null }
+  const index = ids.indexOf(sessionId)
+  return {
+    previous: index > 0 ? ids[index - 1] : null,
+    next: index >= 0 && index < ids.length - 1 ? ids[index + 1] : null,
+  }
+}
