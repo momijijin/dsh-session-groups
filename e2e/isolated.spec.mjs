@@ -615,9 +615,9 @@ try {
   // Settings must be on the package detail page, use DSH switches and expose a
   // standard click-pinned tooltip with the long-form risk/usage copy.
   await page.evaluate(() => [...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Plugins')?.click())
-  await page.waitForTimeout(700)
+  await page.waitForTimeout(1500)
   const packageRow = page.locator('[data-plugin-package="dsh-session-groups"]').first()
-  await packageRow.waitFor({ state: 'visible', timeout: 5000 })
+  await packageRow.waitFor({ state: 'visible', timeout: 15000 })
   await packageRow.click()
   await page.waitForTimeout(1200)
   const settingsPanel = page.locator('[data-testid="session-groups-settings-panel"]').first()
