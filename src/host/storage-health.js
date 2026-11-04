@@ -5,23 +5,13 @@
  * and creates a new file, which a diagnostic must never do. This module only
  * reads the record, its `.bak`, and the quarantine family.
  */
-import { readFile, readdir, stat } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 
 import { DOC_VERSION } from '../shared/constants.js'
 import { normalizeColorHex, validateDoc } from '../shared/model.js'
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
-
-const exists = async (path) => {
-  try {
-    await stat(path)
-    return true
-  } catch (error) {
-    if (error?.code === 'ENOENT') return false
-    throw error
-  }
-}
 
 const normalizeGroups = (groups) =>
   Array.isArray(groups)
@@ -33,9 +23,73 @@ const normalizeGroups = (groups) =>
     : groups
 
 /**
+ * Classify one record body without touching the filesystem.
+ * @param {string} text
+ * @returns {{status: string, revision: number|null, error: string|null}}
+ */
+const classifyText = (text) => {
+  let parsed
+  try {
+    parsed = JSON.parse(text)
+  } catch (error) {
+    return { status: 'corrupt', revision: null, error: error instanceof Error ? error.message : String(error) }
+  }
+  if (!isObject(parsed)) {
+    return { status: 'corrupt', revision: null, error: 'document is not a JSON object' }
+  }
+  const revision = Number.isInteger(parsed.revision) ? parsed.revision : null
+  if (typeof parsed.version === 'number' && parsed.version > DOC_VERSION) {
+    return {
+      status: 'unsupported-version',
+      revision,
+      error: `document version ${String(parsed.version)} is newer than ${String(DOC_VERSION)}`,
+    }
+  }
+  if (parsed.version !== DOC_VERSION) {
+    return { status: 'invalid', revision, error: `version must be ${String(DOC_VERSION)}` }
+  }
+  const verdict = validateDoc({ ...parsed, groups: normalizeGroups(parsed.groups) })
+  if (!verdict.ok) return { status: 'invalid', revision, error: verdict.errors.join('; ') }
+  return { status: 'ok', revision, error: null }
+}
+
+/**
+ * Inspect the optional backup without mutating it.
+ * @param {string} path
+ */
+const inspectFile = async (path) => {
+  try {
+    return { exists: true, ...classifyText(await readFile(path, 'utf8')) }
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return { exists: false, status: 'missing', revision: null, error: null }
+    }
+    return {
+      exists: true,
+      status: 'unreadable',
+      revision: null,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+/**
  * Inspect one record path without mutating anything.
+ *
+ * `backup` is kept as a boolean for backward compatibility; `backupStatus`,
+ * `backupRevision` and `backupError` describe whether that backup is usable.
+ *
  * @param {string} filePath
- * @returns {Promise<{status: string, revision: number|null, error: string|null, backup: boolean, quarantined: number}>}
+ * @returns {Promise<{
+ *   status: string,
+ *   revision: number|null,
+ *   error: string|null,
+ *   backup: boolean,
+ *   backupStatus: string,
+ *   backupRevision: number|null,
+ *   backupError: string|null,
+ *   quarantined: number
+ * }>}
  */
 export const inspectStorageHealth = async (filePath) => {
   const directory = dirname(filePath)
@@ -44,14 +98,17 @@ export const inspectStorageHealth = async (filePath) => {
     revision: null,
     error: null,
     backup: false,
+    backupStatus: 'missing',
+    backupRevision: null,
+    backupError: null,
     quarantined: 0,
   }
 
-  try {
-    result.backup = await exists(`${filePath}.bak`)
-  } catch {
-    result.backup = false
-  }
+  const backup = await inspectFile(`${filePath}.bak`)
+  result.backup = backup.exists
+  result.backupStatus = backup.status
+  result.backupRevision = backup.revision
+  result.backupError = backup.error
 
   try {
     const prefix = `${basename(filePath, '.json')}.corrupt-`
@@ -61,47 +118,9 @@ export const inspectStorageHealth = async (filePath) => {
     result.quarantined = 0
   }
 
-  let text
-  try {
-    text = await readFile(filePath, 'utf8')
-  } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      result.status = 'unreadable'
-      result.error = error instanceof Error ? error.message : String(error)
-    }
-    return result
-  }
-
-  let parsed
-  try {
-    parsed = JSON.parse(text)
-  } catch (error) {
-    result.status = 'corrupt'
-    result.error = error instanceof Error ? error.message : String(error)
-    return result
-  }
-  if (!isObject(parsed)) {
-    result.status = 'corrupt'
-    result.error = 'document is not a JSON object'
-    return result
-  }
-  result.revision = Number.isInteger(parsed.revision) ? parsed.revision : null
-  if (typeof parsed.version === 'number' && parsed.version > DOC_VERSION) {
-    result.status = 'unsupported-version'
-    result.error = `document version ${String(parsed.version)} is newer than ${String(DOC_VERSION)}`
-    return result
-  }
-  if (parsed.version !== DOC_VERSION) {
-    result.status = 'invalid'
-    result.error = `version must be ${String(DOC_VERSION)}`
-    return result
-  }
-  const verdict = validateDoc({ ...parsed, groups: normalizeGroups(parsed.groups) })
-  if (!verdict.ok) {
-    result.status = 'invalid'
-    result.error = verdict.errors.join('; ')
-    return result
-  }
-  result.status = 'ok'
+  const primary = await inspectFile(filePath)
+  result.status = primary.status
+  result.revision = primary.revision
+  result.error = primary.error
   return result
 }
