@@ -39,6 +39,12 @@ git branch -d feature/<slug>
 
 - 每个问题/需求一个分支，不把无关改动塞进同一批。
 - 合并前至少运行受影响测试；UI/设置/拖拽类改动还必须跑对应 A+ 回归。
+- **提交标题必须带当前批次版本号**，例如：
+  ```text
+  feat(settings): [0.3.0-beta.69] nest dependent switches
+  fix(host): [0.3.0-beta.70] classify a corrupt backup
+  ```
+  版本 bump 之后，后续提交统一使用新的 beta 号，直到下一次 bump。
 - **合并后必须先打 `archive/feature/<slug>` 归档 tag，再删除本地 feature 分支**；归档 tag 用来替代已删除分支的历史入口。
 - 归档 tag 默认只留本地，除非用户明确要求推送；它永远不触发 Release。
 - 不为了“同步”把 main 合回 dev；只有在 main 产生热修复时，才按热修复流程回收。
@@ -90,7 +96,12 @@ git push origin main
 git push origin v<version>
 ```
 
-tag 推送会触发 `.github/workflows/release.yml`，由 GitHub Actions 构建 tgz 并创建 prerelease。普通 `push` 不触发发版。
+tag 推送会触发 `.github/workflows/release.yml`，但 workflow 先校验：
+
+- tag 必须是 `v<semver>`；
+- tag 指向的提交必须可从 `origin/main` 到达。
+
+因此 **在 dev 提交上打版本 tag 会直接失败**；Release 只能从 main 的发布边界产生。普通 `push` 不触发发版。
 
 ### 3.3 发布后
 
