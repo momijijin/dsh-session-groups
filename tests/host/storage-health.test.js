@@ -21,6 +21,9 @@ test('storage health reports missing, valid, backup and quarantine state read-on
     revision: null,
     error: null,
     backup: false,
+    backupStatus: 'missing',
+    backupRevision: null,
+    backupError: null,
     quarantined: 0,
   })
 
@@ -31,7 +34,28 @@ test('storage health reports missing, valid, backup and quarantine state read-on
   assert.equal(healthy.status, 'ok')
   assert.equal(healthy.revision, 4)
   assert.equal(healthy.backup, true)
+  assert.equal(healthy.backupStatus, 'ok')
+  assert.equal(healthy.backupRevision, 3)
   assert.equal(healthy.quarantined, 1)
+})
+
+test('storage health distinguishes a corrupt backup from a usable one', async () => {
+  const filePath = await makePath()
+  await writeFile(filePath, JSON.stringify({ ...sampleDoc(), revision: 4 }), 'utf8')
+  await writeFile(`${filePath}.bak`, '{broken', 'utf8')
+  const corruptBackup = await inspectStorageHealth(filePath)
+  assert.equal(corruptBackup.status, 'ok')
+  assert.equal(corruptBackup.backup, true)
+  assert.equal(corruptBackup.backupStatus, 'corrupt')
+  assert.match(corruptBackup.backupError, /JSON/)
+
+  await writeFile(`${filePath}.bak`, JSON.stringify({ ...sampleDoc(), version: 9 }), 'utf8')
+  const unsupportedBackup = await inspectStorageHealth(filePath)
+  assert.equal(unsupportedBackup.backupStatus, 'unsupported-version')
+
+  await writeFile(`${filePath}.bak`, JSON.stringify({ version: 0, revision: 1, groups: [], ungrouped: [] }), 'utf8')
+  const invalidBackup = await inspectStorageHealth(filePath)
+  assert.equal(invalidBackup.backupStatus, 'invalid')
 })
 
 test('storage health classifies corrupt, unsupported, invalid and unreadable records without repairing them', async () => {
