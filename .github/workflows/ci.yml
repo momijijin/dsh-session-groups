@@ -28,7 +28,7 @@ jobs:
       # This plugin's tests import @deepseek-ai/schemastery, so unlike the
       # zero-dependency reference plugin, dependencies must be installed.
       - name: Install dependencies
-        run: npm install --no-package-lock --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Syntax check
         run: |
