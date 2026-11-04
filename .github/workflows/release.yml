@@ -31,6 +31,12 @@ jobs:
               ;;
           esac
 
+      - name: Require the tag commit on main
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main
+          echo "tag commit is reachable from main"
+
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
