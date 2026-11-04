@@ -573,11 +573,14 @@ test('0.2.8 session status: official 16x20 slot, spinner, dots, hidden labels an
   assert.match(components, /class: 'dsg-status-spinner-arc'/)
   const spinner = block('.dsg-status-spinner-motion {')
   assert.match(spinner, /animation:\s*dsg-state-dot-spin 1\.5s linear infinite/)
-  assert.match(CSS, /\.dsg-status-spinner-arc \{ stroke-dasharray:\s*12 150;/)
-  assert.match(CSS, /\.dsg-status-spinner-arc \{[^}]*animation:\s*dsg-state-dot-dash 1\.5s ease-in-out infinite/)
+  // Only the outer transform rotates; the arc stays static so the compositor
+  // does not repaint the SVG stroke every frame.
+  assert.equal(CSS.includes('dsg-state-dot-dash'), false)
+  assert.match(CSS, /\.dsg-status-spinner-arc \{ stroke-dasharray:\s*18 150;/)
+  assert.doesNotMatch(block('.dsg-status-spinner-arc {'), /animation:/)
   assert.match(CSS, /stroke-width:\s*2/)
   assert.match(block('.dsg-status-spinner-track {'), /opacity:\s*\.25/)
-  assert.match(CSS, /@media \(prefers-reduced-motion: reduce\) \{\s*\.dsg-status-spinner-motion, \.dsg-status-spinner-arc \{ animation: none; \}/)
+  assert.match(CSS, /@media \(prefers-reduced-motion: reduce\) \{\s*\.dsg-status-spinner-motion \{ animation: none; \}/)
   // 10px dot with 6px core (inset 20%) and official warn/success aliases.
   assert.match(block('.dsg-status-dot {'), /width:\s*10px/)
   assert.match(block('.dsg-status-dot {'), /height:\s*10px/)

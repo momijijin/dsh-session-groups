@@ -413,16 +413,10 @@ export const CSS = `
 .dsg-status-spinner-motion { transform-origin: center; animation: dsg-state-dot-spin 1.5s linear infinite; }
 .dsg-status-spinner-track, .dsg-status-spinner-arc { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .dsg-status-spinner-track { opacity: .25; }
-.dsg-status-spinner-arc { stroke-dasharray: 12 150; animation: dsg-state-dot-dash 1.5s ease-in-out infinite; }
+.dsg-status-spinner-arc { stroke-dasharray: 18 150; stroke-dashoffset: -3; }
 @keyframes dsg-state-dot-spin { to { transform: rotate(360deg); } }
-@keyframes dsg-state-dot-dash {
-  0% { stroke-dasharray: 12 150; stroke-dashoffset: 0; }
-  50% { stroke-dasharray: 24 150; stroke-dashoffset: -6; }
-  100% { stroke-dasharray: 12 150; stroke-dashoffset: 0; }
-}
 @media (prefers-reduced-motion: reduce) {
-  .dsg-status-spinner-motion, .dsg-status-spinner-arc { animation: none; }
-  .dsg-status-spinner-arc { stroke-dasharray: 18 150; stroke-dashoffset: -3; }
+  .dsg-status-spinner-motion { animation: none; }
 }
 .dsg-visually-hidden { clip: rect(0 0 0 0); white-space: nowrap; width: 1px; height: 1px; position: absolute; overflow: hidden; }
 .dsg-session-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--dsg-font-14, 14px); line-height: 20px; }
