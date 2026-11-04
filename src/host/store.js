@@ -14,8 +14,9 @@
  * - write path: unique temp name -> fsync -> copy previous to `.bak` ->
  *   rename -> directory fsync (where supported); Windows EPERM/EBUSY retried
  *   3x with 20ms backoff;
- * - every public operation runs on one promise tail (in-process
- *   serialization; V1 is single-window, no cross-process lock).
+ * - every public operation runs on one promise tail (in-process serialization)
+ *   and a short-lived filesystem lock (cross-process serialization); the lock
+ *   is reclaimed automatically when its PID is dead or its mtime is stale.
  *
  * Shared model owns document validation: `validateDoc` from
  * `src/shared/model.js` (icon is opaque string <= 64 chars there, per Gate 0
@@ -32,6 +33,9 @@ import { RECORD_FILE_NAME } from './constants.js'
 const RETRYABLE_CODES = new Set(['EACCES', 'EPERM', 'EBUSY', 'EMFILE', 'ENFILE'])
 const WRITE_ATTEMPTS = 4
 const WRITE_RETRY_DELAY_MS = 20
+const LOCK_WAIT_MS = 5_000
+const LOCK_STALE_MS = 30_000
+const LOCK_RETRY_MS = 20
 
 const sleep = (milliseconds) =>
   new Promise((resolve) => {
@@ -103,10 +107,18 @@ const quarantineTimestamp = (now) => new Date(now()).toISOString().replaceAll(':
  *   createStore({ dir, fileName })
  *   createStore({ filePath })
  *
- * @param {{ filePath?: string, dir?: string, fileName?: string, now?: () => number }} options
+ * @param {{ filePath?: string, dir?: string, fileName?: string, now?: () => number, lockWaitMs?: number, lockStaleMs?: number, lockRetryMs?: number }} options
  */
 export const createStore = (options = {}) => {
-  const { filePath: explicitPath, dir, fileName, now = () => Date.now() } = options
+  const {
+    filePath: explicitPath,
+    dir,
+    fileName,
+    now = () => Date.now(),
+    lockWaitMs = LOCK_WAIT_MS,
+    lockStaleMs = LOCK_STALE_MS,
+    lockRetryMs = LOCK_RETRY_MS,
+  } = options
   const filePath =
     typeof explicitPath === 'string' && explicitPath.length > 0
       ? explicitPath
@@ -118,6 +130,7 @@ export const createStore = (options = {}) => {
   }
   const directory = dirname(filePath)
   const backupPath = `${filePath}.bak`
+  const lockPath = `${filePath}.lock`
   const expectedName = RECORD_FILE_NAME
 
   let tail = Promise.resolve()
@@ -131,6 +144,104 @@ export const createStore = (options = {}) => {
   }
 
   const temporaryPathForWrite = () => `${filePath}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`
+
+  const isProcessAlive = (pid) => {
+    if (!Number.isInteger(pid) || pid <= 0) return false
+    try {
+      process.kill(pid, 0)
+      return true
+    } catch (error) {
+      return error?.code === 'EPERM'
+    }
+  }
+
+  const readLock = async () => {
+    let text
+    try {
+      text = await readFile(lockPath, 'utf8')
+    } catch (error) {
+      if (error?.code === 'ENOENT') return null
+      throw error
+    }
+    let data = null
+    try {
+      data = JSON.parse(text)
+    } catch {
+      // A malformed lock is treated as stale by mtime below.
+    }
+    let mtimeMs = 0
+    try {
+      mtimeMs = (await stat(lockPath)).mtimeMs
+    } catch (error) {
+      if (error?.code === 'ENOENT') return null
+      throw error
+    }
+    return { text, data: isObject(data) ? data : null, mtimeMs }
+  }
+
+  const reclaimStaleLock = async () => {
+    const current = await readLock()
+    if (current === null) return true
+    const age = Date.now() - current.mtimeMs
+    const pid = current.data?.pid
+    const ownerAlive = isProcessAlive(pid)
+    if (age <= lockStaleMs && ownerAlive) return false
+    try {
+      // Compare before removing so a lock replaced by a live writer is not
+      // accidentally deleted between the read and the remove.
+      const latest = await readFile(lockPath, 'utf8')
+      if (latest === current.text) await rm(lockPath, { force: true })
+      return true
+    } catch (error) {
+      return error?.code === 'ENOENT'
+    }
+  }
+
+  const acquireLock = async () => {
+    await mkdir(directory, { recursive: true })
+    const token = randomBytes(8).toString('hex')
+    const payload = `${JSON.stringify({
+      pid: process.pid,
+      token,
+      createdAt: new Date().toISOString(),
+    }, null, 2)}\n`
+    const deadline = Date.now() + lockWaitMs
+    for (;;) {
+      let handle
+      try {
+        handle = await open(lockPath, 'wx')
+        await handle.writeFile(payload, 'utf8')
+        await handle.sync()
+        await handle.close()
+        handle = null
+        return async () => {
+          try {
+            const info = await readLock()
+            if (info?.data?.token === token) await rm(lockPath, { force: true })
+          } catch {
+            // Releasing a lock is best-effort; stale recovery handles crashes.
+          }
+        }
+      } catch (error) {
+        await handle?.close().catch(() => undefined)
+        if (error?.code !== 'EEXIST') throw error
+        if (await reclaimStaleLock()) continue
+        if (Date.now() >= deadline) {
+          throw Object.assign(new Error('group store is busy'), { code: 'store-busy' })
+        }
+        await sleep(lockRetryMs)
+      }
+    }
+  }
+
+  const withLock = async (task) => {
+    const release = await acquireLock()
+    try {
+      return await task()
+    } finally {
+      await release()
+    }
+  }
 
   const quarantinePath = async () => {
     const stamp = quarantineTimestamp(now)
@@ -321,12 +432,12 @@ export const createStore = (options = {}) => {
 
     /** Read the current document. */
     load() {
-      return enqueue(readState)
+      return enqueue(() => withLock(readState))
     },
 
     /** Host-owned write: stamp revision = current + 1. */
     save(doc) {
-      return enqueue(async () => {
+      return enqueue(() => withLock(async () => {
         const current = await readState()
         if (current.kind === 'unsupported-version') {
           throw Object.assign(new Error(`unsupported document version ${String(current.version)}`), {
@@ -338,7 +449,7 @@ export const createStore = (options = {}) => {
           throw Object.assign(new Error(verdict.errors.join('; ')), { code: 'invalid', errors: verdict.errors })
         }
         return await writeDoc(verdict.candidate, current.revision + 1)
-      })
+      }))
     },
 
     /**
@@ -346,7 +457,7 @@ export const createStore = (options = {}) => {
      * on the same serialized critical section.
      */
     commit(baseRevision, doc) {
-      return enqueue(async () => {
+      return enqueue(() => withLock(async () => {
         const current = await readState()
         if (current.kind === 'unsupported-version') return current
         if (current.revision !== baseRevision) {
@@ -356,7 +467,7 @@ export const createStore = (options = {}) => {
         if (!verdict.ok) return { kind: 'invalid', errors: verdict.errors }
         const persisted = await writeDoc(verdict.candidate, current.revision + 1)
         return { kind: 'ok', doc: persisted, revision: persisted.revision }
-      })
+      }))
     },
   }
 }

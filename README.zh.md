@@ -286,13 +286,13 @@ node scripts/session-groups-control.mjs doctor
 
 - 状态统计只覆盖分组文档中已归组或显式未归组的会话；自动派生的未归组会话不进入头部计数。
 - 分组、折叠状态与弹窗位置是单窗口本地状态；多窗口冲突通过 409 提示，不做实时合并。
-- store 只在一个进程内串行写；多个 DSH 进程共用同一 profile 时没有跨进程锁。
+- 写入使用进程内队列 + 短生命周期 `<record>.lock` 文件做跨进程串行化；持有者 PID 消失或锁文件超过 30 秒时会自动回收。
 - 大列表懒渲染仍在 deferred；当前只虚拟化未归组列表，折叠子树的 React 节点仍会构建。
 - dshmarket 目录条目尚未发布；当前 beta 阶段使用本地 tarball。
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
-- 当前发布验证以 **447 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
+- 当前发布验证以 **450 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
 
 ## 文档
 
@@ -314,8 +314,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：447 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.58% lines / 82.10% branches / 88.44% functions）
+- `npm test`：450 项单元/契约测试
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.54% lines / 82.16% branches / 88.65% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH
