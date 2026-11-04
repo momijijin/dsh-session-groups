@@ -2,7 +2,8 @@
 
 - 版本：`0.3.0-beta.73`
 - 宿主：`@deepseek-ai/dsh` 0.2.1-rc.2
-- 已验证桌面壳：community DSH Desktop 2.0.18（official shell 待独立回归）
+- 已验证桌面壳：community DSH Desktop **Stable** 2.0.18（official shell 待独立回归）
+- 不官方支持：community DSH Desktop Beta、community DSH NEXT（`-next`）
 - 状态：单元/契约测试 459/459；A+ 隔离回归通过；真实桌面回归通过（含 7–8 个 running 会话滚动/性能验收）
 - 范围：自由分组、跨工作区分组、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、Fork/Copy ID、第一层设置和配置安全、键盘可达性、主会话视图收窄
 - 发布包：`dsh-session-groups-0.3.0-beta.73.tgz`

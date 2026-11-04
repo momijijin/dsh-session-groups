@@ -3,7 +3,8 @@
 日期：2026-11-04  
 版本：`0.3.0-beta.74`  
 宿主基线：`@deepseek-ai/dsh` 0.2.1-rc.2  
-已验证壳组合：community DSH Desktop 2.0.18（anywhere-labs）；official DeepSeek Harness desktop 待独立回归
+已验证壳：community DSH Desktop **Stable** 2.0.18（anywhere-labs）；official DeepSeek Harness desktop 待独立回归  
+不官方支持：community DSH Desktop Beta、community DSH NEXT（`-next`）
 
 ## 结论
 

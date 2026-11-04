@@ -2,7 +2,8 @@
 
 当前实现：**0.3.0-beta.74**  
 支持宿主：`@deepseek-ai/dsh` 0.2.1-rc.2  
-已验证壳组合：社区版 DSH Desktop 2.0.18；官方 DeepSeek Harness 桌面壳待独立回归  
+已验证壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面壳待独立回归  
+明确不支持：社区版 DSH Desktop Beta、社区版 DSH NEXT（`-next`）  
 分发状态：dshmarket 目录条目发布前，使用本地 beta tarball。
 
 插件按洋葱圈分层，宿主升级时只改外圈。

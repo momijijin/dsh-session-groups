@@ -11,10 +11,11 @@
 
 当前版本：**0.3.0-beta.74**  
 主要支持：**DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2**（`engines.dsh: >=0.2.0-rc.2 <0.3.0`）  
-已验证壳组合：**社区版 DSH Desktop 2.0.18（anywhere-labs）**  
-官方 DeepSeek Harness 桌面壳：**待独立回归**
+已验证桌面壳：**社区版 DSH Desktop Stable 2.0.18（anywhere-labs）**  
+目标桌面壳：**官方 DeepSeek Harness 桌面版**——待独立回归  
+不官方支持、不承诺兼容：**社区版 DSH Desktop Beta**、**社区版 DSH NEXT（`-next` 通道）**
 
-兼容性说明见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)：使用 `engines.dsh`、`dsh-0.2` 适配器选择器和运行时能力检测；版本矩阵显式注册，主流程不写版本 `switch`。
+兼容性说明见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)：支持范围、`engines.dsh`、`dsh-0.2` 适配器选择器和运行时能力检测。
 
 ### 平台支持
 
@@ -30,7 +31,18 @@
 
 当前 CI 只是 Ubuntu 上的 Node 层门禁，不等于跨平台认证。Linux/macOS 的真实 DSH UI 支持在完成真实宿主/UI 验证前属于 experimental。普通用户通过 dshmarket 安装；本地 tarball 和 CLI 仅用于维护者/调试。
 
-兼容性首先由内置的 DSH core/API 决定，而不是桌面壳的名字。官方版和社区版各自内置不同 DSH 版本与插件组合，必须分别对本插件做回归。
+兼容性首先由内置的 DSH core/API 决定，而不是桌面壳的名字。官方版和社区版各自内置不同 DSH 版本与插件组合，两个受支持的桌面族必须分别对本插件做回归。
+
+支持的桌面范围：
+
+| 桌面端 | 状态 |
+|---|---|
+| 社区版 DSH Desktop **Stable** 2.0.18 | 已验证 |
+| 官方 DeepSeek Harness 桌面版 | 目标支持；待独立回归 |
+| 社区版 DSH Desktop **Beta** | 不官方支持；不承诺兼容 |
+| 社区版 DSH **NEXT**（`-next` 通道） | 不官方支持；不承诺兼容 |
+
+Beta 和 NEXT 即使能加载插件，也不构成发布门禁，不扩大支持承诺。
 
 ## 功能
 
