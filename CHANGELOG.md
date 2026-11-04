@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0-beta.72 (local batch, no release tag)
+
+- Maintainability: split `components.js` (3051→1366 lines) into primitives, rows, ungrouped, resize-handle, search-box and header modules; split `routes.js` (1040→520 lines) into route-contract and control-routes modules.
+- Behavior-neutral: DOM, testids, styles, routes, storage and wire contracts are unchanged. 456 tests and isolated A+ pass. No tag or Release.
+
+## 0.3.0-beta.71 (local batch, no release tag)
+
+- Accessibility: dialogs now expose an accessible title, focus the first useful control, restore opener focus, trap Tab/Shift+Tab and close on Escape. The titlebar and bottom-right resizer support keyboard movement/resizing; the group menu supports ArrowUp/ArrowDown/Home/End roving focus.
+- Verification: 456 unit/contract tests plus the isolated A+ keyboard path pass. No tag or Release.
+
 ## 0.3.0-beta.70 (local batch, no release tag)
 
 - Group context menu: add “New session” as the first action, above “New subgroup”; it reuses the group row’s first `+` action and the existing workspace-choice dialog.

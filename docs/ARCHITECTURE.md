@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.3.0-beta.71**  
+当前实现：**0.3.0-beta.72**  
 支持宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2  
 分发状态：dshmarket 目录条目发布前，使用本地 beta tarball。
 
@@ -97,6 +97,10 @@ src/index.js     Cordis host 入口
   - 本地 bearer token（0600）+ host fence；token 目前会预生成，合法 token 在插件内部放行 control 路由，但不绕过 Host 外层浏览器 fence
   - revision CAS、planHash、idempotency、审计日志
   - `change-hub` 在每次 commit 后广播 revision；浏览器通过 `/events` SSE 重新 load
+  - 0.3.0-beta.72 拆分：`routes.js` 只保留注册编排；纯响应/解析在 `route-contract.js`，控制路由在 `control-routes.js`
+- `src/client/components.js` + `components-*.js`
+  - `components.js` 只保留 GroupsView 编排；primitives、rows、ungrouped、resize-handle、search-box、header 分模块
+  - DOM、testid、CSS 类与 props 契约不变
 - `src/host/storage-health.js`
   - doctor 的只读存储健康检查；不使用 store.load，不触发 quarantine 或写入
 - `src/host/tool.js`
