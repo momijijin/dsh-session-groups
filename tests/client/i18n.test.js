@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { en, zh } from '../../src/client/locale.js'
 
@@ -91,9 +91,12 @@ test('plugin manifest exposes localized title and description', () => {
   assert.equal(typeof manifest.description?.zh, 'string')
   assert.equal(typeof manifest.description?.en, 'string')
   assert.equal(zh.title, '自由分组')
-  assert.equal(en.title, 'Free groups')
+  assert.equal(en.title, 'Free Groups')
   assert.equal(zh.meta.title, '自由分组')
-  assert.equal(en.meta.title, 'Free groups')
+  assert.equal(en.meta.title, 'Free Groups')
   assert.equal(typeof zh.meta.description, 'string')
   assert.equal(typeof en.meta.description, 'string')
+  assert.equal(pkg.icon, 'assets/icon-180.png')
+  assert.equal(pkg.files.includes('assets/icon-180.png'), true)
+  assert.equal(existsSync(join(root, 'assets', 'icon-180.png')), true)
 })

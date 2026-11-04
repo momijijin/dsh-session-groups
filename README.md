@@ -4,7 +4,7 @@
 
 A free-form grouping layer over the shipped DSH Desktop workspace/session sidebar. Official workspace and session management remain authoritative: each session keeps its workspace membership and log, while this plugin stores a separate group assignment. A group can therefore contain sessions from different workspaces.
 
-- assigning a session to a group changes only this plugin's group record and its placement in the Free groups view;
+- assigning a session to a group changes only this plugin's group record and its placement in the Free Groups view;
 - official workspace membership, the workspace registry and session logs are never changed;
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
 - `workspace.json` is never written.
@@ -32,7 +32,7 @@ The current CI is an Ubuntu Node-level gate, not a cross-platform certification.
 
 ### View
 
-- switch between Free groups and the shipped Workspace view;
+- switch between Free Groups and the shipped Workspace view;
 - drag-resize the sidebar from 264px to 80% of the viewport (default 420px);
 - double-click the resize handle to restore the default width;
 - persist view mode, width, collapsed groups, archive filter and dialog geometry.
