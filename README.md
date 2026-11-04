@@ -9,7 +9,7 @@ A free-form grouping layer over the shipped DSH Desktop workspace/session sideba
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
 - `workspace.json` is never written.
 
-Current version: **0.3.0-beta.69**  
+Current version: **0.3.0-beta.70**  
 Tested baseline: DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the `engines.dsh` range, the `dsh-0.2` adapter selector and runtime capability checks.
@@ -278,7 +278,7 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - writes use an in-process queue plus a short-lived `<record>.lock` file for cross-process serialization; stale locks are reclaimed after the owner PID dies or the lock is 30 seconds old;
 - large-list lazy rendering remains deferred; the current Ungrouped list is virtualized, but a collapsed subtree is still built by `buildRenderTree`;
 - the dshmarket catalog entry is not published yet; local tarball installs are for the beta period;
-- current release validation is **450 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
+- current release validation is **451 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
 
 ## Documentation
 
@@ -300,8 +300,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`: 450 unit/contract tests;
-- `npm run check:coverage`: Node built-in coverage (currently about 93.54% lines / 82.16% branches / 88.65% functions, `src/**` scope);
+- `npm test`: 451 unit/contract tests;
+- `npm run check:coverage`: Node built-in coverage (currently about 93.54% lines / 82.19% branches / 88.65% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;
@@ -309,7 +309,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS;
 - build artifact: `lib/client.js`;
-- package: `dsh-session-groups-0.3.0-beta.69.tgz`;
+- package: `dsh-session-groups-0.3.0-beta.70.tgz`;
 - release steps: `docs/RELEASE.md`;
 - test summary: `docs/TEST-RESULTS.md`.
 
