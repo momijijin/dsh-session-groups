@@ -1,7 +1,7 @@
 name: CI
 
 # Checks only. This workflow never publishes, tags, bumps a version, or edits the repo.
-# Start with the dev branch only; add main/platforms after dev is consistently green.
+# Start with the dev branch; release tags have their own workflow.
 
 on:
   push:
@@ -15,7 +15,13 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: Node 24 / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,6 +48,7 @@ jobs:
         run: npm run build
 
       - name: Coverage gate
+        if: matrix.os == 'ubuntu-latest'
         run: npm run check:coverage
 
       - name: Package dry-run
