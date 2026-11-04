@@ -2,7 +2,7 @@
 
 - 版本：`0.3.0-beta.68`
 - 宿主：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
-- 状态：单元/契约测试 447/447；A+ 隔离回归通过；真实桌面回归待用户执行
+- 状态：单元/契约测试 450/450；A+ 隔离回归通过；真实桌面回归待用户执行
 - 范围：自由分组、跨工作区分组、分组拖拽、搜索、归档筛选、三状态统计、首次使用引导、恢复默认布局、Fork/Copy ID、第一层设置和配置安全
 - 发布包：`dsh-session-groups-0.3.0-beta.68.tgz`
 
@@ -27,7 +27,7 @@
 - README 默认英文，中文移至 `README.zh.md`。
 - README、ARCHITECTURE、COMPATIBILITY、RELEASE、TEST-RESULTS 与 0.3.0-beta.68 对齐。
 - 历史 V1/V1.1 的 CONTRACTS、TEST-PLAN、V1-PLAN、GATE0-SUMMARY、SPIKE 已加历史声明，避免被误读为当前状态。
-- 当前发布验证：447/447 单元/契约；A+ 隔离回归通过；真实桌面回归待用户执行。
+- 当前发布验证：450/450 单元/契约；A+ 隔离回归通过；真实桌面回归待用户执行。
 - 当前 beta 通过本地 tarball 分发；dshmarket 目录条目尚未发布。
 
 ## 2. 构建与测试
@@ -42,7 +42,7 @@ npm pack
 
 预期：
 
-- `npm test`：447/447 PASS
+- `npm test`：450/450 PASS
 - 构建：`lib/client.js`
 - 包：`dsh-session-groups-0.3.0-beta.68.tgz`
 
@@ -159,7 +159,7 @@ npm run test:isolated
 
 发布前必须确认：
 
-- [ ] `npm test` 447/447
+- [ ] `npm test` 450/450
 - [ ] `npm run check:all`
 - [ ] `node --check lib/client.js`
 - [ ] `npm pack` 包含 README、LICENSE、CHANGELOG、locale
@@ -179,7 +179,7 @@ npm run test:isolated
 - 状态统计只覆盖分组文档中已归组或显式未归组的会话
 - 自动派生的未归组会话不进入头部统计
 - 单窗口数据模型；多窗口冲突仅提示
-- 单进程写队列；多个 DSH 进程共用同一 profile 时没有跨进程锁
+- 写入使用进程内队列 + 短生命周期锁文件；持有者 PID 消失或锁超过 30 秒会自动回收
 - 搜索最多 20 条
 - 宽度覆盖依赖宿主侧栏 DOM，失败时 fail-soft
 - 对话框拖动/缩放没有键盘操作

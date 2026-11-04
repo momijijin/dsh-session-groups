@@ -275,10 +275,10 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - search returns at most 20 matches and matches titles/workspaces/group paths only;
 - the width override depends on the DSH sidebar DOM; if the host changes the layout it fails soft and group functionality is unaffected;
 - dialog drag/resize uses pointer input; there is no keyboard move/resize;
-- the store serializes writes in one process; there is no cross-process lock if multiple DSH processes share one profile;
+- writes use an in-process queue plus a short-lived `<record>.lock` file for cross-process serialization; stale locks are reclaimed after the owner PID dies or the lock is 30 seconds old;
 - large-list lazy rendering remains deferred; the current Ungrouped list is virtualized, but a collapsed subtree is still built by `buildRenderTree`;
 - the dshmarket catalog entry is not published yet; local tarball installs are for the beta period;
-- current release validation is **447 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
+- current release validation is **450 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
 
 ## Documentation
 
@@ -300,8 +300,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`: 447 unit/contract tests;
-- `npm run check:coverage`: Node built-in coverage (currently about 93.58% lines / 82.10% branches / 88.44% functions, `src/**` scope);
+- `npm test`: 450 unit/contract tests;
+- `npm run check:coverage`: Node built-in coverage (currently about 93.54% lines / 82.16% branches / 88.65% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;
