@@ -132,7 +132,7 @@ set; only do that when the user explicitly asked to stop active work.
 
 ## Cross-domain sequence
 
-For "rename this session, then move it into a group":
+For "rename this session, then assign it to a group":
 
 1. The user's follow-up prompt is the trigger. If the user says the task is
    complete, proceed; do not poll for an event and do not require a scheduler.
@@ -143,7 +143,7 @@ For "rename this session, then move it into a group":
 5. Re-run `state`; `plan`/`apply` `session.assign` with the resolved group id.
 6. Re-run `state`; verify the session is in the target group.
 
-There is no transaction spanning title and group ownership. Report partial
+There is no transaction spanning title and group assignment. Report partial
 success rather than pretending both succeeded.
 
 ## Operation vocabulary
@@ -164,9 +164,9 @@ session.assign  { sessionId, groupId|null, index? }
   session with `stopActivity`, or any other destructive action.
 - Keep `controlDestructive` off unless the user asks for deletion.
 - Do not invent IDs. Use IDs returned by `state`.
-- Do not perform a rename and a group move as if they were one transaction:
-  session title and group ownership are separate state domains. Do rename,
-  verify, then move, verify.
+- Do not perform a rename and a group assignment as if they were one transaction:
+  session title and group assignment are separate state domains. Do rename,
+  verify, then assign, verify.
 - On `conflict`, re-read state and rebuild the plan; never blindly retry.
-- Do not use this skill for workspace/session-log edits; it only changes display
-  grouping, session title, and archived status.
+- Do not use this skill for workspace/session-log edits; it only changes the
+  plugin's group assignments, session title, and archived status.

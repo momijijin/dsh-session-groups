@@ -10,7 +10,7 @@
 - 0.3.0-beta.64 基线：**442/442 PASS**
 - Linux CI（Ubuntu Node 24）：**442/442 PASS**；build / coverage / `npm pack --dry-run` PASS；未运行真实 DSH UI
 - Core 纯函数测试：**29/29 PASS**
-- Node 内置 coverage：**93.49% lines / 81.99% branches / 88.40% functions**
+- Node 内置 coverage：**93.50% lines / 82.03% branches / 88.42% functions**
 - A+ 隔离 Playwright（.64 基线）：**PASS**；.65 本地候选待验证
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
@@ -32,7 +32,7 @@ A+ 使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，覆盖：
 
 - 首次引导出现/关闭后刷新不重现
 - 三状态按钮存在，后台任务按钮不存在
-- 移动分组/会话后的 head 顺序
+- 分组移动/会话归入后的 head 顺序
 - 收起/展开后的会话顺序
 - 264px 窄侧栏、深色、宿主 Rail
 - 搜索、归档 tri-state

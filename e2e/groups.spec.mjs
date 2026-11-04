@@ -3997,7 +3997,7 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         // does not move; Confirm moves the session to the target group.
         const moveRevision = recordRevision();
         await ui.openSessionMenu(moveSession);
-        await ui.clickMenuItem(/^(移动到分组…|Move to group…)$/);
+        await ui.clickMenuItem(/^(归入分组…|Assign to group…)$/);
         await waitDialogKind('move-session');
         controls = await dialogControls();
         if (!controls.confirm.present || controls.confirm.disabled) throw new Error('move-session Confirm must be enabled with the current group selected');
@@ -5200,8 +5200,8 @@ function makeSteps({ driver, ui, evidenceDir, args, state }) {
         await openDelete();
         const confirmInitial = await confirmState();
         if (!confirmInitial || confirmInitial.disabled !== true) throw new Error('delete Confirm must start disabled without a destination');
-        if (!/^(移动并删除|Move and delete)$/.test(confirmInitial.text)) {
-          throw new Error(`delete Confirm label must be 移动并删除 / Move and delete, got ${JSON.stringify(confirmInitial.text)}`);
+        if (!/^(转移后删除|Reassign and delete)$/.test(confirmInitial.text)) {
+          throw new Error(`delete Confirm label must be 转移后删除 / Reassign and delete, got ${JSON.stringify(confirmInitial.text)}`);
         }
         if (confirmInitial.variant !== 'danger') throw new Error(`delete Confirm must be danger-styled, got ${confirmInitial.variant}`);
         const bodyText = String(await driver.evaluate(`(document.querySelector('[data-testid="session-groups-dialog-delete-body"]')?.textContent ?? '').replace(/\\s+/g, ' ').trim()`));

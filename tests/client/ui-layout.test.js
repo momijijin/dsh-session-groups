@@ -265,7 +265,7 @@ test('0.3.0 beta exposes onboarding, reset layout and opaque status popovers', (
   assert.match(components, /glyph: 'chevronUp'/)
   assert.equal(zh['about.resetLayout'], '恢复默认显示')
   assert.match(zh['about.scope'], /不会删除或调整分组/)
-  assert.match(zh['about.scope'], /会话归属/)
+  assert.match(zh['about.scope'], /分组归属/)
   assert.match(en['about.scope'], /does not delete or change groups/i)
   assert.equal(en['onboarding.title'], 'Welcome to Free groups')
 })
@@ -674,10 +674,19 @@ test('0.2.9 delete group: destination picker, empty direct path and move-and-del
   assert.match(components, /deleteGroupOptions\(store\.doc, dialog\.groupId\)/)
   assert.match(components, /rootLabel: t\('dialog\.rootDestination'\)/)
   assert.match(components, /session-groups-dialog-delete-options/)
-  // Footer is danger-styled and says 移动并删除 / Move and delete only for this dialog.
+  // Group and session moves use separate titles; neither claims to move the session.
+  assert.equal(zh['dialog.moveGroup'], '移动分组')
+  assert.equal(zh['dialog.moveSession'], '归入分组')
+  assert.equal(en['dialog.moveGroup'], 'Move group')
+  assert.equal(en['dialog.moveSession'], 'Assign session to group')
+  assert.equal(Object.hasOwn(zh, 'dialog.moveTo'), false)
+  assert.equal(Object.hasOwn(en, 'dialog.moveTo'), false)
+  assert.match(components, /titleKey: 'dialog\.moveGroup'/)
+  assert.match(components, /titleKey: 'dialog\.moveSession'/)
+  // Footer is danger-styled and says 转移后删除 / Reassign and delete only for this dialog.
   assert.match(components, /dialog\.kind === 'delete-group' \? t\('dialog\.moveAndDelete'\)/)
-  assert.equal(zh['dialog.moveAndDelete'], '移动并删除')
-  assert.equal(en['dialog.moveAndDelete'], 'Move and delete')
+  assert.equal(zh['dialog.moveAndDelete'], '转移后删除')
+  assert.equal(en['dialog.moveAndDelete'], 'Reassign and delete')
   assert.match(components, /data-variant': danger \? 'danger' : 'primary'/)
   // Empty leaf: no dialog, direct runtime commit + toast.
   assert.match(components, /deleteGroupNeedsDialog\(store\.doc, groupId\)/)

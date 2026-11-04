@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-groups",
   "version": "0.3.0-beta.68",
-  "description": "DSH left-sidebar global session groups: organize sessions across workspaces without moving them.",
+  "description": "A free-form grouping layer for the DSH Desktop sidebar: assign sessions from different workspaces to the same group without changing their official workspace membership or logs.",
   "author": "momiji-gz302ea <2648863351@qq.com>",
   "keywords": [
     "dsh",

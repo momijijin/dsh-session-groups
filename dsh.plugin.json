@@ -5,8 +5,8 @@
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": {
-    "en": "Global session groups for the DSH left sidebar: organize sessions across workspaces without moving them.",
-    "zh": "DSH 左侧栏全局自由分组：跨工作区整理会话，不移动会话本身。"
+    "en": "A free-form grouping layer for the DSH Desktop sidebar: assign sessions from different workspaces to the same group without changing their official workspace membership or logs.",
+    "zh": "DSH Desktop 侧栏上的自由分组层：可把不同工作区的会话归入同一分组，不改变会话的官方工作区归属或日志。"
   },
   "title": {
     "en": "Free groups",
