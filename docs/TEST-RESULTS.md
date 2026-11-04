@@ -1,17 +1,17 @@
-# 0.3.0-beta.70 测试结果
+# 0.3.0-beta.71 测试结果
 
-日期：2026-11-03  
-版本：`0.3.0-beta.70`  
+日期：2026-11-04  
+版本：`0.3.0-beta.71`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 本地候选 0.3.0-beta.70：**451/451 PASS**（新增分组菜单新建会话与跨进程锁回归测试）
+- 本地候选 0.3.0-beta.71：**456/456 PASS**（新增对话框键盘焦点与分组菜单 roving focus 回归测试）
 - 0.3.0-beta.64 基线：**442/442 PASS**
 - Linux CI（Ubuntu Node 24）：**442/442 PASS**；build / coverage / `npm pack --dry-run` PASS；未运行真实 DSH UI
 - Core 纯函数测试：**29/29 PASS**
-- Node 内置 coverage：**93.54% lines / 82.19% branches / 88.65% functions**
-- A+ 隔离 Playwright（本地候选 .68）：**PASS**；使用独立 `DSH_HOME`、`sg-e2e` profile 和端口 4421，未写入真实 `~/.dsh`
+- Node 内置 coverage：**93.55% lines / 82.24% branches / 88.69% functions**
+- A+ 隔离 Playwright（本地候选 .71）：**PASS**；使用独立 `DSH_HOME`、`sg-e2e` profile 和隔离端口，未写入真实 `~/.dsh`
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
 - 语法检查：通过
@@ -20,13 +20,14 @@
 - 损坏记录 + 有效 `.bak`：隔离坏文件并自动恢复上一 revision，warning `recovered-backup`
 - 真实恢复演练（隔离实例）：主文件 rev15 损坏 → 自动恢复 `.bak` rev14，4 个分组保留，坏文件进入 `.corrupt-*`
 - 损坏记录 + 无效 `.bak`：降级为空分组，保持两份原文件不删除
-- 原生工具 `doctor` 只读兼容性报告（host capabilities/adapter/gates/storage-health/services/routes）：451 项套件覆盖
+- 原生工具 `doctor` 只读兼容性报告（host capabilities/adapter/gates/storage-health/services/routes）：456 项套件覆盖
 - 真实 CLI `doctor` 返回 storage.health.status=ok、revision、backup=true、quarantined=0
 - doctor CLI compatibility gate：host compatibility 不支持时退出非零，JSON 报告保留
 - 真实 CLI `doctor`（隔离实例，交换 DSH web launch cookie + 插件 bearer token）：**PASS**，返回 14 条路由与 host 服务状态
 - 真实模型原生工具（隔离实例）：**PASS**，session log 记录 `tool/call` / `tool/result`，返回 `protocol: 1` 和成功 state
 
 - 跨进程锁：两个独立 Node 进程竞争同一记录时一个成功、一个 conflict；过期锁自动回收；活跃锁超时返回 `store-busy`
+- A11y：对话框有 `aria-labelledby` 标题、初始/返回焦点、Tab 焦点陷阱、Escape；标题栏和右下 resizer 支持键盘移动/缩放；分组菜单支持 Arrow/Home/End。A+ 键盘路径 PASS
 
 ## A+ 覆盖
 

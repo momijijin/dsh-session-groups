@@ -72,6 +72,8 @@
   "dialog.namePlaceholder": "Group name",
   "dialog.confirm": "Confirm",
   "dialog.cancel": "Cancel",
+  "dialog.moveDialog": "Move dialog",
+  "dialog.resizeDialog": "Resize dialog",
   "dialog.deleteMoveBody": "This group contains {sessions} sessions and {groups} subgroups. Choose where to reassign them before deleting the group; no session is deleted or archived.",
   "dialog.deleteDestination": "Destination group",
   "dialog.rootDestination": "Ungrouped (root)",
