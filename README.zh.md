@@ -184,7 +184,7 @@ control token，也不依赖 CLI。`controlApi` 必须是开启状态；`control
 Host 在每次分组 commit（原生工具或 HTTP）后通过 `/dsh-session-groups/events` 广播新 revision；浏览器收到后重新 load 对账。切回自由分组视图时也会主动重新 load。
 
 `doctor` 是只读兼容性诊断，可在 `controlApi` 关闭时调用；
-它返回宿主能力、适配器/版本范围、控制门禁、存储路径、存储健康（status/revision/.bak/quarantine）、服务存在性与已挂载路由。
+它返回宿主能力、适配器/版本范围、控制门禁、存储路径、存储健康（status/revision、backupStatus/backupRevision/backupError、quarantine）、服务存在性与已挂载路由。
 
 工具动作：
 
@@ -292,7 +292,7 @@ node scripts/session-groups-control.mjs doctor
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框拖动/缩放为指针操作；没有键盘移动/缩放。
-- 当前发布验证以 **446 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
+- 当前发布验证以 **447 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
 
 ## 文档
 
@@ -314,8 +314,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：446 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.50% lines / 82.03% branches / 88.42% functions）
+- `npm test`：447 项单元/契约测试
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.58% lines / 82.10% branches / 88.44% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH

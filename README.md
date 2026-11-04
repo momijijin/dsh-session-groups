@@ -175,7 +175,7 @@ It runs in the DSH Host process, without HTTP, a browser cookie, the control tok
 
 After every group commit (native tool or HTTP), the Host publishes the new revision through `/dsh-session-groups/events`; browsers reload and reconcile. Returning to the groups view also reloads the latest snapshot.
 
-`doctor` is a read-only compatibility diagnostic available even when `controlApi` is off. It returns host capabilities, adapter/version range, control gates, storage paths, storage health (status/revision/.bak/quarantine), service presence and mounted routes.
+`doctor` is a read-only compatibility diagnostic available even when `controlApi` is off. It returns host capabilities, adapter/version range, control gates, storage paths, storage health (status/revision, backupStatus/backupRevision/backupError, quarantine), service presence and mounted routes.
 
 Tool actions:
 
@@ -278,7 +278,7 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - the store serializes writes in one process; there is no cross-process lock if multiple DSH processes share one profile;
 - large-list lazy rendering remains deferred; the current Ungrouped list is virtualized, but a collapsed subtree is still built by `buildRenderTree`;
 - the dshmarket catalog entry is not published yet; local tarball installs are for the beta period;
-- current release validation is **446 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
+- current release validation is **447 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
 
 ## Documentation
 
@@ -300,8 +300,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`: 446 unit/contract tests;
-- `npm run check:coverage`: Node built-in coverage (currently about 93.50% lines / 82.03% branches / 88.42% functions, `src/**` scope);
+- `npm test`: 447 unit/contract tests;
+- `npm run check:coverage`: Node built-in coverage (currently about 93.58% lines / 82.10% branches / 88.44% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;
