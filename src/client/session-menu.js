@@ -73,6 +73,10 @@ export const MenuPopover = ({ store, handlers }) => {
         'data-disabled': disabled ? 'true' : 'false',
         ...(disabled ? { disabled: true } : {}),
       })
+    children.push(item('new-session', t('group.newSession'), () => handlers.openNewSession(null, menu.groupId), {
+      'data-testid': 'session-groups-group-new-session',
+      'data-group-id': menu.groupId,
+    }))
     children.push(item('new-subgroup', t('group.newSubgroup'), () => handlers.openNewGroup(null, menu.groupId)))
     children.push(item('rename', t('group.rename'), () => handlers.openRenameGroup(menu.groupId)))
     children.push(item('icon', t('group.icon'), () => handlers.openIconGroup(menu.groupId)))

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0-beta.70 (local batch, no release tag)
+
+- Group context menu: add “New session” as the first action, above “New subgroup”; it reuses the group row’s first `+` action and the existing workspace-choice dialog.
+- Locales: add `group.newSession` for English and Chinese while keeping the explanatory `group.addSession` tooltip.
+- Tests: add a source contract for menu order/wiring and an isolated A+ assertion that the first menu item opens the new-session dialog.
+
 ## 0.3.0-beta.69 (local batch, no release tag)
 
 - Copy: split the shared move dialog title into `dialog.moveGroup` and `dialog.moveSession`; describe grouping as a plugin-owned layer that leaves official workspace membership and logs unchanged.

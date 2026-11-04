@@ -665,6 +665,21 @@ test('0.2.7 right-click/keyboard menu wiring and clamped anchors', () => {
   assert.match(plugin, /'resize', closeMenuOnViewportChange/)
 })
 
+test('0.3.0-beta.70 group menu starts with new session and reuses the group plus action', () => {
+  assert.equal(zh['group.newSession'], '新建会话')
+  assert.equal(en['group.newSession'], 'New session')
+  const newSessionIndex = sessionMenu.indexOf("t('group.newSession')")
+  const newSubgroupIndex = sessionMenu.indexOf("t('group.newSubgroup')")
+  assert.ok(newSessionIndex >= 0, 'group menu must contain group.newSession')
+  assert.ok(newSubgroupIndex >= 0, 'group menu must keep group.newSubgroup')
+  assert.ok(newSessionIndex < newSubgroupIndex, 'new session must be the first group menu action')
+  assert.match(sessionMenu, /handlers\.openNewSession\(null, menu\.groupId\)/)
+  assert.match(sessionMenu, /'data-testid': 'session-groups-group-new-session'/)
+  // The plus tooltip keeps its explanatory wording.
+  assert.equal(zh['group.addSession'], '在分组内新建会话')
+  assert.equal(en['group.addSession'], 'New session in this group')
+})
+
 
 test('0.2.9 delete group: destination picker, empty direct path and move-and-delete footer', () => {
   // Group menu keeps the delete entry and the color entry now says 修改颜色/Change color.

@@ -243,6 +243,24 @@ try {
   const targetId = await createGroup(targetName)
   await createChildGroup(targetId, childName)
   const sourceId = await createGroup(sourceName)
+
+  // The group menu's first action must be the same new-session entry as the
+  // group row's first + button; checking the dialog proves the handler wiring
+  // without creating a throwaway session.
+  await groupRowById(targetId).locator('[data-testid="session-groups-group-menu"]').click({ force: true })
+  const firstGroupMenuItem = page.locator('[role="menuitem"]').first()
+  await firstGroupMenuItem.waitFor({ state: 'visible' })
+  if ((await firstGroupMenuItem.getAttribute('data-testid')) !== 'session-groups-group-new-session') {
+    throw new Error('group menu first item is not the new-session action')
+  }
+  if (!/新建会话|New session/.test((await firstGroupMenuItem.textContent()) ?? '')) {
+    throw new Error('group menu new-session label is missing')
+  }
+  await firstGroupMenuItem.click()
+  await page.locator('[data-testid="session-groups-dialog"]').waitFor({ state: 'visible' })
+  await page.evaluate(() => document.querySelector('[data-testid="session-groups-dialog-cancel"]')?.click())
+  await page.locator('[data-testid="session-groups-dialog"]').waitFor({ state: 'hidden' })
+
   await moveGroup(sourceId, targetId)
   const ordered = await groupRows().evaluateAll((rows) => rows.map((row) => row.getAttribute('data-group-id')))
   const targetAt = ordered.indexOf(targetId)
@@ -641,10 +659,13 @@ try {
   const switchAfter = await configSwitch.getAttribute('aria-checked')
   if (switchBefore === switchAfter) throw new Error('standard settings switch did not toggle')
   if ((await page.locator('[data-testid="session-groups-diagnostics-hud"]').count()) === 0) {
+    await page.locator('[data-testid="session-groups-diagnostics-hud"]').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+  }
+  if ((await page.locator('[data-testid="session-groups-diagnostics-hud"]').count()) === 0) {
     throw new Error('diagnostics HUD did not start after live config enable')
   }
   await configSwitch.click()
-  await page.waitForTimeout(600)
+  await page.locator('[data-testid="session-groups-diagnostics-hud"]').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {})
   if ((await page.locator('[data-testid="session-groups-diagnostics-hud"]').count()) !== 0) {
     throw new Error('diagnostics HUD did not stop after live config disable')
   }

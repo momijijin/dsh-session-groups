@@ -1,16 +1,16 @@
-# 0.3.0-beta.69 测试结果
+# 0.3.0-beta.70 测试结果
 
 日期：2026-11-03  
-版本：`0.3.0-beta.69`  
+版本：`0.3.0-beta.70`  
 宿主基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 ## 结论
 
-- 本地候选 0.3.0-beta.69：**450/450 PASS**（新增 4 项后台刷新回归测试）
+- 本地候选 0.3.0-beta.70：**451/451 PASS**（新增分组菜单新建会话与跨进程锁回归测试）
 - 0.3.0-beta.64 基线：**442/442 PASS**
 - Linux CI（Ubuntu Node 24）：**442/442 PASS**；build / coverage / `npm pack --dry-run` PASS；未运行真实 DSH UI
 - Core 纯函数测试：**29/29 PASS**
-- Node 内置 coverage：**93.54% lines / 82.16% branches / 88.65% functions**
+- Node 内置 coverage：**93.54% lines / 82.19% branches / 88.65% functions**
 - A+ 隔离 Playwright（本地候选 .68）：**PASS**；使用独立 `DSH_HOME`、`sg-e2e` profile 和端口 4421，未写入真实 `~/.dsh`
 - 隔离生命周期 install → uninstall → reinstall：**PASS**
 - 构建：`lib/client.js` 成功
@@ -20,7 +20,7 @@
 - 损坏记录 + 有效 `.bak`：隔离坏文件并自动恢复上一 revision，warning `recovered-backup`
 - 真实恢复演练（隔离实例）：主文件 rev15 损坏 → 自动恢复 `.bak` rev14，4 个分组保留，坏文件进入 `.corrupt-*`
 - 损坏记录 + 无效 `.bak`：降级为空分组，保持两份原文件不删除
-- 原生工具 `doctor` 只读兼容性报告（host capabilities/adapter/gates/storage-health/services/routes）：450 项套件覆盖
+- 原生工具 `doctor` 只读兼容性报告（host capabilities/adapter/gates/storage-health/services/routes）：451 项套件覆盖
 - 真实 CLI `doctor` 返回 storage.health.status=ok、revision、backup=true、quarantined=0
 - doctor CLI compatibility gate：host compatibility 不支持时退出非零，JSON 报告保留
 - 真实 CLI `doctor`（隔离实例，交换 DSH web launch cookie + 插件 bearer token）：**PASS**，返回 14 条路由与 host 服务状态
