@@ -9,7 +9,7 @@
 - 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
 - 不写入 `workspace.json`。
 
-当前版本：**0.3.0-beta.71**  
+当前版本：**0.3.0-beta.72**  
 测试基线：DSH Desktop 2.0.18 / `@deepseek-ai/dsh` 0.2.1-rc.2
 
 兼容性说明见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)：使用 `engines.dsh`、`dsh-0.2` 适配器选择器和运行时能力检测；版本矩阵显式注册，主流程不写版本 `switch`。
@@ -315,7 +315,7 @@ npm pack
 ```
 
 - `npm test`：456 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.55% lines / 82.24% branches / 88.69% functions）
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.63% lines / 82.28% branches / 88.71% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH
@@ -327,7 +327,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.71.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.72.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 
