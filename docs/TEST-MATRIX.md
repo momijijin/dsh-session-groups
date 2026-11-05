@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.38`  
+Status: `0.4.0-beta.39`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -33,7 +33,7 @@ hosts). Earlier `.22` cells remain historical artifacts.
 | English plural/time labels | PASS | PASS | PASS | — | — |
 | Third-party language activation (`ja`) | PASS | — | — | PASS | — |
 | All-locale switch: header + new-group dialog + group menu + settings/config (19 languages + zh-TW/zh-HK/zh-CN/pt-BR aliases) | PASS | — | — | PASS (23 cases) | — |
-| Arabic RTL smoke: root `dir`, menu/dialog viewport bounds, settings panel direction | PASS | — | — | PASS (23 cases + RTL screenshots) | — |
+| Arabic RTL smoke: root `dir`, menu/dialog viewport bounds, settings panel direction | PASS | — | — | PASS (23 cases + RTL screenshots) | PASS (visual review .38) |
 | Full non-English UI surfaces | PASS (resources only) | — | — | LP header/dialog/group menu/settings + ja onboarding/dialog only | — |
 
 ## Language matrix
@@ -57,7 +57,7 @@ hosts). Earlier `.22` cells remain historical artifacts.
 | `id` Indonesian | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
 | `ru` Russian | yes | PASS (one/few/many/other) | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
 | `hi` Hindi | yes | PASS (one/other) | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
-| `ar` Arabic | yes | PASS (zero/one/two/few/many/other) | — | PASS (header/dialog/group menu + RTL root) | — | RTL foundation; full visual mirror not audited |
+| `ar` Arabic | yes | PASS (zero/one/two/few/many/other) | — | PASS (header/dialog/group menu + RTL root) | PASS (visual review .38) | RTL foundation + plugin surfaces visually accepted 2026-11-05 |
 | `zh-Hant` Traditional Chinese | yes | PASS | — | PASS (header/dialog/group menu) | — | script-aware resolver; locale-pack smoke |
 
 Important distinction:
