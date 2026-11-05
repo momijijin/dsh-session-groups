@@ -4,31 +4,11 @@
  */
 import { createElement, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
-import {
-  currentColorHexOf,
-  currentColorOf,
-  currentGroupIdOf,
-  currentIconOf,
-  currentParentOf,
-  deleteGroupOptions,
-  dialogConfirmPayload,
-  findGroupsFlat,
-  initialDialogSelection,
-  isSelectionDialog,
-  moveGroupOptions,
-  selectionIsValid,
-} from '../core/dialog-selection.js'
-import { GROUP_COLORS, GROUP_COLOR_HEX, GROUP_ICONS, MAX_GROUP_NAME, PLUGIN_VERSION } from '../shared/constants.js'
+import { deleteGroupOptions, dialogConfirmPayload, findGroupsFlat, initialDialogSelection, isSelectionDialog, moveGroupOptions, selectionIsValid } from '../core/dialog-selection.js'
+import { GROUP_COLORS, GROUP_COLOR_HEX, MAX_GROUP_NAME, PLUGIN_VERSION } from '../shared/constants.js'
 import { isColorHex, normalizeColorHex } from '../shared/model.js'
 import { formatActivity, workspaceLabel } from './actions.js'
-import {
-  centeredDialogRect,
-  clampDialogRect,
-  dragDialogRect,
-  readDialogGeometries,
-  resizeDialogRect,
-  saveDialogGeometry,
-} from './dialog-geometry.js'
+import { centeredDialogRect, clampDialogRect, dragDialogRect, readDialogGeometries, resizeDialogRect, saveDialogGeometry } from './dialog-geometry.js'
 import { dialogKeyboardDelta } from './dialog-keyboard.js'
 import { GroupListPicker } from './group-list-picker.js'
 import { ICON_GROUPS, renderGlyph, renderIcon } from './icons.js'

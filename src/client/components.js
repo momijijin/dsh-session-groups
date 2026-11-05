@@ -6,128 +6,32 @@
  * `usePanelInfo`, `…`) plus the slot owner share. Everything host-derived is read
  * from those hooks; the only local state is this plugin's view store.
  */
-import { Component, createElement, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { createElement, useEffect, useMemo, useRef, useState } from 'react'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
-import { groupColorCss } from '../core/color.js'
-import { estimatedTreeHeight } from '../core/layout.js'
-import { sessionRowPropsEqual, statusLabel } from '../core/session-row.js'
-import { GROUP_COLORS, GROUP_ICONS, GROUP_COLOR_HEX, MAX_GROUP_NAME, PLUGIN_VERSION, SESSION_WATERMARK_BASE, SESSION_WATERMARK_AUTO_MAX } from '../shared/constants.js'
-import {
-  assignSession,
-  childrenOf,
-  findGroup,
-  groupColor,
-  groupColorHex,
-  isColorHex,
-  moveGroup,
-  normalizeColorHex,
-} from '../shared/model.js'
-import {
-  currentColorHexOf,
-  currentColorOf,
-  currentGroupIdOf,
-  currentIconOf,
-  currentParentOf,
-  deleteGroupNeedsDialog,
-  deleteGroupOptions,
-  dialogConfirmPayload,
-  findGroupsFlat,
-  initialDialogSelection,
-  isSelectionDialog,
-  moveGroupOptions,
-  selectionIsValid,
-} from '../core/dialog-selection.js'
-import { createActions, formatActivity, workspaceChoices, workspaceLabel } from './actions.js'
+import { GROUP_ICONS } from '../shared/constants.js'
+import { assignSession, childrenOf, findGroup, groupColor, moveGroup } from '../shared/model.js'
+import { currentColorHexOf, currentColorOf, currentGroupIdOf, currentIconOf, currentParentOf, deleteGroupNeedsDialog, findGroupsFlat } from '../core/dialog-selection.js'
+import { workspaceChoices } from './actions.js'
 import { MenuPopover, Toast } from './session-menu.js'
 import { selectMainSessionView } from './main-session-view.js'
-import { GroupListPicker } from './group-list-picker.js'
-import { ScrollArea } from './scroll-area.js'
 import { DialogHost } from './dialog-host.js'
 import { sessionViewEqual, statusMapEqual, workspaceViewEqual } from './session-equality.js'
-import {
-  centeredDialogRect,
-  clampDialogRect,
-  dragDialogRect,
-  readDialogGeometries,
-  resizeDialogRect,
-  saveDialogGeometry,
-} from './dialog-geometry.js'
-import {
-  buildVisibleTree,
-  countTreeSessions,
-  mainSessionIdOf,
-  isArchived,
-  sessionTitle,
-  ARCHIVE_FILTERS,
-  ARCHIVE_FILTER_LABEL_KEYS,
-} from '../core/filter.js'
+import { buildVisibleTree, countTreeSessions, mainSessionIdOf, sessionTitle } from '../core/filter.js'
 import { applyDrop, hitTest, sameDropTarget, stickyDropTarget, ungroupedBodyTarget } from '../core/drag.js'
-import {
-  diagContext,
-  diagDragEnd,
-  diagDragStart,
-  diagDropState,
-  diagEnabled,
-  diagHandler,
-  diagRender,
-  diagTargetChange,
-  diagTrace,
-} from './diagnostics.js'
+import { diagContext, diagDragEnd, diagDragStart, diagDropState, diagEnabled, diagHandler, diagRender, diagTargetChange, diagTrace } from './diagnostics.js'
 import { GROUP_DRAG_MIME, groupHeaderZoneFromRect, isCurrentGroupPosition, resolveGroupDrop } from '../core/group-drag.js'
-import { ICON_GROUPS, renderGlyph, renderHeaderIcon, renderIcon } from './icons.js'
-import { isMenuKey, menuAnchorFromEvent, menuAnchorFromRow } from '../core/menu-position.js'
-import {
-  perfDragOver,
-  perfDropTarget,
-  perfEnabled,
-  perfMark,
-  perfNow,
-  perfRender,
-  perfSample,
-} from './perf.js'
-import { buildSearchIndex, matchSessions, revealSession } from '../core/search.js'
+import { menuAnchorFromEvent, menuAnchorFromRow } from '../core/menu-position.js'
+import { perfDragOver, perfDropTarget, perfEnabled, perfMark, perfNow, perfRender, perfSample } from './perf.js'
+import { revealSession } from '../core/search.js'
 import { readOnboardingDone, writeOnboardingDone } from './state.js'
-import {
-  applyManagedWidth,
-  clampSidebarWidth,
-  clearManagedWidth,
-  findLayoutNodes,
-  maxSidebarWidth,
-  readSidebarWidth,
-  writeSidebarWidth,
-  SIDEBAR_WIDTH_DEFAULT,
-  SIDEBAR_WIDTH_MIN,
-} from './sidebar-width.js'
-import { relativeTimeParts } from './time.js'
-import {
-  computeVirtualWindow,
-  virtualScrollOffset,
-  VIRTUAL_HEADER_HEIGHT,
-  VIRTUAL_ROW_GAP,
-  VIRTUAL_ROW_HEIGHT,
-} from '../core/virtual-list.js'
-import {
-  displayDepth,
-  expandAncestors,
-  flattenTree,
-  groupPath,
-  isExpanded,
-  runningSubagentCounts,
-  statusSectionsByGroup,
-  sessionStatuses,
-  sessionContainer,
-} from '../core/tree.js'
+import { applyManagedWidth, clampSidebarWidth, clearManagedWidth, findLayoutNodes, maxSidebarWidth, readSidebarWidth, writeSidebarWidth, SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MIN } from './sidebar-width.js'
+import { expandAncestors, isExpanded, runningSubagentCounts, statusSectionsByGroup, sessionContainer } from '../core/tree.js'
 
-import {
-  useViewStore, classNames, usePerfCommit, dispatch, toast, IconButton, TextButton,
-  StatusSpinner, StatusDot, SessionStatusCell, sessionTime, menuKeyHandler,
-  DropPlaceholder, EmptyDropBox, SESSION_PLACEHOLDER_HEIGHT, GROUP_PLACEHOLDER_HEIGHT,
-} from './components-primitives.js'
-import { SessionRow, GroupNode, GroupDropSlot } from './components-rows.js'
-import { UngroupedSection, VirtualSpacer } from './components-ungrouped.js'
+import { useViewStore, usePerfCommit, dispatch, toast, TextButton, DropPlaceholder, GROUP_PLACEHOLDER_HEIGHT } from './components-primitives.js'
+import { SessionRow, GroupNode } from './components-rows.js'
+import { UngroupedSection } from './components-ungrouped.js'
 import { ResizeHandle } from './components-resize-handle.js'
-import { SearchBox, SEARCH_LISTBOX_ID } from './components-search-box.js'
-import { ArchiveFilterPopover, OnboardingCard, StatusSessionsButton, Header, Banner, Rail, FlatFallback, ErrorBoundary } from './components-header.js'
+import { OnboardingCard, Header, Banner, Rail, FlatFallback, ErrorBoundary } from './components-header.js'
 
 const h = createElement
 

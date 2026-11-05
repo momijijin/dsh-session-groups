@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.24`  
+Status: `0.4.0-beta.25`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -8,7 +8,7 @@ and at which level. Other docs should link here instead of restating counts.
 
 | Code | Meaning |
 |---|---|
-| `U` | Unit/contract tests: `npm test` (493 tests) |
+| `U` | Unit/contract tests: `npm test` (494 tests) |
 | `A+ C` | Isolated Playwright, community DSH Desktop 2.0.18 / DSH `0.2.1-rc.2` |
 | `A+ O` | Isolated Playwright, official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5` |
 | `LP` | Test-only all-locale pack (`e2e/fixtures/ja-locale-pack`): host catalog injection + active locale switch |
@@ -20,7 +20,7 @@ The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 every packaged dictionary and checks the header + new-group dialog.
 
 A+ C/O cells are historical runtime evidence (last recorded on earlier
-candidates). `0.4.0-beta.24` was not A+-re-run; do not use those cells as a
+candidates). `0.4.0-beta.25` was not A+-re-run; do not use those cells as a
 fresh candidate artifact until the release gate records a new run.
 
 ## Environment matrix
