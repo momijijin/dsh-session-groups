@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.14`  
+Status: `0.4.0-beta.15`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -49,8 +49,8 @@ The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 | `vi` Vietnamese | yes | PASS | — | — | — | resources only |
 | `th` Thai | yes | PASS | — | — | — | resources only |
 | `id` Indonesian | yes | PASS | — | — | — | resources only |
-| `ru` Russian | no | — | — | — | — | not packaged |
-| `hi` Hindi | no | — | — | — | — | not packaged |
+| `ru` Russian | yes | PASS (one/few/many/other) | — | — | — | resources only |
+| `hi` Hindi | yes | PASS (one/other) | — | — | — | resources only |
 | `ar` Arabic | no | — | — | — | — | not packaged; RTL also missing |
 | `zh-Hant` Traditional Chinese | no separate resource | — | — | — | — | **currently resolves to simplified `zh`** |
 
@@ -82,6 +82,8 @@ plural selection.
 | `nl`, `nl-NL` | `nl` | |
 | `pl`, `pl-PL` | `pl` | one/few/many/other |
 | `tr`, `tr-TR` | `tr` | |
+| `ru`, `ru-RU` | `ru` | one/few/many/other |
+| `hi`, `hi-IN` | `hi` | one/other |
 | `vi`, `vi-VN` | `vi` | |
 | `th`, `th-TH` | `th` | |
 | `id`, `id-ID` | `id` | |

@@ -9,12 +9,12 @@ A free-form grouping layer over the shipped DSH Desktop workspace/session sideba
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
 - `workspace.json` is never written.
 
-Current version: **0.4.0-beta.14**  
+Current version: **0.4.0-beta.15**  
 Primary support: **DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 and 0.2.1-rc.5** (`engines.dsh: >=0.2.0-rc.2 <0.3.0`)  
 Verified shells: **community DSH Desktop Stable 2.0.18** (rc.2) and **official DeepSeek Harness desktop 0.2.1.0** (rc.5, isolated runtime A+)  
 Not supported or promised: **community DSH Desktop Beta** and **community DSH NEXT (`-next` channel)**
 
-Localization: **English, Chinese, Japanese, Korean, German, French, Spanish, Brazilian Portuguese, Italian, Dutch, Polish, Turkish, Vietnamese, Thai and Indonesian** dictionaries are packaged. Locale ids resolve by base language (`ja-JP` → `ja`, `zh-Hant` → `zh`, `pt-BR` → `pt`); unsupported languages fall back to English. Session count and expand labels use CLDR plural templates. The plugin registers every dictionary with the host, but does not add languages to the host catalog itself.
+Localization: **English, Chinese, Japanese, Korean, German, French, Spanish, Brazilian Portuguese, Italian, Dutch, Polish, Turkish, Vietnamese, Thai, Indonesian, Russian and Hindi** dictionaries are packaged. Locale ids resolve by base language (`ja-JP` → `ja`, `zh-Hant` → `zh`, `pt-BR` → `pt`); unsupported languages fall back to English. Session count and expand labels use CLDR plural templates. The plugin registers every dictionary with the host, but does not add languages to the host catalog itself.
 
 Dependency policy: official `@deepseek-ai/*` runtime packages are declared as `peerDependencies`; the DSH host supplies them instead of the plugin bundling a duplicate copy.
 
@@ -133,7 +133,7 @@ Updates are owned by dshmarket / the plugin manager. The plugin does not self-up
 
 ### Upgrading from `dsh-session-groups`
 
-`0.4.0-beta.14` is a new package identity. It does **not** auto-read, copy or delete the old `dsh-session-groups` record or browser keys; this avoids importing data from the same-named community plugins. The manual migration checklist is in [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md).
+`0.4.0-beta.15` is a new package identity. It does **not** auto-read, copy or delete the old `dsh-session-groups` record or browser keys; this avoids importing data from the same-named community plugins. The manual migration checklist is in [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md).
 
 ### Maintainer/developer install
 
@@ -346,7 +346,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS;
 - build artifact: `lib/client.js`;
-- package: `dsh-session-grove-0.4.0-beta.14.tgz`;
+- package: `dsh-session-grove-0.4.0-beta.15.tgz`;
 - release steps: `docs/RELEASE.md`;
 - test summary: `docs/TEST-RESULTS.md`.
 
