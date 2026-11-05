@@ -611,6 +611,7 @@ export const CSS = `
 .dsg-dialog-content, .dsg-dialog-list, .dsg-icon-sections { scrollbar-width: none; -ms-overflow-style: none; }
 .dsg-dialog-content::-webkit-scrollbar, .dsg-dialog-list::-webkit-scrollbar, .dsg-icon-sections::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .dsg-dialog-body { font-size: var(--dsg-font-13, 13px); line-height: 20px; color: var(--dsw-alias-label-secondary, CanvasText); white-space: pre-wrap; }
+.dsg-dialog-delete-counts { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .dsg-dialog-input { flex: none; width: 100%; box-sizing: border-box; height: 32px; min-height: 32px; padding: 0 10px; font-size: var(--dsg-font-13, 13px); line-height: 18px; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l3, color-mix(in srgb, CanvasText 22%, transparent)); background: var(--dsw-alias-bg-layer-1, Canvas); color: var(--dsw-alias-label-primary, CanvasText); }
 .dsg-dialog-input::placeholder { color: var(--dsw-alias-label-secondary, CanvasText); }
 .dsg-dialog-input:focus { outline: var(--dsw-focus-ring-width, 2px) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, #4d6bfe)); outline-offset: -1px; }

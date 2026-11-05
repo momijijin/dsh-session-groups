@@ -28,6 +28,10 @@
     "one": "{n} Sitzung",
     "other": "{n} Sitzungen"
   },
+  "group.subgroupCount": {
+    "one": "{n} Untergruppe",
+    "other": "{n} Untergruppen"
+  },
   "drag.groupBefore": "Vor „{name}“ ablegen",
   "drag.groupAfter": "Nach „{name}“ ablegen",
   "drag.groupInto": "In „{name}“ ablegen",
@@ -77,7 +81,7 @@
   "dialog.cancel": "Abbrechen",
   "dialog.moveDialog": "Dialog verschieben",
   "dialog.resizeDialog": "Dialoggröße ändern",
-  "dialog.deleteMoveBody": "Diese Gruppe enthält {sessions} Sitzungen und {groups} Untergruppen. Wählen Sie vor dem Löschen deren Zielgruppe; es werden keine Sitzungen gelöscht oder archiviert.",
+  "dialog.deleteMoveInstruction": "Wählen Sie vor dem Löschen der Gruppe die Zielgruppe für die Sitzungen und Untergruppen; es werden keine Sitzungen gelöscht oder archiviert.",
   "dialog.deleteDestination": "Zielgruppe",
   "dialog.rootDestination": "Ohne Gruppe (oberste Ebene)",
   "dialog.moveAndDelete": "Verschieben und löschen",

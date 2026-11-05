@@ -28,6 +28,10 @@
     "one": "{n} sesi",
     "other": "{n} sesi"
   },
+  "group.subgroupCount": {
+    "one": "{n} subgrup",
+    "other": "{n} subgrup"
+  },
   "drag.groupBefore": "Lepaskan sebelum “{name}”",
   "drag.groupAfter": "Lepaskan setelah “{name}”",
   "drag.groupInto": "Lepaskan ke dalam “{name}”",
@@ -77,7 +81,7 @@
   "dialog.cancel": "Batal",
   "dialog.moveDialog": "Pindahkan dialog",
   "dialog.resizeDialog": "Ubah ukuran dialog",
-  "dialog.deleteMoveBody": "Grup ini berisi {sessions} sesi dan {groups} subgrup. Pilih tujuan pemindahannya sebelum menghapus grup; tidak ada sesi yang dihapus atau diarsipkan.",
+  "dialog.deleteMoveInstruction": "Pilih tujuan pemindahannya sebelum menghapus grup; tidak ada sesi yang dihapus atau diarsipkan.",
   "dialog.deleteDestination": "Grup tujuan",
   "dialog.rootDestination": "Tanpa grup (akar)",
   "dialog.moveAndDelete": "Pindahkan lalu hapus",

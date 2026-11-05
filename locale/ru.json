@@ -30,6 +30,12 @@
     "many": "{n} сессий",
     "other": "{n} сессии"
   },
+  "group.subgroupCount": {
+    "one": "{n} подгруппа",
+    "few": "{n} подгруппы",
+    "many": "{n} подгрупп",
+    "other": "{n} подгруппы"
+  },
   "drag.groupBefore": "Вставить перед «{name}»",
   "drag.groupAfter": "Вставить после «{name}»",
   "drag.groupInto": "Вставить в «{name}»",
@@ -79,7 +85,7 @@
   "dialog.cancel": "Отмена",
   "dialog.moveDialog": "Переместить диалоговое окно",
   "dialog.resizeDialog": "Изменить размер диалогового окна",
-  "dialog.deleteMoveBody": "В этой группе сессий: {sessions}, подгрупп: {groups}. Перед удалением группы выберите, куда их перенести; ни одна сессия не будет удалена или архивирована.",
+  "dialog.deleteMoveInstruction": "Перед удалением группы выберите, куда их перенести; ни одна сессия не будет удалена или архивирована.",
   "dialog.deleteDestination": "Целевая группа",
   "dialog.rootDestination": "Без группы (корень)",
   "dialog.moveAndDelete": "Перенести и удалить",

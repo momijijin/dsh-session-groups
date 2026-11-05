@@ -28,6 +28,10 @@
     "one": "{n} เซสชัน",
     "other": "{n} เซสชัน"
   },
+  "group.subgroupCount": {
+    "one": "{n} กลุ่มย่อย",
+    "other": "{n} กลุ่มย่อย"
+  },
   "drag.groupBefore": "วางก่อน “{name}”",
   "drag.groupAfter": "วางหลัง “{name}”",
   "drag.groupInto": "วางใน “{name}”",
@@ -77,7 +81,7 @@
   "dialog.cancel": "ยกเลิก",
   "dialog.moveDialog": "ย้ายกล่องโต้ตอบ",
   "dialog.resizeDialog": "ปรับขนาดกล่องโต้ตอบ",
-  "dialog.deleteMoveBody": "กลุ่มนี้มีเซสชัน {sessions} รายการและกลุ่มย่อย {groups} กลุ่ม เลือกปลายทางที่จะย้ายรายการเหล่านี้ก่อนลบกลุ่ม ทั้งนี้จะไม่มีการลบหรือเก็บถาวรเซสชันใด ๆ",
+  "dialog.deleteMoveInstruction": "เลือกปลายทางที่จะย้ายรายการเหล่านี้ก่อนลบกลุ่ม ทั้งนี้จะไม่มีการลบหรือเก็บถาวรเซสชันใด ๆ",
   "dialog.deleteDestination": "กลุ่มปลายทาง",
   "dialog.rootDestination": "ยังไม่จัดกลุ่ม (ระดับบนสุด)",
   "dialog.moveAndDelete": "ย้ายแล้วลบ",

@@ -28,6 +28,10 @@
     "one": "{n} session",
     "other": "{n} sessions"
   },
+  "group.subgroupCount": {
+    "one": "{n} sous-groupe",
+    "other": "{n} sous-groupes"
+  },
   "drag.groupBefore": "Déposer avant « {name} »",
   "drag.groupAfter": "Déposer après « {name} »",
   "drag.groupInto": "Déposer dans « {name} »",
@@ -77,7 +81,7 @@
   "dialog.cancel": "Annuler",
   "dialog.moveDialog": "Déplacer la boîte de dialogue",
   "dialog.resizeDialog": "Redimensionner la boîte de dialogue",
-  "dialog.deleteMoveBody": "Ce groupe contient {sessions} sessions et {groups} sous-groupes. Choisissez où les réaffecter avant de supprimer le groupe ; aucune session n'est supprimée ni archivée.",
+  "dialog.deleteMoveInstruction": "Choisissez où les réaffecter avant de supprimer le groupe ; aucune session n'est supprimée ni archivée.",
   "dialog.deleteDestination": "Groupe de destination",
   "dialog.rootDestination": "Sans groupe (racine)",
   "dialog.moveAndDelete": "Réaffecter et supprimer",

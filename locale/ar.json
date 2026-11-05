@@ -32,6 +32,14 @@
     "many": "{n} جلسة",
     "other": "{n} جلسة"
   },
+  "group.subgroupCount": {
+    "zero": "{n} مجموعة فرعية",
+    "one": "{n} مجموعة فرعية",
+    "two": "{n} مجموعتان فرعيتان",
+    "few": "{n} مجموعات فرعية",
+    "many": "{n} مجموعة فرعية",
+    "other": "{n} مجموعة فرعية"
+  },
   "drag.groupBefore": "أفلت قبل «{name}»",
   "drag.groupAfter": "أفلت بعد «{name}»",
   "drag.groupInto": "أفلت داخل «{name}»",
@@ -81,7 +89,7 @@
   "dialog.cancel": "إلغاء",
   "dialog.moveDialog": "نقل مربع الحوار",
   "dialog.resizeDialog": "تغيير حجم مربع الحوار",
-  "dialog.deleteMoveBody": "تحتوي هذه المجموعة على {sessions} من الجلسات و{groups} من المجموعات الفرعية. اختر وجهة إعادة تعيينها قبل حذف المجموعة؛ لن تُحذف أي جلسة أو تُؤرشف.",
+  "dialog.deleteMoveInstruction": "اختر وجهة إعادة تعيين الجلسات والمجموعات الفرعية قبل حذف المجموعة؛ لن تُحذف أي جلسة أو تُؤرشف.",
   "dialog.deleteDestination": "المجموعة الوجهة",
   "dialog.rootDestination": "غير المجمّعة (الجذر)",
   "dialog.moveAndDelete": "إعادة تعيين ثم حذف",

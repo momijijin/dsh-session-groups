@@ -746,7 +746,9 @@ test('0.2.9 delete group: destination picker, empty direct path and move-and-del
   // Non-empty delete dialog: 删除分组 title, counts, destination list and root option.
   assert.match(components, /kind: 'delete-group'/)
   assert.match(components, /titleKey: 'dialog\.deleteGroup'/)
-  assert.match(components, /t\('dialog\.deleteMoveBody'/)
+  assert.match(components, /t\('group\.sessionCount'/)
+  assert.match(components, /t\('group\.subgroupCount'/)
+  assert.match(components, /t\('dialog\.deleteMoveInstruction'/)
   assert.match(components, /session-groups-dialog-delete-body/)
   assert.match(components, /deleteGroupOptions\(store\.doc, dialog\.groupId\)/)
   assert.match(components, /rootLabel: t\('dialog\.rootDestination'\)/)

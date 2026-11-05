@@ -28,6 +28,10 @@
     "one": "{n} सत्र",
     "other": "{n} सत्र"
   },
+  "group.subgroupCount": {
+    "one": "{n} उपसमूह",
+    "other": "{n} उपसमूह"
+  },
   "drag.groupBefore": "“{name}” से पहले छोड़ें",
   "drag.groupAfter": "“{name}” के बाद छोड़ें",
   "drag.groupInto": "“{name}” में छोड़ें",
@@ -77,7 +81,7 @@
   "dialog.cancel": "रद्द करें",
   "dialog.moveDialog": "डायलॉग ले जाएँ",
   "dialog.resizeDialog": "डायलॉग का आकार बदलें",
-  "dialog.deleteMoveBody": "इस समूह में {sessions} सत्र और {groups} उपसमूह हैं। समूह हटाने से पहले चुनें कि इन्हें कहाँ फिर से असाइन करना है; कोई भी सत्र हटाया या संग्रहीत नहीं जाएगा।",
+  "dialog.deleteMoveInstruction": "समूह हटाने से पहले चुनें कि इन्हें कहाँ फिर से असाइन करना है; कोई भी सत्र हटाया या संग्रहीत नहीं जाएगा।",
   "dialog.deleteDestination": "गंतव्य समूह",
   "dialog.rootDestination": "बिना समूह (मूल)",
   "dialog.moveAndDelete": "असाइन करके हटाएँ",

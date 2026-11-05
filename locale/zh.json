@@ -28,6 +28,10 @@
     "one": "{n} 个会话",
     "other": "{n} 个会话"
   },
+  "group.subgroupCount": {
+    "one": "{n} 个子分组",
+    "other": "{n} 个子分组"
+  },
   "drag.groupBefore": "放入『{name}』前",
   "drag.groupAfter": "放入『{name}』后",
   "drag.groupInto": "放入『{name}』内",
@@ -77,7 +81,7 @@
   "dialog.cancel": "取消",
   "dialog.moveDialog": "移动对话框",
   "dialog.resizeDialog": "缩放对话框",
-  "dialog.deleteMoveBody": "该分组包含 {sessions} 个会话、{groups} 个子分组。请选择它们的去向后再删除分组；不会删除或归档任何会话。",
+  "dialog.deleteMoveInstruction": "请选择它们的去向后再删除分组；不会删除或归档任何会话。",
   "dialog.deleteDestination": "目标分组",
   "dialog.rootDestination": "未归组（根目录）",
   "dialog.moveAndDelete": "转移后删除",

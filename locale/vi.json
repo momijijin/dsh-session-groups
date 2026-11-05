@@ -28,6 +28,10 @@
     "one": "{n} phiên",
     "other": "{n} phiên"
   },
+  "group.subgroupCount": {
+    "one": "{n} nhóm con",
+    "other": "{n} nhóm con"
+  },
   "drag.groupBefore": "Thả trước “{name}”",
   "drag.groupAfter": "Thả sau “{name}”",
   "drag.groupInto": "Thả vào “{name}”",
@@ -77,7 +81,7 @@
   "dialog.cancel": "Hủy",
   "dialog.moveDialog": "Di chuyển hộp thoại",
   "dialog.resizeDialog": "Thay đổi kích thước hộp thoại",
-  "dialog.deleteMoveBody": "Nhóm này chứa {sessions} phiên và {groups} nhóm con. Hãy chọn nơi gán lại chúng trước khi xóa nhóm; không phiên nào bị xóa hay lưu trữ.",
+  "dialog.deleteMoveInstruction": "Hãy chọn nơi gán lại chúng trước khi xóa nhóm; không phiên nào bị xóa hay lưu trữ.",
   "dialog.deleteDestination": "Nhóm đích",
   "dialog.rootDestination": "Chưa xếp nhóm (gốc)",
   "dialog.moveAndDelete": "Gán lại và xóa",

@@ -28,6 +28,10 @@
     "one": "{n} sessie",
     "other": "{n} sessies"
   },
+  "group.subgroupCount": {
+    "one": "{n} subgroep",
+    "other": "{n} subgroepen"
+  },
   "drag.groupBefore": "Vóór “{name}” neerzetten",
   "drag.groupAfter": "Na “{name}” neerzetten",
   "drag.groupInto": "In “{name}” neerzetten",
@@ -77,7 +81,7 @@
   "dialog.cancel": "Annuleren",
   "dialog.moveDialog": "Dialoogvenster verplaatsen",
   "dialog.resizeDialog": "Grootte van dialoogvenster wijzigen",
-  "dialog.deleteMoveBody": "Deze groep bevat {sessions} sessies en {groups} subgroepen. Kies waar de sessies en subgroepen moeten worden ondergebracht voordat je de groep verwijdert; er wordt geen sessie verwijderd of gearchiveerd.",
+  "dialog.deleteMoveInstruction": "Kies waar de sessies en subgroepen moeten worden ondergebracht voordat je de groep verwijdert; er wordt geen sessie verwijderd of gearchiveerd.",
   "dialog.deleteDestination": "Doelgroep",
   "dialog.rootDestination": "Niet gegroepeerd (hoofdniveau)",
   "dialog.moveAndDelete": "Opnieuw indelen en verwijderen",

@@ -28,6 +28,10 @@
     "one": "{n} oturum",
     "other": "{n} oturum"
   },
+  "group.subgroupCount": {
+    "one": "{n} alt grup",
+    "other": "{n} alt grup"
+  },
   "drag.groupBefore": "“{name}” önüne bırak",
   "drag.groupAfter": "“{name}” sonrasına bırak",
   "drag.groupInto": "“{name}” içine bırak",
@@ -77,7 +81,7 @@
   "dialog.cancel": "İptal",
   "dialog.moveDialog": "Diyaloğu taşı",
   "dialog.resizeDialog": "Diyaloğu yeniden boyutlandır",
-  "dialog.deleteMoveBody": "Bu grupta {sessions} oturum ve {groups} alt grup var. Grubu silmeden önce bunların nereye atanacağını seç; hiçbir oturum silinmez veya arşivlenmez.",
+  "dialog.deleteMoveInstruction": "Grubu silmeden önce bunların nereye atanacağını seç; hiçbir oturum silinmez veya arşivlenmez.",
   "dialog.deleteDestination": "Hedef grup",
   "dialog.rootDestination": "Gruplanmamış (kök)",
   "dialog.moveAndDelete": "Taşı ve sil",

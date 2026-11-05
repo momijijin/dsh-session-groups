@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0-beta.19 (i18n double-count + release gate)
+
+- Split delete-group copy into independently pluralized session/subgroup lines plus a static instruction; added `group.subgroupCount` to all 19 dictionaries (288 keys).
+- Release gate now requires `test:locale-pack` + `test:all-locales`; tests: 493/493.
+
 ## 0.4.0-beta.18 (ar + RTL foundation)
 
 - Added Arabic (`locale/ar.json`, 287 keys, CLDR zero/one/two/few/many/other) and manifest metadata.
