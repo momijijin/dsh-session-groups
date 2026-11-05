@@ -7,16 +7,55 @@
 import { FALLBACK_LANGUAGE } from './resources.js'
 
 /**
+ * Normalize a BCP 47-style locale id for lookups.
+ * @param {unknown} localeId
+ * @returns {string}
+ */
+export const normalizeLocaleId = (localeId) => {
+  if (typeof localeId !== 'string') return ''
+  return localeId.trim().toLowerCase().replaceAll('_', '-')
+}
+
+/**
  * Normalize a BCP 47-style locale (`ja-JP`, `zh_Hant_TW`, ...) to its base
- * language. Region and script dictionaries are not handled yet; unsupported
- * variants fall back through the same base-language lookup.
+ * language. Region/script variants are resolved separately before this base
+ * fallback.
  * @param {unknown} localeId
  * @returns {string}
  */
 export const baseLanguage = (localeId) => {
-  if (typeof localeId !== 'string') return ''
-  const normalized = localeId.trim().toLowerCase().replaceAll('_', '-')
+  const normalized = normalizeLocaleId(localeId)
   return normalized.split('-')[0] ?? ''
+}
+
+const REGION_SCRIPTS = Object.freeze({ tw: 'hant', hk: 'hant', mo: 'hant', cn: 'hans', sg: 'hans', my: 'hans' })
+
+/**
+ * Ordered dictionary candidates for a locale id: exact id, explicit script,
+ * maximized script, known region script, then base language. The registry
+ * lookup is case-insensitive; this is what makes `zh-TW` select `zh-Hant`
+ * while `zh-CN` keeps the Simplified `zh` resource.
+ * @param {unknown} localeId
+ * @returns {string[]}
+ */
+export const localeCandidates = (localeId) => {
+  const normalized = normalizeLocaleId(localeId)
+  if (normalized === '') return []
+  const parts = normalized.split('-')
+  const language = parts[0]
+  const candidates = [normalized]
+  const explicitScript = parts.find((part) => /^[a-z]{4}$/.test(part))
+  if (explicitScript) candidates.push(`${language}-${explicitScript}`)
+  try {
+    const script = new Intl.Locale(normalized).maximize?.().script
+    if (script) candidates.push(`${language}-${script.toLowerCase()}`)
+  } catch {
+    /* Intl.Locale is optional in older hosts */
+  }
+  const region = parts.find((part) => /^[a-z]{2}$/.test(part))
+  if (region && REGION_SCRIPTS[region]) candidates.push(`${language}-${REGION_SCRIPTS[region]}`)
+  candidates.push(language)
+  return [...new Set(candidates)]
 }
 
 /**

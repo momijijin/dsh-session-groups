@@ -35,7 +35,8 @@ export {
   tr,
   vi,
   zh,
+  zhHant,
 } from './i18n/resources.js'
-export { baseLanguage, detectEnvironmentLocale, resolveLocaleId } from './i18n/locale-id.js'
+export { baseLanguage, detectEnvironmentLocale, localeCandidates, normalizeLocaleId, resolveLocaleId } from './i18n/locale-id.js'
 export { formatMessage } from './i18n/message-format.js'
 export { createTranslator, dictionaryFor } from './i18n/translator.js'
