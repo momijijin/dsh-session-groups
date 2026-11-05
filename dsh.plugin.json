@@ -1,30 +1,27 @@
 {
   "id": "dsh-session-grove",
   "name": "dsh-session-grove",
-  "version": "0.4.0-beta.4",
+  "version": "0.4.0-beta.5",
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": {
     "en": "A free-form grouping layer for the DSH Desktop sidebar: assign sessions from different workspaces to the same group without changing their official workspace membership or logs.",
     "zh": "DSH Desktop 侧栏上的自由分组层：可把不同工作区的会话归入同一分组，不改变会话的官方工作区归属或日志。",
-    "ja": "DSH Desktop のサイドバーに重ねる自由なグループ分けのレイヤーです。ワークスペースの異なるセッションを、公式のワークスペース所属やログを変えずに同じグループにまとめられます。"
+    "ja": "DSH Desktop のサイドバーに重ねる自由なグループ分けのレイヤーです。ワークスペースの異なるセッションを、公式のワークスペース所属やログを変えずに同じグループにまとめられます。",
+    "ko": "DSH Desktop 사이드바에서 세션을 자유롭게 그룹으로 묶는 레이어입니다. 서로 다른 워크스페이스의 세션을 공식 워크스페이스 소속이나 로그를 바꾸지 않고 같은 그룹에 배정할 수 있습니다.",
+    "de": "Eine frei gestaltbare Gruppierungsebene für die Seitenleiste von DSH Desktop: Ordnen Sie Sitzungen aus verschiedenen Arbeitsbereichen derselben Gruppe zu, ohne ihre offizielle Arbeitsbereichszugehörigkeit oder ihre Protokolle zu ändern.",
+    "fr": "Une couche de regroupement libre pour la barre latérale de DSH Desktop : affectez des sessions de différents espaces de travail à un même groupe sans modifier leur appartenance officielle à un espace de travail ni leurs journaux.",
+    "es": "Una capa de agrupación libre para la barra lateral de DSH Desktop: permite asignar sesiones de distintos espacios de trabajo a un mismo grupo sin cambiar su pertenencia oficial al espacio de trabajo ni sus registros.",
+    "pt": "Uma camada de agrupamento livre para a barra lateral do DSH Desktop: agrupe sessões de diferentes espaços de trabalho no mesmo grupo sem alterar a vinculação oficial ao espaço de trabalho nem os registros."
   },
   "title": {
     "en": "Free Groups",
     "zh": "自由分组",
-    "ja": "フリーグループ"
+    "ja": "フリーグループ",
+    "ko": "프리 그룹",
+    "de": "Freie Gruppen",
+    "fr": "Groupes libres",
+    "es": "Grupos libres",
+    "pt": "Grupos livres"
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
