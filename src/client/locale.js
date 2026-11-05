@@ -15,14 +15,15 @@ export const LOCALE_NS = 'dsh-session-grove'
 
 import zh from '../../locale/zh.json' with { type: 'json' }
 import en from '../../locale/en.json' with { type: 'json' }
+import ja from '../../locale/ja.json' with { type: 'json' }
 
-export { zh, en }
+export { zh, en, ja }
 
 /** Language used whenever the active locale has no packaged dictionary. */
 export const FALLBACK_LANGUAGE = 'en'
 
-/** Dictionaries keyed by base language (`zh`, `en`, later `ja`, ...). */
-export const dictionaries = Object.freeze({ zh, en })
+/** Dictionaries keyed by base language (`zh`, `en`, `ja`, ...). */
+export const dictionaries = Object.freeze({ zh, en, ja })
 
 /**
  * Normalize a BCP 47-style locale (`ja-JP`, `zh_Hant_TW`, ...) to its base
