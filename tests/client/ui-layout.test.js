@@ -44,7 +44,11 @@ const components = [
 const sessionMenu = readFileSync(new URL('../../src/client/session-menu.js', import.meta.url), 'utf8')
 const scrollArea = readFileSync(new URL('../../src/client/scroll-area.js', import.meta.url), 'utf8')
 const groupPicker = readFileSync(new URL('../../src/client/group-list-picker.js', import.meta.url), 'utf8')
-const plugin = readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8')
+const plugin = [
+  readFileSync(new URL('../../src/client/plugin.js', import.meta.url), 'utf8'),
+  readFileSync(new URL('../../src/client/plugin-settings.js', import.meta.url), 'utf8'),
+  readFileSync(new URL('../../src/client/plugin-workspace-chrome.js', import.meta.url), 'utf8'),
+].join('\n')
 const workspaceToggle = readFileSync(new URL('../../src/client/workspace-toggle.js', import.meta.url), 'utf8')
 
 /** Source block for one CSS selector (compiled stylesheet is flat). */

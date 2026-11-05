@@ -12,6 +12,8 @@ import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
 import { createLocaleRuntime } from './plugin-locale.js'
+import { installSettingsSlot } from './plugin-settings.js'
+import { createWorkspaceChrome } from './plugin-workspace-chrome.js'
 import { createFloatingLabel } from './floating-label.js'
 import { installStyles } from './css.js'
 import { createOptimisticQueue } from './optimistic.js'
@@ -33,7 +35,6 @@ import { CLIENT_REQUIRED, compatibilityReport, detectClientCapabilities } from '
 import { resolveDshVersion, selectDshAdapter } from '../adapters/dsh-selector.js'
 import { writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import { GroupsViewBoundary } from './components.js'
-import { SkillRepairCard } from './skill-repair.js'
 import {
   applyManagedWidth,
   clearManagedWidth,
@@ -45,7 +46,6 @@ import {
   writeSidebarWidth,
 } from './sidebar-width.js'
 import { clearDialogGeometries } from './dialog-geometry.js'
-import { installWorkspaceToggle } from './workspace-toggle.js'
 
 /** Single sidebar slot taken over while the groups view is active. */
 export const VIEW_SLOT = 'sidebar.workspaces'
@@ -72,15 +72,12 @@ export const createPlugin = () => {
   let store = null
   let api = null
   let t = (key) => key
-  let localeService = null
   let toastTimer = null
   let floatingLabel = null
   let occupantDisposer = null
   let styleDisposer = null
-  let workspaceToggle = null
-  let widthRetryTimer = null
-  let localeDisposer = null
-  let localeSubscriptionDisposer = null
+  let workspaceChrome = null
+  let localeRuntime = null
   let configSlotDisposer = null
   let perfDisposer = null
   let loadPromise = null
@@ -337,34 +334,7 @@ export const createPlugin = () => {
     return true
   }
 
-  /**
-   * Official workspace mode has no plugin slot in its header, so render one
-   * overlay action just left of the shipped search control. The same controller
-   * clears automatically when the groups header returns.
-   */
-  const syncWorkspaceChrome = () => {
-    const mode = store?.getSnapshot().viewMode
-    if (mode === 'workspace') {
-      if (workspaceToggle === null) {
-        workspaceToggle = installWorkspaceToggle({
-          doc: globalThis.document,
-          label: t('footer.toGroups'),
-          onToggle: () => toggleMode(),
-        })
-      } else {
-        workspaceToggle.update()
-      }
-    } else {
-      workspaceToggle?.dispose()
-      workspaceToggle = null
-    }
-    if (!syncSidebarWidth() && widthRetryTimer === null) {
-      widthRetryTimer = setTimeout(() => {
-        widthRetryTimer = null
-        if (mounted) syncWorkspaceChrome()
-      }, 50)
-    }
-  }
+  const syncWorkspaceChrome = () => workspaceChrome?.sync()
 
   const setMode = (mode) => {
     if (!store) return
@@ -386,6 +356,14 @@ export const createPlugin = () => {
   }
 
   const toggleMode = () => setMode(store.getSnapshot().viewMode === 'groups' ? 'workspace' : 'groups')
+
+  workspaceChrome = createWorkspaceChrome({
+    getMode: () => store?.getSnapshot().viewMode,
+    getLabel: () => t('footer.toGroups'),
+    onToggle: () => toggleMode(),
+    syncSidebarWidth,
+    isMounted: () => mounted,
+  })
 
   // --- host actions ---------------------------------------------------------
   const getDoc = () => store.getSnapshot().doc
@@ -639,30 +617,7 @@ export const createPlugin = () => {
     })
 
     styleDisposer = installStyles(globalThis.document)
-    // The package detail page renders plugins.bundle.config. Use the bundle
-    // slot so settings are one click from the plugin list; the row page should
-    // not be the only path to configuration.
-    const currentConfigForm = () => {
-      try {
-        return ctx.get?.('configForms')?.get?.('dsh-session-grove') ?? null
-      } catch {
-        return null
-      }
-    }
-    try {
-      configSlotDisposer = ctx.slots?.inject?.('plugins.bundle.config', () =>
-        ctx.slots.register(
-          {
-            name: 'plugins.bundle.config',
-            key: 'dsh-session-grove',
-            inject: () => ({ form: currentConfigForm() }),
-          },
-          SkillRepairCard,
-        ),
-      )
-    } catch {
-      /* compatible with host versions without the plugins settings slot */
-    }
+    configSlotDisposer = installSettingsSlot(ctx)
     bridge = {
       store,
       t,
@@ -707,7 +662,7 @@ export const createPlugin = () => {
 
     const onWindowResize = () => {
       if (updateManagedWidth(readSidebarWidth(), globalThis.innerWidth || 1440) === null) syncSidebarWidth()
-      workspaceToggle?.update()
+      workspaceChrome?.update()
     }
     globalThis.addEventListener?.('resize', onWindowResize)
     syncWorkspaceChrome()
@@ -749,16 +704,12 @@ export const createPlugin = () => {
       }
       return () => {
         disposeOccupant()
-        if (widthRetryTimer !== null) clearTimeout(widthRetryTimer)
-        widthRetryTimer = null
-        workspaceToggle?.dispose()
-        workspaceToggle = null
+        workspaceChrome?.dispose()
+        workspaceChrome = null
         globalThis.removeEventListener?.('resize', onWindowResize)
         clearManagedWidth()
-        if (typeof localeDisposer === 'function') localeDisposer()
-        localeDisposer = null
-        if (typeof localeSubscriptionDisposer === 'function') localeSubscriptionDisposer()
-        localeSubscriptionDisposer = null
+        localeRuntime?.dispose()
+        localeRuntime = null
         if (typeof configSlotDisposer === 'function') configSlotDisposer()
         configSlotDisposer = null
         if (typeof storeSubscriptionDisposer === 'function') storeSubscriptionDisposer()
