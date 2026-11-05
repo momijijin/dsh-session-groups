@@ -67,6 +67,21 @@ test('session routes gate on controlApi, controlSessions and HTTP method', async
   assert.equal(sessionsDisabled.res.statusCode, 404)
   assert.equal(sessionsDisabled.json.code, 'session-controls-disabled')
 
+  const renameDisabled = await sessionsOff.mounted.call(
+    CONTROL_SESSION_RENAME_PATH,
+    post(CONTROL_SESSION_RENAME_PATH, { sessionId: 's-live', title: 'New title' }),
+  )
+  assert.equal(renameDisabled.res.statusCode, 404)
+  assert.equal(renameDisabled.json.code, 'session-controls-disabled')
+  const archiveDisabled = await sessionsOff.mounted.call(
+    CONTROL_SESSION_ARCHIVE_PATH,
+    post(CONTROL_SESSION_ARCHIVE_PATH, { sessionId: 's-live', archived: true }),
+  )
+  assert.equal(archiveDisabled.res.statusCode, 404)
+  assert.equal(archiveDisabled.json.code, 'session-controls-disabled')
+  assert.equal(sessionsOff.live.title, 'Old title')
+  assert.deepEqual(sessionsOff.registry.archiveCalls, [])
+
   const wrongMethod = await setup()
   t.after(() => wrongMethod.mounted.cleanup())
   const methodResult = await wrongMethod.mounted.call(CONTROL_SESSION_INSPECT_PATH, makeRequest({ method: 'GET', headers }))
