@@ -1,7 +1,7 @@
 {
   "id": "dsh-session-grove",
   "name": "dsh-session-grove",
-  "version": "0.3.0-beta.79",
+  "version": "0.4.0-beta.1",
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": {

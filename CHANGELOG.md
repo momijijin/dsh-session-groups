@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-beta.1 (local identity-reset candidate)
+
+- Identity reset: package, plugin/bundle ids, host routes, storage/token/diagnostics/debug files and client localStorage namespaces now use `dsh-session-grove`; the display title remains Free Groups / 自由分组.
+- Control names: native tool is now `session_grove_control`; managed skill/CLI is now `session-grove-control`.
+- No automatic data migration: old `dsh-session-groups` files and localStorage keys are deliberately ignored and left untouched because the old package name is shared with unrelated community plugins. Manual migration is documented in `docs/MIGRATION-0.4.md`.
+- Verification: 476/476 tests, community and official A+ PASS, coverage 93.71/82.36/88.91. No tag or Release yet.
+
 ## 0.3.0-beta.79 (local batch, no release tag)
 
 - Control validation: unknown icon -> `invalid-icon`, unknown palette color -> `invalid-color`, malformed `colorHex` -> `invalid-color` consistently for create and update, and `color` + `colorHex` together -> `invalid-operation`.
