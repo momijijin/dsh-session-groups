@@ -98,7 +98,7 @@ import {
   SIDEBAR_WIDTH_DEFAULT,
   SIDEBAR_WIDTH_MIN,
 } from './sidebar-width.js'
-import { formatAbsoluteTime, relativeTimeParts } from './time.js'
+import { relativeTimeParts } from './time.js'
 import {
   computeVirtualWindow,
   virtualScrollOffset,

@@ -11,8 +11,7 @@ import { placeForkedSession } from '../core/fork.js'
 import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
-import { dictionaries, createTranslator, LOCALE_NS, resolveLocaleId } from './locale.js'
-import { directionForLocale } from './i18n/direction.js'
+import { dictionaries, createTranslator, directionForLocale, formatDateTime, LOCALE_NS, resolveLocaleId } from './locale.js'
 import { createFloatingLabel } from './floating-label.js'
 import { installStyles } from './css.js'
 import { createOptimisticQueue } from './optimistic.js'
@@ -710,6 +709,13 @@ export const createPlugin = () => {
           return directionForLocale(resolveLocaleId(getLocaleSnapshot))
         } catch {
           return 'ltr'
+        }
+      },
+      formatAbsoluteTime: (value) => {
+        try {
+          return formatDateTime(value, resolveLocaleId(getLocaleSnapshot))
+        } catch {
+          return null
         }
       },
       api,

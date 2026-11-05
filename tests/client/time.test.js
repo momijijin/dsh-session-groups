@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { formatAbsoluteTime, parseSessionTimestamp, relativeTimeParts } from '../../src/client/time.js'
+import { formatDateTime } from '../../src/client/i18n/date-format.js'
+import { parseSessionTimestamp, relativeTimeParts } from '../../src/client/time.js'
 
 const now = Date.UTC(2026, 9, 29, 8, 0, 0)
 const minute = 60 * 1000
@@ -30,10 +31,10 @@ test('relativeTimeParts bucketing: just now/minutes/hours/days/years', () => {
   assert.equal(relativeTimeParts(undefined, now), null)
 })
 
-test('formatAbsoluteTime is a local absolute timestamp and null when invalid', () => {
-  const text = formatAbsoluteTime(now)
+test('formatDateTime returns a locale-aware stamp and null when invalid', () => {
+  const text = formatDateTime(now, 'en-US')
   assert.equal(typeof text, 'string')
   assert.ok(text.length > 0)
-  assert.equal(formatAbsoluteTime('nope'), null)
-  assert.equal(formatAbsoluteTime(0), null)
+  assert.equal(formatDateTime('nope', 'en-US'), null)
+  assert.equal(formatDateTime(0, 'en-US'), null)
 })
