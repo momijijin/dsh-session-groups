@@ -10,35 +10,29 @@ import { createElement, useEffect, useRef, useState } from 'react'
 import { useGroupsSidebarWidth } from './groups-view-width.js'
 import { useGroupsViewData } from './groups-view-data.js'
 import { useGroupsSearchReveal } from './groups-view-search.js'
+import { createMenuHandlers } from './groups-view-menu-handlers.js'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
-import { GROUP_ICONS } from '../shared/constants.js'
-import { assignSession, childrenOf, findGroup, groupColor, moveGroup } from '../shared/model.js'
-import { currentColorHexOf, currentColorOf, currentGroupIdOf, currentIconOf, currentParentOf, deleteGroupNeedsDialog, findGroupsFlat } from '../core/dialog-selection.js'
-import { workspaceChoices } from './actions.js'
+import { findGroup, moveGroup } from '../shared/model.js'
+import { currentGroupIdOf, findGroupsFlat } from '../core/dialog-selection.js'
 import { MenuPopover, Toast } from './session-menu.js'
 import { DialogHost } from './dialog-host.js'
 import { countTreeSessions, sessionTitle } from '../core/filter.js'
 import { applyDrop, hitTest, sameDropTarget, stickyDropTarget, ungroupedBodyTarget } from '../core/drag.js'
 import { diagContext, diagDragEnd, diagDragStart, diagDropState, diagEnabled, diagHandler, diagRender, diagTargetChange, diagTrace } from './diagnostics.js'
 import { GROUP_DRAG_MIME, groupHeaderZoneFromRect, isCurrentGroupPosition, resolveGroupDrop } from '../core/group-drag.js'
-import { menuAnchorFromEvent, menuAnchorFromRow } from '../core/menu-position.js'
 import { perfDragOver, perfDropTarget, perfEnabled, perfMark, perfNow, perfRender, perfSample } from './perf.js'
 import { readOnboardingDone, writeOnboardingDone } from './state.js'
 import { SIDEBAR_WIDTH_MIN } from './sidebar-width.js'
-import { expandAncestors, isExpanded, sessionContainer } from '../core/tree.js'
-
-import { useViewStore, usePerfCommit, dispatch, toast, TextButton, DropPlaceholder, GROUP_PLACEHOLDER_HEIGHT } from './components-primitives.js'
+import { expandAncestors, isExpanded } from '../core/tree.js'
+import { GROUP_DROP_NOOP, useViewStore, usePerfCommit, dispatch, toast, TextButton, DropPlaceholder, GROUP_PLACEHOLDER_HEIGHT } from './components-primitives.js'
 import { SessionRow, GroupNode } from './components-rows.js'
 import { UngroupedSection } from './components-ungrouped.js'
 import { ResizeHandle } from './components-resize-handle.js'
 import { OnboardingCard, Header, Banner, Rail, FlatFallback, ErrorBoundary } from './components-header.js'
-
 const h = createElement
-
 // ---------------------------------------------------------------------------
 // Runtime bridge is installed by plugin.js through the DSH client adapter.
 // ---------------------------------------------------------------------------
-
 // Session row
 // ---------------------------------------------------------------------------
 /**
@@ -47,7 +41,6 @@ const h = createElement
  * highlight changes; handlers are the stable proxy supplied by GroupsView.
  * Comparison policy lives in src/core/session-row.js.
  */
-
 // Ungrouped section (virtualized)
 // ---------------------------------------------------------------------------
 /**
@@ -55,7 +48,6 @@ const h = createElement
  * metrics are measured. Pure arithmetic lives in src/core/layout.js; the host
  * viewport probe stays here.
  */
-
 // Resize handle (groups view, wide only)
 // ---------------------------------------------------------------------------
 /**
@@ -80,7 +72,6 @@ export const GroupsView = (props) => {
   const perfRenderStart = perfEnabled() ? perfNow() : 0
   perfRender('GroupsView')
   diagRender('GroupsView')
-
   const {
     handlersRef,
     stableHandlers,
@@ -97,7 +88,6 @@ export const GroupsView = (props) => {
     highlightCurrent,
     tree,
   } = useGroupsViewData({ store, props })
-
   const [dragState, setDragState] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
   const [onboardingOpen, setOnboardingOpen] = useState(() => !readOnboardingDone())
@@ -111,7 +101,6 @@ export const GroupsView = (props) => {
   // re-rendered the whole tree on every event (0.2.2 perf probe: 48 renders for
   // 45 stationary dragovers, 800 SessionRow renders for 30 paced dragovers).
   const dropTargetRef = useRef(null)
-
   /**
    * Drop-target setter used by every drag handler: skips React when the stable
    * target descriptor is unchanged. The opt-in probe records set attempts and
@@ -147,7 +136,6 @@ export const GroupsView = (props) => {
   // target really is the `+`/`…` button) and consumed by onGroupDragStart.
   const buttonPointerRef = useRef(null)
   dragRef.current = dragState
-
   /** Locked target for the current resting pointer position (0.2.21). */
   const stickyTargetFor = (event) =>
     stickyDropTarget(dragTargetLockRef.current, event?.clientX, event?.clientY)
@@ -155,7 +143,6 @@ export const GroupsView = (props) => {
     if (!target || !event || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return
     dragTargetLockRef.current = { x: event.clientX, y: event.clientY, target }
   }
-
   // Sidebar width override state. `preferredWidth` is the persisted preference;
   // the applied width is always its viewport clamp, so a narrow viewport never
   // destroys the stored preference.
@@ -181,11 +168,9 @@ export const GroupsView = (props) => {
     handleWidthCommit,
     handleWidthReset,
   } = useGroupsSidebarWidth({ wide, docState: store?.docState, rootRef })
-
   const t = rt()?.t ?? ((key) => key)
   const { clearSearchHit, revealSearchRow, selectSearchResult } = useGroupsSearchReveal({ rootRef, tree, store, t, virtualRef })
   const direction = rt()?.direction === 'rtl' ? 'rtl' : 'ltr'
-
   // Auto-expand ancestors of the current session when the view opens.
   useEffect(() => {
     if (!store || store.docState !== 'ready' || !currentId) return
@@ -194,16 +179,11 @@ export const GroupsView = (props) => {
     const ancestors = expandAncestors(store.collapsed, store.doc, entry.id)
     if (ancestors !== store.collapsed) store.update({ collapsed: ancestors })
   }, [currentId, store?.docState, store?.doc])
-
   usePerfCommit('groups-view', perfRenderStart)
-
   if (!wide) return h(Rail, { props })
-
   if (store === null) return h('div', { class: 'dsg-root', 'data-testid': 'session-groups-view', dir: direction }, t('flat.title'))
-
   // Flat fallback for load/route/commit failures (CONTRACTS §6).
   if (store.docState === 'error') return h(FlatFallback, { props, store, reason: store.banner?.code === 'route-unavailable' ? 'route-unavailable' : 'error' })
-
   const ungroupedCount = tree.ungrouped.length
   // Diagnostics run context: every traced event carries the current revision,
   // optimistic flag, tree counts, viewport and applied sidebar width. Building
@@ -228,7 +208,6 @@ export const GroupsView = (props) => {
     draggedGroupId: dragState?.kind === 'group' ? dragState.groupId : null,
   }
   const treeEmpty = tree.groups.length === 0 && tree.ungrouped.length === 0
-
   const commitDrop = async (source, target) => {
     perfMark('commitDrop:start', { kind: target?.kind ?? null })
     if (diagEnabled()) {
@@ -256,7 +235,6 @@ export const GroupsView = (props) => {
       if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] drop failed', error)
     }
   }
-
   /**
    * Commit a group drag. The gesture stores only the stable target descriptor;
    * the numeric parent/index is resolved inside the queued updater against the
@@ -310,49 +288,12 @@ export const GroupsView = (props) => {
       if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] group drop failed', error)
     }
   }
-
-  /** Menu move-up/move-down: one sibling step inside the latest confirmed doc. */
-  const moveGroupStep = (groupId, delta) => {
-    const task = rt()?.commitOptimistic((latest) => {
-      const group = findGroup(latest, groupId)
-      if (!group) throw GROUP_DROP_NOOP
-      const siblings = childrenOf(latest, group.parentId)
-      const currentIndex = siblings.findIndex((item) => item.id === groupId)
-      const nextIndex = currentIndex + delta
-      if (currentIndex === -1 || nextIndex < 0 || nextIndex >= siblings.length) throw GROUP_DROP_NOOP
-      return moveGroup(latest, groupId, group.parentId, nextIndex)
-    })
-    task?.catch((error) => {
-      if (error === GROUP_DROP_NOOP || error?.reported === true) return
-      toast('error', t('toast.dropFailed'))
-      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] group move failed', error)
-    })
-  }
-
-  /** Menu move-up/move-down for a stored session inside its group or ungrouped list. */
-  const moveSessionStep = (sessionId, delta) => {
-    const task = rt()?.commitOptimistic((latest) => {
-      const container = sessionContainer(latest, sessionId)
-      if (!container.ids) throw GROUP_DROP_NOOP
-      const currentIndex = container.ids.indexOf(sessionId)
-      const nextIndex = currentIndex + delta
-      if (currentIndex === -1 || nextIndex < 0 || nextIndex >= container.ids.length) throw GROUP_DROP_NOOP
-      return assignSession(latest, sessionId, container.groupId, nextIndex)
-    })
-    task?.catch((error) => {
-      if (error === GROUP_DROP_NOOP || error?.reported === true) return
-      toast('error', t('toast.dropFailed'))
-      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] session move failed', error)
-    })
-  }
-
   const clearAutoExpand = () => {
     const current = autoExpandRef.current
     if (current.timer !== null) clearTimeout(current.timer)
     if (current.timer !== null && diagEnabled()) diagTrace('autoexpand.cancel', { groupId: current.groupId })
     autoExpandRef.current = { groupId: null, timer: null }
   }
-
   const scheduleAutoExpand = (groupId) => {
     const collapsedNow = !isExpanded(store.collapsed, groupId)
     if (!collapsedNow) return clearAutoExpand()
@@ -367,7 +308,6 @@ export const GroupsView = (props) => {
     }, 500)
     autoExpandRef.current = { groupId, timer }
   }
-
   const rowDragOver = (event, target) => {
     const drag = dragRef.current
     if (!drag) return
@@ -386,20 +326,16 @@ export const GroupsView = (props) => {
     setDropTargetTracked(target)
     lockTargetAt(event, target)
   }
-
   const ungroupedBodyRows = (container) =>
     [...(container?.querySelectorAll?.('[data-session-id]') ?? [])].map((row) => {
       const rect = row.getBoundingClientRect()
       return { sessionId: row.getAttribute('data-session-id'), top: rect.top, height: rect.height }
     })
-
   const groupOwnedIds = (groupId) => {
     const group = findGroup(store.doc, groupId)
     return group ? group.sessionIds : []
   }
-
   const groupDragId = () => (dragRef.current?.kind === 'group' ? dragRef.current.groupId : null)
-
   /** Translate the view drop-target vocabulary to the resolver target shape. */
   const resolveTargetFor = (viewTarget) => {
     switch (viewTarget?.kind) {
@@ -415,7 +351,6 @@ export const GroupsView = (props) => {
         return null
     }
   }
-
   /**
    * Live indicator for a group drop. Invalid targets (self/descendant, missing
    * anchors) render the forbidden state and never accept the drop.
@@ -439,10 +374,8 @@ export const GroupsView = (props) => {
     rowDragOver(event, viewTarget)
     rt()?.setFloatingLabel?.(label)
   }
-
   /** Top/bottom edge zone of a group header; the middle 50% is invalid. */
   const groupHeaderZone = (row, clientY) => groupHeaderZoneFromRect(row?.getBoundingClientRect?.(), clientY)
-
   /** Consume the click synthesized right after a dragstart (400 ms guard). */
   const consumeDragClick = (groupId) => {
     const marker = suppressedClickRef.current
@@ -450,148 +383,8 @@ export const GroupsView = (props) => {
     suppressedClickRef.current = null
     return marker.groupId === groupId && Date.now() - marker.at <= 400
   }
-
   const handlers = {
-    toggleGroup: (id) => dispatch('toggle-group', { id }),
-    onGroupClick: (id) => {
-      if (consumeDragClick(id)) return
-      dispatch('toggle-group', { id })
-    },
-    moveGroupStep,
-    moveSessionStep,
-    retryLoad: () => rt()?.retryLoad(),
-    openSession: (id) => rt()?.actions.openSession(id),
-    setArchiveFilter: (filter) => dispatch('archive-filter', { filter }),
-    resetLayout: () => {
-      rt()?.resetLayout?.()
-      handleWidthReset()
-    },
-    searchSelect: (entry) => selectSearchResult(entry),
-    openRunningSession: (sessionId, archived) => selectSearchResult({ sessionId, archived }),
-    searchArchived: () => toast('info', t('search.archivedDisabled')),
-    openNewGroup: (event, parentId) => rt()?.openDialog({ kind: 'new-group', parentId, titleKey: parentId ? 'dialog.newSubgroup' : 'dialog.newGroup' }),
-    openRenameGroup: (groupId) => rt()?.openDialog({ kind: 'rename-group', groupId, titleKey: 'dialog.renameGroup', value: findGroup(store.doc, groupId)?.name ?? '' }),
-    openIconGroup: (groupId) =>
-      rt()?.openDialog({
-        kind: 'icon',
-        groupId,
-        titleKey: 'group.icon',
-        icons: [...GROUP_ICONS],
-        current: currentIconOf(store.doc, groupId),
-      }),
-    openGroupColor: (groupId) =>
-      rt()?.openDialog({
-        kind: 'group-color',
-        groupId,
-        titleKey: 'dialog.groupColor',
-        current: currentColorOf(store.doc, groupId),
-        currentHex: currentColorHexOf(store.doc, groupId),
-      }),
-    openMoveGroup: (groupId) =>
-      rt()?.openDialog({ kind: 'move-group', groupId, titleKey: 'dialog.moveGroup', currentId: currentParentOf(store.doc, groupId) }),
-    openDeleteGroup: (groupId) => {
-      const group = findGroup(store.doc, groupId)
-      if (!group) return undefined
-      // 0.2.9: an empty leaf deletes immediately (no dialog, toast only); any
-      // direct sessions or child groups require an explicit destination.
-      if (!deleteGroupNeedsDialog(store.doc, groupId)) return rt()?.deleteGroupDirect?.(groupId)
-      rt()?.openDialog({
-        kind: 'delete-group',
-        groupId,
-        titleKey: 'dialog.deleteGroup',
-        sessionCount: group.sessionIds.length,
-        childCount: childrenOf(store.doc, groupId).length,
-      })
-      return undefined
-    },
-    openSessionMenu: (event, sessionNode) => {
-      const row = sessionNode.session
-      const point = menuAnchorFromEvent(event, { width: globalThis.innerWidth, height: globalThis.innerHeight })
-      dispatch('menu', {
-        menu: {
-          kind: 'session',
-          x: point.x,
-          y: point.y,
-          anchorX: point.anchorX,
-          anchorY: point.anchorY,
-          sessionId: row.id,
-          title: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
-          archived: sessionNode.archived === true,
-          blank: sessionNode.session.blank === true,
-        },
-      })
-    },
-    openSessionMenuAtRow: (rowElement, sessionNode) => {
-      const row = sessionNode.session
-      const point = menuAnchorFromRow(rowElement, { width: globalThis.innerWidth, height: globalThis.innerHeight })
-      dispatch('menu', {
-        menu: {
-          kind: 'session',
-          x: point.x,
-          y: point.y,
-          anchorX: point.anchorX,
-          anchorY: point.anchorY,
-          sessionId: row.id,
-          title: sessionTitle(row, { blankLabel: t('session.blank'), untitledLabel: t('session.untitled') }),
-          archived: sessionNode.archived === true,
-          blank: sessionNode.session.blank === true,
-        },
-      })
-    },
-    onSessionContextMenu: (event, sessionNode) => {
-      event.preventDefault()
-      event.stopPropagation()
-      if (dragRef.current) return
-      handlers.openSessionMenu(event, sessionNode)
-    },
-    openGroupMenu: (event, group) => {
-      const point = menuAnchorFromEvent(event, { width: globalThis.innerWidth, height: globalThis.innerHeight })
-      dispatch('menu', {
-        menu: {
-          kind: 'group',
-          x: point.x,
-          y: point.y,
-          anchorX: point.anchorX,
-          anchorY: point.anchorY,
-          groupId: group.id,
-        },
-      })
-    },
-    openGroupMenuAtRow: (rowElement, group) => {
-      const point = menuAnchorFromRow(rowElement, { width: globalThis.innerWidth, height: globalThis.innerHeight })
-      dispatch('menu', {
-        menu: {
-          kind: 'group',
-          x: point.x,
-          y: point.y,
-          anchorX: point.anchorX,
-          anchorY: point.anchorY,
-          groupId: group.id,
-        },
-      })
-    },
-    onGroupContextMenu: (event, group) => {
-      event.preventDefault()
-      event.stopPropagation()
-      if (dragRef.current) return
-      handlers.openGroupMenu(event, group)
-    },
-    openNewSession: (event, groupId) => {
-      const choices = workspaceChoices(store.doc, groupId, byId, workspaceItems, currentId)
-      if (choices.choices.length === 0) {
-        rt()?.showToast('error', t('dialog.noWorkspace'))
-        return
-      }
-      rt()?.openDialog({ kind: 'new-session', groupId, titleKey: 'dialog.newSession', choices: choices.choices, inferred: choices.inferred })
-    },
-    openRenameSession: (sessionId, title) => rt()?.openDialog({ kind: 'rename-session', sessionId, titleKey: 'dialog.renameSession', value: title ?? '' }),
-    openMoveSession: (sessionId) =>
-      rt()?.openDialog({ kind: 'move-session', sessionId, titleKey: 'dialog.moveSession', currentId: currentGroupIdOf(store.doc, sessionId) }),
-    archiveSession: (sessionId) => rt()?.archiveSession(sessionId),
-    unarchiveSession: (sessionId) => rt()?.unarchiveSession(sessionId),
-    forkSession: (sessionId) => rt()?.forkSession(sessionId),
-    copySessionId: (sessionId) => rt()?.copySessionId(sessionId),
-    closeMenu: () => dispatch('menu', { menu: null }),
+    ...createMenuHandlers({ store, byId, workspaceItems, currentId, t, dragRef, handleWidthReset, selectSearchResult, consumeDragClick }),
     onDragStart: (sessionId) => {
       const row = byId[sessionId]
       dragRef.current = {
@@ -945,7 +738,6 @@ export const GroupsView = (props) => {
       commitDrop(drag, target)
     },
   }
-
   // Time every drag handler for the opt-in perf probe and for diagnostics
   // (0.2.5, default on). Handlers stay unwrapped when both are off.
   if (perfEnabled() || diagEnabled()) {
@@ -978,11 +770,9 @@ export const GroupsView = (props) => {
       }
     }
   }
-
   // 0.2.20: stable handler facade for memoized rows. Every call reads the
   // latest render's closure, so memoization cannot dispatch stale drag/doc data.
   handlersRef.current = handlers
-
   return h(
     'div',
     { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', dir: direction, 'data-mode': store.viewMode, 'data-wide': 'true', 'data-narrow': appliedWidth !== null && appliedWidth <= 320 ? 'true' : 'false', 'data-optimistic': store.optimistic ? 'true' : 'false' },
@@ -1039,7 +829,6 @@ export const GroupsView = (props) => {
     h(DialogHost, { store, props })
   )
 }
-
 /** Export the error boundary wrapped occupant used by the slot registration. */
 export const GroupsViewBoundary = (props) =>
   h(
@@ -1054,8 +843,5 @@ export const GroupsViewBoundary = (props) =>
     },
     h(GroupsView, props)
   )
-
 // Keep the module-level runtime reachable for plugin.js helpers.
 export const __internal = { findGroupsFlat, currentGroupIdOf }
-
-

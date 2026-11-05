@@ -55,7 +55,7 @@ const toast = (kind, message) => rt()?.notify({ kind, message })
  * latest confirmed doc first, so this keeps the latest-doc semantics while still
  * skipping the write entirely (no revision bump).
  */
-const GROUP_DROP_NOOP = Symbol('dsh-session-grove/group-drop-noop')
+export const GROUP_DROP_NOOP = Symbol('dsh-session-grove/group-drop-noop')
 
 /**
  * Whether a resolved group drop lands on the dragged group's current position.
