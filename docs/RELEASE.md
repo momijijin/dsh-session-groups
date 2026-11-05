@@ -1,18 +1,18 @@
-# 0.4.0-beta.10 发布与安装说明
+# 0.4.0-beta.11 发布与安装说明
 
-- 版本：`0.4.0-beta.10`
+- 版本：`0.4.0-beta.11`
 - 包名：`dsh-session-grove`
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
 - 状态：485/485 测试；第三方 ja 语言包 A+ PASS；等待最终发布授权
-- 发布包：`dsh-session-grove-0.4.0-beta.10.tgz`
+- 发布包：`dsh-session-grove-0.4.0-beta.11.tgz`
 
 ## 本版重点
 
 - **CLDR 复数**：`Intl.PluralRules` + per-category JSON；`group.sessionCount`、`sessions.expand`、`time.*` 已迁移 one/other；`dialog.deleteMoveBody` 仍为已知限制。
 - **第三方语言包 A+**：test-only ja locale bundle 调用 `addLanguage` + `setLocale`，隔离 A+ 断言日文 onboarding/弹窗。
-- **语言资源**：`en/zh/ja/ko/de/fr/es/pt/it/nl` 十种 locale，每种 288 keys；Host 注册与 manifest 标题/描述同步。
+- **语言资源**：`en/zh/ja/ko/de/fr/es/pt/it/nl/pl/tr` 十二种 locale，每种 288 keys；Host 注册与 manifest 标题/描述同步。
 - 地区变体解析到基础语言（`ja-JP` → `ja`、`ko-KR` → `ko`、`pt-BR` → `pt` 等）；未支持语言回退英文。
 - **i18n 基础设施**：BCP 47 基础语言归一化、字典注册表、未知语言回退英文；不调用 `addLanguage`，语言目录仍由 Host/第三方语言包拥有。
 - 保留 `0.4.0-beta.1` 身份重置与 `0.4.0-beta.2` 原生官方壳 locale fallback 修复。
@@ -28,7 +28,7 @@
 # 以本地 desktop profile 为例
 DeepSeek Harness.exe --expose-internals `
   "C:\Users\<user>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
-  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.10.tgz"
+  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.11.tgz"
 ```
 
 安装后必须重启对应桌面客户端。先卸载旧的 `dsh-session-groups`；不要在同一 profile 中并存两个身份。
