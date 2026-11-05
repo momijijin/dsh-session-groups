@@ -103,7 +103,8 @@ test('apply() returns void synchronously and mounts the host routes inside ctx.e
 
   // Cordis 4.0.5 treats the return value as the plugin effect list.
   assert.equal(returned, undefined)
-  assert.equal(routes.length, 14)
+  assert.equal(routes.length, 15)
+  assert.equal(routes.some((route) => route.path === '/dsh-session-groups/control/catalog'), true)
   assert.equal(ready.filePath, temp.filePath)
   assert.equal(ready.diagnosticsFilePath, join(temp.storages, 'dsh-session-groups.diagnostics.ndjson'))
   assert.equal(ready.debugFilePath, join(temp.storages, 'dsh-session-groups.debug.ndjson'))

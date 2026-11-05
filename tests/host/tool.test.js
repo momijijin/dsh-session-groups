@@ -58,6 +58,7 @@ test('native tool exposes a raw registry-ready definition without HTTP', () => {
   assert.equal(tool.parameters.type, 'object')
   assert.equal(tool.parameters.required.includes('action'), true)
   assert.equal(tool.parameters.properties.action.enum.includes('doctor'), true)
+  assert.equal(tool.parameters.properties.action.enum.includes('catalog'), true)
   assert.equal(typeof tool.execute, 'function')
   assert.equal(tool.output.schema.type, 'object')
   assert.equal(tool.output.render({}, { ok: true }).at(0).type, 'text')
@@ -91,6 +92,17 @@ test('native tool reads state and resolves full paths', async () => {
   assert.equal(resolved.ok, true)
   assert.equal(resolved.groupId, 'g-bbbbbbbbbbbb')
   assert.equal(resolved.revision, 2)
+})
+
+test('native tool catalog is read-only and includes icons, colors and operations', async () => {
+  const { tool } = setup()
+  const catalog = await tool.execute({ action: 'catalog' })
+  assert.equal(catalog.ok, true)
+  assert.equal(catalog.revision, undefined)
+  assert.ok(catalog.icons.items.length > 70)
+  assert.ok(catalog.colors.items.length >= 12)
+  assert.equal(catalog.colors.formats.custom.canonical, '#rrggbb')
+  assert.ok(catalog.operations.includes('session.assign'))
 })
 
 test('native tool plans and applies with CAS and stale-plan protection', async (t) => {

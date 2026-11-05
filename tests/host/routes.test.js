@@ -46,12 +46,13 @@ const commitBody = (baseRevision, doc) => JSON.stringify({ baseRevision, doc })
 test('route registration mounts the frozen paths and diagnostics by default', async (t) => {
   const mounted = await mountRoutes()
   t.after(() => mounted.cleanup())
-  assert.equal(mounted.routes.length, 12)
+  assert.equal(mounted.routes.length, 13)
   for (const path of [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH, DEBUG_PATH]) {
     assert.equal(mounted.routes.some((route) => route.path === path), true)
   }
   assert.deepEqual(mounted.mounted.routes.slice(0, 3), [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH])
   assert.equal(mounted.mounted.routes.includes('/dsh-session-groups/control/state'), true)
+  assert.equal(mounted.mounted.routes.includes('/dsh-session-groups/control/catalog'), true)
   assert.equal(mounted.mounted.routes.includes('/dsh-session-groups/control/session/inspect'), true)
 })
 
