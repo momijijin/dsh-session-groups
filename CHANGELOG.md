@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-beta.13 (local i18n vi/th/id)
+
+- Added complete Vietnamese, Thai and Indonesian dictionaries (287 keys each), preserving one/other plural objects for invariant numeral languages.
+- Fifteen packaged languages now share the registry and English fallback.
+- Documented the authoritative 287 top-level key count (295 leaves with meta).
+- Tests: 486/486. No tag or Release.
+
 ## 0.4.0-beta.12 (local i18n subagent status plural)
 
 - Replaced the flat `status.subagentsRunning.one/other` keys with one plural object `status.subagentsRunning`.
