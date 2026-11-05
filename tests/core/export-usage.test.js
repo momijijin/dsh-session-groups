@@ -150,4 +150,11 @@ test('the dead-export allowlist is scoped to the host dynamic entry API', () => 
   for (const name of DYNAMIC_ENTRIES.get(HOST_ENTRY)) {
     assert.ok(declared.has(name), `allowlisted host API ${name} is no longer exported by ${HOST_ENTRY}`)
   }
+  const clientSource = readFileSync(join(srcDir, 'client', 'index.js'), 'utf8')
+  DECLARATION_PATTERN.lastIndex = 0
+  const clientDeclared = new Set()
+  while ((match = DECLARATION_PATTERN.exec(clientSource)) !== null) clientDeclared.add(match[1])
+  for (const name of DYNAMIC_ENTRIES.get(CLIENT_ENTRY)) {
+    assert.ok(clientDeclared.has(name), `allowlisted client API ${name} is no longer exported by ${CLIENT_ENTRY}`)
+  }
 })

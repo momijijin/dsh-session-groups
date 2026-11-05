@@ -2,7 +2,7 @@
 
 ## 0.4.0-beta.45 (dead-export cleanup + guard)
 
-- Removed 27 production-unused exports across shared model, core tree/filter/virtual-list/drag/control, client icons and the DSH selector: 16 planned + 1 cascading session helper + 9 guard-discovered + `groupColorValue` exposed after the guard started ignoring comments; valuable assertions now run through production paths.
+- Removed 27 production-unused exports across shared model, core tree/filter/virtual-list/drag/control, client components/diagnostics/icons/state and the DSH selector: 16 planned + 1 cascading session helper + 9 guard-discovered + `groupColorValue` exposed after the guard started ignoring comments; valuable assertions now run through production paths.
 - Added `tests/core/export-usage.test.js`, a static guard over `src/**` export declarations; it also exposed and removed nine additional fully-dead exports plus `groupColorValue` after comment-blind counting was fixed.
 - Removed the `removeSession` row from the frozen shared-model contract list; version `.45`; rebuild `lib/client.js` + 17 locale chunks; tests 513, coverage 92.3/82.9/89.1.
 
