@@ -10,15 +10,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { REPO_ROOT } from '../integration/helpers.js';
 
 const clientDir = join(REPO_ROOT, 'src', 'client');
-const modulePath = (name) => join(clientDir, name);
+const coreDir = join(REPO_ROOT, 'src', 'core');
+// Shared logic lives in src/core; only client-specific modules stay in client.
+const modulePath = (name) => {
+  const corePath = join(coreDir, name);
+  return existsSync(corePath) ? corePath : join(clientDir, name);
+};
 const has = (name) => existsSync(modulePath(name));
 
 async function importClient(name) {
-  return await import(new URL(`../../src/client/${name}`, import.meta.url).href);
+  return await import(pathToFileURL(modulePath(name)).href);
 }
 
 function fakeStorage(seed = {}) {
