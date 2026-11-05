@@ -25,7 +25,7 @@ DSH 的 plugin client 是 **单个客户端 bundle**，没有为插件准备 `#i
 主支持：@deepseek-ai/dsh 0.2.1-rc.2 / 0.2.1-rc.5
 插件 engines.dsh: >=0.2.0-rc.2 <0.3.0
 
-已验证：
+已验证（最新一轮 A+：0.4.0-beta.42）：
   community DSH Desktop Stable 2.0.18 (anywhere-labs) / DSH 0.2.1-rc.2
   official DeepSeek Harness desktop 0.2.1.0 / DSH 0.2.1-rc.5
     （官方 bundle DSH host/core 隔离 A+ + 维护者桌面窗口验收）
@@ -125,7 +125,7 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 
 ## 为什么优先能力检测
 
-- 目前只有一个已验证的壳组合；在官方壳完成独立实例回归前，不为“壳名”写版本分支，写死分支等于发布未测试代码。
+- 目前 community Stable 与 official 两个桌面族都已有隔离实例证据（最新一轮 A+ 为 `0.4.0-beta.42`）；仍不为“壳名”写死版本分支，写死分支等于发布未测试代码。
 - DSH 的扩展点本身是 service/slot 组合，能力检测比版本判断更精确。
 - 插件管理器已经承担版本范围拒绝；插件内部重复版本判断会制造双重真相源。
 
@@ -148,15 +148,15 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 | 平台 | Node/单测 | 构建/打包 | 真实 DSH UI |
 |---|---|---|---|
 | Windows | 本地已验证 | 本地已验证 | 本地已验证 |
-| Linux | GitHub Actions 已验证 | GitHub Actions 已验证 | 未验证 |
-| macOS | 未验证 | 未验证 | 未验证 |
+| Linux | CI 已验证 | CI 已验证 | 未验证 |
+| macOS | CI 已验证 | CI 已验证 | 未验证 |
 
-当前 CI 只覆盖 Ubuntu 的 Node 层：
+当前 CI 在 Ubuntu、Windows、macOS 上运行 Node 层检查（coverage gate 仅 Ubuntu）：
 
 ```text
-npm install
+npm ci
 语法检查
-510 项单元/契约测试
+511 项单元/契约测试
 客户端构建
 coverage gate
 npm pack --dry-run

@@ -8,7 +8,7 @@ and at which level. Other docs should link here instead of restating counts.
 
 | Code | Meaning |
 |---|---|
-| `U` | Unit/contract tests: `npm test` (510 tests) |
+| `U` | Unit/contract tests: `npm test` (511 tests) |
 | `A+ C` | Isolated Playwright, community DSH Desktop 2.0.18 / DSH `0.2.1-rc.2` |
 | `A+ O` | Isolated Playwright, official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5` |
 | `LP` | Test-only all-locale pack (`e2e/fixtures/ja-locale-pack`): host catalog injection + active locale switch |
@@ -19,8 +19,8 @@ The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 `e2e/locale-pack.spec.mjs`, and `e2e/all-locales.spec.mjs` switches through
 every packaged dictionary and checks the header + new-group dialog.
 
-A+ C/O cells were re-run on `0.4.0-beta.30` (community and official isolated
-hosts). Earlier `.22` cells remain historical artifacts.
+A+ C/O cells were re-run on `0.4.0-beta.42` (community and official isolated
+hosts). Earlier `.22` and `.30` cells remain historical artifacts.
 
 ## Environment matrix
 
@@ -33,7 +33,7 @@ hosts). Earlier `.22` cells remain historical artifacts.
 | English plural/time labels | PASS | PASS | PASS | — | — |
 | Third-party language activation (`ja`) | PASS | — | — | PASS | — |
 | All-locale switch: header + new-group dialog + group menu + settings/config (19 languages + zh-TW/zh-HK/zh-CN/pt-BR aliases) | PASS | — | — | PASS (23 cases) | — |
-| Arabic RTL smoke: root `dir`, menu/dialog viewport bounds, settings panel direction | PASS | — | — | PASS (23 cases + RTL screenshots) | PASS (visual review .38) |
+| Arabic RTL smoke: root `dir`, menu/dialog viewport bounds, settings panel direction | PASS | — | — | PASS (23 cases + RTL screenshots) | PASS (visual review .39) |
 | Full non-English UI surfaces | PASS (resources only) | — | — | LP header/dialog/group menu/settings + ja onboarding/dialog only | — |
 
 ## Language matrix
@@ -57,7 +57,7 @@ hosts). Earlier `.22` cells remain historical artifacts.
 | `id` Indonesian | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
 | `ru` Russian | yes | PASS (one/few/many/other) | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
 | `hi` Hindi | yes | PASS (one/other) | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
-| `ar` Arabic | yes | PASS (zero/one/two/few/many/other) | — | PASS (header/dialog/group menu + RTL root) | PASS (visual review .38) | RTL foundation + plugin surfaces visually accepted 2026-11-05 |
+| `ar` Arabic | yes | PASS (zero/one/two/few/many/other) | — | PASS (header/dialog/group menu + RTL root) | PASS (visual review .39) | RTL foundation + plugin surfaces visually accepted 2026-11-05 |
 | `zh-Hant` Traditional Chinese | yes | PASS | — | PASS (header/dialog/group menu) | — | script-aware resolver; locale-pack smoke |
 
 Important distinction:

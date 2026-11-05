@@ -42,7 +42,7 @@ src/index.js     Cordis host 入口
 
 ## 客户端 i18n 分层
 
-`src/client/locale.js` 只是兼容 facade，实际拆为五个模块：
+`src/client/locale.js` 只是兼容 facade，实际拆为六个 i18n 模块：
 
 - `src/client/i18n/resources.js`：唯一 import `locale/*.json` 的模块，导出字典注册表与 `FALLBACK_LANGUAGE`
 - `src/client/i18n/locale-id.js`：基础语言归一化、Host snapshot / `<html lang>` / navigator 解析
@@ -50,6 +50,9 @@ src/index.js     Cordis host 入口
 - `src/client/i18n/translator.js`：字典选择与 `createTranslator`
 - `src/client/i18n/direction.js`：RTL 检测（基础语言 + `Intl.Locale` textInfo）
 - `src/client/i18n/date-format.js`：`Intl.DateTimeFormat` 绝对时间格式化（UI 通过 runtime bridge 调用）
+
+以下其余客户端模块不属于 i18n 分层：
+
 - `src/client/groups-view-width.js`：`GroupsView` 的 sidebar width controller hook（持久化/视口 clamp/host DOM 生命周期）
 - `src/client/groups-view-state.js`：framework session/workspace/status hooks 与可见树（纯数据适配）
 - `src/client/groups-view-search.js`：搜索 reveal/highlight 的 DOM 控制器与 timer 生命周期

@@ -1,5 +1,101 @@
 # Changelog
 
+## 0.4.0-beta.43 (A+ .42 evidence refresh)
+
+- Recorded community and official A+ PASS on `0.4.0-beta.42`, plus community all-locales 23/23 on `.40` and official all-locales 23/23 on `.42`; no runtime change.
+
+## 0.4.0-beta.42 (settings-slot/handler runtime coverage)
+
+- Settings-slot injection plus expanded menu/dialog handler tests; tests 510/510, coverage 92.44/82.38/88.73.
+
+## 0.4.0-beta.41 (workspace-chrome runtime tests)
+
+- Added an injectable toggle installer and four workspace-chrome runtime tests; tests 504/504, coverage 91.97/82.41/87.05.
+
+## 0.4.0-beta.40 (plugin composition-root split)
+
+- Extracted `plugin-settings.js` and `plugin-workspace-chrome.js`; `plugin.js` ~791 → ~742 lines, no behavior change; 500/500 tests.
+
+## 0.4.0-beta.39 (Arabic RTL visual acceptance)
+
+- Official isolated-profile RTL review accepted 2026-11-05 (header/list, dialog, menu, 264px sidebar, settings); reproducible screenshots via `scripts/qa/rtl-review.mjs`.
+
+## 0.4.0-beta.38 (coverage truth correction)
+
+- README/RELEASE coverage corrected to the measured 93.10/82.31/87.48 after lazy locale chunks; 500/500 tests.
+
+## 0.4.0-beta.37 (A+ evidence refresh after lazy locales)
+
+- Recorded community/official English A+ on `0.4.0-beta.36` and official all-locales 23/23; no runtime or bundle change.
+
+## 0.4.0-beta.36 (lazy locale chunks)
+
+- Main bundle keeps only English and Simplified Chinese; the other 17 dictionaries ship as `lib/client.locale-<language>.js` chunks loaded via `require.async` (~707 KB → ~421 KB raw main bundle).
+
+## 0.4.0-beta.35 (UI handler tests + command runtime)
+
+- Added handler-level menu/dialog/move tests and extracted `command-runtime.js` dispatch/toast; tests 500/500, coverage 93.30/82.38/87.98.
+
+## 0.4.0-beta.34 (cohesion cleanup after split series)
+
+- Renamed `groups-view-data` → `groups-view-state`, moved the handler proxy back to the event layer, and split menu/dialog handlers into narrower modules; 494/494 tests.
+
+## 0.4.0-beta.33 (menu/dialog handler split)
+
+- Extracted menu, dialog, context-menu and optimistic move-step handlers into `groups-view-menu-handlers.js`; `components.js` ~1,061 → ~847 lines; 494/494 tests.
+
+## 0.4.0-beta.32 (search reveal controller split)
+
+- Moved search reveal/highlight DOM handling, retry frames and scroll positioning into `groups-view-search.js`; no behavior change; 494/494 tests.
+
+## 0.4.0-beta.31 (official-host A+ support)
+
+- `start-isolated-web.ps1 -HostRoot` can launch the A+ spec from an official DeepSeek Harness install; community and official A+ both PASS on `0.4.0-beta.30`.
+
+## 0.4.0-beta.30 (groups data + locale runtime split)
+
+- Extracted `useGroupsViewData` and `plugin-locale.js`; all-locale 23/23 and community A+ PASS; 494/494 tests.
+
+## 0.4.0-beta.29 (QA evidence cleanup)
+
+- Moved ~1.76 MB of tracked QA evidence images/JSON out of Git to the local archive; QA scripts and output paths unchanged; 494/494 tests.
+
+## 0.4.0-beta.28 (groups-view-width split)
+
+- Extracted sidebar-width persistence, viewport clamping and resize/DOM lifecycle into `groups-view-width.js`; community A+ PASS; 494/494 tests.
+
+## 0.4.0-beta.27 (final documentation truth corrections)
+
+- Fixed the remaining 493 → 494 test-count references; recorded community A+ on `.26` while official A+ stayed historical.
+
+## 0.4.0-beta.26 (dead shims/exports removal)
+
+- Removed 8 client re-export shims and 10 unused exports; build ~705 KB raw; 494/494 tests.
+
+## 0.4.0-beta.25 (import hygiene + charset cleanup)
+
+- Removed 779 unused import bindings, added an import-hygiene guard and enabled `charset: "utf8"`; 494/494 tests, coverage 93.65/82.35/89.10.
+
+## 0.4.0-beta.24 (architecture guards + locale-safe time)
+
+- Dependency guards now scan static/side-effect/dynamic imports and `require()`; absolute time moved to `i18n/date-format.js`; 493/493 tests.
+
+## 0.4.0-beta.23 (documentation truth pass)
+
+- Corrected dictionary/test/minimum-sidebar counts and A+ historical labels, and added the missing `.20`–`.22` CHANGELOG entries; docs only.
+
+## 0.4.0-beta.22 (RTL menus/dialogs/settings)
+
+- Settings panel now receives the plugin `dir`; Arabic checks add group-menu/dialog viewport bounds and the settings direction; 493/493 tests.
+
+## 0.4.0-beta.21 (settings config all-locale smoke)
+
+- `test:all-locales` now asserts `config.title`, `config.hint`, `config.controlApi` and `skill.repairTitle` for all 23 cases; 493/493 tests.
+
+## 0.4.0-beta.20 (expanded all-locale + narrow visuals)
+
+- All-locale smoke now checks group-menu labels and the Arabic root `dir`; session rows repaint on `localeRevision`; ru/hi/ar 252px screenshots; 493/493 tests.
+
 ## 0.4.0-beta.19 (i18n double-count + release gate)
 
 - Split delete-group copy into independently pluralized session/subgroup lines plus a static instruction; added `group.subgroupCount` to all 19 dictionaries (288 keys).

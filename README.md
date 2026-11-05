@@ -29,10 +29,10 @@ Current verification status:
 | Platform | Node/unit tests | Build/package | Real DSH UI |
 |---|---|---|---|
 | Windows | verified locally | verified locally | verified locally |
-| Linux | verified by GitHub Actions | verified by GitHub Actions | not verified |
-| macOS | not verified | not verified | not verified |
+| Linux | verified by CI | verified by CI | not verified |
+| macOS | verified by CI | verified by CI | not verified |
 
-The current CI is an Ubuntu Node-level gate, not a cross-platform certification. Treat Linux/macOS DSH UI support as experimental until a real host/UI pass exists. Ordinary users install through dshmarket; the local tarball and CLI are maintainer/debug paths only.
+The current CI runs the Node-level gate on Ubuntu, Windows and macOS; the coverage gate runs only on Ubuntu. It is not a cross-platform DSH UI certification: the real DSH UI has been verified on Windows only, so Linux/macOS UI support remains experimental until a real host/UI pass exists. Ordinary users install through dshmarket; the local tarball and CLI are maintainer/debug paths only.
 
 Compatibility is defined by the bundled DSH core/API, not by the desktop shell name. The official and community desktop clients bundle their own DSH versions and plugin compositions; both supported desktop families must be tested separately against this plugin.
 
@@ -133,7 +133,7 @@ Updates are owned by dshmarket / the plugin manager. The plugin does not self-up
 
 ### Upgrading from `dsh-session-groups`
 
-`0.4.0-beta.43` is a new package identity. It does **not** auto-read, copy or delete the old `dsh-session-groups` record or browser keys; this avoids importing data from the same-named community plugins. The manual migration checklist is in [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md).
+The `0.4.0-beta.1` identity reset means this package does **not** auto-read, copy or delete the old `dsh-session-groups` record or browser keys; this avoids importing data from the same-named community plugins. The manual migration checklist is in [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md).
 
 ### Maintainer/developer install
 
@@ -153,7 +153,7 @@ The group record is stored at:
 - a single-slot `.bak` is kept before successful commits;
 - official workspace and session data are never written.
 
-Local UI preferences:
+Local UI preferences and opt-in trace flags (localStorage):
 
 - `dsh-session-grove.view.v1`
 - `dsh-session-grove.archive.v1`
@@ -161,8 +161,10 @@ Local UI preferences:
 - `dsh-session-grove.width.v1`
 - `dsh-session-grove.onboarded.v1`
 - `dsh-session-grove.dialog.geometry.v9`
+- `dsh-session-grove.diagnostics` (page-load diagnostics flag; `'1'`/`'true'` enables the trace)
+- `dsh-session-grove.perf` (opt-in performance probe flag; `'1'` enables it)
 
-Uninstalling the plugin restores the shipped workspace view. The group record and local preferences remain and are restored on reinstall. To remove all traces, delete the record, `.bak` and the localStorage keys above.
+Uninstalling the plugin restores the shipped workspace view. The group record and local preferences remain and are restored on reinstall. To remove all traces, delete the record, `.bak`, the control token, the diagnostics/debug NDJSON files (if any) and the localStorage keys above.
 
 ## Configuration
 
@@ -293,7 +295,7 @@ Diagnostics are written to:
 <dshHome>/storages/dsh-session-grove.diagnostics.ndjson
 ```
 
-Only while `diagnostics` is on. It contains drag events, ids and timings, never session transcripts. The file is not rotated automatically.
+Only while `diagnostics` is on. It contains drag events, ids and timings, never session transcripts. The file is truncated to empty before an append would grow it past 8 MiB; it is not rotated.
 
 ## Language
 
@@ -313,7 +315,7 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - writes use an in-process queue plus a short-lived `<record>.lock` file for cross-process serialization; stale locks are reclaimed after the owner PID dies or the lock is 30 seconds old;
 - large-list lazy rendering remains deferred; the current Ungrouped list is virtualized, but a collapsed subtree is still built by `buildRenderTree`;
 - the dshmarket catalog entry is not published yet; local tarball installs are for the beta period;
-- current release validation is **500 unit/contract tests**; the maintainer desktop pass is historical evidence, not a per-candidate CI artifact; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
+- current release validation is **511 unit/contract tests**; the maintainer desktop pass is historical evidence, not a per-candidate CI artifact; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
 
 ## Documentation
 
@@ -323,7 +325,7 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - [Compatibility policy](docs/COMPATIBILITY.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Release and verification](docs/RELEASE.md)
-- [Test results](docs/TEST-RESULTS.md)
+- [Historical test results (0.4.0-beta.13 snapshot)](docs/TEST-RESULTS.md)
 
 Historical V1/V1.1 contracts and plans are indexed separately and are not current behavior.
 
@@ -337,9 +339,9 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`: 500 unit/contract tests;
+- `npm test`: 511 unit/contract tests;
 - `npm run test:all-locales`: all 19 packaged languages + aliases through the test-only locale pack (requires an isolated web instance);
-- `npm run check:coverage`: Node built-in coverage (currently about 92.44% lines / 82.38% branches / 88.73% functions, `src/**` scope);
+- `npm run check:coverage`: Node built-in coverage (currently about 92.45% lines / 82.47% branches / 88.73% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;
@@ -349,7 +351,7 @@ npm pack
 - build artifact: `lib/client.js`;
 - package: `dsh-session-grove-0.4.0-beta.43.tgz`;
 - release steps: `docs/RELEASE.md`;
-- test summary: `docs/TEST-RESULTS.md`.
+- historical test snapshot: `docs/TEST-RESULTS.md` (0.4.0-beta.13; current status is `docs/TEST-MATRIX.md`).
 
 ## License
 
