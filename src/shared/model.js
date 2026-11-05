@@ -43,7 +43,7 @@ export const normalizeColor = (color) => (isKnownColor(color) ? color : DEFAULT_
 /**
  * Display color of a group: the persisted palette id or the blue default.
  * 0.2.7 keeps this palette helper stable for the existing `data-color` contract;
- * `groupColorHex`/`groupColorValue` add the custom-color precedence.
+ * `groupColorHex` adds the custom-color precedence.
  */
 export const groupColor = (group) => normalizeColor(group?.color)
 
@@ -71,8 +71,6 @@ export const normalizeColorHex = (value) => {
 /** Custom color of a group, or null when absent/invalid (display falls back to palette). */
 export const groupColorHex = (group) => (isColorHex(group?.colorHex) ? group.colorHex : null)
 
-/** Effective display value: custom hex first, then the palette id. */
-export const groupColorValue = (group) => groupColorHex(group) ?? groupColor(group)
 
 
 /** C0/C1 control characters are forbidden in user-visible group names. */

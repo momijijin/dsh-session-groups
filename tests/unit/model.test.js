@@ -12,7 +12,6 @@ import {
   findGroup,
   groupColor,
   groupColorHex,
-  groupColorValue,
   groupSubtreeHeight,
   inferWorkspaceId,
   isColorHex,
@@ -112,7 +111,6 @@ test('custom colorHex: normalization, precedence, validation and quarantine shap
   let doc = createGroup(emptyDoc(), { name: 'A', color: 'purple', colorHex: '#A1B2C3' })
   assert.equal(doc.groups[0].colorHex, '#a1b2c3')
   assert.equal(groupColorHex(doc.groups[0]), '#a1b2c3')
-  assert.equal(groupColorValue(doc.groups[0]), '#a1b2c3', 'colorHex wins over the palette')
   assert.equal(groupColor(doc.groups[0]), 'purple', 'palette identity stays available')
   assert.equal(validateDoc(doc).ok, true)
 
@@ -121,7 +119,7 @@ test('custom colorHex: normalization, precedence, validation and quarantine shap
   assert.equal(doc.groups[0].colorHex, '#00ff00')
   doc = setGroupColor(doc, id, 'orange')
   assert.equal(doc.groups[0].colorHex, undefined, 'picking a preset clears the custom color')
-  assert.equal(groupColorValue(doc.groups[0]), 'orange')
+  assert.equal(groupColor(doc.groups[0]), 'orange')
 
   const invalidHex = { ...doc, groups: [{ ...doc.groups[0], colorHex: '#A1B2C3' }] }
   const verdict = validateDoc(invalidHex)

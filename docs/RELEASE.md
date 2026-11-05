@@ -1,18 +1,19 @@
-# 0.4.0-beta.44 发布与安装说明
+# 0.4.0-beta.45 发布与安装说明
 
-- 版本：`0.4.0-beta.44`
+- 版本：`0.4.0-beta.45`
 - 包名：`dsh-session-grove`
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
-- 状态：514/514 测试；A+ 为 `0.4.0-beta.42` 实测证据；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
-- 发布包：`dsh-session-grove-0.4.0-beta.44.tgz`
+- 状态：513/513 测试；A+ 为 `0.4.0-beta.42` 实测证据；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
+- 发布包：`dsh-session-grove-0.4.0-beta.45.tgz`
 
 ## 本版重点
 
-- **安全修复**：session rename/archive 现在严格受 `controlSessions` 控制；关闭时在 token/body 检查前返回 404 `session-controls-disabled`，并补了 gate 顺序与零 mutation 测试。
-- **文档 truth pass**：README/CHANGELOG/RELEASE/TEST-MATRIX/I18N/ARCHITECTURE/COMPATIBILITY 统一到当前事实（514 tests、A+ 0.4.0-beta.42、RTL 0.4.0-beta.39、19×288 locale keys）。
-- **版本**：五处版本一致为 `0.4.0-beta.44`；主 bundle 与 17 个 lazy locale chunk 已重建。
+- **死导出清理**：删除 27 个生产零引用的导出（16 个计划内 + 1 个级联 helper + 9 个 guard 发现 + 1 个 comment-blind 修正后发现）；仍有策略价值的断言改走生产路径（`buildRenderTree`/`resolveGroupDrop`/`applyControlOperations`/`computeVirtualWindow`/`HEADER_ICON_ARTWORK`/`selectDshAdapter` 等）。
+- **静态 guard**：新增 `tests/core/export-usage.test.js`，扫描 `src/**` 的 `export const|let|var|function|class` 声明并统计引用；guard 还发现并移除 9 个完全无引用的历史导出，最终无 dead export。
+- **契约文档**：删除 `docs/CONTRACTS.md` 中已被移除的 `removeSession` 契约行。
+- **版本**：五处版本一致为 `0.4.0-beta.45`；主 bundle 与 17 个 lazy locale chunk 已重建。
 - 本批未发布；没有版本 tag 或 GitHub Release。
 
 ## 安装方式
@@ -25,7 +26,7 @@
 # 以本地 desktop profile 为例
 DeepSeek Harness.exe --expose-internals `
   "C:\Users\<user>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
-  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.44.tgz"
+  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.45.tgz"
 ```
 
 安装后必须重启对应桌面客户端。先卸载旧的 `dsh-session-groups`；不要在同一 profile 中并存两个身份。
@@ -70,6 +71,6 @@ npm run test:all-locales
 
 完整覆盖矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)；本候选版本的可重复门禁为：
 
-- 514/514 单元/契约测试。
-- coverage：92.45% lines / 82.44% branches / 88.73% functions。
+- 513/513 单元/契约测试。
+- coverage：92.3% lines / 82.9% branches / 89.1% functions（Node coverage 合并存在 ±0.05 的重复运行抖动）。
 - community A+：`0.4.0-beta.42` PASS；official A+：`0.4.0-beta.42` PASS（隔离 official host）；official all-locales 23/23 PASS；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。

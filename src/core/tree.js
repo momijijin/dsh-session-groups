@@ -187,9 +187,6 @@ export const groupPath = (doc, groupId, separator = ' / ') => {
 /** Depth used for indentation (CSS clamps deeper nesting visually). */
 export const displayDepth = (depth) => Math.min(Math.max(depth, 0), UI_SOFT_DEPTH)
 
-/** Direct children ids of a parent (null = root groups), display order. */
-export const siblingGroupIds = (doc, parentId) => childrenOf(doc, parentId).map((group) => group.id)
-
 /** Next/previous sibling id for move-up/down menu actions (P1 graceful). */
 export const siblingNeighbors = (doc, groupId) => {
   const group = findGroup(doc, groupId)

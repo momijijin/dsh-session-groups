@@ -8,16 +8,6 @@
  */
 import { assignSession, findGroup, reorderUngrouped } from '../shared/model.js'
 
-/** Drop-target vocabulary. */
-export const DROP_KINDS = Object.freeze([
-  'session-before',
-  'session-after',
-  'group-append',
-  'group-head',
-  'ungrouped',
-  'invalid',
-])
-
 /**
  * 0.2.21: insertion placeholders move rows under a resting pointer. Recomputing
  * the hit target from the shifted row makes the placeholder jump a row (or two)
@@ -195,9 +185,6 @@ export const applyDrop = (doc, source, target, visibleUngrouped = null) => {
       return { doc, applied: false }
   }
 }
-
-/** Read-only clone helper used by components to preview optimistic drops. */
-export const previewDrop = (doc) => cloneDoc(doc)
 
 /** Stable drop-target fields. Geometry/indices are never part of a view target. */
 const TARGET_FIELDS = Object.freeze(['kind', 'sessionId', 'groupId', 'targetId', 'parentId', 'beforeGroupId'])

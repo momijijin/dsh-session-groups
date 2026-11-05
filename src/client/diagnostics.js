@@ -813,12 +813,3 @@ export const diagTargetChange = (previous, next) => current?.targetChange(previo
 
 /** Record the current drop state for the HUD. */
 export const diagDropState = (state, detail) => current?.dropState(state, detail)
-
-
-/** Test seam: dispose and forget the page singleton. */
-export const resetDiagnosticsForTests = () => {
-  stopDiagnostics()
-}
-
-/** Re-export the target key helper for tests. */
-export const dropTargetKey = targetKey

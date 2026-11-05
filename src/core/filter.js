@@ -7,7 +7,7 @@
  * visibility) so they can be unit-tested without React.
  */
 import { ARCHIVE_FILTERS } from '../shared/constants.js'
-import { buildRenderTree, workspaceOfSession } from '../shared/model.js'
+import { buildRenderTree } from '../shared/model.js'
 
 export { ARCHIVE_FILTERS }
 
@@ -73,9 +73,6 @@ export const sessionTitle = (row, { blankLabel = '新会话', untitledLabel = '�
 /** True when a session row is archived per the host array (array, never a Set). */
 export const isArchived = (archivedSessionIds, sessionId) =>
   Array.isArray(archivedSessionIds) && archivedSessionIds.includes(sessionId)
-
-/** Workspace ref for a session id (shared model is the single authority). */
-export const workspaceFor = (workspaces, sessionId) => workspaceOfSession(workspaces, sessionId)
 
 /**
  * Build the visible render tree for the current view options.

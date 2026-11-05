@@ -18,9 +18,6 @@ export const COLLAPSED_KEY = 'dsh-session-grove.collapsed.v1'
 /** localStorage key for the one-time groups-view onboarding card. */
 export const ONBOARDING_KEY = 'dsh-session-grove.onboarded.v1'
 
-/** Modes understood by the sidebar controller. */
-export const VIEW_MODES = Object.freeze(['workspace', 'groups'])
-
 /** Safe localStorage accessor (SSR / tests / disabled storage return null). */
 export const safeStorage = () => {
   try {
