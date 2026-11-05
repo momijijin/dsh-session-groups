@@ -7,7 +7,7 @@
  */
 import { installWorkspaceToggle } from './workspace-toggle.js'
 
-export const createWorkspaceChrome = ({ getMode, getLabel, onToggle, syncSidebarWidth, isMounted }) => {
+export const createWorkspaceChrome = ({ getMode, getLabel, onToggle, syncSidebarWidth, isMounted, installToggle = installWorkspaceToggle }) => {
   let toggle = null
   let retryTimer = null
 
@@ -15,7 +15,7 @@ export const createWorkspaceChrome = ({ getMode, getLabel, onToggle, syncSidebar
     const mode = getMode()
     if (mode === 'workspace') {
       if (toggle === null) {
-        toggle = installWorkspaceToggle({
+        toggle = installToggle({
           doc: globalThis.document,
           label: getLabel(),
           onToggle,
