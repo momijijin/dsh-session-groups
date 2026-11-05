@@ -37,6 +37,7 @@ export const sessionRowPropsEqual = (prev, next) => {
   if (prev.depth !== next.depth || prev.groupId !== next.groupId || prev.ungrouped !== next.ungrouped) return false
   if (a.archived !== b.archived || a.runningSubagentCount !== b.runningSubagentCount) return false
   if ((prev.store?.currentSessionId === a.session.id) !== (next.store?.currentSessionId === b.session.id)) return false
+  if ((prev.store?.localeRevision ?? 0) !== (next.store?.localeRevision ?? 0)) return false
   const ar = a.session
   const br = b.session
   if (ar.title !== br.title || ar.displayTitle !== br.displayTitle || ar.updatedAt !== br.updatedAt || ar.blank !== br.blank) {

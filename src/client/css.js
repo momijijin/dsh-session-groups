@@ -133,6 +133,7 @@ export const CSS = `
 .dsg-root[data-narrow="true"] .dsg-header-actions { gap: 2px; }
 .dsg-root[data-narrow="true"] .dsg-status-actions { margin-right: 0; gap: 1px; }
 .dsg-root[data-narrow="true"] .dsg-status-action { min-width: 26px; padding: 0 2px; gap: 1px; }
+.dsg-root[data-narrow="true"] .dsg-status-action[data-count="0"] .dsg-status-action-count { display: none; }
 /* Optional second row: the existing SearchBox (30px) under the title row. */
 .dsg-header-search-row { align-items: center; gap: 4px; height: 30px; }
 .dsg-search { position: relative; display: flex; flex: 1 1 auto; min-width: 0; }

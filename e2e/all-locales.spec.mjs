@@ -105,14 +105,28 @@ try {
 
   const groupView = page.locator('[data-testid="session-groups-view"]')
   if ((await groupView.count()) === 0) {
+    await dismissOverlays()
     const toggle = page.locator('[data-testid="session-groups-workspace-toggle"], [data-testid="session-groups-toggle"]').first()
-    if (await toggle.count()) await toggle.click()
+    if (await toggle.count()) await toggle.click({ force: true })
   }
   await groupView.waitFor({ state: 'visible' })
   const onboarding = page.locator('[data-testid="session-groups-onboarding"]')
   if (await onboarding.count()) {
     await page.locator('[data-testid="session-groups-onboarding-dismiss"]').click()
     await onboarding.waitFor({ state: 'detached' })
+  }
+
+  // One real group is enough to exercise the localized group menu in every
+  // language; group names themselves are user data and intentionally untranslated.
+  const groupMenuButton = page.locator('[data-testid="session-groups-group-menu"]')
+  if ((await groupMenuButton.count()) === 0) {
+    await page.locator('[data-testid="session-groups-new-group"]').click()
+    const createDialog = page.locator('[data-testid="session-groups-dialog"]')
+    await createDialog.waitFor({ state: 'visible' })
+    await page.locator('[data-testid="session-groups-dialog-input"]').fill('Locale QA')
+    await page.locator('[data-testid="session-groups-dialog-confirm"]').click()
+    await createDialog.waitFor({ state: 'hidden' })
+    await groupMenuButton.first().waitFor({ state: 'visible' })
   }
 
   for (const [localeId, dictionaryId] of cases) {
@@ -143,10 +157,76 @@ try {
     if (actualDialogTitle !== expectedDialogTitle) {
       throw new Error(`${localeId}: dialog title ${JSON.stringify(actualDialogTitle)} != ${JSON.stringify(expectedDialogTitle)}`)
     }
+    const dialogPlaceholder = await page.locator('[data-testid="session-groups-dialog-input"]').getAttribute('placeholder')
+    const dialogCancel = (await page.locator('[data-testid="session-groups-dialog-cancel"]').innerText()).trim()
+    const dialogConfirm = (await page.locator('[data-testid="session-groups-dialog-confirm"]').innerText()).trim()
+    const expectedPlaceholder = dictionaries[dictionaryId]['dialog.namePlaceholder']
+    const expectedCancel = dictionaries[dictionaryId]['dialog.cancel']
+    const expectedConfirm = dictionaries[dictionaryId]['dialog.confirm']
+    if (dialogPlaceholder !== expectedPlaceholder || dialogCancel !== expectedCancel || dialogConfirm !== expectedConfirm) {
+      throw new Error(`${localeId}: dialog fields mismatch (${dialogPlaceholder}/${dialogCancel}/${dialogConfirm})`)
+    }
     await page.locator('[data-testid="session-groups-dialog-cancel"]').click()
     await dialog.waitFor({ state: 'hidden' })
-    console.log(`PASS ${localeId} -> ${dictionaryId}: ${expectedTitle}`)
+
+    const firstGroupRow = page.locator('[data-testid="session-groups-group"]').first()
+    await firstGroupRow.hover()
+    await groupMenuButton.first().click()
+    const menu = page.locator('[data-testid="session-groups-menu"]')
+    await menu.waitFor({ state: 'visible' })
+    const menuText = await menu.innerText()
+    for (const key of ['group.newSession', 'group.newSubgroup', 'group.rename', 'group.color', 'group.delete']) {
+      if (!menuText.includes(dictionaries[dictionaryId][key])) {
+        throw new Error(`${localeId}: group menu missing ${key}`)
+      }
+    }
+    await page.keyboard.press('Escape')
+    await menu.waitFor({ state: 'hidden' })
+    console.log(`PASS ${localeId} -> ${dictionaryId}: header + dialog + group menu`)
   }
+
+  // Long RTL/Indic/Cyrillic labels at the narrow sidebar width: fail on root
+  // horizontal overflow and leave screenshots for the visual review.
+  await page.setViewportSize({ width: 1024, height: 900 })
+  const railExpand = page.locator('[data-testid="session-groups-rail-expand"]')
+  if (await railExpand.count()) {
+    await railExpand.first().click()
+    await page.locator('.dsg-root').waitFor({ state: 'visible' })
+  }
+  const resizeHandle = page.locator('[data-testid="session-groups-resize-handle"]')
+  if (await resizeHandle.count()) {
+    const box = await resizeHandle.boundingBox()
+    if (box) {
+      await page.mouse.move(box.x + box.width / 2, box.y + 120)
+      await page.mouse.down()
+      await page.mouse.move(264, box.y + 120, { steps: 6 })
+      await page.mouse.up()
+      await page.waitForTimeout(300)
+    }
+  }
+  for (const localeId of ['ru', 'hi', 'ar']) {
+    await page.evaluate((id) => globalThis.__DSH_E2E_SET_LOCALE__(id), localeId)
+    await page.waitForFunction((id) => globalThis.__DSH_E2E_GET_LOCALE__?.().active === id, localeId)
+    await page.waitForTimeout(500)
+    const metrics = await page.evaluate(() => {
+      const root = document.querySelector('.dsg-root')
+      const header = root?.querySelector('.dsg-header-label')
+      return {
+        found: Boolean(root),
+        rootScroll: root?.scrollWidth ?? 0,
+        rootClient: root?.clientWidth ?? 0,
+        headerScroll: header?.scrollWidth ?? 0,
+        headerClient: header?.clientWidth ?? 0,
+      }
+    })
+    if (!metrics.found) throw new Error(`${localeId}: groups root not visible at narrow viewport`)
+    if (metrics.rootScroll > metrics.rootClient + 2) {
+      throw new Error(`${localeId}: root overflow ${metrics.rootScroll} > ${metrics.rootClient}`)
+    }
+    await page.screenshot({ path: `${testHome}/narrow-${localeId}.png`, fullPage: false })
+    console.log(`VISUAL ${localeId}: root ${metrics.rootClient}px, header ${metrics.headerClient}px (scroll ${metrics.headerScroll})`)
+  }
+  await page.setViewportSize({ width: 1280, height: 900 })
 
   if (pageErrors.length > 0) fail(`page errors: ${pageErrors.join('; ')}`)
   console.log(`PASS: all ${cases.length} locale switch cases`)
