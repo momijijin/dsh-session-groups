@@ -1,20 +1,21 @@
-# 0.4.0-beta.2 测试结果
+# 0.4.0-beta.3 测试结果
 
 日期：2026-11-05  
-版本：`0.4.0-beta.2`  
+版本：`0.4.0-beta.3`  
 宿主基线：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）  
 已验证壳：community DSH Desktop **Stable** 2.0.18（rc.2）；official DeepSeek Harness desktop 0.2.1.0（rc.5，隔离 A+ + 维护者桌面窗口验收）  
 不官方支持：community DSH Desktop Beta、community DSH NEXT（`-next`）
 
 ## 结论
 
-- 本地候选 0.4.0-beta.2：**479/479 PASS**（identity reset + i18n fallback + a11y + maintainability + perf + icon/title + session reorder + official rc.5 compatibility）
+- 本地候选 0.4.0-beta.3：**480/480 PASS**（identity reset + i18n fallback + a11y + maintainability + perf + icon/title + session reorder + official rc.5 compatibility）
 - 身份边界：package/manifest/bundle、host 路由、record/token/diagnostics/debug、client localStorage、skill/tool 名称全部为 grove；旧 `dsh-session-groups` 标识没有残留于 active source。
 - i18n fallback：英文客户端在 Host locale handle 缺失时按 Host snapshot → `<html lang>` → navigator 解析；onboarding、settings、menu、dialog 英文断言已补入隔离 A+。
+- i18n 基础：BCP 47 基础语言归一化、未知语言回退英文、全量字典 Host 注册；本轮尚未添加新语言资源。
 - 无自动迁移：旧 `dsh-session-groups` 记录/localStorage 被刻意忽略且不删除；手动迁移见 `docs/MIGRATION-0.4.md`。
 - 包声明：`@deepseek-ai/schemastery` 从 `dependencies` 移到 `peerDependencies`，保留 `devDependencies` 供测试；隔离安装的插件包不再携带重复运行时副本。
 - 控制面：只读 catalog、严格 icon/color/colorHex 校验均已覆盖边界测试。
-- Node 内置 coverage：**93.67% lines / 82.42% branches / 88.94% functions**
+- Node 内置 coverage：**93.67% lines / 82.35% branches / 88.96% functions**
 - community A+ 隔离 Playwright（0.2.1-rc.2）：**PASS**
 - official A+ 隔离 Playwright（0.2.1-rc.5，官方 bundle 的 DSH host/core + 独立 web profile）：**PASS**
 - Core 纯函数测试：**29/29 PASS**
