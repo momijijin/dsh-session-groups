@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   CONTROL_APPLY_PATH,
+  CONTROL_CATALOG_PATH,
   CONTROL_DOCTOR_PATH,
   CONTROL_PLAN_PATH,
   CONTROL_RESOLVE_PATH,
@@ -35,7 +36,7 @@ test('control routes stay behind the API switch without changing their paths', a
   t.after(() => on.cleanup())
   assert.deepEqual(
     on.mounted.routes.filter((path) => path.startsWith('/dsh-session-groups/control/') && !path.includes('/session/')),
-    [CONTROL_DOCTOR_PATH, CONTROL_STATE_PATH, CONTROL_RESOLVE_PATH, CONTROL_PLAN_PATH, CONTROL_APPLY_PATH],
+    [CONTROL_DOCTOR_PATH, CONTROL_STATE_PATH, CONTROL_CATALOG_PATH, CONTROL_RESOLVE_PATH, CONTROL_PLAN_PATH, CONTROL_APPLY_PATH],
   )
 })
 
@@ -54,6 +55,21 @@ test('control routes follow the live API switch without remounting', async (t) =
   enabled = true
   const visible = await mounted.call(CONTROL_STATE_PATH, makeRequest({ method: 'GET', headers }))
   assert.equal(visible.res.statusCode, 200)
+})
+
+test('control catalog is read-only and exposes the shared vocabulary', async (t) => {
+  const mounted = await mountRoutes({ connection: connection(), controlApiEnabled: true })
+  t.after(() => mounted.cleanup())
+  const catalog = await mounted.call(CONTROL_CATALOG_PATH, makeRequest({ method: 'GET', headers }))
+  assert.equal(catalog.res.statusCode, 200)
+  assert.equal(catalog.json.ok, true)
+  assert.equal(catalog.json.protocol, 1)
+  assert.ok(catalog.json.icons.items.length > 70)
+  assert.ok(catalog.json.icons.categories.length > 0)
+  assert.ok(catalog.json.colors.items.length >= 12)
+  assert.equal(catalog.json.colors.formats.custom.canonical, '#rrggbb')
+  assert.ok(catalog.json.operations.includes('group.update'))
+  assert.equal(catalog.json.revision, undefined, 'catalog must not read or leak group state')
 })
 
 test('control state, plan and apply use revision CAS and idempotency', async (t) => {

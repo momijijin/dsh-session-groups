@@ -410,6 +410,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
   )
 
   let controlStatePath = null
+  let controlCatalogPath = null
   let controlDoctorPath = null
   let controlResolvePath = null
   let controlPlanPath = null
@@ -443,6 +444,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
   eventsPath = controlRoutes.eventsPath
   controlDoctorPath = controlRoutes.controlDoctorPath
   controlStatePath = controlRoutes.controlStatePath
+  controlCatalogPath = controlRoutes.controlCatalogPath
   controlResolvePath = controlRoutes.controlResolvePath
   controlPlanPath = controlRoutes.controlPlanPath
   controlApplyPath = controlRoutes.controlApplyPath
@@ -512,7 +514,7 @@ const sessionRoutes = registerSessionRoutes({
       ...(eventsPath === null ? [] : [eventsPath]),
       debugPath,
       ...(controlDoctorPath === null ? [] : [controlDoctorPath]),
-      ...(controlStatePath === null ? [] : [controlStatePath, controlResolvePath, controlPlanPath, controlApplyPath]),
+      ...(controlStatePath === null ? [] : [controlStatePath, controlCatalogPath, controlResolvePath, controlPlanPath, controlApplyPath]),
       ...(sessionInspectPath === null ? [] : [sessionInspectPath, sessionRenamePath, sessionArchivePath]),
       ...(skillRepairPath === null ? [] : [skillRepairPath]),
     ],

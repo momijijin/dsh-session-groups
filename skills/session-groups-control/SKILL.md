@@ -42,6 +42,7 @@ session; archived-only sessions cannot be renamed.
 ## Tool actions
 
 ```text
+catalog
 state
 resolve
 plan
@@ -50,6 +51,22 @@ session_inspect
 session_rename
 session_archive
 ```
+
+### catalog
+
+```json
+{ "action": "catalog" }
+```
+
+Read-only vocabulary and format reference. Returns:
+
+- every icon `id`, `category`, `labelKey` and `style`;
+- every palette `color` `id`, `hex` and `labelKey`;
+- documented `colorHex` input forms plus canonical `#rrggbb`;
+- operation names and group-name/icon/color limits.
+
+It does not read the group document, revision or sessions. Use it before
+building a plan that changes `icon` or `color`.
 
 ### state
 

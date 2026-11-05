@@ -89,42 +89,8 @@ export const ICON_PATHS = Object.freeze({
 /** All icon names the plugin accepts (contract set). */
 export const ICON_NAMES = GROUP_ICONS
 
-/**
- * 0.2.13 semantic sections for the icon picker. Every section is rendered with
- * a heading and a divider; names not listed here fall into the general group.
- */
-export const ICON_GROUPS = Object.freeze([
-  {
-    key: 'status',
-    labelKey: 'iconGroup.status',
-    icons: ['check-circle', 'check', 'x-circle', 'x', 'pause-circle', 'pause', 'play-circle', 'play', 'stop-circle', 'stop', 'ban', 'clock', 'hourglass', 'fire'],
-  },
-  {
-    key: 'work',
-    labelKey: 'iconGroup.work',
-    icons: ['code', 'terminal', 'wrench', 'bug', 'hammer', 'lightning', 'database', 'chart', 'target', 'rocket', 'briefcase', 'layers', 'book', 'log', 'cpu', 'memory', 'hard-drive', 'server', 'network', 'activity', 'gauge', 'git-branch', 'git-merge'],
-  },
-  {
-    key: 'devices',
-    labelKey: 'iconGroup.devices',
-    icons: ['computer', 'phone', 'tablet', 'printer', 'camera', 'music', 'video', 'wifi'],
-  },
-  {
-    key: 'actions',
-    labelKey: 'iconGroup.actions',
-    icons: ['file', 'clipboard', 'link', 'mail', 'message', 'users', 'settings', 'filter', 'refresh', 'download', 'upload'],
-  },
-  {
-    key: 'life',
-    labelKey: 'iconGroup.life',
-    icons: ['gift', 'map'],
-  },
-  {
-    key: 'general',
-    labelKey: 'iconGroup.general',
-    icons: ['folder', 'folder-open', 'star', 'flag', 'bookmark', 'tag', 'bulb', 'globe', 'heart', 'home', 'calendar', 'hash', 'cloud', 'shield', 'lock', 'key', 'puzzle'],
-  },
-])
+/** Canonical icon categories live in the shared control catalog. */
+export { ICON_GROUPS } from '../shared/control-catalog.js'
 
 /** Resolve a possibly-invalid icon name to the default folder. */
 export const iconName = (name) => (GROUP_ICONS.includes(name) ? name : DEFAULT_ICON)

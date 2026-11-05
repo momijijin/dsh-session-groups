@@ -9,7 +9,7 @@
 - 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
 - 不写入 `workspace.json`。
 
-当前版本：**0.3.0-beta.77**  
+当前版本：**0.3.0-beta.78**  
 主要支持：**DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 与 0.2.1-rc.5**（`engines.dsh: >=0.2.0-rc.2 <0.3.0`）  
 已验证桌面壳：**社区版 DSH Desktop Stable 2.0.18**（rc.2）与**官方 DeepSeek Harness 桌面版 0.2.1.0**（rc.5，隔离运行时 A+）  
 不官方支持、不承诺兼容：**社区版 DSH Desktop Beta**、**社区版 DSH NEXT（`-next` 通道）**
@@ -208,6 +208,7 @@ Host 在每次分组 commit（原生工具或 HTTP）后通过 `/dsh-session-gro
 工具动作：
 
 ```text
+catalog
 state
 resolve
 plan
@@ -217,6 +218,9 @@ session_rename
 session_archive
 doctor
 ```
+
+`catalog` 是只读词表与格式参考：图标 id/分类/style、色板 id/hex/label、`colorHex`
+输入形式与 canonical `#rrggbb`、操作名和限制。它不读取分组状态或 revision。
 
 `state` 返回稳定 `revision`、每个分组的 `id`/`path`/icon/color 和 sessionIds。
 `resolve` 只把完整 path 数组解析成 ID；不存在返回 `group-not-found`，同名同级
@@ -254,6 +258,7 @@ doctor
 
 ```text
 GET  /dsh-session-groups/control/doctor
+GET  /dsh-session-groups/control/catalog
 GET  /dsh-session-groups/control/state
 POST /dsh-session-groups/control/resolve
 POST /dsh-session-groups/control/plan
@@ -346,7 +351,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.77.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.78.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 

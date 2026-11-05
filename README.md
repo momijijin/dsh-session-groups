@@ -9,7 +9,7 @@ A free-form grouping layer over the shipped DSH Desktop workspace/session sideba
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
 - `workspace.json` is never written.
 
-Current version: **0.3.0-beta.77**  
+Current version: **0.3.0-beta.78**  
 Primary support: **DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 and 0.2.1-rc.5** (`engines.dsh: >=0.2.0-rc.2 <0.3.0`)  
 Verified shells: **community DSH Desktop Stable 2.0.18** (rc.2) and **official DeepSeek Harness desktop 0.2.1.0** (rc.5, isolated runtime A+)  
 Not supported or promised: **community DSH Desktop Beta** and **community DSH NEXT (`-next` channel)**
@@ -199,6 +199,7 @@ After every group commit (native tool or HTTP), the Host publishes the new revis
 Tool actions:
 
 ```text
+catalog
 state
 resolve
 plan
@@ -208,6 +209,10 @@ session_rename
 session_archive
 doctor
 ```
+
+`catalog` is a read-only vocabulary reference: icon ids/categories/style,
+palette ids/hex/labels, documented `colorHex` input forms and canonical
+`#rrggbb`, operation names and limits. It does not read group state.
 
 `state` returns a stable `revision`, each group's `id`/`path`/icon/color and sessionIds.  
 `resolve` maps a complete path array to an id; missing paths return `group-not-found`, duplicate siblings return `ambiguous-path` with candidates.  
@@ -242,6 +247,7 @@ These routes are for browser settings pages and local debugging, not the primary
 
 ```text
 GET  /dsh-session-groups/control/doctor
+GET  /dsh-session-groups/control/catalog
 GET  /dsh-session-groups/control/state
 POST /dsh-session-groups/control/resolve
 POST /dsh-session-groups/control/plan
@@ -328,7 +334,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS;
 - build artifact: `lib/client.js`;
-- package: `dsh-session-groups-0.3.0-beta.77.tgz`;
+- package: `dsh-session-groups-0.3.0-beta.78.tgz`;
 - release steps: `docs/RELEASE.md`;
 - test summary: `docs/TEST-RESULTS.md`.
 

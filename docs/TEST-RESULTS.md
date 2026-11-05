@@ -1,16 +1,17 @@
-# 0.3.0-beta.77 测试结果
+# 0.3.0-beta.78 测试结果
 
 日期：2026-11-04  
-版本：`0.3.0-beta.77`  
+版本：`0.3.0-beta.78`  
 宿主基线：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）  
 已验证壳：community DSH Desktop **Stable** 2.0.18（rc.2）；official DeepSeek Harness desktop 0.2.1.0（rc.5，隔离 A+ + 维护者桌面窗口验收）  
 不官方支持：community DSH Desktop Beta、community DSH NEXT（`-next`）
 
 ## 结论
 
-- 本地候选 0.3.0-beta.77：**462/462 PASS**（G6a a11y + G6b maintainability + perf + icon/title + session reorder + official rc.5 compatibility + peerDependency packaging）
+- 本地候选 0.3.0-beta.78：**468/468 PASS**（G6a a11y + G6b maintainability + perf + icon/title + session reorder + official rc.5 compatibility + peerDependency packaging）
 - 包声明：`@deepseek-ai/schemastery` 从 `dependencies` 移到 `peerDependencies`，保留 `devDependencies` 供测试；隔离安装的插件包不再携带重复运行时副本。
-- Node 内置 coverage：**93.64% lines / 82.29% branches / 88.78% functions**
+- 控制面：新增只读 catalog 数据源/接口；图标/色板/格式/操作名与边界测试已覆盖。
+- Node 内置 coverage：**93.69% lines / 82.27% branches / 88.89% functions**
 - community A+ 隔离 Playwright（0.2.1-rc.2）：**PASS**
 - official A+ 隔离 Playwright（0.2.1-rc.5，官方 bundle 的 DSH host/core + 独立 web profile）：**PASS**
 - Core 纯函数测试：**29/29 PASS**

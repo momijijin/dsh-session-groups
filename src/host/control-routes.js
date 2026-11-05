@@ -4,6 +4,7 @@
  */
 import {
   CONTROL_APPLY_PATH,
+  CONTROL_CATALOG_PATH,
   CONTROL_DOCTOR_PATH,
   CONTROL_PLAN_PATH,
   CONTROL_RESOLVE_PATH,
@@ -11,6 +12,7 @@ import {
   EVENTS_PATH,
   MAX_CONTROL_BODY_BYTES,
 } from './constants.js'
+import { buildControlCatalog } from '../core/catalog.js'
 import { applyControlOperations, buildControlState, CONTROL_PROTOCOL, resolveGroupPath } from '../core/control.js'
 
 export const registerControlRoutes = (deps) => {
@@ -37,6 +39,7 @@ export const registerControlRoutes = (deps) => {
   } = deps
 
   let controlStatePath = null
+  let controlCatalogPath = null
   let controlDoctorPath = null
   let controlResolvePath = null
   let controlPlanPath = null
@@ -144,6 +147,20 @@ if (changeHub !== null) {
         }
       },
       `dsh-session-groups: GET ${CONTROL_STATE_PATH}`,
+    )
+
+    controlCatalogPath = register(
+      CONTROL_CATALOG_PATH,
+      async (req, res) => {
+        if (controlUnavailable(res)) return
+        if (controlDenied(req, res)) return
+        if (req.method !== 'GET') {
+          sendMethodNotAllowed(res, 'GET')
+          return
+        }
+        sendJson(res, 200, { ok: true, ...buildControlCatalog() })
+      },
+      `dsh-session-groups: GET ${CONTROL_CATALOG_PATH}`,
     )
 
     controlResolvePath = register(
@@ -426,5 +443,5 @@ if (changeHub !== null) {
   }
 
   
-  return { eventsPath, controlStatePath, controlDoctorPath, controlResolvePath, controlPlanPath, controlApplyPath }
+  return { eventsPath, controlStatePath, controlCatalogPath, controlDoctorPath, controlResolvePath, controlPlanPath, controlApplyPath }
 }
