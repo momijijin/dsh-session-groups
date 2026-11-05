@@ -23,11 +23,13 @@ import tr from '../../../locale/tr.json' with { type: 'json' }
 import vi from '../../../locale/vi.json' with { type: 'json' }
 import th from '../../../locale/th.json' with { type: 'json' }
 import id from '../../../locale/id.json' with { type: 'json' }
+import ru from '../../../locale/ru.json' with { type: 'json' }
+import hi from '../../../locale/hi.json' with { type: 'json' }
 
-export { zh, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id }
+export { zh, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id, ru, hi }
 
 /** Language used whenever the active locale has no packaged dictionary. */
 export const FALLBACK_LANGUAGE = 'en'
 
 /** Dictionaries keyed by base language (`zh`, `en`, `ja`, `ko`, ...). */
-export const dictionaries = Object.freeze({ zh, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id })
+export const dictionaries = Object.freeze({ zh, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id, ru, hi })
