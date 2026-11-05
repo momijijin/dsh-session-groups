@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.7 (local i18n locale-pack fixture)
+
+- Added a test-only Japanese language-pack bundle and a dedicated isolated Playwright check: `addLanguage({id:ja})` + `setLocale(ja)` must switch plugin onboarding/dialog copy to Japanese.
+- Extended the isolated harness with an optional `-LocalePack` installation path.
+- Tests remain 484/484 unit/contract; the new locale-pack A+ is an additional runtime gate. No tag or Release.
+
 ## 0.4.0-beta.6 (local i18n plural foundation)
 
 - `formatMessage` now accepts per-category plural objects and selects them with `Intl.PluralRules`.
