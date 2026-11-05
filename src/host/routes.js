@@ -14,53 +14,16 @@
  */
 
 import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises'
-import { createHash, timingSafeEqual } from 'node:crypto'
-import { basename, dirname } from 'node:path'
-import { DOC_VERSION } from '../shared/constants.js'
-import { normalizeColor, normalizeColorHex, validateDoc } from '../shared/model.js'
-import { applyControlOperations, buildControlState, CONTROL_PROTOCOL, resolveGroupPath } from '../core/control.js'
-import { hasControlChars } from '../shared/model.js'
+import { timingSafeEqual } from 'node:crypto'
+import { dirname } from 'node:path'
 import { repairManagedSkill } from './skill-install.js'
 import { registerSessionRoutes } from './session-routes.js'
 import { registerControlRoutes } from './control-routes.js'
-import {
-  COMMIT_PATH,
-  CONTROL_APPLY_PATH,
-  CONTROL_DOCTOR_PATH,
-  CONTROL_PLAN_PATH,
-  CONTROL_RESOLVE_PATH,
-  CONTROL_SESSION_ARCHIVE_PATH,
-  CONTROL_SESSION_INSPECT_PATH,
-  CONTROL_SESSION_RENAME_PATH,
-  CONTROL_STATE_PATH,
-  DEBUG_PATH,
-  DIAGNOSTICS_PATH,
-  EVENTS_PATH,
-  LOAD_PATH,
-  MAX_BODY_BYTES,
-  MAX_CONTROL_BODY_BYTES,
-  MAX_DIAGNOSTICS_BODY_BYTES,
-  MAX_DIAGNOSTICS_EVENTS,
-  MAX_DIAGNOSTICS_FILE_BYTES,
-  SKILL_REPAIR_PATH,
-} from './constants.js'
+import { COMMIT_PATH, DEBUG_PATH, DIAGNOSTICS_PATH, LOAD_PATH, MAX_BODY_BYTES, MAX_CONTROL_BODY_BYTES, MAX_DIAGNOSTICS_BODY_BYTES, MAX_DIAGNOSTICS_FILE_BYTES, SKILL_REPAIR_PATH } from './constants.js'
 import { fenceRequest, probeConnection } from './fence.js'
 import { logInfo, logWarn } from './log.js'
 
-import {
-  sendJson,
-  sendEmpty,
-  sendMethodNotAllowed,
-  contentTypeOf,
-  isObject,
-  readBoundedBody,
-  controlPlanHash,
-  unexpectedControlField,
-  loadResponse,
-  commitResponse,
-  parseCommitBody,
-  parseDiagnosticsBody,
-} from './route-contract.js'
+import { sendJson, sendEmpty, sendMethodNotAllowed, contentTypeOf, readBoundedBody, controlPlanHash, unexpectedControlField, loadResponse, commitResponse, parseCommitBody, parseDiagnosticsBody } from './route-contract.js'
 export { loadResponse, commitResponse, parseCommitBody, parseDiagnosticsBody } from './route-contract.js'
 
 export const registerRoutes = (ctx, store, options = {}) => {
