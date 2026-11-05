@@ -1,7 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { createTranslator, detectEnvironmentLocale, dictionaries, dictionaryFor, en, formatMessage, zh } from '../../src/client/locale.js'
+import {
+  FALLBACK_LANGUAGE,
+  baseLanguage,
+  createTranslator,
+  detectEnvironmentLocale,
+  dictionaries,
+  dictionaryFor,
+  en,
+  formatMessage,
+  zh,
+} from '../../src/client/locale.js'
 
 const withDocumentLang = (lang, run) => {
   const hadDocument = Object.prototype.hasOwnProperty.call(globalThis, 'document')
@@ -78,9 +88,22 @@ test('detectEnvironmentLocale uses document lang then navigator language', () =>
   })
 })
 
-test('dictionaryFor handles en prefixes and defaults to zh', () => {
+test('dictionaryFor handles base language prefixes and falls back to English', () => {
+  assert.equal(FALLBACK_LANGUAGE, 'en')
+  assert.equal(baseLanguage('ja-JP'), 'ja')
+  assert.equal(baseLanguage('zh_Hant_TW'), 'zh')
+  assert.equal(baseLanguage(undefined), '')
   assert.equal(dictionaryFor('en'), dictionaries.en)
   assert.equal(dictionaryFor('en-GB'), dictionaries.en)
   assert.equal(dictionaryFor('zh-Hans'), dictionaries.zh)
-  assert.equal(dictionaryFor(undefined), dictionaries.zh)
+  assert.equal(dictionaryFor('zh-TW'), dictionaries.zh)
+  assert.equal(dictionaryFor('ja-JP'), dictionaries.en)
+  assert.equal(dictionaryFor('unknown-language'), dictionaries.en)
+  assert.equal(dictionaryFor(undefined), dictionaries.en)
+})
+
+test('an unsupported host locale follows the English fallback instead of Chinese', () => {
+  const japanese = createTranslator(() => ({ active: 'ja-JP' }))
+  assert.equal(japanese('view.title'), 'Free Groups')
+  assert.equal(japanese('onboarding.title'), 'Welcome to Free Groups')
 })
