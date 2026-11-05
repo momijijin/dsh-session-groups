@@ -1,0 +1,13 @@
+{
+  "id": "e2e-ja-locale-pack",
+  "name": "e2e-ja-locale-pack",
+  "version": "0.0.0",
+  "entry": "src/index.js",
+  "client": "lib/client.js",
+  "description": {
+    "en": "Test-only locale pack that adds Japanese to the host locale catalog."
+  },
+  "title": {
+    "en": "E2E Japanese locale pack"
+  }
+}
