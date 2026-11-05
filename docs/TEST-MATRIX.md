@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.22`  
+Status: `0.4.0-beta.23`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -18,6 +18,10 @@ and at which level. Other docs should link here instead of restating counts.
 The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 `e2e/locale-pack.spec.mjs`, and `e2e/all-locales.spec.mjs` switches through
 every packaged dictionary and checks the header + new-group dialog.
+
+A+ C/O cells are historical runtime evidence (last recorded on earlier
+candidates). `0.4.0-beta.23` was not A+-re-run; do not use those cells as a
+fresh candidate artifact until the release gate records a new run.
 
 ## Environment matrix
 
@@ -62,8 +66,9 @@ Important distinction:
 ```text
 U parity PASS = the resource has the right keys, placeholders and plural
 categories; it does not prove translation quality or visual fit.
-LP PASS = the active locale changes and the header + new-group dialog render
-that dictionary; it does not cover every menu, settings or drag surface.
+LP PASS = the active locale changes and the header + new-group dialog + group
+menu + settings render that dictionary; full drag surfaces are still not part
+of this smoke.
 ```
 
 ## Locale aliases
@@ -107,18 +112,18 @@ plural rules are used for plural selection.
 | Drag labels | U + English A+ C/O | |
 | Search/empty/flat fallback | U + English A+ C/O | |
 | Plural objects | U parity for all 19 locales | translations are not native-reviewed |
-| Long strings / narrow sidebar | English A+ only | ru/hi/ar 252px screenshots: no root overflow; title ellipsizes at minimum width |
-| RTL | Root `dir` + menu/dialog/settings bounds smoke | fine geometry/drag mirroring still not exhaustively audited |
+| Long strings / narrow sidebar | English A+ only | ru/hi/ar 264px-min sidebar (252px content) screenshots: no root overflow; title ellipsizes at minimum width |
+| RTL | Root `dir`, menu/dialog bounds, settings direction | fine geometry/drag mirroring still not exhaustively audited |
 
 ## Not verified
 
 - Full A+ remains English-only; Japanese has the onboarding/dialog fixture.
-- All 19 packaged dictionaries have header/dialog/group-menu smoke coverage,
-  not full-surface A+; settings/config is not in the all-locale smoke.
+- All 19 packaged dictionaries have header/dialog/group-menu/settings smoke
+  coverage, not full-surface A+.
 - No native/client visual pass beyond ru/hi/ar narrow-sidebar screenshots.
 - No translation-quality review beyond structural parity.
-- Arabic RTL has root direction and core list/header/dialog overrides, but no
-  full visual mirror audit (menu/dialog geometry, resize handle, extra icons).
+- Arabic RTL has root direction, menu/dialog bounds and settings direction,
+  but no exhaustive drag/resize geometry or every-icon visual mirror audit.
 
 ## Required evidence before claiming a new language
 

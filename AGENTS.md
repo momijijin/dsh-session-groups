@@ -57,7 +57,7 @@ git branch -d feature/<slug>
 - 当前文档真相源：
   - 测试矩阵/语言运行时状态/aliases：`docs/TEST-MATRIX.md`
   - 本地化资源、解析和限制：`docs/I18N.md`
-  - 当前架构/兼容/契约：`docs/ARCHITECTURE.md`、`docs/COMPATIBILITY.md`、`docs/CONTRACTS.md`
+  - 当前架构/兼容：`docs/ARCHITECTURE.md`、`docs/COMPATIBILITY.md`；`docs/CONTRACTS.md` 是 frozen 历史契约
   - 历史 V1/Gate0/Spike/superpowers 已移出 Git，保存在用户本地归档；不要在仓库里重新引入。
 - i18n 分层规则：
   - UI 只调用 `t(key, params)`，不判断语言、不选 `one/few/many`、不拼句子；
@@ -163,6 +163,6 @@ git merge --no-ff main -m "merge: hotfix v<version> back to dev"
 
 - 最新已发布版本：`0.3.0-beta.76`（`v0.3.0-beta.76` 已发布）
 - 当前开发候选版本：以 `package.json` 的 `version` 为准；`.4.0` 系列身份重置后仍处于本地 beta 候选，尚未发布
-- 当前测试：493/493，coverage 约 93.70/82.36/89.10；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文；日文有 onboarding 语言包 fixture；19 种语言有全语言 header/dialog/group-menu/settings smoke；阿拉伯语 RTL 有菜单/弹窗/设置面板 bounds smoke）
+- 当前测试：493/493，coverage 约 93.70/82.36/89.10；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文；日文有 onboarding 语言包 fixture；19 种语言有全语言 header/dialog/group-menu/settings smoke；阿拉伯语 RTL 有菜单/弹窗 bounds + 设置面板 dir smoke）
 - main / dev：以 `git log --oneline -1` 为准，允许分叉
 - 下一次开发从 `dev` 开新 feature 分支，不从 main 拉功能分支

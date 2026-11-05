@@ -9,7 +9,7 @@ A free-form grouping layer over the shipped DSH Desktop workspace/session sideba
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
 - `workspace.json` is never written.
 
-Current version: **0.4.0-beta.22**  
+Current version: **0.4.0-beta.23**  
 Primary support: **DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 and 0.2.1-rc.5** (`engines.dsh: >=0.2.0-rc.2 <0.3.0`)  
 Verified shells: **community DSH Desktop Stable 2.0.18** (rc.2) and **official DeepSeek Harness desktop 0.2.1.0** (rc.5, isolated runtime A+)  
 Not supported or promised: **community DSH Desktop Beta** and **community DSH NEXT (`-next` channel)**
@@ -133,7 +133,7 @@ Updates are owned by dshmarket / the plugin manager. The plugin does not self-up
 
 ### Upgrading from `dsh-session-groups`
 
-`0.4.0-beta.22` is a new package identity. It does **not** auto-read, copy or delete the old `dsh-session-groups` record or browser keys; this avoids importing data from the same-named community plugins. The manual migration checklist is in [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md).
+`0.4.0-beta.23` is a new package identity. It does **not** auto-read, copy or delete the old `dsh-session-groups` record or browser keys; this avoids importing data from the same-named community plugins. The manual migration checklist is in [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md).
 
 ### Maintainer/developer install
 
@@ -298,7 +298,7 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 ## Language
 
 - follows the host language; there is no plugin-level language switch;
-- packages 15 dictionaries (`en zh ja ko de fr es pt it nl pl tr vi th id`) and registers all of them with the host locale service;
+- packages 19 dictionaries (`en zh ja ko de fr es pt it nl pl tr vi th id ru hi ar zh-Hant`) and registers all of them with the host locale service;
 - the host or a third-party language pack owns activation; the plugin does not call `addLanguage`, add a picker, or add languages to the host catalog itself;
 - locale ids resolve by base language (`ja-JP` → `ja`); `zh-Hant`/`zh-TW`/`zh-HK` select the Traditional Chinese dictionary; `zh-CN`/`zh-Hans` select Simplified Chinese; unknown languages fall back to English;
 - user-created group, session and workspace names are never translated.
@@ -313,7 +313,7 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - writes use an in-process queue plus a short-lived `<record>.lock` file for cross-process serialization; stale locks are reclaimed after the owner PID dies or the lock is 30 seconds old;
 - large-list lazy rendering remains deferred; the current Ungrouped list is virtualized, but a collapsed subtree is still built by `buildRenderTree`;
 - the dshmarket catalog entry is not published yet; local tarball installs are for the beta period;
-- current release validation is **493 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
+- current release validation is **493 unit/contract tests**; the maintainer desktop pass is historical evidence, not a per-candidate CI artifact; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
 
 ## Documentation
 
@@ -347,7 +347,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS;
 - build artifact: `lib/client.js`;
-- package: `dsh-session-grove-0.4.0-beta.22.tgz`;
+- package: `dsh-session-grove-0.4.0-beta.23.tgz`;
 - release steps: `docs/RELEASE.md`;
 - test summary: `docs/TEST-RESULTS.md`.
 
