@@ -13,10 +13,12 @@ import {
   CONTROL_PROTOCOL,
   resolveGroupPath,
 } from '../core/control.js'
+import { buildControlCatalog } from '../core/catalog.js'
 
 export const TOOL_NAME = 'session_groups_control'
 
 const ACTIONS = [
+  'catalog',
   'state',
   'resolve',
   'plan',
@@ -111,6 +113,10 @@ export const createControlTool = (options) => {
       }
     }
     if (!enabled()) return failure('control-disabled', 'enable controlApi before using session_groups_control')
+
+    if (action === 'catalog') {
+      return { ok: true, ...buildControlCatalog() }
+    }
 
     if (action === 'state') {
       const loaded = await load()
@@ -285,6 +291,7 @@ export const createControlTool = (options) => {
     name: TOOL_NAME,
     description:
       'Read and safely change the DSH free-groups sidebar and session title/archive state in-process. ' +
+      'Use action=catalog to read the available icon/color vocabulary and operation names. ' +
       'Use action=state or resolve first; use plan then apply with the returned planHash and baseRevision for group writes. ' +
       'Use action=doctor to inspect host compatibility, gates, storage and service availability. ' +
       'Session actions require an explicit live sessionId. Destructive group deletion requires controlDestructive.',
