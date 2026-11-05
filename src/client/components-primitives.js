@@ -96,7 +96,7 @@ import {
   SIDEBAR_WIDTH_DEFAULT,
   SIDEBAR_WIDTH_MIN,
 } from './sidebar-width.js'
-import { formatAbsoluteTime, relativeTimeParts } from './time.js'
+import { relativeTimeParts } from './time.js'
 import {
   computeVirtualWindow,
   virtualScrollOffset,
@@ -270,7 +270,7 @@ const sessionTime = (updatedAt) => {
   if (!parts) return null
   const t = rt()?.t ?? ((key) => key)
   const label = parts.unit === 'justNow' ? t('time.justNow') : t(`time.${parts.unit}`, { n: parts.value })
-  return { label, title: formatAbsoluteTime(updatedAt) ?? label }
+  return { label, title: rt()?.formatAbsoluteTime?.(updatedAt) ?? label }
 }
 
 /** Shift+F10 / ContextMenu opens the row menu; Enter/Space keep their own action. */

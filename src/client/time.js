@@ -38,14 +38,3 @@ export const relativeTimeParts = (value, now = Date.now()) => {
   if (elapsed < YEAR) return { unit: 'days', value: Math.floor(elapsed / DAY) }
   return { unit: 'years', value: Math.floor(elapsed / YEAR) }
 }
-
-/** Absolute local timestamp for the row `title` tooltip (null when invalid). */
-export const formatAbsoluteTime = (value) => {
-  const timestamp = parseSessionTimestamp(value)
-  if (timestamp === null) return null
-  try {
-    return new Date(timestamp).toLocaleString()
-  } catch {
-    return null
-  }
-}
