@@ -166,6 +166,14 @@ try {
     if (dialogPlaceholder !== expectedPlaceholder || dialogCancel !== expectedCancel || dialogConfirm !== expectedConfirm) {
       throw new Error(`${localeId}: dialog fields mismatch (${dialogPlaceholder}/${dialogCancel}/${dialogConfirm})`)
     }
+    if (localeId === 'ar') {
+      const box = await dialog.boundingBox()
+      const viewport = page.viewportSize()
+      if (!box || box.x < 0 || box.y < 0 || box.x + box.width > viewport.width + 1 || box.y + box.height > viewport.height + 1) {
+        throw new Error(`ar: dialog outside viewport ${JSON.stringify(box)}`)
+      }
+      await page.screenshot({ path: `${testHome}/rtl-dialog.png`, fullPage: false })
+    }
     await page.locator('[data-testid="session-groups-dialog-cancel"]').click()
     await dialog.waitFor({ state: 'hidden' })
 
@@ -174,6 +182,14 @@ try {
     await groupMenuButton.first().click()
     const menu = page.locator('[data-testid="session-groups-menu"]')
     await menu.waitFor({ state: 'visible' })
+    if (localeId === 'ar') {
+      const box = await menu.boundingBox()
+      const viewport = page.viewportSize()
+      if (!box || box.x < 0 || box.y < 0 || box.x + box.width > viewport.width + 1 || box.y + box.height > viewport.height + 1) {
+        throw new Error(`ar: menu outside viewport ${JSON.stringify(box)}`)
+      }
+      await page.screenshot({ path: `${testHome}/rtl-menu.png`, fullPage: false })
+    }
     const menuText = await menu.innerText()
     for (const key of ['group.newSession', 'group.newSubgroup', 'group.rename', 'group.color', 'group.delete']) {
       if (!menuText.includes(dictionaries[dictionaryId][key])) {
@@ -256,6 +272,11 @@ try {
       if (!text.includes(dictionaries[dictionaryId][key])) {
         throw new Error(`${localeId}: settings missing ${key}`)
       }
+    }
+    if (localeId === 'ar') {
+      const dir = await settingsPanel.getAttribute('dir')
+      if (dir !== 'rtl') throw new Error(`ar: settings direction ${dir}`)
+      await page.screenshot({ path: `${testHome}/rtl-settings.png`, fullPage: false })
     }
     console.log(`PASS ${localeId}: settings/config`)
   }
