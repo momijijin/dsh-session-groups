@@ -1,4 +1,4 @@
-# dsh-session-groups
+# dsh-session-grove
 
 [English](README.md) | [中文](README.zh.md)
 
@@ -122,7 +122,7 @@ The top-right view options contain:
 Install from **dshmarket** and search for:
 
 ```text
-dsh-session-groups
+dsh-session-grove
 ```
 
 The market entry is being prepared. Once it is listed, install and update the plugin entirely through dshmarket; users should not need a local path or a terminal command.
@@ -138,7 +138,7 @@ Local tarball and command-line installation are maintainer/debug workflows only.
 The group record is stored at:
 
 ```text
-<dshHome>/storages/dsh-session-groups.json
+<dshHome>/storages/dsh-session-grove.json
 ```
 
 - writes use revision comparison and a serialized queue;
@@ -149,24 +149,24 @@ The group record is stored at:
 
 Local UI preferences:
 
-- `dsh-session-groups.view.v1`
-- `dsh-session-groups.archive.v1`
-- `dsh-session-groups.collapsed.v1`
-- `dsh-session-groups.width.v1`
-- `dsh-session-groups.onboarded.v1`
-- `dsh-session-groups.dialog.geometry.v9`
+- `dsh-session-grove.view.v1`
+- `dsh-session-grove.archive.v1`
+- `dsh-session-grove.collapsed.v1`
+- `dsh-session-grove.width.v1`
+- `dsh-session-grove.onboarded.v1`
+- `dsh-session-grove.dialog.geometry.v9`
 
 Uninstalling the plugin restores the shipped workspace view. The group record and local preferences remain and are restored on reinstall. To remove all traces, delete the record, `.bak` and the localStorage keys above.
 
 ## Configuration
 
-The plugin manager exposes five switches, all off by default. They live on the first layer of the **Plugins → dsh-session-groups** detail page; no component-row drill-down is needed. All controls use the standard DSH `Switch` and `Tooltip`.
+The plugin manager exposes five switches, all off by default. They live on the first layer of the **Plugins → dsh-session-grove** detail page; no component-row drill-down is needed. All controls use the standard DSH `Switch` and `Tooltip`.
 
 | Setting | Default | Effect |
 |---|---|---|
 | `diagnostics` | off | drag HUD and local NDJSON trace; applies live |
 | `debugProbe` | off | temporary dialog layout probe and `.debug.ndjson` route; never enable in production |
-| `controlApi` | off | master switch for the native `session_groups_control` tool and browser/debug control routes |
+| `controlApi` | off | master switch for the native `session_grove_control` tool and browser/debug control routes |
 | `controlDestructive` | off | allow destructive control operations such as group deletion; requires explicit confirmation |
 | `controlSessions` | off | allow session rename and archive changes; requires `controlApi` |
 
@@ -187,12 +187,12 @@ Background job monitoring was rolled back in 0.3.0-beta.1; the plugin does not s
 The primary AI channel is the Host-native tool:
 
 ```text
-session_groups_control
+session_grove_control
 ```
 
 It runs in the DSH Host process, without HTTP, a browser cookie, the control token or the CLI. `controlApi` must be enabled; `controlSessions` controls session rename/archive; `controlDestructive` controls deletion.
 
-After every group commit (native tool or HTTP), the Host publishes the new revision through `/dsh-session-groups/events`; browsers reload and reconcile. Returning to the groups view also reloads the latest snapshot.
+After every group commit (native tool or HTTP), the Host publishes the new revision through `/dsh-session-grove/events`; browsers reload and reconcile. Returning to the groups view also reloads the latest snapshot.
 
 `doctor` is a read-only compatibility diagnostic available even when `controlApi` is off. It returns host capabilities, adapter/version range, control gates, storage paths, storage health (status/revision, backupStatus/backupRevision/backupError, quarantine), service presence and mounted routes.
 
@@ -224,11 +224,11 @@ Session actions require an explicit `sessionId`; a missing id is `invalid-sessio
 
 ### Copy-paste AI prompts
 
-Enable **AI control API** first; the rename prompt also needs **session operations**. No CLI, HTTP request, cookie or token is involved — paste the prompt into a DSH session and let the agent call `session_groups_control`.
+Enable **AI control API** first; the rename prompt also needs **session operations**. No CLI, HTTP request, cookie or token is involved — paste the prompt into a DSH session and let the agent call `session_grove_control`.
 
 #### Batch-create a project hierarchy
 
-> Use `session_groups_control` to create (or reuse) this hierarchy:
+> Use `session_grove_control` to create (or reuse) this hierarchy:
 >
 > `<Project> project group` — icon `server`, color `blue`
 > - `Designing` — icon `book`, color `purple`
@@ -241,22 +241,22 @@ Enable **AI control API** first; the rename prompt also needs **session operatio
 
 #### Rename and assign in one instruction
 
-> Rename the current session to `<new title>` and assign it to `<Project> project group / In development` using `session_groups_control`. Use the current session's explicit `sessionId`; never guess it. Rename first, then plan/apply `session.assign`. If either step fails, stop and report which step failed. This is two sequential operations, not one transaction.
+> Rename the current session to `<new title>` and assign it to `<Project> project group / In development` using `session_grove_control`. Use the current session's explicit `sessionId`; never guess it. Rename first, then plan/apply `session.assign`. If either step fails, stop and report which step failed. This is two sequential operations, not one transaction.
 
 ### HTTP routes (browser/debug)
 
 These routes are for browser settings pages and local debugging, not the primary AI path:
 
 ```text
-GET  /dsh-session-groups/control/doctor
-GET  /dsh-session-groups/control/catalog
-GET  /dsh-session-groups/control/state
-POST /dsh-session-groups/control/resolve
-POST /dsh-session-groups/control/plan
-POST /dsh-session-groups/control/apply
-POST /dsh-session-groups/control/session/inspect
-POST /dsh-session-groups/control/session/rename
-POST /dsh-session-groups/control/session/archive
+GET  /dsh-session-grove/control/doctor
+GET  /dsh-session-grove/control/catalog
+GET  /dsh-session-grove/control/state
+POST /dsh-session-grove/control/resolve
+POST /dsh-session-grove/control/plan
+POST /dsh-session-grove/control/apply
+POST /dsh-session-grove/control/session/inspect
+POST /dsh-session-grove/control/session/rename
+POST /dsh-session-grove/control/session/archive
 ```
 
 The real DSH Desktop host browser fence runs before plugin routes. The CLI exchanges the DSH web cookie using `DSH_WEB_URL` (including `?token=`) and then sends the plugin Bearer token. `doctor` works while `controlApi` is off; other control routes remain behind their own gates:
@@ -264,7 +264,7 @@ The real DSH Desktop host browser fence runs before plugin routes. The CLI excha
 ```powershell
 $env:DSH_HOME = "$env:USERPROFILE\.dsh"
 $env:DSH_WEB_URL = "http://127.0.0.1:43120/?token=token-printed-at-startup"
-node scripts/session-groups-control.mjs doctor
+node scripts/session-grove-control.mjs doctor
 ```
 
 The native tool remains the primary AI path; the CLI is only for local read-only diagnosis and debugging. `doctor` exits non-zero when host compatibility is unsupported, so it can gate pre/post-upgrade scripts.
@@ -274,17 +274,17 @@ The native tool remains the primary AI path; the CLI is only for local read-only
 The plugin writes a local control token at:
 
 ```text
-<dshHome>/storages/dsh-session-groups.control-token
+<dshHome>/storages/dsh-session-grove.control-token
 ```
 
 The POSIX mode is `0600`. Windows does not enforce POSIX modes as ACLs; on a multi-user machine verify the effective ACL separately. When `controlApi` is off, control routes other than `doctor` still return 404; the token cannot bypass the host browser fence.
 
-The bundled skill is `skills/session-groups-control/SKILL.md`. When `controlApi` is enabled, the plugin installs it to `<dshHome>/skills/session-groups-control/SKILL.md`; the settings card can verify or repair a missing/damaged managed skill without reinstalling the plugin. A user-owned file with the same name is never overwritten.
+The bundled skill is `skills/session-grove-control/SKILL.md`. When `controlApi` is enabled, the plugin installs it to `<dshHome>/skills/session-grove-control/SKILL.md`; the settings card can verify or repair a missing/damaged managed skill without reinstalling the plugin. A user-owned file with the same name is never overwritten.
 
 Diagnostics are written to:
 
 ```text
-<dshHome>/storages/dsh-session-groups.diagnostics.ndjson
+<dshHome>/storages/dsh-session-grove.diagnostics.ndjson
 ```
 
 Only while `diagnostics` is on. It contains drag events, ids and timings, never session transcripts. The file is not rotated automatically.
@@ -336,7 +336,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS;
 - build artifact: `lib/client.js`;
-- package: `dsh-session-groups-0.3.0-beta.79.tgz`;
+- package: `dsh-session-grove-0.3.0-beta.79.tgz`;
 - release steps: `docs/RELEASE.md`;
 - test summary: `docs/TEST-RESULTS.md`.
 

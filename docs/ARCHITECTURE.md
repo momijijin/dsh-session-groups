@@ -106,7 +106,7 @@ src/index.js     Cordis host 入口
 - `src/host/storage-health.js`
   - doctor 的只读存储健康检查；不使用 store.load，不触发 quarantine 或写入
 - `src/host/tool.js`
-  - 原生 `session_groups_control`；Host 进程内执行，不经过 HTTP fence
+  - 原生 `session_grove_control`；Host 进程内执行，不经过 HTTP fence
   - action 门禁：`controlApi` / `controlSessions` / `controlDestructive`；`doctor` 只读且不受 write gates 阻挡
   - 分组写走同一套 core control + CAS；session 动作走 Host registry
 - `src/client/skill-repair.js`
@@ -114,10 +114,10 @@ src/index.js     Cordis host 入口
   - 标准 `Switch` / `Button` / `Tooltip`；destructive 有二次确认
 - `src/host/skill-install.js`
   - managed skill 安装/校验；用户自有同名文件不覆盖
-- `scripts/session-groups-control.mjs`
+- `scripts/session-grove-control.mjs`
   - 本地 CLI；只调用 state/plan/apply，不直接写 JSON
   - 读取 DSH_HOME 下的 control token；受 Host 浏览器 fence 限制
-- `skills/session-groups-control/SKILL.md`
+- `skills/session-grove-control/SKILL.md`
   - 模型侧操作流程与安全约束
 
 ## 已有纯模块

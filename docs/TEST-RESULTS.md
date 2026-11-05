@@ -71,16 +71,16 @@ A+ 使用独立 `DSH_HOME`、隔离端口和临时 profile（community `sg-e2e` 
 
 ## 原生工具和隔离控制
 
-- `session_groups_control`：注册、state/resolve/plan/apply/CAS、session 动作、开关门禁
+- `session_grove_control`：注册、state/resolve/plan/apply/CAS、session 动作、开关门禁
 - 隔离 control E2E：state/resolve/plan/apply、icon/color、同名歧义、未知字段
 - 隔离 session E2E：inspect / rename / archive / unarchive 实际 CLI 通过；HTTP/CLI 仍受 Host 浏览器 fence 限制，AI 使用原生工具
-- 自动 skill 安装：`controlApi` 开启后写入 `<DSH_HOME>/skills/session-groups-control/SKILL.md`
+- 自动 skill 安装：`controlApi` 开启后写入 `<DSH_HOME>/skills/session-grove-control/SKILL.md`
 - skill repair：managed skill 可修复；用户自有同名文件返回 `409 skill-user-owned`，不被覆盖
 
 ## 运行方式
 
 ```powershell
-cd C:\Users\Momiji\Projects\dsh-session-groups
+cd C:\Users\Momiji\Projects\dsh-session-grove
 npm test
 npm run check:core
 npm run check:coverage
