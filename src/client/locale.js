@@ -18,18 +18,36 @@ import en from '../../locale/en.json' with { type: 'json' }
 
 export { zh, en }
 
-/** Dictionaries keyed by host locale id prefix. */
+/** Language used whenever the active locale has no packaged dictionary. */
+export const FALLBACK_LANGUAGE = 'en'
+
+/** Dictionaries keyed by base language (`zh`, `en`, later `ja`, ...). */
 export const dictionaries = Object.freeze({ zh, en })
 
-/** Pick a dictionary for a locale id (`en*` -> English, else Chinese). */
-export const dictionaryFor = (localeId) => (typeof localeId === 'string' && localeId.toLowerCase().startsWith('en') ? en : zh)
+/**
+ * Normalize a BCP 47-style locale (`ja-JP`, `zh_Hant_TW`, ...) to its base
+ * language. Region and script dictionaries are not handled yet; unsupported
+ * variants fall back through the same base-language lookup.
+ * @param {unknown} localeId
+ * @returns {string}
+ */
+export const baseLanguage = (localeId) => {
+  if (typeof localeId !== 'string') return ''
+  const normalized = localeId.trim().toLowerCase().replaceAll('_', '-')
+  return normalized.split('-')[0] ?? ''
+}
+
+/** Pick a dictionary for a locale id, falling back to English. */
+export const dictionaryFor = (localeId) => dictionaries[baseLanguage(localeId)] ?? dictionaries[FALLBACK_LANGUAGE]
 
 /**
  * Translate one key with `{name}` placeholder substitution.
- * Missing keys fall back to the Chinese dictionary, then to the key itself.
+ * Missing keys fall back to the English dictionary, then to the key itself.
+ * English is the stable fallback so an unsupported third-party language never
+ * silently renders Chinese.
  */
 export const formatMessage = (dict, key, params = {}) => {
-  const template = dict?.[key] ?? zh[key] ?? key
+  const template = dict?.[key] ?? en[key] ?? key
   if (!params || typeof template !== 'string') return template
   return template.replace(/\{(\w+)\}/g, (match, name) => (Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match))
 }
@@ -79,7 +97,7 @@ export const resolveLocaleId = (getLocaleSnapshot, getEnvironmentLocale = detect
   } catch {
     /* optional environment probe */
   }
-  return 'zh'
+  return FALLBACK_LANGUAGE
 }
 
 /**
