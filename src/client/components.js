@@ -7,6 +7,7 @@
  * from those hooks; the only local state is this plugin's view store.
  */
 import { createElement, useEffect, useMemo, useRef, useState } from 'react'
+import { useGroupsSidebarWidth } from './groups-view-width.js'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
 import { GROUP_ICONS } from '../shared/constants.js'
 import { assignSession, childrenOf, findGroup, groupColor, moveGroup } from '../shared/model.js'
@@ -24,7 +25,7 @@ import { menuAnchorFromEvent, menuAnchorFromRow } from '../core/menu-position.js
 import { perfDragOver, perfDropTarget, perfEnabled, perfMark, perfNow, perfRender, perfSample } from './perf.js'
 import { revealSession } from '../core/search.js'
 import { readOnboardingDone, writeOnboardingDone } from './state.js'
-import { applyManagedWidth, clampSidebarWidth, clearManagedWidth, findLayoutNodes, maxSidebarWidth, readSidebarWidth, writeSidebarWidth, SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MIN } from './sidebar-width.js'
+import { SIDEBAR_WIDTH_MIN } from './sidebar-width.js'
 import { expandAncestors, isExpanded, runningSubagentCounts, statusSectionsByGroup, sessionContainer } from '../core/tree.js'
 
 import { useViewStore, usePerfCommit, dispatch, toast, TextButton, DropPlaceholder, GROUP_PLACEHOLDER_HEIGHT } from './components-primitives.js'
@@ -211,118 +212,15 @@ export const GroupsView = (props) => {
   }
   // Imperative bridge to the virtualized ungrouped list (search reveal).
   const virtualRef = useRef(null)
-  const widthControllerRef = useRef(null)
-  const preferredWidthRef = useRef(0)
-  const [preferredWidth, setPreferredWidth] = useState(() => readSidebarWidth())
-  const [viewportWidth, setViewportWidth] = useState(() => globalThis.innerWidth || 1440)
-  const [widthSupported, setWidthSupported] = useState(false)
-  preferredWidthRef.current = preferredWidth
-  const appliedWidth = clampSidebarWidth(preferredWidth, viewportWidth)
-  const maxAppliedWidth = maxSidebarWidth(viewportWidth)
-
-  useEffect(() => {
-    if (!wide) {
-      // The host owns the 56px rail. The cross-view managed override must also
-      // be released, not just this component's local controller reference.
-      clearManagedWidth()
-      widthControllerRef.current = null
-      setWidthSupported(false)
-      return undefined
-    }
-    const root = rootRef.current
-    if (!root) return undefined
-    let disposed = false
-
-    const clearController = () => {
-      if (!widthControllerRef.current) return
-      try {
-        widthControllerRef.current.clear()
-      } catch {
-        /* fail-soft: a detached host node is already gone */
-      }
-      widthControllerRef.current = null
-    }
-
-    const sync = () => {
-      if (disposed) return
-      const viewport = globalThis.innerWidth || viewportWidth
-      const nodes = findLayoutNodes(root)
-      if (!nodes.supported) {
-        clearController()
-        setWidthSupported(false)
-        return
-      }
-      const clamped = clampSidebarWidth(preferredWidthRef.current, viewport)
-      if (clamped === null) {
-        clearController()
-        setWidthSupported(false)
-        return
-      }
-      if (widthControllerRef.current === null) {
-        const controller = applyManagedWidth(nodes, clamped, viewport)
-        if (!controller) {
-          setWidthSupported(false)
-          return
-        }
-        widthControllerRef.current = controller
-      } else if (widthControllerRef.current.update(clamped, viewport) === null) {
-        clearController()
-        setWidthSupported(false)
-        return
-      }
-      setWidthSupported(true)
-    }
-
-    // The host replaced the frame / sidebar root underneath us: the adapter has
-    // already cleared the override, so hide the handle and re-find the nodes.
-    // When the groups root itself is detached, `findLayoutNodes` reports
-    // unsupported and the handle stays hidden.
-    function onLost() {
-      if (disposed) return
-      clearController()
-      setWidthSupported(false)
-      sync()
-    }
-
-    const onResize = () => {
-      setViewportWidth(globalThis.innerWidth)
-      sync()
-    }
-
-    sync()
-    globalThis.addEventListener('resize', onResize)
-    return () => {
-      disposed = true
-      globalThis.removeEventListener('resize', onResize)
-      // Keep the managed override alive across a groups -> workspace switch;
-      // the plugin shell owns its final release.
-      widthControllerRef.current = null
-      setWidthSupported(false)
-    }
-  }, [wide, store?.docState])
-
-  const handleWidthChange = (next) => {
-    preferredWidthRef.current = next
-    setPreferredWidth(next)
-    widthControllerRef.current?.update(next, globalThis.innerWidth)
-  }
-
-  const handleWidthCommit = (next) => {
-    writeSidebarWidth(next)
-  }
-
-  const handleWidthReset = () => {
-    const viewport = globalThis.innerWidth || viewportWidth
-    // The preference is always the design default (420); the applied width is
-    // only its viewport clamp. Persisting the clamp would permanently downgrade
-    // a narrow-window reset (e.g. 320 at 800px) and widening later would stay
-    // narrow instead of restoring 420.
-    const next = clampSidebarWidth(SIDEBAR_WIDTH_DEFAULT, viewport)
-    preferredWidthRef.current = SIDEBAR_WIDTH_DEFAULT
-    setPreferredWidth(SIDEBAR_WIDTH_DEFAULT)
-    if (next !== null) widthControllerRef.current?.update(next, viewport)
-    writeSidebarWidth(SIDEBAR_WIDTH_DEFAULT)
-  }
+  const {
+    viewportWidth,
+    appliedWidth,
+    maxAppliedWidth,
+    widthSupported,
+    handleWidthChange,
+    handleWidthCommit,
+    handleWidthReset,
+  } = useGroupsSidebarWidth({ wide, docState: store?.docState, rootRef })
 
   const t = rt()?.t ?? ((key) => key)
   const direction = rt()?.direction === 'rtl' ? 'rtl' : 'ltr'
