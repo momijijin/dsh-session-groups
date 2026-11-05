@@ -6,11 +6,12 @@
  * `usePanelInfo`, `…`) plus the slot owner share. Everything host-derived is read
  * from those hooks; the only local state is this plugin's view store.
  */
-import { createElement, useEffect, useRef, useState } from 'react'
+import { createElement, useEffect, useMemo, useRef, useState } from 'react'
 import { useGroupsSidebarWidth } from './groups-view-width.js'
-import { useGroupsViewData } from './groups-view-data.js'
+import { useGroupsViewState } from './groups-view-state.js'
 import { useGroupsSearchReveal } from './groups-view-search.js'
 import { createMenuHandlers } from './groups-view-menu-handlers.js'
+import { createDialogHandlers } from './groups-view-dialog-handlers.js'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
 import { findGroup, moveGroup } from '../shared/model.js'
 import { currentGroupIdOf, findGroupsFlat } from '../core/dialog-selection.js'
@@ -73,8 +74,6 @@ export const GroupsView = (props) => {
   perfRender('GroupsView')
   diagRender('GroupsView')
   const {
-    handlersRef,
-    stableHandlers,
     sessions,
     workspaces,
     statuses,
@@ -87,7 +86,21 @@ export const GroupsView = (props) => {
     currentId,
     highlightCurrent,
     tree,
-  } = useGroupsViewData({ store, props })
+  } = useGroupsViewState({ store, props })
+
+  // Stable handler proxy owns no data itself; every call reads the latest
+  // handlersRef, so memoized rows can keep a stable handler identity.
+  const handlersRef = useRef(null)
+  const stableHandlers = useMemo(
+    () =>
+      new Proxy(
+        {},
+        {
+          get: (_target, property) => (...args) => handlersRef.current?.[property]?.(...args),
+        },
+      ),
+    [],
+  )
   const [dragState, setDragState] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
   const [onboardingOpen, setOnboardingOpen] = useState(() => !readOnboardingDone())
@@ -384,7 +397,8 @@ export const GroupsView = (props) => {
     return marker.groupId === groupId && Date.now() - marker.at <= 400
   }
   const handlers = {
-    ...createMenuHandlers({ store, byId, workspaceItems, currentId, t, dragRef, handleWidthReset, selectSearchResult, consumeDragClick }),
+    ...createMenuHandlers({ t, dragRef, consumeDragClick, handleWidthReset, selectSearchResult }),
+    ...createDialogHandlers({ store, t, byId, workspaceItems, currentId }),
     onDragStart: (sessionId) => {
       const row = byId[sessionId]
       dragRef.current = {

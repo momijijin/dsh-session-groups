@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.4.0-beta.33**  
+当前实现：**0.4.0-beta.34**  
 支持宿主：`@deepseek-ai/dsh` 0.2.1-rc.2 / 0.2.1-rc.5  
 已验证壳：社区版 DSH Desktop **Stable** 2.0.18（rc.2）；官方 DeepSeek Harness 桌面版 0.2.1.0（rc.5，隔离 A+ + 桌面窗口验收）  
 明确不支持：社区版 DSH Desktop Beta、社区版 DSH NEXT（`-next`）  
@@ -51,9 +51,10 @@ src/index.js     Cordis host 入口
 - `src/client/i18n/direction.js`：RTL 检测（基础语言 + `Intl.Locale` textInfo）
 - `src/client/i18n/date-format.js`：`Intl.DateTimeFormat` 绝对时间格式化（UI 通过 runtime bridge 调用）
 - `src/client/groups-view-width.js`：`GroupsView` 的 sidebar width controller hook（持久化/视口 clamp/host DOM 生命周期）
-- `src/client/groups-view-data.js`：framework session/workspace/status hooks、可见树与 stable handler proxy
+- `src/client/groups-view-state.js`：framework session/workspace/status hooks 与可见树（纯数据适配）
 - `src/client/groups-view-search.js`：搜索 reveal/highlight 的 DOM 控制器与 timer 生命周期
-- `src/client/groups-view-menu-handlers.js`：菜单/弹窗/移动步进等 action handlers
+- `src/client/groups-view-menu-handlers.js`：菜单锚点/上下文菜单/导航命令
+- `src/client/groups-view-dialog-handlers.js`：新建/重命名/移动/删除/归档/fork 等 dialog 命令
 - `src/client/plugin-locale.js`：locale service 注册/订阅、translator/direction/time 运行时
 
 边界规则：
