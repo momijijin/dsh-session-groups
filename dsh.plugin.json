@@ -1,7 +1,7 @@
 {
   "id": "dsh-session-grove",
   "name": "dsh-session-grove",
-  "version": "0.4.0-beta.8",
+  "version": "0.4.0-beta.9",
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": {
@@ -12,7 +12,9 @@
     "de": "Eine frei gestaltbare Gruppierungsebene für die Seitenleiste von DSH Desktop: Ordnen Sie Sitzungen aus verschiedenen Arbeitsbereichen derselben Gruppe zu, ohne ihre offizielle Arbeitsbereichszugehörigkeit oder ihre Protokolle zu ändern.",
     "fr": "Une couche de regroupement libre pour la barre latérale de DSH Desktop : affectez des sessions de différents espaces de travail à un même groupe sans modifier leur appartenance officielle à un espace de travail ni leurs journaux.",
     "es": "Una capa de agrupación libre para la barra lateral de DSH Desktop: permite asignar sesiones de distintos espacios de trabajo a un mismo grupo sin cambiar su pertenencia oficial al espacio de trabajo ni sus registros.",
-    "pt": "Uma camada de agrupamento livre para a barra lateral do DSH Desktop: agrupe sessões de diferentes espaços de trabalho no mesmo grupo sem alterar a vinculação oficial ao espaço de trabalho nem os registros."
+    "pt": "Uma camada de agrupamento livre para a barra lateral do DSH Desktop: agrupe sessões de diferentes espaços de trabalho no mesmo grupo sem alterar a vinculação oficial ao espaço de trabalho nem os registros.",
+    "it": "Un livello di raggruppamento libero per la barra laterale di DSH Desktop: consente di assegnare sessioni di spazi di lavoro diversi allo stesso gruppo senza modificarne l'appartenenza ufficiale allo spazio di lavoro né i log.",
+    "nl": "Een vrij indeelbare groeperingslaag voor de zijbalk van DSH Desktop: wijs sessies uit verschillende werkruimtes toe aan dezelfde groep zonder hun officiële werkruimtetoewijzing of logboeken te wijzigen."
   },
   "title": {
     "en": "Free Groups",
@@ -22,6 +24,8 @@
     "de": "Freie Gruppen",
     "fr": "Groupes libres",
     "es": "Grupos libres",
-    "pt": "Grupos livres"
+    "pt": "Grupos livres",
+    "it": "Gruppi liberi",
+    "nl": "Vrije groepen"
   }
 }
