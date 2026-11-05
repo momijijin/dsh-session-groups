@@ -157,10 +157,22 @@
   "icon.rocket": "Fusée",
   "icon.hash": "Dièse",
   "time.justNow": "à l'instant",
-  "time.minutes": "il y a {n} min",
-  "time.hours": "il y a {n} h",
-  "time.days": "il y a {n} j",
-  "time.years": "il y a {n} an(s)",
+  "time.minutes": {
+    "one": "il y a {n} min",
+    "other": "il y a {n} min"
+  },
+  "time.hours": {
+    "one": "il y a {n} h",
+    "other": "il y a {n} h"
+  },
+  "time.days": {
+    "one": "il y a {n} j",
+    "other": "il y a {n} j"
+  },
+  "time.years": {
+    "one": "il y a {n} an",
+    "other": "il y a {n} ans"
+  },
   "icon.briefcase": "Mallette",
   "icon.book": "Livre",
   "icon.code": "Code",
