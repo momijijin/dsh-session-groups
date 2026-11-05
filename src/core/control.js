@@ -17,14 +17,17 @@ import {
   groupColor,
   groupColorHex,
   hasControlChars,
+  isKnownColor,
+  isKnownIcon,
   moveGroup,
+  normalizeColorHex,
   renameGroup,
   setGroupColor,
   setGroupColorHex,
   setGroupIcon,
   validateDoc,
 } from '../shared/model.js'
-import { MAX_DEPTH, MAX_GROUP_NAME } from '../shared/constants.js'
+import { GROUP_COLORS, GROUP_ICONS, MAX_DEPTH, MAX_GROUP_NAME } from '../shared/constants.js'
 
 export const CONTROL_PROTOCOL = 1
 export const MAX_CONTROL_OPERATIONS = 64
@@ -120,6 +123,41 @@ const validateField = (operation, index, field, spec) => {
   return null
 }
 
+/**
+ * Semantic enum/format checks for group appearance fields. The shared
+ * mutators still normalize persisted/legacy docs, but control input is
+ * user intent and must not be silently rewritten.
+ */
+const validateGroupAppearance = (operation, index) => {
+  if (operation.op !== 'group.create' && operation.op !== 'group.update') return null
+  if (operation.color !== undefined && operation.colorHex !== undefined) {
+    return fail('invalid-operation', 'color and colorHex are mutually exclusive', index, {
+      field: 'color|colorHex',
+      expected: 'choose one color representation',
+    })
+  }
+  if (operation.icon !== undefined && !isKnownIcon(operation.icon)) {
+    return fail('invalid-icon', `unknown icon ${JSON.stringify(operation.icon)}`, index, {
+      field: 'icon',
+      allowed: [...GROUP_ICONS],
+    })
+  }
+  if (operation.color !== undefined && !isKnownColor(operation.color)) {
+    return fail('invalid-color', `unknown palette color ${JSON.stringify(operation.color)}`, index, {
+      field: 'color',
+      allowed: [...GROUP_COLORS],
+    })
+  }
+  if (operation.colorHex !== undefined && normalizeColorHex(operation.colorHex) === null) {
+    return fail('invalid-color', 'colorHex must be #RGB, RGB, #RRGGBB or RRGGBB (no alpha)', index, {
+      field: 'colorHex',
+      expected: '#RGB | RGB | #RRGGBB | RRGGBB',
+      canonical: '#rrggbb',
+    })
+  }
+  return null
+}
+
 const validateOperation = (operation, index) => {
   if (!isPlainRecord(operation)) {
     return fail('invalid-operation', 'operation must be an object', index, { expected: 'object' })
@@ -149,6 +187,8 @@ const validateOperation = (operation, index) => {
       expected: 'at least one update field',
     })
   }
+  const appearance = validateGroupAppearance(operation, index)
+  if (appearance !== null) return appearance
   return null
 }
 
