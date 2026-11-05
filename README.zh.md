@@ -313,8 +313,10 @@ node scripts/session-grove-control.mjs doctor
 ## 语言
 
 - 只跟随主框架当前语言，不提供插件自己的语言切换入口。
-- 当前注册 `zh` / `en`；其他语言的 JSON 只作为后续备用资源，不主动加入主框架语言目录。
-- 只有主框架已实现的语言才会被启用；用户创建的分组名、会话名和工作区名不翻译。
+- 已打包 15 种字典（`en zh ja ko de fr es pt it nl pl tr vi th id`），并全部注册到 Host locale service。
+- 语言是否可选由 Host 或第三方语言包决定；插件不调用 `addLanguage`，不添加语言选择器，也不主动向 Host 语言目录加入语言。
+- locale id 按基础语言解析（`ja-JP` → `ja`）；`zh-Hant`/`zh-TW` 当前命中简体中文，不是独立繁体资源；未知语言回退英文。
+- 用户创建的分组名、会话名和工作区名不翻译。
 
 ## 已知限制
 
@@ -326,11 +328,13 @@ node scripts/session-grove-control.mjs doctor
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框移动/缩放已有键盘支持；全量 axe/对比度审计和整棵树的键盘拖拽仍为 deferred。
-- 当前发布验证以 **462 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
+- 当前发布验证以 **486 项单元/契约测试**（含 Node 内置 coverage 报告）和用户桌面回归为准；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
 
 ## 文档
 
 - [当前文档索引](docs/INDEX.md)
+- [测试矩阵](docs/TEST-MATRIX.md)
+- [本地化状态](docs/I18N.md)
 - [兼容策略](docs/COMPATIBILITY.md)
 - [架构](docs/ARCHITECTURE.md)
 - [发布与验证](docs/RELEASE.md)
@@ -348,8 +352,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：462 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.63% lines / 82.22% branches / 88.73% functions）
+- `npm test`：486 项单元/契约测试
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 93.63% lines / 82.20% branches / 88.98% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH

@@ -298,8 +298,10 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 ## Language
 
 - follows the host language; there is no plugin-level language switch;
-- registers `zh` and `en`; other locale JSON files are kept as future resources and are not added to the host locale catalog automatically;
-- only languages implemented by the host are enabled; user-created group, session and workspace names are never translated.
+- packages 15 dictionaries (`en zh ja ko de fr es pt it nl pl tr vi th id`) and registers all of them with the host locale service;
+- the host or a third-party language pack owns activation; the plugin does not call `addLanguage`, add a picker, or add languages to the host catalog itself;
+- locale ids resolve by base language (`ja-JP` → `ja`); `zh-Hant`/`zh-TW` currently resolve to Simplified Chinese, not a separate traditional resource; unknown languages fall back to English;
+- user-created group, session and workspace names are never translated.
 
 ## Known limitations
 
@@ -311,11 +313,13 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - writes use an in-process queue plus a short-lived `<record>.lock` file for cross-process serialization; stale locks are reclaimed after the owner PID dies or the lock is 30 seconds old;
 - large-list lazy rendering remains deferred; the current Ungrouped list is virtualized, but a collapsed subtree is still built by `buildRenderTree`;
 - the dshmarket catalog entry is not published yet; local tarball installs are for the beta period;
-- current release validation is **462 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
+- current release validation is **486 unit/contract tests** plus the user's real desktop pass; `e2e/groups.spec.mjs` is a historical manual script, while the default automated A+ is `e2e/isolated.spec.mjs`.
 
 ## Documentation
 
 - [Current documentation index](docs/INDEX.md)
+- [Test matrix](docs/TEST-MATRIX.md)
+- [Localization status](docs/I18N.md)
 - [Compatibility policy](docs/COMPATIBILITY.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Release and verification](docs/RELEASE.md)
@@ -333,8 +337,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`: 462 unit/contract tests;
-- `npm run check:coverage`: Node built-in coverage (currently about 93.63% lines / 82.22% branches / 88.73% functions, `src/**` scope);
+- `npm test`: 486 unit/contract tests;
+- `npm run check:coverage`: Node built-in coverage (currently about 93.63% lines / 82.20% branches / 88.98% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;
