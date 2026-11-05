@@ -1,160 +1,39 @@
 /**
- * Locale dictionaries + translator for the groups client half.
+ * Public locale facade for the groups client half.
  *
- * The plugin registers these dictionaries with the host locale service when it
- * exists and re-renders on locale changes (the service exposes
- * getSnapshot/subscribe). The packaged dictionaries are also used directly so a
- * host composition that does not expose its locale translator still follows the
- * active document language instead of falling back to Chinese.
- * `locale/zh.json` / `locale/en.json` are the packaged source of truth and are
- * imported into the client bundle at build time.
+ * The implementation is split into four i18n modules so resources, locale-id
+ * resolution, message formatting and translator selection can evolve and be
+ * tested independently:
+ *
+ *   i18n/resources.js       packaged dictionaries + fallback language
+ *   i18n/locale-id.js       id normalization + host/document resolution
+ *   i18n/message-format.js  CLDR plural selection + {placeholder} interpolation
+ *   i18n/translator.js      dictionary selection + createTranslator
+ *
+ * UI code should consume only the translator (`t`); it must not import the
+ * JSON resources or inspect plural categories.
  */
 
-/** Locale namespace owned by this plugin. */
-export const LOCALE_NS = 'dsh-session-grove'
-
-import zh from '../../locale/zh.json' with { type: 'json' }
-import en from '../../locale/en.json' with { type: 'json' }
-import ja from '../../locale/ja.json' with { type: 'json' }
-import ko from '../../locale/ko.json' with { type: 'json' }
-import de from '../../locale/de.json' with { type: 'json' }
-import fr from '../../locale/fr.json' with { type: 'json' }
-import es from '../../locale/es.json' with { type: 'json' }
-import pt from '../../locale/pt.json' with { type: 'json' }
-import it from '../../locale/it.json' with { type: 'json' }
-import nl from '../../locale/nl.json' with { type: 'json' }
-import pl from '../../locale/pl.json' with { type: 'json' }
-import tr from '../../locale/tr.json' with { type: 'json' }
-import vi from '../../locale/vi.json' with { type: 'json' }
-import th from '../../locale/th.json' with { type: 'json' }
-import id from '../../locale/id.json' with { type: 'json' }
-
-export { zh, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id }
-
-/** Language used whenever the active locale has no packaged dictionary. */
-export const FALLBACK_LANGUAGE = 'en'
-
-/** Dictionaries keyed by base language (`zh`, `en`, `ja`, `ko`, ...). */
-export const dictionaries = Object.freeze({ zh, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id })
-
-/**
- * Normalize a BCP 47-style locale (`ja-JP`, `zh_Hant_TW`, ...) to its base
- * language. Region and script dictionaries are not handled yet; unsupported
- * variants fall back through the same base-language lookup.
- * @param {unknown} localeId
- * @returns {string}
- */
-export const baseLanguage = (localeId) => {
-  if (typeof localeId !== 'string') return ''
-  const normalized = localeId.trim().toLowerCase().replaceAll('_', '-')
-  return normalized.split('-')[0] ?? ''
-}
-
-/** Pick a dictionary for a locale id, falling back to English. */
-export const dictionaryFor = (localeId) => dictionaries[baseLanguage(localeId)] ?? dictionaries[FALLBACK_LANGUAGE]
-
-/**
- * Resolve a string or plural template for the active locale. Plural templates
- * are plain objects keyed by CLDR categories (`one`, `other`, ...); `Intl`
- * chooses the category from `params.n`. Without a numeric count, `other` is the
- * stable fallback.
- * @param {string | Record<string, string> | undefined} template
- * @param {string} localeId
- * @param {Record<string, unknown>} params
- * @returns {string | undefined}
- */
-const selectPluralTemplate = (template, localeId, params) => {
-  if (!template || typeof template !== 'object') return template
-  const count = Number(params?.n)
-  const fallback = template.other ?? template.one ?? Object.values(template)[0]
-  if (!Number.isFinite(count)) return fallback
-  try {
-    const category = new Intl.PluralRules(localeId || FALLBACK_LANGUAGE).select(count)
-    return template[category] ?? fallback
-  } catch {
-    try {
-      const category = new Intl.PluralRules(FALLBACK_LANGUAGE).select(count)
-      return template[category] ?? fallback
-    } catch {
-      return fallback
-    }
-  }
-}
-
-/**
- * Translate one key with `{name}` placeholder substitution.
- * Missing keys fall back to the English dictionary, then to the key itself.
- * English is the stable fallback so an unsupported third-party language never
- * silently renders Chinese. Object values are CLDR plural templates.
- * @param {Record<string, string | Record<string, string>>} dict
- * @param {string} key
- * @param {Record<string, unknown>} [params]
- * @param {string} [localeId]
- */
-export const formatMessage = (dict, key, params = {}, localeId = FALLBACK_LANGUAGE) => {
-  const selected = dict?.[key] ?? en[key] ?? key
-  const template = selectPluralTemplate(selected, localeId, params)
-  if (!params || typeof template !== 'string') return template
-  return template.replace(/\{(\w+)\}/g, (match, name) => (Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match))
-}
-
-/**
- * Browser language visible to a client plugin. The host locale service keeps
- * `<html lang>` in sync with its active locale; navigator is only a secondary
- * fallback because the browser language can disagree with the DSH UI language.
- * @returns {string} a locale id, or an empty string when no browser hint exists
- */
-export const detectEnvironmentLocale = () => {
-  try {
-    const lang = globalThis.document?.documentElement?.lang
-    if (typeof lang === 'string' && lang.trim() !== '') return lang.trim()
-  } catch {
-    /* no document in tests/host worker */
-  }
-  try {
-    const navigator = globalThis.navigator
-    const first = Array.isArray(navigator?.languages) ? navigator.languages[0] : navigator?.language
-    if (typeof first === 'string' && first.trim() !== '') return first.trim()
-  } catch {
-    /* optional browser API */
-  }
-  return ''
-}
-
-/**
- * Resolve the active locale from the host snapshot, then the document language,
- * then the browser language. Host snapshots use `active`; `id` is kept for
- * older compositions.
- * @param {() => ({ active?: string, id?: string } | null | undefined)} [getLocaleSnapshot]
- * @param {() => string} [getEnvironmentLocale]
- * @returns {string}
- */
-export const resolveLocaleId = (getLocaleSnapshot, getEnvironmentLocale = detectEnvironmentLocale) => {
-  try {
-    const snapshot = getLocaleSnapshot?.()
-    const active = snapshot?.active ?? snapshot?.id
-    if (typeof active === 'string' && active.trim() !== '') return active.trim()
-  } catch {
-    /* malformed or unavailable host service */
-  }
-  try {
-    const environment = getEnvironmentLocale?.()
-    if (typeof environment === 'string' && environment.trim() !== '') return environment.trim()
-  } catch {
-    /* optional environment probe */
-  }
-  return FALLBACK_LANGUAGE
-}
-
-/**
- * Create a translator bound to a host locale snapshot getter.
- * @param {() => ({ active?: string, id?: string } | null | undefined)} [getLocaleSnapshot]
- * @param {() => string} [getEnvironmentLocale]
- */
-export const createTranslator = (getLocaleSnapshot, getEnvironmentLocale = detectEnvironmentLocale) => (key, params) => {
-  const localeId = resolveLocaleId(getLocaleSnapshot, getEnvironmentLocale)
-  return formatMessage(dictionaryFor(localeId), key, params, localeId)
-}
-
-
-
+export {
+  FALLBACK_LANGUAGE,
+  LOCALE_NS,
+  de,
+  dictionaries,
+  en,
+  es,
+  fr,
+  id,
+  it,
+  ja,
+  ko,
+  nl,
+  pl,
+  pt,
+  th,
+  tr,
+  vi,
+  zh,
+} from './i18n/resources.js'
+export { baseLanguage, detectEnvironmentLocale, resolveLocaleId } from './i18n/locale-id.js'
+export { formatMessage } from './i18n/message-format.js'
+export { createTranslator, dictionaryFor } from './i18n/translator.js'
