@@ -1,7 +1,7 @@
 // tests/client/search.test.js
 //
 // Task 5 (v1.1): pure search index + reveal logic. Requirements:
-// docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md §3.3/§4.4/§7.
+// historical design archive (see docs/archive/README.md) §3.3/§4.4/§7.
 // No DOM, no React: every assertion drives the exported pure functions.
 
 import test from 'node:test'
