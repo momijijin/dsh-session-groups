@@ -628,6 +628,15 @@ export const createPlugin = () => {
     api = createApi({ documentRef: globalThis.document, trace: (type, detail) => diagTrace(type, detail) })
     if (diagEnabled()) diagContext({ mode: store.getSnapshot().viewMode })
     localeService = safeGet(ctx, 'locale')
+    if (localeService === null) {
+      try {
+        // Cordis services are normally read through ctx.get, but native shells
+        // have also exposed the same face as a direct context property.
+        localeService = typeof ctx?.locale === 'object' && ctx.locale !== null ? ctx.locale : null
+      } catch {
+        /* optional direct service face */
+      }
+    }
     const getLocaleSnapshot = () => {
       try {
         return localeService?.getSnapshot?.() ?? localeService?.getLocale?.() ?? null
@@ -635,12 +644,11 @@ export const createPlugin = () => {
         return null
       }
     }
-    // The host translator owns the active-locale fallback chain. Keep the local
-    // translator only as a feature-detection fallback for older compositions.
-    t =
-      typeof localeService?.bind === 'function'
-        ? localeService.bind(LOCALE_NS)
-        : createTranslator(getLocaleSnapshot)
+    // Use the packaged dictionaries with the host snapshot and the document
+    // language fallback. Native and web shells expose different locale handles;
+    // binding through the host alone leaves this plugin on the Chinese fallback
+    // in the native official shell even when the UI is English.
+    t = createTranslator(getLocaleSnapshot)
     queue = createOptimisticQueue({
       store,
       commit: (doc, revision) => api.commit(doc, revision),
