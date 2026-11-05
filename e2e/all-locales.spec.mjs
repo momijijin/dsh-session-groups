@@ -228,6 +228,38 @@ try {
   }
   await page.setViewportSize({ width: 1280, height: 900 })
 
+  // Settings/config surface: use an English host route to reach the package
+  // detail page, then switch locales and check that the plugin settings slot
+  // follows the active dictionary.
+  await page.evaluate((id) => globalThis.__DSH_E2E_SET_LOCALE__(id), 'en')
+  await page.waitForFunction(() => globalThis.__DSH_E2E_GET_LOCALE__?.().active === 'en')
+  await page.evaluate(() => [...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Plugins')?.click())
+  await page.waitForTimeout(1500)
+  const packageRow = page.locator('[data-plugin-package="dsh-session-grove"]').first()
+  await packageRow.waitFor({ state: 'visible', timeout: 15000 })
+  await packageRow.click()
+  await page.waitForTimeout(1200)
+  const settingsPanel = page.locator('[data-testid="session-groups-settings-panel"]').first()
+  await settingsPanel.waitFor({ state: 'visible', timeout: 15000 })
+
+  for (const [localeId, dictionaryId] of cases) {
+    await page.evaluate((id) => globalThis.__DSH_E2E_SET_LOCALE__(id), localeId)
+    await page.waitForFunction((id) => globalThis.__DSH_E2E_GET_LOCALE__?.().active === id, localeId)
+    const expectedSettings = dictionaries[dictionaryId]['config.title']
+    await page.waitForFunction(
+      (expected) => document.querySelector('[data-testid="session-groups-settings-panel"]')?.innerText?.includes(expected),
+      expectedSettings,
+      { timeout: 5000 },
+    )
+    const text = await settingsPanel.innerText()
+    for (const key of ['config.title', 'config.hint', 'config.controlApi', 'skill.repairTitle']) {
+      if (!text.includes(dictionaries[dictionaryId][key])) {
+        throw new Error(`${localeId}: settings missing ${key}`)
+      }
+    }
+    console.log(`PASS ${localeId}: settings/config`)
+  }
+
   if (pageErrors.length > 0) fail(`page errors: ${pageErrors.join('; ')}`)
   console.log(`PASS: all ${cases.length} locale switch cases`)
 } catch (error) {

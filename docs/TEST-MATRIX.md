@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.20`  
+Status: `0.4.0-beta.21`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -29,9 +29,9 @@ every packaged dictionary and checks the header + new-group dialog.
 | English onboarding/settings/menu/dialog copy | PASS | PASS | PASS | — | — |
 | English plural/time labels | PASS | PASS | PASS | — | — |
 | Third-party language activation (`ja`) | PASS | — | — | PASS | — |
-| All-locale switch: header + new-group dialog + group menu (19 languages + zh-TW/zh-HK/zh-CN/pt-BR aliases) | PASS | — | — | PASS (23 cases) | — |
+| All-locale switch: header + new-group dialog + group menu + settings/config (19 languages + zh-TW/zh-HK/zh-CN/pt-BR aliases) | PASS | — | — | PASS (23 cases) | — |
 | Arabic RTL root: `dir="rtl"` + core list/header/dialog overrides | PASS | — | — | PASS (header/dialog/direction) | — |
-| Full non-English UI surfaces | PASS (resources only) | — | — | LP header/dialog/group menu + ja onboarding/dialog only | — |
+| Full non-English UI surfaces | PASS (resources only) | — | — | LP header/dialog/group menu/settings + ja onboarding/dialog only | — |
 
 ## Language matrix
 
@@ -100,7 +100,7 @@ plural rules are used for plural selection.
 | Surface | Current evidence | Notes |
 |---|---|---|
 | Onboarding card | U + English A+ C/O + ja LP | ja LP checks title/dismiss |
-| Settings/config form | U + English A+ C/O | ja LP does not cover settings |
+| Settings/config form | U + English A+ C/O + all-locale settings smoke | all 23 cases check title/hint/controlApi/skill-repair copy |
 | Group menu / session menu | U + English A+ C/O | |
 | Dialog titles/body | U + English A+ C/O + ja LP (new-group title) | |
 | Status labels and subagent count | U (including pl one/few/many/other) | UI uses one key + `{n}` |
