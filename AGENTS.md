@@ -49,6 +49,23 @@ git branch -d feature/<slug>
 - 归档 tag 默认只留本地，除非用户明确要求推送；它永远不触发 Release。
 - 不为了“同步”把 main 合回 dev；只有在 main 产生热修复时，才按热修复流程回收。
 
+## 2.1 当前节奏：小步快跑
+
+- 每个改动批次始终从 `dev` 切一条 `feature/<slug>`；完成一个小目标就 `--no-ff` 合并、打 `archive/feature/<slug>`、删本地分支。
+- 不把多个无关类型堆进同一批；一个批次内仍按“代码 / 测试 / 文档 / 版本”拆小提交。
+- 每个批次消费下一个 beta 号；未发布号不回收、不复用。最终是否打版本 tag/Release 由用户明示。
+- 当前文档真相源：
+  - 测试矩阵/语言运行时状态/aliases：`docs/TEST-MATRIX.md`
+  - 本地化资源、解析和限制：`docs/I18N.md`
+  - 当前架构/兼容/契约：`docs/ARCHITECTURE.md`、`docs/COMPATIBILITY.md`、`docs/CONTRACTS.md`
+  - 历史 V1/Gate0/Spike/superpowers 已移出 Git，保存在用户本地归档；不要在仓库里重新引入。
+- i18n 分层规则：
+  - UI 只调用 `t(key, params)`，不判断语言、不选 `one/few/many`、不拼句子；
+  - 语言解析、字典选择、CLDR 复数、插值集中在 client i18n 层；
+  - `src/core` 不引入 locale/Intl/字典，只接收注入的 translator；
+  - 新增语言必须同时补资源、registry、manifest、aliases 测试，并在 TEST-MATRIX 标出真实运行时验证级别。
+- 当前包身份是 `dsh-session-grove`；旧 `dsh-session-groups` 数据不做自动迁移，手动迁移见 `docs/MIGRATION-0.4.md`。
+
 ## 3. 发布：dev → main → tag
 
 只有用户明确宣布“这一批可以发布”时才进入本流程。
@@ -139,6 +156,8 @@ git merge --no-ff main -m "merge: hotfix v<version> back to dev"
 
 ## 6. 当前基线
 
-- 最新发布：`0.3.0-beta.68`
-- main / dev：以 `git log --oneline -1` 为准，发布后允许分叉
-- 下一次开发从 `dev` 开新 feature 分支，不再从 main 拉功能分支
+- 最新已发布版本：`0.3.0-beta.76`（`v0.3.0-beta.76` 已发布）
+- 当前开发候选版本：以 `package.json` 的 `version` 为准；`.4.0` 系列身份重置后仍处于本地 beta 候选，尚未发布
+- 当前测试：486/486，coverage 约 93.63/82.20/88.98；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文，日文有语言包 fixture）
+- main / dev：以 `git log --oneline -1` 为准，允许分叉
+- 下一次开发从 `dev` 开新 feature 分支，不从 main 拉功能分支
