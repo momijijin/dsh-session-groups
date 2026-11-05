@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.15 (local i18n ru/hi)
+
+- Added complete Russian (one/few/many/other) and Hindi (one/other) dictionaries (287 keys each) plus manifest metadata.
+- Registered them through the split i18n resources/registry; runtime status remains unit-only in TEST-MATRIX.
+- Tests: 490/490. No tag or Release.
+
 ## 0.4.0-beta.14 (local i18n layering)
 
 - Split `src/client/locale.js` into `i18n/resources.js`, `locale-id.js`, `message-format.js` and `translator.js`; the old file is now a thin re-export facade.
