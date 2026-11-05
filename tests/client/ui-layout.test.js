@@ -24,6 +24,7 @@ const componentSearch = readFileSync(new URL('../../src/client/components-search
 const componentHeader = readFileSync(new URL('../../src/client/components-header.js', import.meta.url), 'utf8')
 const dialogHost = readFileSync(new URL('../../src/client/dialog-host.js', import.meta.url), 'utf8')
 const groupsViewWidth = readFileSync(new URL('../../src/client/groups-view-width.js', import.meta.url), 'utf8')
+const groupsViewData = readFileSync(new URL('../../src/client/groups-view-data.js', import.meta.url), 'utf8')
 const components = [
   componentsSource,
   componentPrimitives,
@@ -34,6 +35,7 @@ const components = [
   componentHeader,
   dialogHost,
   groupsViewWidth,
+  groupsViewData,
 ].join('\n')
 const sessionMenu = readFileSync(new URL('../../src/client/session-menu.js', import.meta.url), 'utf8')
 const scrollArea = readFileSync(new URL('../../src/client/scroll-area.js', import.meta.url), 'utf8')
