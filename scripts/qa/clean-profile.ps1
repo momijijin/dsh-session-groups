@@ -7,7 +7,7 @@
   web process in place and prints both so the operator can inspect and clean up.
 
 .PARAMETER Tarball
-  Absolute path to dsh-session-groups-*.tgz.
+  Absolute path to dsh-session-grove-*.tgz.
 
 .PARAMETER Port
   Web port for the isolated profile. Default 4415.
@@ -63,7 +63,7 @@ if ($install.ExitCode -ne 0) {
   throw "plugin install failed with exit code $($install.ExitCode)"
 }
 
-$installed = Join-Path $testHome "profiles\$Profile\node_modules\dsh-session-groups\package.json"
+$installed = Join-Path $testHome "profiles\$Profile\node_modules\dsh-session-grove\package.json"
 $version = if (Test-Path -LiteralPath $installed) { (Get-Content -LiteralPath $installed -Raw | ConvertFrom-Json).version } else { 'not-installed' }
 
 Write-Host "TEST_HOME=$testHome"

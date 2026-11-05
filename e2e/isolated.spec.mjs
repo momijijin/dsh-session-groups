@@ -190,7 +190,7 @@ const addSessionToGroup = async (groupId) => {
   throw new Error(`new session did not land in group ${groupId}`)
 }
 
-const readTestDoc = () => JSON.parse(readFileSync(resolve(testHome, 'storages', 'dsh-session-groups.json'), 'utf8'))
+const readTestDoc = () => JSON.parse(readFileSync(resolve(testHome, 'storages', 'dsh-session-grove.json'), 'utf8'))
 
 const groupSessionIds = (groupId) => {
   const doc = readTestDoc()
@@ -487,7 +487,7 @@ try {
   await page.waitForTimeout(300)
 
   // Narrow sidebar visual gate: the sidebar must not create horizontal overflow.
-  await page.evaluate(() => localStorage.setItem('dsh-session-groups.width.v1', '264'))
+  await page.evaluate(() => localStorage.setItem('dsh-session-grove.width.v1', '264'))
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1500)
   await closeGetStarted()
@@ -603,11 +603,11 @@ try {
   // a page reload.
   const externalRename = (name) =>
     page.evaluate(async (nextName) => {
-      const loaded = await fetch('/dsh-session-groups/load').then((response) => response.json())
+      const loaded = await fetch('/dsh-session-grove/load').then((response) => response.json())
       const doc = loaded.doc
       if (!Array.isArray(doc?.groups) || doc.groups.length === 0) throw new Error('no group for external commit')
       doc.groups[0].name = nextName
-      const response = await fetch('/dsh-session-groups/commit', {
+      const response = await fetch('/dsh-session-grove/commit', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ baseRevision: loaded.revision, doc }),
@@ -619,7 +619,7 @@ try {
 
   const prepareRename = (targetPage) =>
     targetPage.evaluate(async () => {
-      const loaded = await fetch('/dsh-session-groups/load').then((response) => response.json())
+      const loaded = await fetch('/dsh-session-grove/load').then((response) => response.json())
       if (!Array.isArray(loaded.doc?.groups) || loaded.doc.groups.length === 0) {
         throw new Error('no group for concurrent commit')
       }
@@ -629,7 +629,7 @@ try {
   const commitPreparedRename = (targetPage, prepared, name) =>
     targetPage.evaluate(async ({ baseRevision, doc, name: nextName }) => {
       doc.groups[0].name = nextName
-      const response = await fetch('/dsh-session-groups/commit', {
+      const response = await fetch('/dsh-session-grove/commit', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ baseRevision, doc }),
@@ -689,15 +689,15 @@ try {
   // standard click-pinned tooltip with the long-form risk/usage copy.
   await page.evaluate(() => [...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Plugins')?.click())
   await page.waitForTimeout(1500)
-  const packageRow = page.locator('[data-plugin-package="dsh-session-groups"]').first()
+  const packageRow = page.locator('[data-plugin-package="dsh-session-grove"]').first()
   await packageRow.waitFor({ state: 'visible', timeout: 15000 })
   await packageRow.click()
   await page.waitForTimeout(1200)
   const settingsPanel = page.locator('[data-testid="session-groups-settings-panel"]').first()
   if ((await settingsPanel.count()) === 0) throw new Error('settings panel is not on the package detail page')
-  const pluginHead = await page.locator('[data-plugin-detail="dsh-session-groups"]').innerText()
+  const pluginHead = await page.locator('[data-plugin-detail="dsh-session-grove"]').innerText()
   if (!/Free Groups/.test(pluginHead)) throw new Error(`localized plugin title missing: ${pluginHead.slice(0, 120)}`)
-  const packageIcon = page.locator('[data-plugin-detail="dsh-session-groups"] img[src^="data:image/"]').first()
+  const packageIcon = page.locator('[data-plugin-detail="dsh-session-grove"] img[src^="data:image/"]').first()
   if ((await packageIcon.count()) === 0) throw new Error('plugin manager did not load the package icon metadata')
   if ((await page.locator('[role="switch"]').count()) < 5) throw new Error('settings switches are missing')
   const infoButton = page.locator('.dsg-config-info').first()
@@ -766,7 +766,7 @@ try {
       throw new Error(`concurrent CAS expected one 200 and one 409, got ${JSON.stringify({ a: resultA, b: resultB })}`)
     }
     const winner = resultA.status === 200 ? concurrentA : concurrentB
-    const final = await page.evaluate(() => fetch('/dsh-session-groups/load').then((response) => response.json()))
+    const final = await page.evaluate(() => fetch('/dsh-session-grove/load').then((response) => response.json()))
     if (final.doc.groups[0].name !== winner) {
       throw new Error(`concurrent winner not persisted: expected ${winner}, got ${final.doc.groups[0].name}`)
     }
@@ -782,7 +782,7 @@ try {
   // then restore the route and prove onopen recovery reloads the page.
   const reconnectPage = await context.newPage()
   let blockEvents = true
-  await reconnectPage.route('**/dsh-session-groups/events', (route) =>
+  await reconnectPage.route('**/dsh-session-grove/events', (route) =>
     blockEvents ? route.abort() : route.continue(),
   )
   try {
@@ -792,7 +792,7 @@ try {
     const reconnectTitle = `重连 ${Date.now()}`
     await externalRename(reconnectTitle)
     blockEvents = false
-    await reconnectPage.unroute('**/dsh-session-groups/events')
+    await reconnectPage.unroute('**/dsh-session-grove/events')
     await reconnectPage.waitForFunction(
       (name) => document.body.innerText.includes(name),
       reconnectTitle,

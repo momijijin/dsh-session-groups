@@ -88,7 +88,7 @@ if (-not $url) {
   throw "isolated web URL not found on port $Port"
 }
 
-$installed = Join-Path $testHome "profiles\$Profile\node_modules\dsh-session-groups\package.json"
+$installed = Join-Path $testHome "profiles\$Profile\node_modules\dsh-session-grove\package.json"
 $version = if (Test-Path -LiteralPath $installed) { (Get-Content -LiteralPath $installed -Raw | ConvertFrom-Json).version } else { 'not-installed' }
 $manifest = @{
   testHome = $testHome

@@ -42,7 +42,7 @@ $envs = @{
 
 $storage = Join-Path $testHome 'storages'
 New-Item -ItemType Directory -Force -Path $storage | Out-Null
-$record = Join-Path $storage 'dsh-session-groups.json'
+$record = Join-Path $storage 'dsh-session-grove.json'
 $sentinel = @{
   version = 1
   revision = 0
@@ -87,19 +87,19 @@ Stop-Process -Id $init.Id -Force -ErrorAction SilentlyContinue
 
 Invoke-Plugin "add --force `"file:$Tarball`""
 $installed = Read-ProfileManifest
-if (-not ($installed.dependencies.PSObject.Properties.Name -contains 'dsh-session-groups')) { throw 'install did not add the dependency' }
-if (-not (@($installed.dsh.profile.bundles) -contains 'dsh-session-groups')) { throw 'install did not add the bundle' }
+if (-not ($installed.dependencies.PSObject.Properties.Name -contains 'dsh-session-grove')) { throw 'install did not add the dependency' }
+if (-not (@($installed.dsh.profile.bundles) -contains 'dsh-session-grove')) { throw 'install did not add the bundle' }
 
-Invoke-Plugin 'remove dsh-session-groups'
+Invoke-Plugin 'remove dsh-session-grove'
 $removed = Read-ProfileManifest
-if ($removed.dependencies.PSObject.Properties.Name -contains 'dsh-session-groups') { throw 'uninstall left the dependency' }
-if (@($removed.dsh.profile.bundles) -contains 'dsh-session-groups') { throw 'uninstall left the bundle' }
+if ($removed.dependencies.PSObject.Properties.Name -contains 'dsh-session-grove') { throw 'uninstall left the dependency' }
+if (@($removed.dsh.profile.bundles) -contains 'dsh-session-grove') { throw 'uninstall left the bundle' }
 if ((Get-FileHash -LiteralPath $record -Algorithm SHA256).Hash -ne $beforeHash) { throw 'uninstall changed the group record' }
 
 Invoke-Plugin "add --force `"file:$Tarball`""
 $reinstalled = Read-ProfileManifest
-if (-not ($reinstalled.dependencies.PSObject.Properties.Name -contains 'dsh-session-groups')) { throw 'reinstall did not add the dependency' }
-if (-not (@($reinstalled.dsh.profile.bundles) -contains 'dsh-session-groups')) { throw 'reinstall did not add the bundle' }
+if (-not ($reinstalled.dependencies.PSObject.Properties.Name -contains 'dsh-session-grove')) { throw 'reinstall did not add the dependency' }
+if (-not (@($reinstalled.dsh.profile.bundles) -contains 'dsh-session-grove')) { throw 'reinstall did not add the bundle' }
 if ((Get-FileHash -LiteralPath $record -Algorithm SHA256).Hash -ne $beforeHash) { throw 'reinstall changed the group record' }
 
 Write-Host "PASS: lifecycle install/uninstall/reinstall"

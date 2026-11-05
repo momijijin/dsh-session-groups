@@ -101,7 +101,7 @@ const evidence = {
 
 let driver = null;
 let originalRecord = null;
-const recordPath = join(web.spikeHome, 'storages', 'dsh-session-groups.json');
+const recordPath = join(web.spikeHome, 'storages', 'dsh-session-grove.json');
 
 try {
   originalRecord = readFileSync(recordPath, 'utf8');

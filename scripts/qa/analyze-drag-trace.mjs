@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Analyse a dsh-session-groups drag diagnostics file (0.2.5).
+ * Analyse a dsh-session-grove drag diagnostics file (0.2.5).
  *
- * Input: NDJSON written by `POST /dsh-session-groups/diagnostics` to
- * `<dshHomePath('storages')>/dsh-session-groups.diagnostics.ndjson`. Each line is
+ * Input: NDJSON written by `POST /dsh-session-grove/diagnostics` to
+ * `<dshHomePath('storages')>/dsh-session-grove.diagnostics.ndjson`. Each line is
  * `{receivedAt, runId, schemaVersion, event}` (or a raw event for older builds).
  *
  * Usage:
