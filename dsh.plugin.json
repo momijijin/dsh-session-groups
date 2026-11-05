@@ -1,6 +1,6 @@
 {
-  "id": "dsh-session-groups",
-  "name": "dsh-session-groups",
+  "id": "dsh-session-grove",
+  "name": "dsh-session-grove",
   "version": "0.3.0-beta.79",
   "entry": "src/index.js",
   "client": "lib/client.js",

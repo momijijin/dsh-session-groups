@@ -1,5 +1,5 @@
 /**
- * Cordis host plugin entry for dsh-session-groups.
+ * Cordis host plugin entry for dsh-session-grove.
  *
  * Frozen contract: docs/CONTRACTS.md §2 / §6.5.
  * - Host half mounts load/commit, diagnostics/debug, control/session routes,
@@ -14,7 +14,7 @@
  *   synchronous (home resolution is sync) so route registration happens before
  *   Cordis inspects the effect list.
  *
- * @module dsh-session-groups
+ * @module dsh-session-grove
  */
 
 import { dirname, join } from 'node:path'
@@ -36,7 +36,7 @@ import { resolveDshVersion, selectDshAdapter } from './adapters/dsh-selector.js'
 import { PLUGIN_VERSION } from './shared/constants.js'
 
 /** Cordis function-plugin name (matches the bundle patch row id). */
-export const name = 'dsh-session-groups'
+export const name = 'dsh-session-grove'
 
 /**
  * Plugin-manager configuration schema (Settings → Plugins → this plugin).
@@ -78,14 +78,14 @@ export const apply = (ctx, config = {}) => {
   const declaredVersion = resolveDshVersion(ctx)
   const selectedAdapter = selectDshAdapter(declaredVersion)
   if (declaredVersion !== null && selectedAdapter === null) {
-    logWarn(ctx, `dsh-session-groups: unsupported DSH runtime version ${declaredVersion}; refusing to mount`)
+    logWarn(ctx, `dsh-session-grove: unsupported DSH runtime version ${declaredVersion}; refusing to mount`)
     return
   }
   const hostCapabilities = selectedAdapter === null ? detectHostCapabilities(ctx) : selectedAdapter.detectHost(ctx)
   const requiredHost = selectedAdapter?.requiredHost ?? HOST_REQUIRED
   const hostCompatibility = compatibilityReport(hostCapabilities, requiredHost)
   if (!hostCompatibility.supported) {
-    logWarn(ctx, `dsh-session-groups: missing host capabilities: ${hostCompatibility.missing.join(', ')}`)
+    logWarn(ctx, `dsh-session-grove: missing host capabilities: ${hostCompatibility.missing.join(', ')}`)
   }
   const readFlag = (key) => {
     const value = config?.[key]
@@ -97,7 +97,7 @@ export const apply = (ctx, config = {}) => {
   const changeHub = createChangeHub()
   ctx.effect(
     () => () => changeHub.close(),
-    'dsh-session-groups: close change stream',
+    'dsh-session-grove: close change stream',
   )
   const diagnosticsFilePath =
     typeof config.diagnosticsFilePath === 'string' && config.diagnosticsFilePath.length > 0
@@ -121,10 +121,10 @@ export const apply = (ctx, config = {}) => {
             /* managed skill cleanup is best effort */
           }
         },
-        'dsh-session-groups: remove managed skill',
+        'dsh-session-grove: remove managed skill',
       )
     } catch (error) {
-      logWarn(ctx, `dsh-session-groups: skill install failed: ${error instanceof Error ? error.message : String(error)}`)
+      logWarn(ctx, `dsh-session-grove: skill install failed: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
   {
@@ -141,11 +141,11 @@ export const apply = (ctx, config = {}) => {
             /* token already removed */
           }
         },
-        'dsh-session-groups: remove control token',
+        'dsh-session-grove: remove control token',
       )
     } catch (error) {
       controlToken = null
-      logWarn(ctx, `dsh-session-groups: control token unavailable: ${error instanceof Error ? error.message : String(error)}`)
+      logWarn(ctx, `dsh-session-grove: control token unavailable: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
   let doctorReport = null
@@ -243,7 +243,7 @@ export const apply = (ctx, config = {}) => {
             doctorReport,
           }),
         ),
-      'dsh-session-groups: register control tool',
+      'dsh-session-grove: register control tool',
     )
   }
   if (typeof ctx.inject === 'function') {
@@ -256,7 +256,7 @@ export const apply = (ctx, config = {}) => {
 
   logInfo(
     ctx,
-    `[dsh-session-groups] host ready: file=${record.filePath} storageSource=${
+    `[dsh-session-grove] host ready: file=${record.filePath} storageSource=${
       record.storageSource
     } diagnostics=${diagnosticsFilePath} routes=${mounted.routes.join(',')} connectionAtApply=${
       probe.connection === undefined ? 'deferred' : 'present'

@@ -4,7 +4,7 @@
  * This module is bundled by `scripts/build-client.mjs` into a single CJS factory
  * and wrapped as:
  *
- *   window.__ModuleLoader__.load({ id: 'dsh-session-groups', factory: (require) => module.exports })
+ *   window.__ModuleLoader__.load({ id: 'dsh-session-grove', factory: (require) => module.exports })
  *
  * `react` / `react/jsx-runtime` stay external (platform modules) so the host's
  * single React copy is used; the removed client-runtime package is never imported
@@ -16,7 +16,7 @@ import { createPlugin } from './plugin.js'
 export const inject = ['slots']
 
 /** Stable plugin name for loader diagnostics. */
-export const name = 'dsh-session-groups'
+export const name = 'dsh-session-grove'
 
 const plugin = createPlugin()
 
