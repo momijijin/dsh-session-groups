@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.4.0-beta.30**  
+当前实现：**0.4.0-beta.31**  
 支持宿主：`@deepseek-ai/dsh` 0.2.1-rc.2 / 0.2.1-rc.5  
 已验证壳：社区版 DSH Desktop **Stable** 2.0.18（rc.2）；官方 DeepSeek Harness 桌面版 0.2.1.0（rc.5，隔离 A+ + 桌面窗口验收）  
 明确不支持：社区版 DSH Desktop Beta、社区版 DSH NEXT（`-next`）  

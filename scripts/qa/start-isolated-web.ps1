@@ -17,20 +17,32 @@
 
 .PARAMETER LocalePack
   Optional test-only locale-pack directory/package to install after the plugin.
+
+.PARAMETER HostRoot
+  Optional host installation directory. Defaults to community DSH Desktop;
+  pass the official DeepSeek Harness directory to run the same isolated A+.
 #>
 param(
   [Parameter(Mandatory = $true)][string]$Tarball,
   [int]$Port = 4416,
   [string]$Profile = 'sg-e2e',
-  [string]$LocalePack = ''
+  [string]$LocalePack = '',
+  [string]$HostRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
 
-$desktop = Join-Path $env:LOCALAPPDATA 'Programs\DSH Desktop\DSH Desktop.exe'
-$cli = Join-Path $env:LOCALAPPDATA 'Programs\DSH Desktop\resources\app\lib\desktop-cli.js'
-if (-not (Test-Path -LiteralPath $desktop)) { throw "DSH Desktop not found: $desktop" }
-if (-not (Test-Path -LiteralPath $cli)) { throw "desktop-cli.js not found: $cli" }
+if ($HostRoot -ne '') {
+  $desktop = Join-Path $HostRoot 'DeepSeek Harness.exe'
+  # Official builds keep the host CLI inside app.asar; Windows cannot path-test
+  # into an asar archive, but Electron can execute the virtual path.
+  $cli = Join-Path $HostRoot 'resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js'
+} else {
+  $desktop = Join-Path $env:LOCALAPPDATA 'Programs\DSH Desktop\DSH Desktop.exe'
+  $cli = Join-Path $env:LOCALAPPDATA 'Programs\DSH Desktop\resources\app\lib\desktop-cli.js'
+}
+if (-not (Test-Path -LiteralPath $desktop)) { throw "host executable not found: $desktop" }
+if ($HostRoot -eq '' -and (-not $cli -or -not (Test-Path -LiteralPath $cli))) { throw "host CLI not found: $cli" }
 if (-not (Test-Path -LiteralPath $Tarball)) { throw "Tarball not found: $Tarball" }
 
 $realHome = [System.IO.Path]::GetFullPath((Join-Path $env:USERPROFILE '.dsh'))
