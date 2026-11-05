@@ -1,5 +1,7 @@
 # 0.4.0-beta.13 测试结果
 
+> 本文件是 `0.4.0-beta.13` 的历史证据快照。当前可重复验证状态、语言覆盖范围和测试缺口以 [TEST-MATRIX.md](TEST-MATRIX.md) 为准。
+
 日期：2026-11-05  
 版本：`0.4.0-beta.13`  
 宿主基线：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）  
@@ -11,7 +13,7 @@
 - 本地候选 0.4.0-beta.13：**486/486 PASS**（identity reset + i18n fallback + 15 locales + CLDR plural templates + a11y + maintainability + perf + icon/title + session reorder + official rc.5 compatibility）
 - 身份边界：package/manifest/bundle、host 路由、record/token/diagnostics/debug、client localStorage、skill/tool 名称全部为 grove；旧 `dsh-session-groups` 标识没有残留于 active source。
 - i18n fallback：英文客户端在 Host locale handle 缺失时按 Host snapshot → `<html lang>` → navigator 解析；onboarding、settings、menu、dialog 英文断言已补入隔离 A+。
-- i18n 基础：BCP 47 基础语言归一化、未知语言回退英文、全量字典 Host 注册；已打包 `en/zh/ja/ko/de/fr/es/pt/it/nl/pl/tr/vi/th/id` 十五种 locale（各 288 keys，key/placeholder/非空值一致），区域变体解析到基础语言，其他未支持语言回退英文。
+- i18n 基础：BCP 47 基础语言归一化、未知语言回退英文、全量字典 Host 注册；已打包 `en/zh/ja/ko/de/fr/es/pt/it/nl/pl/tr/vi/th/id` 十五种 locale（各 287 keys，key/placeholder/非空值一致），区域变体解析到基础语言，其他未支持语言回退英文。
 - 复数机制：`Intl.PluralRules` + per-category JSON；`group.sessionCount` 与 `sessions.expand` 已迁移 one/other，其他数量文案后续迁移。
 - 第三方语言包 fixture：test-only ja bundle 调用 `addLanguage({id:ja})` + `setLocale(ja)`，隔离 A+ 断言日文 onboarding 与新建分组弹窗 PASS。
 - 时间复数：`time.minutes/hours/days/years` 已迁移 one/other；`dialog.deleteMoveBody` 双计数仍为已知限制。
@@ -31,7 +33,7 @@
 - 损坏记录 + 有效 `.bak`：隔离坏文件并自动恢复上一 revision，warning `recovered-backup`
 - 真实恢复演练（隔离实例）：主文件 rev15 损坏 → 自动恢复 `.bak` rev14，4 个分组保留，坏文件进入 `.corrupt-*`
 - 损坏记录 + 无效 `.bak`：降级为空分组，保持两份原文件不删除
-- 原生工具 `doctor` 只读兼容性报告（host capabilities/adapter/gates/storage-health/services/routes）：462 项套件覆盖
+- 原生工具 `doctor` 只读兼容性报告（host capabilities/adapter/gates/storage-health/services/routes）：486 项套件覆盖
 - 真实 CLI `doctor` 返回 storage.health.status=ok、revision、backup=true、quarantined=0
 - doctor CLI compatibility gate：host compatibility 不支持时退出非零，JSON 报告保留
 - 真实 CLI `doctor`（隔离实例，交换 DSH web launch cookie + 插件 bearer token）：**PASS**，返回 14 条路由与 host 服务状态
