@@ -14,11 +14,15 @@
 
 .PARAMETER Profile
   Disposable profile name. Default sg-e2e.
+
+.PARAMETER LocalePack
+  Optional test-only locale-pack directory/package to install after the plugin.
 #>
 param(
   [Parameter(Mandatory = $true)][string]$Tarball,
   [int]$Port = 4416,
-  [string]$Profile = 'sg-e2e'
+  [string]$Profile = 'sg-e2e',
+  [string]$LocalePack = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -62,6 +66,20 @@ $install.WaitForExit(180000) | Out-Null
 if ($install.ExitCode -ne 0) {
   Get-Content $installErr -Tail 20 -ErrorAction SilentlyContinue
   throw "plugin install failed with exit code $($install.ExitCode)"
+}
+
+if ($LocalePack -ne '') {
+  $localePackPath = [System.IO.Path]::GetFullPath($LocalePack)
+  if (-not (Test-Path -LiteralPath $localePackPath)) { throw "locale pack not found: $localePackPath" }
+  $packOut = Join-Path $testHome 'locale-pack-install.out'
+  $packErr = Join-Path $testHome 'locale-pack-install.err'
+  $packArgs = "--expose-internals `"$cli`" plugin --profile $Profile add --force `"file:$localePackPath`""
+  $packInstall = Start-Process -FilePath $desktop -ArgumentList $packArgs -Environment $envs -RedirectStandardOutput $packOut -RedirectStandardError $packErr -PassThru -WindowStyle Hidden
+  $packInstall.WaitForExit(180000) | Out-Null
+  if ($packInstall.ExitCode -ne 0) {
+    Get-Content $packErr -Tail 20 -ErrorAction SilentlyContinue
+    throw "locale pack install failed with exit code $($packInstall.ExitCode)"
+  }
 }
 
 $webOut = Join-Path $testHome 'web.out'

@@ -71,7 +71,8 @@
     "check:coverage": "node --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-exclude=\"tests/**\" --test-coverage-exclude=\"scripts/**\" --test-coverage-lines=92 --test-coverage-branches=80 --test-coverage-functions=85 --test \"tests/**/*.test.js\"",
     "test:isolated": "node e2e/isolated.spec.mjs",
     "check:all": "node scripts/check-all.mjs",
-    "check": "node --check src/index.js && node --check src/shared/model.js && node --check src/client/index.js"
+    "check": "node --check src/index.js && node --check src/shared/model.js && node --check src/client/index.js",
+    "test:locale-pack": "node e2e/locale-pack.spec.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.5",
@@ -85,42 +86,3 @@
   },
   "license": "MIT"
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
