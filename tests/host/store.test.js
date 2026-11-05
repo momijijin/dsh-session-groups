@@ -28,7 +28,7 @@ test('H2/H5: commit writes revision+1, one .bak, and leaves no temp file', async
   const first = await temp.store.commit(0, sampleDoc())
   assert.equal(first.kind, 'ok')
   assert.equal(first.revision, 1)
-  assert.deepEqual(await list(temp.storages), ['dsh-session-groups.json'])
+  assert.deepEqual(await list(temp.storages), ['dsh-session-grove.json'])
   const onDisk = JSON.parse(await readFile(temp.filePath, 'utf8'))
   assert.equal(onDisk.revision, 1)
   assert.deepEqual(onDisk, first.doc)
@@ -36,7 +36,7 @@ test('H2/H5: commit writes revision+1, one .bak, and leaves no temp file', async
   const second = await temp.store.commit(1, { ...sampleDoc(), ungrouped: ['s-4', 's-5'] })
   assert.equal(second.kind, 'ok')
   assert.equal(second.revision, 2)
-  assert.deepEqual(await list(temp.storages), ['dsh-session-groups.json', 'dsh-session-groups.json.bak'])
+  assert.deepEqual(await list(temp.storages), ['dsh-session-grove.json', 'dsh-session-grove.json.bak'])
   assert.equal(JSON.parse(await readFile(temp.filePath + '.bak', 'utf8')).revision, 1)
   const tempFiles = (await list(temp.storages)).filter((name) => name.endsWith('.tmp'))
   assert.deepEqual(tempFiles, [])
@@ -146,7 +146,7 @@ test('H6: bad JSON is quarantined as .corrupt-* and degrades to empty + corrupt-
   assert.equal(result.revision, 0)
   assert.deepEqual(result.doc, emptyDoc())
   assert.equal(result.warning, 'corrupt-file')
-  assert.match(result.quarantinedTo, /dsh-session-groups\.corrupt-.*\.json$/)
+  assert.match(result.quarantinedTo, /dsh-session-grove\.corrupt-.*\.json$/)
   assert.equal(await readFile(result.quarantinedTo, 'utf8'), garbage)
   assert.equal(await sha256(temp.filePath).catch(() => 'missing'), 'missing')
 
@@ -172,7 +172,7 @@ test('H6a: a corrupt record recovers the previous valid .bak and preserves the c
   assert.equal(result.warning, 'recovered-backup')
   assert.equal(result.revision, 1)
   assert.deepEqual(result.doc.groups, sampleDoc().groups)
-  assert.match(result.quarantinedTo, /dsh-session-groups\.corrupt-.*\.json$/)
+  assert.match(result.quarantinedTo, /dsh-session-grove\.corrupt-.*\.json$/)
   assert.equal(await readFile(result.quarantinedTo, 'utf8'), garbage)
   assert.equal(JSON.parse(await readFile(temp.filePath, 'utf8')).revision, 1)
 
@@ -191,7 +191,7 @@ test('H6a2: a corrupt record with a corrupt backup still degrades to empty witho
   assert.equal(result.warning, 'corrupt-file')
   assert.equal(result.revision, 0)
   assert.deepEqual(result.doc, emptyDoc())
-  assert.match(result.quarantinedTo, /dsh-session-groups\.corrupt-.*\.json$/)
+  assert.match(result.quarantinedTo, /dsh-session-grove\.corrupt-.*\.json$/)
   assert.equal(await readFile(`${temp.filePath}.bak`, 'utf8'), '{also-broken')
 })
 
@@ -250,10 +250,10 @@ test('S7 crash window: leftover temp files are inert and never affect the record
   assert.equal(next.kind, 'ok')
   assert.equal(next.revision, 2)
   const files = await list(temp.storages)
-  assert.equal(files.includes(`dsh-session-groups.json.${process.pid}.deadbeef.tmp`), true)
-  assert.equal(files.includes('dsh-session-groups.json.tmp'), true)
-  const ownTemps = files.filter((name) => /^dsh-session-groups\.json\.\d+\.[0-9a-f]{8}\.tmp$/.test(name))
-  assert.deepEqual(ownTemps, [`dsh-session-groups.json.${process.pid}.deadbeef.tmp`])
+  assert.equal(files.includes(`dsh-session-grove.json.${process.pid}.deadbeef.tmp`), true)
+  assert.equal(files.includes('dsh-session-grove.json.tmp'), true)
+  const ownTemps = files.filter((name) => /^dsh-session-grove\.json\.\d+\.[0-9a-f]{8}\.tmp$/.test(name))
+  assert.deepEqual(ownTemps, [`dsh-session-grove.json.${process.pid}.deadbeef.tmp`])
 })
 
 test('H10: only the record file family is written next to unrelated host data', async (t) => {
@@ -268,8 +268,8 @@ test('H10: only the record file family is written next to unrelated host data', 
 
   assert.equal(await sha256(sentinel), before)
   assert.deepEqual(await list(temp.storages), [
-    'dsh-session-groups.json',
-    'dsh-session-groups.json.bak',
+    'dsh-session-grove.json',
+    'dsh-session-grove.json.bak',
     'workspace.json',
   ])
 })

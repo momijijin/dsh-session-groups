@@ -64,7 +64,7 @@ test('session control routes stay behind the session mutation switch', async (t)
   })
   t.after(() => on.cleanup())
   assert.deepEqual(
-    on.mounted.routes.filter((path) => path.startsWith('/dsh-session-groups/control/session/')),
+    on.mounted.routes.filter((path) => path.startsWith('/dsh-session-grove/control/session/')),
     [CONTROL_SESSION_INSPECT_PATH, CONTROL_SESSION_RENAME_PATH, CONTROL_SESSION_ARCHIVE_PATH],
   )
 })

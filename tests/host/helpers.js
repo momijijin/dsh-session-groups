@@ -38,7 +38,7 @@ export const makeTempStore = async (now) => {
   const dir = await mkdtemp(join(tmpdir(), 'dsg-host-v1-'))
   const storages = join(dir, 'storages')
   await mkdir(storages, { recursive: true })
-  const filePath = join(storages, 'dsh-session-groups.json')
+  const filePath = join(storages, 'dsh-session-grove.json')
   const store = createStore(now === undefined ? { filePath } : { filePath, now })
   return {
     dir,

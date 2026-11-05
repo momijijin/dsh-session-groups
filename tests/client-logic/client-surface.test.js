@@ -41,7 +41,7 @@ test('state: view mode defaults to workspace, persists groups, and stays at the 
   assert.equal(read(storage), 'workspace', 'first install defaults to the official workspace view');
   write('groups', storage);
   assert.equal(read(storage), 'groups');
-  assert.equal(storage.map.has(module.VIEW_MODE_KEY ?? 'dsh-session-groups.view.v1'), true);
+  assert.equal(storage.map.has(module.VIEW_MODE_KEY ?? 'dsh-session-grove.view.v1'), true);
   write('bogus', storage);
   assert.equal(read(storage), 'workspace', 'unknown persisted values fall back to workspace');
 

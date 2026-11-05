@@ -10,7 +10,7 @@ import { sampleDoc } from './helpers.js'
 const makePath = async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsg-health-'))
   await mkdir(join(dir, 'storages'), { recursive: true })
-  return join(dir, 'storages', 'dsh-session-groups.json')
+  return join(dir, 'storages', 'dsh-session-grove.json')
 }
 
 test('storage health reports missing, valid, backup and quarantine state read-only', async () => {
@@ -29,7 +29,7 @@ test('storage health reports missing, valid, backup and quarantine state read-on
 
   await writeFile(filePath, JSON.stringify({ ...sampleDoc(), revision: 4 }), 'utf8')
   await writeFile(`${filePath}.bak`, JSON.stringify({ ...sampleDoc(), revision: 3 }), 'utf8')
-  await writeFile(join(filePath, '..', 'dsh-session-groups.corrupt-2026.json'), '{}', 'utf8')
+  await writeFile(join(filePath, '..', 'dsh-session-grove.corrupt-2026.json'), '{}', 'utf8')
   const healthy = await inspectStorageHealth(filePath)
   assert.equal(healthy.status, 'ok')
   assert.equal(healthy.revision, 4)

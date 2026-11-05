@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
-const script = fileURLToPath(new URL('../../scripts/session-groups-control.mjs', import.meta.url))
+const script = fileURLToPath(new URL('../../scripts/session-grove-control.mjs', import.meta.url))
 
 const startServer = async (reply, { authToken = null } = {}) => {
   const server = createServer((req, res) => {
@@ -47,7 +47,7 @@ const runCli = (args, env) =>
 test('control CLI doctor exchanges the web launch token and fetches the read-only report', async () => {
   const home = await mkdtemp(join(tmpdir(), 'dsg-cli-'))
   await mkdir(join(home, 'storages'), { recursive: true })
-  await writeFile(join(home, 'storages', 'dsh-session-groups.control-token'), 'test-token\n', 'utf8')
+  await writeFile(join(home, 'storages', 'dsh-session-grove.control-token'), 'test-token\n', 'utf8')
   const report = { ok: true, protocol: 1, plugin: { version: 'test' }, gates: { controlApi: true } }
   const { server, port } = await startServer({ body: report }, { authToken: 'web-token' })
   try {
