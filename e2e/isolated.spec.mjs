@@ -224,6 +224,14 @@ try {
 
   const onboarding = page.locator('[data-testid="session-groups-onboarding"]')
   await onboarding.waitFor({ state: 'visible' })
+  const onboardingTitle = (await page.locator('.dsg-onboarding-title').innerText()).trim()
+  if (onboardingTitle !== 'Welcome to Free Groups') {
+    throw new Error(`English host rendered a non-English onboarding title: ${onboardingTitle}`)
+  }
+  const onboardingDismiss = (await page.locator('[data-testid="session-groups-onboarding-dismiss"]').innerText()).trim()
+  if (onboardingDismiss !== 'Got it') {
+    throw new Error(`English host rendered a non-English onboarding action: ${onboardingDismiss}`)
+  }
   await page.locator('[data-testid="session-groups-onboarding-dismiss"]').click()
   await onboarding.waitFor({ state: 'detached' })
 
@@ -265,8 +273,8 @@ try {
   if ((await firstGroupMenuItem.getAttribute('data-testid')) !== 'session-groups-group-new-session') {
     throw new Error('group menu first item is not the new-session action')
   }
-  if (!/新建会话|New session/.test((await firstGroupMenuItem.textContent()) ?? '')) {
-    throw new Error('group menu new-session label is missing')
+  if (!/New session/.test((await firstGroupMenuItem.textContent()) ?? '')) {
+    throw new Error(`English host rendered a non-English group menu label: ${await firstGroupMenuItem.innerText()}`)
   }
   await firstGroupMenuItem.click()
   const a11yDialog = page.locator('[data-testid="session-groups-dialog"]')
@@ -274,6 +282,10 @@ try {
   const labelledBy = await a11yDialog.getAttribute('aria-labelledby')
   if (!labelledBy || (await page.locator(`#${labelledBy}`).count()) !== 1) {
     throw new Error('dialog has no single accessible title reference')
+  }
+  const dialogTitle = (await page.locator(`#${labelledBy}`).innerText()).trim()
+  if (dialogTitle !== 'New session in group') {
+    throw new Error(`English host rendered a non-English dialog title: ${dialogTitle}`)
   }
   for (let index = 0; index < 8; index += 1) await page.keyboard.press('Tab')
   const tabStayedInside = await page.evaluate(() =>
@@ -695,6 +707,10 @@ try {
   await page.waitForTimeout(1200)
   const settingsPanel = page.locator('[data-testid="session-groups-settings-panel"]').first()
   if ((await settingsPanel.count()) === 0) throw new Error('settings panel is not on the package detail page')
+  const settingsText = await settingsPanel.innerText()
+  if (!/Free-group settings/.test(settingsText) || !/AI control API/.test(settingsText)) {
+    throw new Error(`English host rendered non-English settings copy: ${settingsText.slice(0, 300)}`)
+  }
   const pluginHead = await page.locator('[data-plugin-detail="dsh-session-grove"]').innerText()
   if (!/Free Groups/.test(pluginHead)) throw new Error(`localized plugin title missing: ${pluginHead.slice(0, 120)}`)
   const packageIcon = page.locator('[data-plugin-detail="dsh-session-grove"] img[src^="data:image/"]').first()
