@@ -9,7 +9,12 @@ import { FALLBACK_LANGUAGE, dictionaries } from './resources.js'
 import { detectEnvironmentLocale, localeCandidates, resolveLocaleId } from './locale-id.js'
 import { formatMessage } from './message-format.js'
 
-const registryByLowerId = new Map(Object.entries(dictionaries).map(([id, dictionary]) => [id.toLowerCase(), dictionary]))
+const registryByLowerId = new Map(Object.entries(dictionaries).filter(([, dictionary]) => dictionary != null).map(([id, dictionary]) => [id.toLowerCase(), dictionary]))
+
+/** Register a dictionary loaded at runtime (lazy client chunks). */
+export const registerRuntimeDictionary = (language, dictionary) => {
+  if (typeof language === 'string' && language !== '' && dictionary != null) registryByLowerId.set(language.toLowerCase(), dictionary)
+}
 
 /** Pick a dictionary for a locale id, falling back to English. */
 export const dictionaryFor = (localeId) => {
@@ -17,7 +22,7 @@ export const dictionaryFor = (localeId) => {
     const dictionary = registryByLowerId.get(candidate)
     if (dictionary !== undefined) return dictionary
   }
-  return dictionaries[FALLBACK_LANGUAGE]
+  return registryByLowerId.get(FALLBACK_LANGUAGE) ?? null
 }
 
 /**

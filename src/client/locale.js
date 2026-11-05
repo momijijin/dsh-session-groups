@@ -42,4 +42,5 @@ export { baseLanguage, detectEnvironmentLocale, localeCandidates, normalizeLocal
 export { directionForLocale, isRtlLocale } from './i18n/direction.js'
 export { formatDateTime } from './i18n/date-format.js'
 export { formatMessage } from './i18n/message-format.js'
-export { createTranslator, dictionaryFor } from './i18n/translator.js'
+export { createTranslator, dictionaryFor, registerRuntimeDictionary } from './i18n/translator.js'
+export { loadLazyDictionary, needsLazyDictionary } from './i18n/resources-lazy.js'

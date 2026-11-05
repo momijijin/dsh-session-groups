@@ -1,12 +1,11 @@
 /**
  * Host locale-service wiring for the plugin composition root.
  *
- * Resolves the optional locale service, registers packaged dictionaries,
- * subscribes for host locale changes and exposes the translator/direction/date
- * helpers consumed by the runtime bridge. Kept separate from createPlugin so the
- * composition root stays orchestration-only.
+ * Resolves the optional locale service, registers packaged dictionaries, loads
+ * non-fallback dictionaries on demand from package-local client chunks, and
+ * exposes the translator/direction/date helpers consumed by the runtime bridge.
  */
-import { createTranslator, directionForLocale, dictionaries, formatDateTime, LOCALE_NS, resolveLocaleId } from './locale.js'
+import { createTranslator, directionForLocale, dictionaries, formatDateTime, loadLazyDictionary, LOCALE_NS, needsLazyDictionary, registerRuntimeDictionary, resolveLocaleId } from './locale.js'
 
 const resolveLocaleService = (ctx) => {
   try {
@@ -32,12 +31,39 @@ export const createLocaleRuntime = ({ ctx, store }) => {
     }
   }
   const t = createTranslator(getLocaleSnapshot)
-  let localeDisposer = null
   let subscriptionDisposer = null
+  const localeDisposers = []
+  const loadedLanguages = new Set()
+  let registered = { ...dictionaries }
+
+  const registerDictionaries = () => {
+    try {
+      const disposer = localeService?.register?.(LOCALE_NS, registered)
+      if (typeof disposer === 'function') localeDisposers.push(disposer)
+    } catch {
+      /* locale service optional */
+    }
+  }
+
+  const ensureDictionary = async (localeId) => {
+    if (!needsLazyDictionary(localeId)) return
+    const loaded = await loadLazyDictionary(localeId)
+    if (loaded === null || loadedLanguages.has(loaded.language)) return
+    loadedLanguages.add(loaded.language)
+    registerRuntimeDictionary(loaded.language, loaded.dictionary)
+    registered = { ...registered, [loaded.language]: loaded.dictionary }
+    registerDictionaries()
+    try {
+      store?.dispatch('locale-changed')
+    } catch {
+      /* locale refresh must not break the view */
+    }
+  }
+
+  registerDictionaries()
   try {
-    const disposer = localeService?.register?.(LOCALE_NS, dictionaries)
-    if (typeof disposer === 'function') localeDisposer = disposer
     const unsubscribe = localeService?.subscribe?.(() => {
+      void ensureDictionary(resolveLocaleId(getLocaleSnapshot))
       try {
         store?.dispatch('locale-changed')
       } catch {
@@ -48,6 +74,7 @@ export const createLocaleRuntime = ({ ctx, store }) => {
   } catch {
     /* locale service optional */
   }
+  void ensureDictionary(resolveLocaleId(getLocaleSnapshot))
 
   return {
     t,
@@ -67,9 +94,15 @@ export const createLocaleRuntime = ({ ctx, store }) => {
       }
     },
     dispose: () => {
-      if (typeof localeDisposer === 'function') localeDisposer()
+      for (const disposer of localeDisposers) {
+        try {
+          disposer()
+        } catch {
+          /* already disposed */
+        }
+      }
+      localeDisposers.length = 0
       if (typeof subscriptionDisposer === 'function') subscriptionDisposer()
-      localeDisposer = null
       subscriptionDisposer = null
     },
   }
