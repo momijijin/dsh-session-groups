@@ -1,16 +1,16 @@
-# 0.4.0-beta.20 发布与安装说明
+# 0.4.0-beta.21 发布与安装说明
 
-- 版本：`0.4.0-beta.20`
+- 版本：`0.4.0-beta.21`
 - 包名：`dsh-session-grove`
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
 - 状态：493/493 测试；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
-- 发布包：`dsh-session-grove-0.4.0-beta.20.tgz`
+- 发布包：`dsh-session-grove-0.4.0-beta.21.tgz`
 
 ## 本版重点
 
-- **全语言注入 smoke**：test-only locale pack 注入 19 种语言及 zh-TW/zh-HK/zh-CN/pt-BR 别名，`test:all-locales` 共 23 例断言 header + 新建分组弹窗 + 组菜单 + 阿拉伯语 RTL 根方向。
+- **全语言注入 smoke**：test-only locale pack 注入 19 种语言及 zh-TW/zh-HK/zh-CN/pt-BR 别名，`test:all-locales` 共 23 例断言 header + 新建分组弹窗 + 组菜单 + settings/config + 阿拉伯语 RTL 根方向。
 - **阿拉伯语 + RTL 基础**：`ar` 资源、`dir` 根方向、核心列表/header/弹窗 RTL 覆盖；完整弹窗几何/菜单镜像仍待视觉审计。
 - **i18n 分层**：`locale.js` 拆为 resources / locale-id / message-format / translator；facade 仅 re-export，UI 仍只消费 `t`。
 - **双计数文案**：删除分组改为 `group.sessionCount` + `group.subgroupCount` 两条独立复数 + 静态指令，不再依赖双计数单串。
@@ -34,7 +34,7 @@
 # 以本地 desktop profile 为例
 DeepSeek Harness.exe --expose-internals `
   "C:\Users\<user>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
-  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.20.tgz"
+  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.21.tgz"
 ```
 
 安装后必须重启对应桌面客户端。先卸载旧的 `dsh-session-groups`；不要在同一 profile 中并存两个身份。
