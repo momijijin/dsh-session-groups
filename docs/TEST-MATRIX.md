@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.17`  
+Status: `0.4.0-beta.18`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -8,7 +8,7 @@ and at which level. Other docs should link here instead of restating counts.
 
 | Code | Meaning |
 |---|---|
-| `U` | Unit/contract tests: `npm test` (491 tests) |
+| `U` | Unit/contract tests: `npm test` (493 tests) |
 | `A+ C` | Isolated Playwright, community DSH Desktop 2.0.18 / DSH `0.2.1-rc.2` |
 | `A+ O` | Isolated Playwright, official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5` |
 | `LP` | Test-only all-locale pack (`e2e/fixtures/ja-locale-pack`): host catalog injection + active locale switch |
@@ -29,7 +29,8 @@ every packaged dictionary and checks the header + new-group dialog.
 | English onboarding/settings/menu/dialog copy | PASS | PASS | PASS | — | — |
 | English plural/time labels | PASS | PASS | PASS | — | — |
 | Third-party language activation (`ja`) | PASS | — | — | PASS | — |
-| All-locale switch: header + new-group dialog (18 languages + zh-TW/zh-HK/zh-CN/pt-BR aliases) | PASS | — | — | PASS (22 cases) | — |
+| All-locale switch: header + new-group dialog (19 languages + zh-TW/zh-HK/zh-CN/pt-BR aliases) | PASS | — | — | PASS (23 cases) | — |
+| Arabic RTL root: `dir="rtl"` + core list/header/dialog overrides | PASS | — | — | PASS (header/dialog/direction) | — |
 | Full non-English UI surfaces | PASS (resources only) | — | — | LP header/dialog + ja onboarding/dialog only | — |
 
 ## Language matrix
@@ -53,7 +54,7 @@ every packaged dictionary and checks the header + new-group dialog.
 | `id` Indonesian | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
 | `ru` Russian | yes | PASS (one/few/many/other) | — | PASS (header/dialog) | — | resources + locale-pack smoke |
 | `hi` Hindi | yes | PASS (one/other) | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `ar` Arabic | no | — | — | — | — | not packaged; RTL also missing |
+| `ar` Arabic | yes | PASS (zero/one/two/few/many/other) | — | PASS (header/dialog + RTL root) | — | RTL foundation; full visual mirror not audited |
 | `zh-Hant` Traditional Chinese | yes | PASS | — | PASS (header/dialog) | — | script-aware resolver; locale-pack smoke |
 
 Important distinction:
@@ -105,19 +106,19 @@ plural rules are used for plural selection.
 | Status labels and subagent count | U (including pl one/few/many/other) | UI uses one key + `{n}` |
 | Drag labels | U + English A+ C/O | |
 | Search/empty/flat fallback | U + English A+ C/O | |
-| Plural objects | U parity for all 15 locales | translations are not native-reviewed |
+| Plural objects | U parity for all 19 locales | translations are not native-reviewed |
 | Long strings / narrow sidebar | English A+ only | de/fr/th/pl resources are not visually measured |
-| RTL | — | no `dir` propagation; physical CSS |
+| RTL | Root `dir` + header/dialog/list overrides | menu/dialog geometry and fine icon mirroring not visually audited |
 
 ## Not verified
 
-- No current automated A+ for `zh`, `ja` full UI, `ko`, `de`, `fr`, `es`, `pt`,
-  `it`, `nl`, `pl`, `tr`, `vi`, `th`, `id`.
-- The `ja` LP fixture covers only onboarding and new-group dialog.
+- Full A+ remains English-only; Japanese has the onboarding/dialog fixture.
+- All 19 packaged dictionaries have all-locale header/dialog smoke coverage,
+  not full-surface A+.
 - No native/client visual pass for non-English translations.
 - No translation-quality review beyond structural parity.
-- No Arabic/Hindi/Russian resources.
-- No Traditional Chinese resource or script-aware locale resolution.
+- Arabic RTL has root direction and core list/header/dialog overrides, but no
+  full visual mirror audit (menu/dialog geometry, resize handle, extra icons).
 
 ## Required evidence before claiming a new language
 
@@ -125,7 +126,8 @@ plural rules are used for plural selection.
    resource.
 2. Add aliases and a base-language resolution test.
 3. Run at least an English A+ regression (no global regression).
-4. For the new language, run either a language-pack A+ fixture or an isolated
-   language switch; assert onboarding, settings, menu and dialog copy.
-5. For RTL languages, add `dir` propagation, logical CSS, and a visual
-   regression before claiming support.
+4. Add the language to `e2e/all-locales.spec.mjs`; assert header + new-group
+   dialog copy and, for RTL, the plugin root `dir`. Full settings/menu copy
+   still needs its own fixture.
+5. For RTL languages, add `dir` propagation, core logical/physical overrides,
+   and a visual regression before claiming full support.
