@@ -15,11 +15,14 @@ import {
   fr,
   hi,
   ja,
+  localeCandidates,
+  normalizeLocaleId,
   pl,
   pt,
   ru,
   tr,
   zh,
+  zhHant,
 } from '../../src/client/locale.js'
 
 const withDocumentLang = (lang, run) => {
@@ -152,7 +155,12 @@ test('dictionaryFor handles base language prefixes and falls back to English', (
   assert.equal(dictionaryFor('en'), dictionaries.en)
   assert.equal(dictionaryFor('en-GB'), dictionaries.en)
   assert.equal(dictionaryFor('zh-Hans'), dictionaries.zh)
-  assert.equal(dictionaryFor('zh-TW'), dictionaries.zh)
+  assert.equal(dictionaryFor('zh-CN'), dictionaries.zh)
+  assert.equal(dictionaryFor('zh-Hant'), dictionaries['zh-Hant'])
+  assert.equal(dictionaryFor('zh-TW'), dictionaries['zh-Hant'])
+  assert.equal(dictionaryFor('zh-HK'), dictionaries['zh-Hant'])
+  assert.equal(dictionaryFor('zh-MO'), dictionaries['zh-Hant'])
+  assert.equal(dictionaryFor('zh-Hant-TW'), dictionaries['zh-Hant'])
   assert.equal(dictionaryFor('ja-JP'), dictionaries.ja)
   assert.equal(dictionaryFor('ko-KR'), dictionaries.ko)
   assert.equal(dictionaryFor('de-DE'), dictionaries.de)
@@ -170,6 +178,16 @@ test('dictionaryFor handles base language prefixes and falls back to English', (
   assert.equal(dictionaryFor('hi-IN'), dictionaries.hi)
   assert.equal(dictionaryFor('unknown-language'), dictionaries.en)
   assert.equal(dictionaryFor(undefined), dictionaries.en)
+})
+
+test('script-aware locale resolution separates Traditional and Simplified Chinese', () => {
+  assert.equal(normalizeLocaleId('zh_Hant_TW'), 'zh-hant-tw')
+  assert.ok(localeCandidates('zh-TW').includes('zh-hant'))
+  assert.ok(localeCandidates('zh-HK').includes('zh-hant'))
+  assert.equal(dictionaryFor('zh-TW'), zhHant)
+  assert.equal(dictionaryFor('zh-CN'), zh)
+  assert.equal(createTranslator(() => ({ active: 'zh-TW' }))('onboarding.title'), zhHant['onboarding.title'])
+  assert.equal(createTranslator(() => ({ active: 'zh-CN' }))('onboarding.title'), zh['onboarding.title'])
 })
 
 test('the first language batch resolves each base dictionary and region variant', () => {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.16 (local i18n zh-Hant)
+
+- Added Traditional Chinese (`locale/zh-Hant.json`, 287 keys) with manifest metadata.
+- Added script/region-aware locale candidates: zh-TW/zh-HK/zh-MO select zh-Hant, while zh-CN/zh-Hans keep Simplified zh.
+- Tests: 491/491. No tag or Release.
+
 ## 0.4.0-beta.15 (local i18n ru/hi)
 
 - Added complete Russian (one/few/many/other) and Hindi (one/other) dictionaries (287 keys each) plus manifest metadata.

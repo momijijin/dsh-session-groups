@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.15`  
+Status: `0.4.0-beta.16`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -8,7 +8,7 @@ and at which level. Other docs should link here instead of restating counts.
 
 | Code | Meaning |
 |---|---|
-| `U` | Unit/contract tests: `npm test` (490 tests) |
+| `U` | Unit/contract tests: `npm test` (491 tests) |
 | `A+ C` | Isolated Playwright, community DSH Desktop 2.0.18 / DSH `0.2.1-rc.2` |
 | `A+ O` | Isolated Playwright, official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5` |
 | `LP` | Test-only language-pack fixture (`e2e/fixtures/ja-locale-pack`) |
@@ -52,7 +52,7 @@ The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 | `ru` Russian | yes | PASS (one/few/many/other) | — | — | — | resources only |
 | `hi` Hindi | yes | PASS (one/other) | — | — | — | resources only |
 | `ar` Arabic | no | — | — | — | — | not packaged; RTL also missing |
-| `zh-Hant` Traditional Chinese | no separate resource | — | — | — | — | **currently resolves to simplified `zh`** |
+| `zh-Hant` Traditional Chinese | yes | PASS | — | — | — | script-aware resolver; runtime unit-only |
 
 Important distinction:
 
@@ -71,7 +71,8 @@ plural selection.
 | Input family | Selected dictionary | Notes |
 |---|---|---|
 | `en`, `en-US`, `en-GB`, `en_US` | `en` | fallback language |
-| `zh`, `zh-CN`, `zh-Hans`, `zh-Hant`, `zh-TW`, `zh_TW` | `zh` | all currently map to Simplified Chinese |
+| `zh`, `zh-CN`, `zh-Hans`, `zh-SG` | `zh` | Simplified Chinese |
+| `zh-Hant`, `zh-TW`, `zh-HK`, `zh-MO`, `zh-Hant-TW` | `zh-Hant` | Traditional Chinese; script/region fallback |
 | `ja`, `ja-JP`, `ja_JP` | `ja` | |
 | `ko`, `ko-KR` | `ko` | |
 | `de`, `de-DE`, `de-AT` | `de` | |

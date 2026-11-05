@@ -6,11 +6,19 @@
  * assembly in their own modules.
  */
 import { FALLBACK_LANGUAGE, dictionaries } from './resources.js'
-import { baseLanguage, detectEnvironmentLocale, resolveLocaleId } from './locale-id.js'
+import { detectEnvironmentLocale, localeCandidates, resolveLocaleId } from './locale-id.js'
 import { formatMessage } from './message-format.js'
 
+const registryByLowerId = new Map(Object.entries(dictionaries).map(([id, dictionary]) => [id.toLowerCase(), dictionary]))
+
 /** Pick a dictionary for a locale id, falling back to English. */
-export const dictionaryFor = (localeId) => dictionaries[baseLanguage(localeId)] ?? dictionaries[FALLBACK_LANGUAGE]
+export const dictionaryFor = (localeId) => {
+  for (const candidate of localeCandidates(localeId)) {
+    const dictionary = registryByLowerId.get(candidate)
+    if (dictionary !== undefined) return dictionary
+  }
+  return dictionaries[FALLBACK_LANGUAGE]
+}
 
 /**
  * Create a translator bound to a host locale snapshot getter.
