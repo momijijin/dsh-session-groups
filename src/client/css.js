@@ -30,7 +30,7 @@
  */
 
 /** Style-element id used to keep exactly one copy per page. */
-export const STYLE_ID = 'dsh-session-groups/css'
+export const STYLE_ID = 'dsh-session-grove/css'
 
 export const CSS = `
 .dsg-root {

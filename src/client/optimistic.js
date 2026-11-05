@@ -3,7 +3,7 @@
  *
  * Drag/drop used to wait for the HTTP round trip before the view moved: the
  * commit queue resolved the next document against the last *confirmed* doc and
- * dispatched only after `POST /dsh-session-groups/commit` answered, so every
+ * dispatched only after `POST /dsh-session-grove/commit` answered, so every
  * reorder paid a full request in perceived latency. This module turns drops into
  * WYSIWYG commits:
  *

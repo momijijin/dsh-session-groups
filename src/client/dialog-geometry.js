@@ -15,7 +15,7 @@ export {
   resizeDialogRect,
 } from '../core/dialog-geometry.js'
 
-export const DIALOG_GEOMETRY_KEY = 'dsh-session-groups.dialog.geometry.v9'
+export const DIALOG_GEOMETRY_KEY = 'dsh-session-grove.dialog.geometry.v9'
 
 export const readDialogGeometries = (storage = safeStorage()) => {
   try {

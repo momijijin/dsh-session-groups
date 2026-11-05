@@ -14,13 +14,13 @@
  *   counters, current revision/optimistic flag, tree counts, viewport/sidebar
  *   width, build version, mode and theme;
  * - batching (20 events or 500 ms) flushed to
- *   `POST /dsh-session-groups/diagnostics`, which appends NDJSON under
+ *   `POST /dsh-session-grove/diagnostics`, which appends NDJSON under
  *   `dshHomePath('storages')`; `sendBeacon` on dragend/visibility hidden;
  * - a fixed, pointer-events:none HUD updated at <=4 Hz (never per event, never
  *   through React).
  *
  * Diagnostics are **enabled by default** in 0.2.5 and can be disabled without a
- * rebuild via `localStorage['dsh-session-groups.diagnostics'] = '0'`.
+ * rebuild via `localStorage['dsh-session-grove.diagnostics'] = '0'`.
  *
  * Privacy: no session titles or transcript text are ever traced. IDs, test ids,
  * group names and translated drag labels are allowed (local file only).
@@ -28,11 +28,11 @@
 import { PLUGIN_VERSION } from '../shared/constants.js'
 
 /** localStorage opt-out key (read once per page load). */
-export const DIAGNOSTICS_STORAGE_KEY = 'dsh-session-groups.diagnostics'
+export const DIAGNOSTICS_STORAGE_KEY = 'dsh-session-grove.diagnostics'
 /** Wire schema version; bump when event field names change. */
 export const DIAGNOSTICS_SCHEMA_VERSION = 1
 /** Host route that appends the NDJSON trace. */
-export const DIAGNOSTICS_PATH = 'dsh-session-groups/diagnostics'
+export const DIAGNOSTICS_PATH = 'dsh-session-grove/diagnostics'
 /** Batch trigger: pending events before an immediate flush. */
 export const DIAGNOSTICS_BATCH_SIZE = 20
 /** Batch trigger: maximum delay between flushes. */
@@ -537,7 +537,7 @@ export const createDiagnostics = (options = {}) => {
       if (!warnedFlushFailure) {
         warnedFlushFailure = true
         try {
-          globalThis.console?.warn?.('[dsh-session-groups] diagnostics flush failed; trace stays in the ring buffer')
+          globalThis.console?.warn?.('[dsh-session-grove] diagnostics flush failed; trace stays in the ring buffer')
         } catch {
           /* console unavailable */
         }

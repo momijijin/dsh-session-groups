@@ -10,7 +10,7 @@
 import { safeStorage } from './state.js'
 
 /** localStorage key for the user-chosen sidebar width. */
-export const SIDEBAR_WIDTH_KEY = 'dsh-session-groups.width.v1'
+export const SIDEBAR_WIDTH_KEY = 'dsh-session-grove.width.v1'
 
 /** Smallest width the resize handle may produce. */
 export const SIDEBAR_WIDTH_MIN = 264

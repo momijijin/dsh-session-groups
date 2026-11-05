@@ -205,7 +205,7 @@ export const createPlugin = () => {
         fail(result.routeUnavailable ? 'route-unavailable' : result.code ?? 'load-failed')
       } catch (error) {
         fail('load-failed')
-        if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] load failed', error)
+        if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] load failed', error)
       } finally {
         loadPromise = null
         // A newer revision may have arrived while this read was in flight, or
@@ -262,7 +262,7 @@ export const createPlugin = () => {
     if (typeof EventSourceImpl !== 'function' || changeSource !== null) return
     const stream = createChangeStream({
       EventSourceImpl,
-      url: '/dsh-session-groups/events',
+      url: '/dsh-session-grove/events',
       onRevision: (event) => {
         try {
           const payload = JSON.parse(event.data)
@@ -281,7 +281,7 @@ export const createPlugin = () => {
 
   // --- slot lifecycle -------------------------------------------------------
   const reportRegistrationFailure = (error) => {
-    if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] sidebar registration failed', error)
+    if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] sidebar registration failed', error)
     notify({ kind: 'error', message: t('error.title') })
     store.dispatch('banner', { banner: { kind: 'error', code: 'registration-failed' } })
   }
@@ -497,7 +497,7 @@ export const createPlugin = () => {
       return await commitDocFromAction((latest) => deleteGroup(latest, groupId), 'toast.groupDeleted')
     } catch (error) {
       notify({ kind: 'error', message: t('toast.deleteFailed') })
-      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] direct delete failed', error)
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] direct delete failed', error)
       return null
     }
   }
@@ -591,7 +591,7 @@ export const createPlugin = () => {
       ) {
         failDialog('commit-failed')
       } else notify({ kind: 'error', message: t('toast.dropFailed') })
-      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] dialog action failed', error)
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] dialog action failed', error)
     }
   }
 
@@ -605,7 +605,7 @@ export const createPlugin = () => {
     const declaredVersion = resolveDshVersion(ctx)
     const selectedAdapter = selectDshAdapter(declaredVersion)
     if (declaredVersion !== null && selectedAdapter === null) {
-      globalThis.console?.warn?.(`[dsh-session-groups] unsupported DSH runtime version ${declaredVersion}`)
+      globalThis.console?.warn?.(`[dsh-session-grove] unsupported DSH runtime version ${declaredVersion}`)
       return
     }
     const clientCapabilities = selectedAdapter === null
@@ -617,7 +617,7 @@ export const createPlugin = () => {
     )
     if (!clientCompatibility.supported) {
       globalThis.console?.warn?.(
-        `[dsh-session-groups] missing client capabilities: ${clientCompatibility.missing.join(', ')}`,
+        `[dsh-session-grove] missing client capabilities: ${clientCompatibility.missing.join(', ')}`,
       )
     }
     store = createStore({ storage: safeStorage() })
@@ -655,7 +655,7 @@ export const createPlugin = () => {
     // not be the only path to configuration.
     const currentConfigForm = () => {
       try {
-        return ctx.get?.('configForms')?.get?.('dsh-session-groups') ?? null
+        return ctx.get?.('configForms')?.get?.('dsh-session-grove') ?? null
       } catch {
         return null
       }
@@ -665,7 +665,7 @@ export const createPlugin = () => {
         ctx.slots.register(
           {
             name: 'plugins.bundle.config',
-            key: 'dsh-session-groups',
+            key: 'dsh-session-grove',
             inject: () => ({ form: currentConfigForm() }),
           },
           SkillRepairCard,
@@ -810,7 +810,7 @@ export const createPlugin = () => {
         if (toastTimer !== null) clearTimeout(toastTimer)
         toastTimer = null
       }
-    }, 'dsh-session-groups: lifecycle')
+    }, 'dsh-session-grove: lifecycle')
   }
 
   return { mount }

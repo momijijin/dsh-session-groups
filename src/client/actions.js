@@ -224,7 +224,7 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t, clipb
 
   const notifyFailure = (key, error) => {
     notify({ kind: 'error', message: t(key) })
-    if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups]', key, String(error?.message ?? error))
+    if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove]', key, String(error?.message ?? error))
   }
 
   return {
