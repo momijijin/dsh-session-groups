@@ -77,7 +77,6 @@
   "dialog.cancel": "Cancel",
   "dialog.moveDialog": "Move dialog",
   "dialog.resizeDialog": "Resize dialog",
-  "dialog.deleteMoveBody": "This group contains {sessions} sessions and {groups} subgroups. Choose where to reassign them before deleting the group; no session is deleted or archived.",
   "dialog.deleteDestination": "Destination group",
   "dialog.rootDestination": "Ungrouped (root)",
   "dialog.moveAndDelete": "Reassign and delete",
@@ -309,5 +308,10 @@
   "status.subagentsRunning": {
     "one": "{n} subagent running",
     "other": "{n} subagents running"
-  }
+  },
+  "group.subgroupCount": {
+    "one": "{n} subgroup",
+    "other": "{n} subgroups"
+  },
+  "dialog.deleteMoveInstruction": "Choose where to reassign them before deleting the group; no session is deleted or archived."
 }

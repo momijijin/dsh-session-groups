@@ -28,6 +28,10 @@
     "one": "{n} 件のセッション",
     "other": "{n} 件のセッション"
   },
+  "group.subgroupCount": {
+    "one": "{n} 件のサブグループ",
+    "other": "{n} 件のサブグループ"
+  },
   "drag.groupBefore": "「{name}」の前にドロップ",
   "drag.groupAfter": "「{name}」の後にドロップ",
   "drag.groupInto": "「{name}」の中にドロップ",
@@ -77,7 +81,7 @@
   "dialog.cancel": "キャンセル",
   "dialog.moveDialog": "ダイアログを移動",
   "dialog.resizeDialog": "ダイアログのサイズを変更",
-  "dialog.deleteMoveBody": "このグループには {sessions} 件のセッションと {groups} 件のサブグループがあります。削除する前に、それらの移動先を選択してください。セッションは削除もアーカイブもされません。",
+  "dialog.deleteMoveInstruction": "グループを削除する前に、それらの移動先を選択してください。セッションは削除もアーカイブもされません。",
   "dialog.deleteDestination": "移動先のグループ",
   "dialog.rootDestination": "未分類（最上位）",
   "dialog.moveAndDelete": "移動して削除",

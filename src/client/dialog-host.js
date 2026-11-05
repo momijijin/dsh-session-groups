@@ -409,8 +409,24 @@ export const DialogHost = ({ store, props }) => {
     bodyNodes.push(
       h(
         'div',
-        { class: 'dsg-dialog-body', 'data-testid': 'session-groups-dialog-delete-body' },
-        t('dialog.deleteMoveBody', { sessions: dialog.sessionCount ?? 0, groups: dialog.childCount ?? 0 })
+        { class: 'dsg-dialog-body dsg-dialog-delete-counts', 'data-testid': 'session-groups-dialog-delete-body' },
+        h(
+          'span',
+          { 'data-testid': 'session-groups-dialog-delete-sessions' },
+          t('group.sessionCount', { n: dialog.sessionCount ?? 0 }),
+        ),
+        h(
+          'span',
+          { 'data-testid': 'session-groups-dialog-delete-groups' },
+          t('group.subgroupCount', { n: dialog.childCount ?? 0 }),
+        ),
+      )
+    )
+    bodyNodes.push(
+      h(
+        'div',
+        { class: 'dsg-dialog-body', 'data-testid': 'session-groups-dialog-delete-instruction' },
+        t('dialog.deleteMoveInstruction'),
       )
     )
     bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.deleteDestination')))

@@ -28,6 +28,10 @@
     "one": "{n} sesión",
     "other": "{n} sesiones"
   },
+  "group.subgroupCount": {
+    "one": "{n} subgrupo",
+    "other": "{n} subgrupos"
+  },
   "drag.groupBefore": "Suelta antes de «{name}»",
   "drag.groupAfter": "Suelta después de «{name}»",
   "drag.groupInto": "Suelta dentro de «{name}»",
@@ -77,7 +81,7 @@
   "dialog.cancel": "Cancelar",
   "dialog.moveDialog": "Mover el diálogo",
   "dialog.resizeDialog": "Cambiar el tamaño del diálogo",
-  "dialog.deleteMoveBody": "Este grupo contiene {sessions} sesiones y {groups} subgrupos. Elige dónde reasignarlos antes de eliminar el grupo; no se elimina ni se archiva ninguna sesión.",
+  "dialog.deleteMoveInstruction": "Elige dónde reasignarlos antes de eliminar el grupo; no se elimina ni se archiva ninguna sesión.",
   "dialog.deleteDestination": "Grupo de destino",
   "dialog.rootDestination": "Sin grupo (raíz)",
   "dialog.moveAndDelete": "Reasignar y eliminar",

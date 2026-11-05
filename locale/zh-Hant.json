@@ -28,6 +28,10 @@
     "one": "{n} 個工作階段",
     "other": "{n} 個工作階段"
   },
+  "group.subgroupCount": {
+    "one": "{n} 個子分組",
+    "other": "{n} 個子分組"
+  },
   "drag.groupBefore": "放入「{name}」前",
   "drag.groupAfter": "放入「{name}」後",
   "drag.groupInto": "放入「{name}」內",
@@ -77,7 +81,7 @@
   "dialog.cancel": "取消",
   "dialog.moveDialog": "移動對話方塊",
   "dialog.resizeDialog": "調整對話方塊大小",
-  "dialog.deleteMoveBody": "此分組包含 {sessions} 個工作階段與 {groups} 個子分組。刪除分組前，請先選擇它們要移轉到的目標分組；不會刪除或封存任何工作階段。",
+  "dialog.deleteMoveInstruction": "刪除分組前，請先選擇它們要移轉到的目標分組；不會刪除或封存任何工作階段。",
   "dialog.deleteDestination": "目標分組",
   "dialog.rootDestination": "未分組（根層）",
   "dialog.moveAndDelete": "移轉後刪除",

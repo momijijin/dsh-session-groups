@@ -30,6 +30,12 @@
     "many": "{n} sesji",
     "other": "{n} sesji"
   },
+  "group.subgroupCount": {
+    "one": "{n} podgrupa",
+    "few": "{n} podgrupy",
+    "many": "{n} podgrup",
+    "other": "{n} podgrupy"
+  },
   "drag.groupBefore": "Upuść przed „{name}”",
   "drag.groupAfter": "Upuść po „{name}”",
   "drag.groupInto": "Upuść do „{name}”",
@@ -79,7 +85,7 @@
   "dialog.cancel": "Anuluj",
   "dialog.moveDialog": "Przenieś okno dialogowe",
   "dialog.resizeDialog": "Zmień rozmiar okna dialogowego",
-  "dialog.deleteMoveBody": "Ta grupa zawiera sesje ({sessions}) i podgrupy ({groups}). Przed usunięciem grupy wskaż, dokąd je przenieść. Żadna sesja nie zostanie usunięta ani zarchiwizowana.",
+  "dialog.deleteMoveInstruction": "Przed usunięciem grupy wskaż, dokąd je przenieść. Żadna sesja nie zostanie usunięta ani zarchiwizowana.",
   "dialog.deleteDestination": "Grupa docelowa",
   "dialog.rootDestination": "Niezgrupowane (poziom główny)",
   "dialog.moveAndDelete": "Przenieś i usuń",

@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.18`  
+Status: `0.4.0-beta.19`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -113,8 +113,8 @@ plural rules are used for plural selection.
 ## Not verified
 
 - Full A+ remains English-only; Japanese has the onboarding/dialog fixture.
-- All 19 packaged dictionaries have all-locale header/dialog smoke coverage,
-  not full-surface A+.
+- All 19 packaged dictionaries have header/dialog/group-menu smoke coverage,
+  not full-surface A+; settings/config is not in the all-locale smoke.
 - No native/client visual pass for non-English translations.
 - No translation-quality review beyond structural parity.
 - Arabic RTL has root direction and core list/header/dialog overrides, but no
