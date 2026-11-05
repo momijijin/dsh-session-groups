@@ -158,6 +158,9 @@ test('dictionaryFor handles base language prefixes and falls back to English', (
   assert.equal(dictionaryFor('nl-NL'), dictionaries.nl)
   assert.equal(dictionaryFor('pl-PL'), dictionaries.pl)
   assert.equal(dictionaryFor('tr-TR'), dictionaries.tr)
+  assert.equal(dictionaryFor('vi-VN'), dictionaries.vi)
+  assert.equal(dictionaryFor('th-TH'), dictionaries.th)
+  assert.equal(dictionaryFor('id-ID'), dictionaries.id)
   assert.equal(dictionaryFor('unknown-language'), dictionaries.en)
   assert.equal(dictionaryFor(undefined), dictionaries.en)
 })
@@ -174,6 +177,9 @@ test('the first language batch resolves each base dictionary and region variant'
     ['nl-NL', 'nl'],
     ['pl-PL', 'pl'],
     ['tr-TR', 'tr'],
+    ['vi-VN', 'vi'],
+    ['th-TH', 'th'],
+    ['id-ID', 'id'],
   ]) {
     const translate = createTranslator(() => ({ active: localeId }))
     assert.equal(translate('view.title'), dictionaries[language]['view.title'], localeId)
