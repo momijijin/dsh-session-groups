@@ -814,8 +814,6 @@ export const diagTargetChange = (previous, next) => current?.targetChange(previo
 /** Record the current drop state for the HUD. */
 export const diagDropState = (state, detail) => current?.dropState(state, detail)
 
-/** Flush pending events now (beacon on unload/dragend). */
-export const diagFlush = (options) => current?.flush(options) ?? Promise.resolve()
 
 /** Test seam: dispose and forget the page singleton. */
 export const resetDiagnosticsForTests = () => {

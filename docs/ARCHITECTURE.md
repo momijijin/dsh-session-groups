@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.4.0-beta.25**  
+当前实现：**0.4.0-beta.26**  
 支持宿主：`@deepseek-ai/dsh` 0.2.1-rc.2 / 0.2.1-rc.5  
 已验证壳：社区版 DSH Desktop **Stable** 2.0.18（rc.2）；官方 DeepSeek Harness 桌面版 0.2.1.0（rc.5，隔离 A+ + 桌面窗口验收）  
 明确不支持：社区版 DSH Desktop Beta、社区版 DSH NEXT（`-next`）  
@@ -67,25 +67,18 @@ src/index.js     Cordis host 入口
   - `estimatedTreeHeight`：虚拟列表首帧估算
 - `src/core/drag.js`
   - `hitTest` / `applyDrop` / sticky target / ungrouped target
-  - `src/client/drag.js` 只保留兼容 re-export
 - `src/core/tree.js`
   - 状态聚合、树扁平化、祖先展开、分组路径
-  - `src/client/tree.js` 只保留兼容 re-export
 - `src/core/filter.js`
   - 可见树、归档过滤、标题/子代理判定
-  - `src/client/filter.js` 只保留兼容 re-export
 - `src/core/search.js`
   - 搜索索引、匹配与 reveal 折叠补丁
-  - `src/client/search.js` 只保留兼容 re-export
 - `src/core/virtual-list.js`
   - 虚拟列表窗口与 spacer 算术
-  - `src/client/virtual-list.js` 只保留兼容 re-export
 - `src/core/group-drag.js`
   - 分组拖拽目标解析与稳定 anchor
-  - `src/client/group-drag.js` 只保留兼容 re-export
 - `src/core/dialog-selection.js`
   - 选择弹窗初始值、合法性与 Confirm payload
-  - `src/client/dialog-selection.js` 只保留兼容 re-export
 - `src/core/dialog-geometry.js`
   - 矩形 viewport clamp、居中、拖动、八方向缩放
   - `src/client/dialog-geometry.js` 保留 localStorage 持久化并 re-export 纯数学
@@ -94,7 +87,6 @@ src/index.js     Cordis host 入口
   - `groupHeaderZoneFromRect`：上/下 25% 边缘 zone
 - `src/core/menu-position.js`
   - 菜单 anchor/clamp 纯数学；viewport 由调用方注入
-  - `src/client/menu-position.js` 只保留兼容 re-export
 - `src/core/control.js`
   - `resolveGroupPath`：完整根路径 → 唯一 ID；不存在/同名歧义/控制字符均结构化失败
   - AI 控制协议：catalog（共享图标/色板词表）、state、结构化 operation、plan/apply 候选 doc

@@ -6,7 +6,7 @@
  * Components own the HTML5 drag events, insertion line, floating label and the
  * 500ms collapsed-group auto-expand timer; they call these functions.
  */
-import { assignSession, cloneDoc, findGroup, reorderUngrouped } from '../shared/model.js'
+import { assignSession, findGroup, reorderUngrouped } from '../shared/model.js'
 
 /** Drop-target vocabulary. */
 export const DROP_KINDS = Object.freeze([
