@@ -13,6 +13,7 @@ import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
 import { createLocaleRuntime } from './plugin-locale.js'
 import { installSettingsSlot } from './plugin-settings.js'
+import { SkillRepairCard } from './skill-repair.js'
 import { createWorkspaceChrome } from './plugin-workspace-chrome.js'
 import { createFloatingLabel } from './floating-label.js'
 import { installStyles } from './css.js'
@@ -617,7 +618,7 @@ export const createPlugin = () => {
     })
 
     styleDisposer = installStyles(globalThis.document)
-    configSlotDisposer = installSettingsSlot(ctx)
+    configSlotDisposer = installSettingsSlot(ctx, SkillRepairCard)
     bridge = {
       store,
       t,
