@@ -1,15 +1,16 @@
-# 0.4.0-beta.3 发布与安装说明
+# 0.4.0-beta.4 发布与安装说明
 
-- 版本：`0.4.0-beta.3`
+- 版本：`0.4.0-beta.4`
 - 包名：`dsh-session-grove`
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
-- 状态：480/480 测试；等待最终发布授权
-- 发布包：`dsh-session-grove-0.4.0-beta.3.tgz`
+- 状态：481/481 测试；等待最终发布授权
+- 发布包：`dsh-session-grove-0.4.0-beta.4.tgz`
 
 ## 本版重点
 
+- **日语资源**：完整 `locale/ja.json`（288 keys），Host 注册与 manifest 日文标题/描述；`ja-JP` 等变体解析到 ja。
 - **i18n 基础设施**：BCP 47 基础语言归一化（`ja-JP` → `ja`、`zh-Hant` → `zh`）、字典注册表、未知语言回退英文。
 - 所有打包字典注册到 Host locale service；不调用 `addLanguage`，语言目录仍由 Host/第三方语言包拥有。
 - 保留 `0.4.0-beta.1` 身份重置与 `0.4.0-beta.2` 原生官方壳 locale fallback 修复。
@@ -25,7 +26,7 @@
 # 以本地 desktop profile 为例
 DeepSeek Harness.exe --expose-internals `
   "C:\Users\<user>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
-  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.3.tgz"
+  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.4.tgz"
 ```
 
 安装后必须重启对应桌面客户端。先卸载旧的 `dsh-session-groups`；不要在同一 profile 中并存两个身份。

@@ -1,16 +1,18 @@
 {
   "id": "dsh-session-grove",
   "name": "dsh-session-grove",
-  "version": "0.4.0-beta.3",
+  "version": "0.4.0-beta.4",
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": {
     "en": "A free-form grouping layer for the DSH Desktop sidebar: assign sessions from different workspaces to the same group without changing their official workspace membership or logs.",
-    "zh": "DSH Desktop 侧栏上的自由分组层：可把不同工作区的会话归入同一分组，不改变会话的官方工作区归属或日志。"
+    "zh": "DSH Desktop 侧栏上的自由分组层：可把不同工作区的会话归入同一分组，不改变会话的官方工作区归属或日志。",
+    "ja": "DSH Desktop のサイドバーに重ねる自由なグループ分けのレイヤーです。ワークスペースの異なるセッションを、公式のワークスペース所属やログを変えずに同じグループにまとめられます。"
   },
   "title": {
     "en": "Free Groups",
-    "zh": "自由分组"
+    "zh": "自由分组",
+    "ja": "フリーグループ"
   }
 }
 

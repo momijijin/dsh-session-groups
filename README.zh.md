@@ -9,10 +9,12 @@
 - 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
 - 不写入 `workspace.json`。
 
-当前版本：**0.4.0-beta.3**  
+当前版本：**0.4.0-beta.4**  
 主要支持：**DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 与 0.2.1-rc.5**（`engines.dsh: >=0.2.0-rc.2 <0.3.0`）  
 已验证桌面壳：**社区版 DSH Desktop Stable 2.0.18**（rc.2）与**官方 DeepSeek Harness 桌面版 0.2.1.0**（rc.5，隔离运行时 A+）  
 不官方支持、不承诺兼容：**社区版 DSH Desktop Beta**、**社区版 DSH NEXT（`-next` 通道）**
+
+本地化：已打包**英文、中文、日文**字典；locale id 按基础语言解析（`ja-JP` → `ja`、`zh-Hant` → `zh`），未支持语言回退英文。插件会把所有字典注册到 Host，但不会主动向 Host 语言目录添加语言。
 
 依赖声明：官方 `@deepseek-ai/*` 运行时包使用 `peerDependencies`，由 DSH 宿主提供，插件不再打包一份重复副本。
 
@@ -137,7 +139,7 @@ dsh-session-grove
 
 ### 从 `dsh-session-groups` 升级
 
-`0.4.0-beta.3` 是新包身份，**不会自动读取、复制或删除**旧 `dsh-session-groups` 的分组文件和浏览器键；这是为了避免把同名社区插件的数据误导入。手动迁移步骤见 [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md)。
+`0.4.0-beta.4` 是新包身份，**不会自动读取、复制或删除**旧 `dsh-session-groups` 的分组文件和浏览器键；这是为了避免把同名社区插件的数据误导入。手动迁移步骤见 [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md)。
 
 ### 维护者/开发者安装
 
@@ -359,7 +361,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-grove-0.4.0-beta.3.tgz`
+- 发布包：`dsh-session-grove-0.4.0-beta.4.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.4 (local i18n first language)
+
+- Added the complete Japanese locale (`locale/ja.json`, 288 keys) with host locale registration and Japanese plugin manifest title/description.
+- `ja`, `ja-JP` and other variants resolve to the Japanese dictionary; unsupported languages still fall back to English.
+- Tests: 481/481, including all-dictionary key/placeholder/non-empty parity and Japanese selection. No tag or Release.
+
 ## 0.4.0-beta.3 (local i18n foundation)
 
 - Locale ids are normalized to their base language (`ja-JP` → `ja`, `zh-Hant` → `zh`).
