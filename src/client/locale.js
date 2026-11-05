@@ -21,14 +21,16 @@ import de from '../../locale/de.json' with { type: 'json' }
 import fr from '../../locale/fr.json' with { type: 'json' }
 import es from '../../locale/es.json' with { type: 'json' }
 import pt from '../../locale/pt.json' with { type: 'json' }
+import it from '../../locale/it.json' with { type: 'json' }
+import nl from '../../locale/nl.json' with { type: 'json' }
 
-export { zh, en, ja, ko, de, fr, es, pt }
+export { zh, en, ja, ko, de, fr, es, pt, it, nl }
 
 /** Language used whenever the active locale has no packaged dictionary. */
 export const FALLBACK_LANGUAGE = 'en'
 
 /** Dictionaries keyed by base language (`zh`, `en`, `ja`, `ko`, ...). */
-export const dictionaries = Object.freeze({ zh, en, ja, ko, de, fr, es, pt })
+export const dictionaries = Object.freeze({ zh, en, ja, ko, de, fr, es, pt, it, nl })
 
 /**
  * Normalize a BCP 47-style locale (`ja-JP`, `zh_Hant_TW`, ...) to its base

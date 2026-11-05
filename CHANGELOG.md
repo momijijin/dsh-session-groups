@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0-beta.9 (local i18n it/nl)
+
+- Added complete Italian and Dutch dictionaries (288 keys each), including plural objects for session/time counts, plus manifest titles/descriptions.
+- Ten packaged languages now share the same registry and English fallback.
+- Tests: 485/485. No tag or Release.
+
+## 0.4.0-beta.8 (local i18n time plurals)
+
+- Migrated `time.minutes/hours/days/years` to one/other templates in all eight then-packaged locales.
+- Improved French `an/ans`, Spanish `año/años` and Portuguese `dia/dias`, `ano/anos`; `dialog.deleteMoveBody` remains the only known multi-count gap.
+- Tests: 485/485. No tag or Release.
+
 ## 0.4.0-beta.7 (local i18n locale-pack fixture)
 
 - Added a test-only Japanese language-pack bundle and a dedicated isolated Playwright check: `addLanguage({id:ja})` + `setLocale(ja)` must switch plugin onboarding/dialog copy to Japanese.
