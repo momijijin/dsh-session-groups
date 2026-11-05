@@ -156,7 +156,7 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 ```text
 npm install
 语法检查
-494 项单元/契约测试
+500 项单元/契约测试
 客户端构建
 coverage gate
 npm pack --dry-run

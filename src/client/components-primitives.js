@@ -9,6 +9,8 @@
 import { createElement, useCallback, useEffect, useSyncExternalStore } from 'react'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
 import { statusLabel } from '../core/session-row.js'
+import { GROUP_DROP_NOOP } from '../core/group-drag.js'
+import { dispatch, toast } from './command-runtime.js'
 import { findGroup, moveGroup } from '../shared/model.js'
 import { resolveGroupDrop } from '../core/group-drag.js'
 import { renderGlyph, renderHeaderIcon } from './icons.js'
@@ -43,11 +45,7 @@ const usePerfCommit = (name, renderStartedAt) => {
   })
 }
 
-/** Dispatch helper bound to the live store. */
-const dispatch = (action, payload) => rt()?.store.dispatch(action, payload)
 
-/** Show one toast through the plugin shell (auto-dismiss). */
-const toast = (kind, message) => rt()?.notify({ kind, message })
 
 /**
  * Thrown inside a queued doc updater to abandon a no-op group drop before the
@@ -55,7 +53,6 @@ const toast = (kind, message) => rt()?.notify({ kind, message })
  * latest confirmed doc first, so this keeps the latest-doc semantics while still
  * skipping the write entirely (no revision bump).
  */
-export const GROUP_DROP_NOOP = Symbol('dsh-session-grove/group-drop-noop')
 
 /**
  * Whether a resolved group drop lands on the dragged group's current position.
@@ -283,7 +280,7 @@ const EmptyDropBox = ({ label, active = false, testId = 'session-groups-empty', 
 // ---------------------------------------------------------------------------
 
 export {
-  useViewStore, classNames, usePerfCommit, dispatch, toast, IconButton, TextButton,
+  useViewStore, classNames, usePerfCommit, dispatch, toast, GROUP_DROP_NOOP, IconButton, TextButton,
   StatusSpinner, StatusDot, SessionStatusCell, sessionTime, menuKeyHandler,
   DropPlaceholder, EmptyDropBox, SESSION_PLACEHOLDER_HEIGHT, GROUP_PLACEHOLDER_HEIGHT,
 }

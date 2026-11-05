@@ -7,7 +7,7 @@
 import { useEffect, useRef } from 'react'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
 import { revealSession } from '../core/search.js'
-import { dispatch, toast } from './components-primitives.js'
+import { dispatch, toast } from './command-runtime.js'
 
 export const useGroupsSearchReveal = ({ rootRef, tree, store, t, virtualRef }) => {
   const searchHitTimerRef = useRef(null)

@@ -7,7 +7,7 @@
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
 import { sessionTitle } from '../core/filter.js'
 import { menuAnchorFromEvent, menuAnchorFromRow } from '../core/menu-position.js'
-import { dispatch, toast } from './components-primitives.js'
+import { dispatch, toast } from './command-runtime.js'
 
 export const createMenuHandlers = (ctx) => {
   const { t, dragRef, consumeDragClick, handleWidthReset, selectSearchResult } = ctx

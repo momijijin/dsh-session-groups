@@ -11,7 +11,7 @@ import { currentColorHexOf, currentColorOf, currentGroupIdOf, currentIconOf, cur
 import { sessionContainer } from '../core/tree.js'
 import { GROUP_ICONS } from '../shared/constants.js'
 import { workspaceChoices } from './actions.js'
-import { GROUP_DROP_NOOP } from './components-primitives.js'
+import { GROUP_DROP_NOOP } from '../core/group-drag.js'
 
 export const createDialogHandlers = ({ store, t, byId, workspaceItems, currentId }) => {
   const moveGroupStep = (groupId, delta) => {
