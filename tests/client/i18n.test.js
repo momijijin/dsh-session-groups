@@ -37,11 +37,16 @@ test('every packaged dictionary has the same keys, placeholders and no empty val
       const referenceValue = en[key]
       if (referenceValue !== null && typeof referenceValue === 'object') {
         assert.equal(typeof value, 'object', `${language} ${key} must be a plural object`)
-        assert.deepEqual(Object.keys(value).sort(), Object.keys(referenceValue).sort(), `${language} ${key} plural categories`)
+        const categories = Object.keys(value)
+        assert.ok(categories.includes('other'), `${language} ${key} must include other`)
         for (const category of Object.keys(referenceValue)) {
           assert.equal(typeof value[category], 'string', `${language} ${key}.${category} must be a string`)
+        }
+        for (const category of categories) {
+          const referenceCategory = referenceValue[category] ?? referenceValue.other
+          assert.equal(typeof value[category], 'string', `${language} ${key}.${category} must be a string`)
           assert.notEqual(value[category].trim(), '', `${language} ${key}.${category} must not be empty`)
-          assert.deepEqual(placeholders(value[category]), placeholders(referenceValue[category]), `${language} ${key}.${category} placeholders`)
+          assert.deepEqual(placeholders(value[category]), placeholders(referenceCategory), `${language} ${key}.${category} placeholders`)
         }
         continue
       }

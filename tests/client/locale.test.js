@@ -14,7 +14,9 @@ import {
   formatMessage,
   fr,
   ja,
+  pl,
   pt,
+  tr,
   zh,
 } from '../../src/client/locale.js'
 
@@ -53,6 +55,15 @@ test('formatMessage selects plural categories by language', () => {
   assert.equal(formatMessage({ count: plural }, 'count', {}, 'en'), '{n} items')
 })
 
+test('formatMessage supports CLDR categories beyond one/other', () => {
+  const polish = { one: '{n} element', few: '{n} elementy', many: '{n} elementów', other: '{n} elementu' }
+  const dict = { count: polish }
+  assert.equal(formatMessage(dict, 'count', { n: 1 }, 'pl'), '1 element')
+  assert.equal(formatMessage(dict, 'count', { n: 2 }, 'pl'), '2 elementy')
+  assert.equal(formatMessage(dict, 'count', { n: 5 }, 'pl'), '5 elementów')
+  assert.equal(formatMessage(dict, 'count', { n: 1.5 }, 'pl'), '1.5 elementu')
+})
+
 test('packaged count strings use plural templates', () => {
   assert.equal(formatMessage(en, 'group.sessionCount', { n: 1 }, 'en'), '1 session')
   assert.equal(formatMessage(en, 'group.sessionCount', { n: 2 }, 'en'), '2 sessions')
@@ -60,6 +71,9 @@ test('packaged count strings use plural templates', () => {
   assert.equal(formatMessage(fr, 'group.sessionCount', { n: 1 }, 'fr'), '1 session')
   assert.equal(formatMessage(es, 'group.sessionCount', { n: 1 }, 'es'), '1 sesión')
   assert.equal(formatMessage(pt, 'group.sessionCount', { n: 1 }, 'pt'), '1 sessão')
+  assert.equal(formatMessage(pl, 'group.sessionCount', { n: 2 }, 'pl'), '2 sesje')
+  assert.equal(formatMessage(pl, 'group.sessionCount', { n: 5 }, 'pl'), '5 sesji')
+  assert.equal(formatMessage(tr, 'group.sessionCount', { n: 2 }, 'tr'), '2 oturum')
   assert.equal(formatMessage(ja, 'group.sessionCount', { n: 2 }, 'ja'), '2 件のセッション')
 })
 
@@ -142,6 +156,8 @@ test('dictionaryFor handles base language prefixes and falls back to English', (
   assert.equal(dictionaryFor('pt-BR'), dictionaries.pt)
   assert.equal(dictionaryFor('it-IT'), dictionaries.it)
   assert.equal(dictionaryFor('nl-NL'), dictionaries.nl)
+  assert.equal(dictionaryFor('pl-PL'), dictionaries.pl)
+  assert.equal(dictionaryFor('tr-TR'), dictionaries.tr)
   assert.equal(dictionaryFor('unknown-language'), dictionaries.en)
   assert.equal(dictionaryFor(undefined), dictionaries.en)
 })
@@ -156,6 +172,8 @@ test('the first language batch resolves each base dictionary and region variant'
     ['pt-BR', 'pt'],
     ['it-IT', 'it'],
     ['nl-NL', 'nl'],
+    ['pl-PL', 'pl'],
+    ['tr-TR', 'tr'],
   ]) {
     const translate = createTranslator(() => ({ active: localeId }))
     assert.equal(translate('view.title'), dictionaries[language]['view.title'], localeId)
