@@ -9,7 +9,6 @@ import assert from 'node:assert/strict'
 
 import {
   HEADER_ICON_ARTWORK,
-  HEADER_ICON_NAMES,
   renderHeaderIcon,
 } from '../../src/client/icons.js'
 
@@ -22,7 +21,7 @@ const collect = (element, out = []) => {
 }
 
 test('the header icon set is exactly search, view-options, project-add', () => {
-  assert.deepEqual([...HEADER_ICON_NAMES], ['search', 'view-options', 'project-add'])
+  // The artwork map is the production source of truth for the header buttons.
   assert.deepEqual(Object.keys(HEADER_ICON_ARTWORK).sort(), ['project-add', 'search', 'view-options'])
 })
 
@@ -61,7 +60,7 @@ test('project-add artwork is the official filled project contour + plus', () => 
 })
 
 test('renderHeaderIcon emits a 16px currentColor SVG with the official children', () => {
-  for (const name of HEADER_ICON_NAMES) {
+  for (const name of Object.keys(HEADER_ICON_ARTWORK)) {
     const svg = renderHeaderIcon(h, name, 16)
     assert.equal(svg.type, 'svg')
     assert.equal(svg.props.width, 16)

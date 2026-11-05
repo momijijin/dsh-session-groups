@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyControlOperations, buildControlState, CONTROL_OPERATIONS, CONTROL_PROTOCOL, resolveGroupPath, validateControlDoc } from '../../src/core/control.js'
+import { applyControlOperations, buildControlState, CONTROL_OPERATIONS, CONTROL_PROTOCOL, resolveGroupPath } from '../../src/core/control.js'
 import { assignSession, createGroup, emptyDoc, findGroup, validateDoc } from '../../src/shared/model.js'
 
 const fixture = () => {
@@ -150,12 +150,15 @@ test('control rejects empty, unknown, oversized and invalid operations', () => {
   )
 })
 
-test('validateControlDoc rejects an invalid candidate instead of returning ok', () => {
-  assert.deepEqual(validateControlDoc(emptyDoc()), { ok: true })
-  const invalid = validateControlDoc({ version: 99, revision: 0, groups: [], ungrouped: [] })
-  assert.equal(invalid.ok, false)
-  assert.equal(invalid.code, 'invalid-doc')
-  assert.match(invalid.message, /version/)
+test('control planning refuses an invalid candidate document instead of returning a plan', () => {
+  const planned = applyControlOperations(emptyDoc(), [{ op: 'group.create', name: 'A', parentId: null }])
+  assert.equal(planned.ok, true)
+
+  const invalid = { version: 99, revision: 0, groups: [], ungrouped: [] }
+  const result = applyControlOperations(invalid, [{ op: 'group.create', name: 'A', parentId: null }])
+  assert.equal(result.ok, false)
+  assert.equal(result.code, 'invalid-result')
+  assert.match(result.message, /version/)
 })
 
 test('applyControlOperations validates the final document even when the operation itself is valid', () => {

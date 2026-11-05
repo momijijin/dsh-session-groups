@@ -196,21 +196,6 @@ export const applyDrop = (doc, source, target, visibleUngrouped = null) => {
   }
 }
 
-/** Whether a group can accept another group as child without creating a cycle. */
-export const canDropGroupInto = (doc, groupId, parentId) => {
-  if (!groupId || !parentId) return true
-  if (groupId === parentId) return false
-  let current = findGroup(doc, parentId)
-  const seen = new Set()
-  while (current) {
-    if (current.parentId === groupId) return false
-    if (seen.has(current.id)) return false
-    seen.add(current.id)
-    current = current.parentId === null ? null : findGroup(doc, current.parentId)
-  }
-  return true
-}
-
 /** Read-only clone helper used by components to preview optimistic drops. */
 export const previewDrop = (doc) => cloneDoc(doc)
 

@@ -9,13 +9,11 @@ import assert from 'node:assert/strict'
 
 import {
   computeVirtualWindow,
-  isVirtualIndexVisible,
   virtualScrollOffset,
   VIRTUAL_HEADER_HEIGHT,
   VIRTUAL_OVERSCAN,
   VIRTUAL_ROW_GAP,
   VIRTUAL_ROW_HEIGHT,
-  VIRTUAL_STEP,
 } from '../../src/core/virtual-list.js'
 
 const heightOf = (win, total, { rowHeight = VIRTUAL_ROW_HEIGHT, gap = VIRTUAL_ROW_GAP } = {}) => {
@@ -31,7 +29,8 @@ const fullHeight = (total, { rowHeight = VIRTUAL_ROW_HEIGHT, gap = VIRTUAL_ROW_G
 test('constants match the CSS layout contract', () => {
   assert.equal(VIRTUAL_ROW_HEIGHT, 32)
   assert.equal(VIRTUAL_ROW_GAP, 2)
-  assert.equal(VIRTUAL_STEP, 34)
+  // Row pitch (32 + 2) is the step the windowing math derives internally.
+  assert.equal(VIRTUAL_ROW_HEIGHT + VIRTUAL_ROW_GAP, 34)
   assert.equal(VIRTUAL_HEADER_HEIGHT, 34)
   assert.equal(VIRTUAL_OVERSCAN, 8)
 })
@@ -115,13 +114,20 @@ test('malformed input is treated as zero/empty instead of NaN', () => {
   assert.equal(negative.count, 0)
 })
 
-test('isVirtualIndexVisible is inclusive-start / exclusive-end', () => {
-  const win = { start: 10, end: 20 }
-  assert.equal(isVirtualIndexVisible(win, 9), false)
-  assert.equal(isVirtualIndexVisible(win, 10), true)
-  assert.equal(isVirtualIndexVisible(win, 19), true)
-  assert.equal(isVirtualIndexVisible(win, 20), false)
-  assert.equal(isVirtualIndexVisible(win, 1.5), false)
+test('computed windows are start-inclusive / end-exclusive and cover the scrolled row', () => {
+  // Four full rows fit exactly: rows 0..3 render, row 4 (the `end` bound) does not.
+  const top = computeVirtualWindow({ rowCount: 50, scrollTop: 0, viewportHeight: 34 * 4, listTop: 0, overscan: 0 })
+  assert.equal(top.start, 0)
+  assert.equal(top.end, 4)
+  assert.equal(top.count, top.end - top.start)
+
+  // Every scroll target must stay inside the half-open window the DOM renders.
+  for (const index of [0, 10, 750, 1499]) {
+    const scrollTop = virtualScrollOffset(index, { listTop: 38, viewportHeight: 432, rowCount: 1500 })
+    const win = computeVirtualWindow({ rowCount: 1500, scrollTop, viewportHeight: 432, listTop: 38 })
+    assert.ok(index >= win.start && index < win.end, `row ${index} must be inside [${win.start}, ${win.end})`)
+    assert.equal(win.count, win.end - win.start)
+  }
 })
 
 test('virtualScrollOffset centres a far index and stays inside the scroll range', () => {

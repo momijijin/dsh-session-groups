@@ -35,10 +35,3 @@ export const resolveDshVersion = (ctx) => {
   }
   return null
 }
-
-/**
- * Report the matrix used by tests/docs.
- * @returns {{ id: string, range: string }[]}
- */
-export const adapterMatrix = () =>
-  DSH_ADAPTERS.map((adapter) => ({ id: adapter.id, range: adapter.range }))

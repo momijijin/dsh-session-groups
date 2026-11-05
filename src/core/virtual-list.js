@@ -33,9 +33,6 @@ export const VIRTUAL_HEADER_HEIGHT = 34
 /** Rows rendered beyond each viewport edge to hide fast scroll gaps. */
 export const VIRTUAL_OVERSCAN = 8
 
-/** Distance between two row tops (row height + gap). */
-export const VIRTUAL_STEP = VIRTUAL_ROW_HEIGHT + VIRTUAL_ROW_GAP
-
 const finite = (value, fallback) => (Number.isFinite(value) ? value : fallback)
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
@@ -94,10 +91,6 @@ export const computeVirtualWindow = (input = {}) => {
     step,
   }
 }
-
-/** Whether `index` is inside the rendered window (inclusive start, exclusive end). */
-export const isVirtualIndexVisible = (window, index) =>
-  Number.isInteger(index) && index >= window.start && index < window.end
 
 /** Scroll offset that centres `index` at 30% of the viewport (clamped by the DOM). */
 export const virtualScrollOffset = (index, { listTop = 0, viewportHeight = 0, rowCount = 0, rowHeight = VIRTUAL_ROW_HEIGHT, gap = VIRTUAL_ROW_GAP } = {}) => {

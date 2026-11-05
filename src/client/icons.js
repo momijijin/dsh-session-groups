@@ -184,9 +184,6 @@ export const HEADER_ICON_ARTWORK = Object.freeze({
   }),
 })
 
-/** Header action names mapped to the official artwork above. */
-export const HEADER_ICON_NAMES = Object.freeze(['search', 'view-options', 'project-add'])
-
 /**
  * Render one official header artwork at `size` (default 16, matching the
  * official workspace header). Fill/stroke are separated exactly like the
