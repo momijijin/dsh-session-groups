@@ -24,7 +24,10 @@
   "group.moveDown": "Descendre",
   "group.icon": "Changer l'icône",
   "group.color": "Changer la couleur",
-  "group.sessionCount": "{n} sessions",
+  "group.sessionCount": {
+    "one": "{n} session",
+    "other": "{n} sessions"
+  },
   "drag.groupBefore": "Déposer avant « {name} »",
   "drag.groupAfter": "Déposer après « {name} »",
   "drag.groupInto": "Déposer dans « {name} »",
@@ -184,7 +187,10 @@
   "iconGroup.status": "Statut",
   "iconGroup.work": "Développement",
   "iconGroup.general": "Général",
-  "sessions.expand": "Afficher {n} sessions de plus",
+  "sessions.expand": {
+    "one": "Afficher {n} session de plus",
+    "other": "Afficher {n} sessions de plus"
+  },
   "sessions.collapse": "Afficher moins",
   "color.teal": "Turquoise",
   "color.pink": "Rose",

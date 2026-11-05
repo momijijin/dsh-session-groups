@@ -24,7 +24,10 @@
   "group.moveDown": "Nach unten",
   "group.icon": "Symbol ändern",
   "group.color": "Farbe ändern",
-  "group.sessionCount": "{n} Sitzungen",
+  "group.sessionCount": {
+    "one": "{n} Sitzung",
+    "other": "{n} Sitzungen"
+  },
   "drag.groupBefore": "Vor „{name}“ ablegen",
   "drag.groupAfter": "Nach „{name}“ ablegen",
   "drag.groupInto": "In „{name}“ ablegen",
@@ -184,7 +187,10 @@
   "iconGroup.status": "Status",
   "iconGroup.work": "Entwicklung",
   "iconGroup.general": "Allgemein",
-  "sessions.expand": "Weitere {n} Sitzungen anzeigen",
+  "sessions.expand": {
+    "one": "Weitere {n} Sitzung anzeigen",
+    "other": "Weitere {n} Sitzungen anzeigen"
+  },
   "sessions.collapse": "Weniger anzeigen",
   "color.teal": "Türkis",
   "color.pink": "Rosa",
