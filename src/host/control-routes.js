@@ -85,7 +85,7 @@ if (changeHub !== null) {
         req.on?.('close', cleanup)
         res.on?.('close', cleanup)
       },
-      `dsh-session-groups: GET ${EVENTS_PATH}`,
+      `dsh-session-grove: GET ${EVENTS_PATH}`,
     )
   }
   {
@@ -123,7 +123,7 @@ if (changeHub !== null) {
           })
         }
       },
-      `dsh-session-groups: GET ${CONTROL_DOCTOR_PATH}`,
+      `dsh-session-grove: GET ${CONTROL_DOCTOR_PATH}`,
     )
 
     controlStatePath = register(
@@ -146,7 +146,7 @@ if (changeHub !== null) {
           sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
         }
       },
-      `dsh-session-groups: GET ${CONTROL_STATE_PATH}`,
+      `dsh-session-grove: GET ${CONTROL_STATE_PATH}`,
     )
 
     controlCatalogPath = register(
@@ -160,7 +160,7 @@ if (changeHub !== null) {
         }
         sendJson(res, 200, { ok: true, ...buildControlCatalog() })
       },
-      `dsh-session-groups: GET ${CONTROL_CATALOG_PATH}`,
+      `dsh-session-grove: GET ${CONTROL_CATALOG_PATH}`,
     )
 
     controlResolvePath = register(
@@ -237,7 +237,7 @@ if (changeHub !== null) {
           sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
         }
       },
-      `dsh-session-groups: POST ${CONTROL_RESOLVE_PATH}`,
+      `dsh-session-grove: POST ${CONTROL_RESOLVE_PATH}`,
     )
 
     controlPlanPath = register(
@@ -313,7 +313,7 @@ if (changeHub !== null) {
           sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
         }
       },
-      `dsh-session-groups: POST ${CONTROL_PLAN_PATH}`,
+      `dsh-session-grove: POST ${CONTROL_PLAN_PATH}`,
     )
 
     controlApplyPath = register(
@@ -428,7 +428,7 @@ if (changeHub !== null) {
             if (idempotencyKey !== null) remember(idempotencyKey, { planHash, body: responseBody })
             logInfo(
               ctx,
-              `[dsh-session-groups] control apply revision=${String(committed.revision)} plan=${planHash.slice(0, 12)} operations=${String(planned.changes.length)}`,
+              `[dsh-session-grove] control apply revision=${String(committed.revision)} plan=${planHash.slice(0, 12)} operations=${String(planned.changes.length)}`,
             )
             sendJson(res, 200, responseBody)
             return
@@ -438,7 +438,7 @@ if (changeHub !== null) {
           sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
         }
       },
-      `dsh-session-groups: POST ${CONTROL_APPLY_PATH}`,
+      `dsh-session-grove: POST ${CONTROL_APPLY_PATH}`,
     )
   }
 

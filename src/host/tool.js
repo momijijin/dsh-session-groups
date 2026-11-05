@@ -15,7 +15,7 @@ import {
 } from '../core/control.js'
 import { buildControlCatalog } from '../core/catalog.js'
 
-export const TOOL_NAME = 'session_groups_control'
+export const TOOL_NAME = 'session_grove_control'
 
 const ACTIONS = [
   'catalog',
@@ -112,7 +112,7 @@ export const createControlTool = (options) => {
         return failure('doctor-failed', error instanceof Error ? error.message : String(error))
       }
     }
-    if (!enabled()) return failure('control-disabled', 'enable controlApi before using session_groups_control')
+    if (!enabled()) return failure('control-disabled', 'enable controlApi before using session_grove_control')
 
     if (action === 'catalog') {
       return { ok: true, ...buildControlCatalog() }

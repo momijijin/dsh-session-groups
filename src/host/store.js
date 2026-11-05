@@ -2,10 +2,10 @@
  * Revisioned, atomically written JSON store for the group document.
  *
  * Frozen contract: docs/CONTRACTS.md §2 "File".
- * Target: `<dshHomePath('storages')>/dsh-session-groups.json`.
+ * Target: `<dshHomePath('storages')>/dsh-session-grove.json`.
  *
  * - missing file -> empty document, revision 0;
- * - JSON parse failure -> quarantine as `dsh-session-groups.corrupt-<ts>.json`,
+ * - JSON parse failure -> quarantine as `dsh-session-grove.corrupt-<ts>.json`,
  *   restore a valid `.bak` with warning `recovered-backup`, otherwise empty
  *   doc + warning `corrupt-file`;
  * - shape/invariant failure -> same recovery/quarantine policy, warning
