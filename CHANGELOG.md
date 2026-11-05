@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0-beta.10 (local i18n build fix)
+
+- Rebuilt `lib/client.js` after the final Italian review copy; the published bundle now matches `locale/it.json` exactly. No runtime behavior change.
+- Tests: 485/485. No tag or Release.
+
 ## 0.4.0-beta.9 (local i18n it/nl)
 
 - Added complete Italian and Dutch dictionaries (288 keys each), including plural objects for session/time counts, plus manifest titles/descriptions.
