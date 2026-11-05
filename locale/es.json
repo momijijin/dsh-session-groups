@@ -157,10 +157,22 @@
   "icon.rocket": "Cohete",
   "icon.hash": "Símbolo #",
   "time.justNow": "ahora mismo",
-  "time.minutes": "hace {n} min",
-  "time.hours": "hace {n} h",
-  "time.days": "hace {n} d",
-  "time.years": "hace {n} a",
+  "time.minutes": {
+    "one": "hace {n} min",
+    "other": "hace {n} min"
+  },
+  "time.hours": {
+    "one": "hace {n} h",
+    "other": "hace {n} h"
+  },
+  "time.days": {
+    "one": "hace {n} d",
+    "other": "hace {n} d"
+  },
+  "time.years": {
+    "one": "hace {n} año",
+    "other": "hace {n} años"
+  },
   "icon.briefcase": "Maletín",
   "icon.book": "Libro",
   "icon.code": "Código",

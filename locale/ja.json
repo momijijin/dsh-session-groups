@@ -157,10 +157,22 @@
   "icon.rocket": "ロケット",
   "icon.hash": "ハッシュ",
   "time.justNow": "たった今",
-  "time.minutes": "{n} 分前",
-  "time.hours": "{n} 時間前",
-  "time.days": "{n} 日前",
-  "time.years": "{n} 年前",
+  "time.minutes": {
+    "one": "{n} 分前",
+    "other": "{n} 分前"
+  },
+  "time.hours": {
+    "one": "{n} 時間前",
+    "other": "{n} 時間前"
+  },
+  "time.days": {
+    "one": "{n} 日前",
+    "other": "{n} 日前"
+  },
+  "time.years": {
+    "one": "{n} 年前",
+    "other": "{n} 年前"
+  },
   "icon.briefcase": "ブリーフケース",
   "icon.book": "本",
   "icon.code": "コード",

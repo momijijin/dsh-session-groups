@@ -157,10 +157,22 @@
   "icon.rocket": "로켓",
   "icon.hash": "해시",
   "time.justNow": "방금 전",
-  "time.minutes": "{n}분 전",
-  "time.hours": "{n}시간 전",
-  "time.days": "{n}일 전",
-  "time.years": "{n}년 전",
+  "time.minutes": {
+    "one": "{n}분 전",
+    "other": "{n}분 전"
+  },
+  "time.hours": {
+    "one": "{n}시간 전",
+    "other": "{n}시간 전"
+  },
+  "time.days": {
+    "one": "{n}일 전",
+    "other": "{n}일 전"
+  },
+  "time.years": {
+    "one": "{n}년 전",
+    "other": "{n}년 전"
+  },
   "icon.briefcase": "서류 가방",
   "icon.book": "책",
   "icon.code": "코드",

@@ -157,10 +157,22 @@
   "icon.rocket": "Rocket",
   "icon.hash": "Hash",
   "time.justNow": "just now",
-  "time.minutes": "{n} min ago",
-  "time.hours": "{n} hr ago",
-  "time.days": "{n} d ago",
-  "time.years": "{n} yr ago",
+  "time.minutes": {
+    "one": "{n} min ago",
+    "other": "{n} min ago"
+  },
+  "time.hours": {
+    "one": "{n} hr ago",
+    "other": "{n} hr ago"
+  },
+  "time.days": {
+    "one": "{n} d ago",
+    "other": "{n} d ago"
+  },
+  "time.years": {
+    "one": "{n} yr ago",
+    "other": "{n} yr ago"
+  },
   "icon.briefcase": "Briefcase",
   "icon.book": "Book",
   "icon.code": "Code",

@@ -107,7 +107,12 @@ test('dynamic keys used by status, archive, settings and errors are present', ()
   ]
   for (const key of dynamic) {
     for (const [language, dictionary] of Object.entries(dictionaries)) {
-      assert.equal(typeof dictionary[key], 'string', `${language} missing ${key}`)
+      const value = dictionary[key]
+      if (value !== null && typeof value === 'object') {
+        assert.equal(typeof value.other, 'string', `${language} missing ${key}.other`)
+      } else {
+        assert.equal(typeof value, 'string', `${language} missing ${key}`)
+      }
     }
   }
 })

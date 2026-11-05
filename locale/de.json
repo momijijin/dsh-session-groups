@@ -157,10 +157,22 @@
   "icon.rocket": "Rakete",
   "icon.hash": "Raute",
   "time.justNow": "gerade eben",
-  "time.minutes": "vor {n} Min.",
-  "time.hours": "vor {n} Std.",
-  "time.days": "vor {n} T.",
-  "time.years": "vor {n} J.",
+  "time.minutes": {
+    "one": "vor {n} Min.",
+    "other": "vor {n} Min."
+  },
+  "time.hours": {
+    "one": "vor {n} Std.",
+    "other": "vor {n} Std."
+  },
+  "time.days": {
+    "one": "vor {n} T.",
+    "other": "vor {n} T."
+  },
+  "time.years": {
+    "one": "vor {n} J.",
+    "other": "vor {n} J."
+  },
   "icon.briefcase": "Aktentasche",
   "icon.book": "Buch",
   "icon.code": "Code",

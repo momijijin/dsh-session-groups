@@ -157,10 +157,22 @@
   "icon.rocket": "Foguete",
   "icon.hash": "Cerquilha",
   "time.justNow": "agora mesmo",
-  "time.minutes": "há {n} min",
-  "time.hours": "há {n} h",
-  "time.days": "há {n} dias",
-  "time.years": "há {n} anos",
+  "time.minutes": {
+    "one": "há {n} min",
+    "other": "há {n} min"
+  },
+  "time.hours": {
+    "one": "há {n} h",
+    "other": "há {n} h"
+  },
+  "time.days": {
+    "one": "há {n} dia",
+    "other": "há {n} dias"
+  },
+  "time.years": {
+    "one": "há {n} ano",
+    "other": "há {n} anos"
+  },
   "icon.briefcase": "Maleta",
   "icon.book": "Livro",
   "icon.code": "Código",

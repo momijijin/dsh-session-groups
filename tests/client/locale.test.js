@@ -63,6 +63,17 @@ test('packaged count strings use plural templates', () => {
   assert.equal(formatMessage(ja, 'group.sessionCount', { n: 2 }, 'ja'), '2 件のセッション')
 })
 
+test('time unit strings use plural templates where the language needs them', () => {
+  assert.equal(formatMessage(fr, 'time.years', { n: 1 }, 'fr'), 'il y a 1 an')
+  assert.equal(formatMessage(fr, 'time.years', { n: 2 }, 'fr'), 'il y a 2 ans')
+  assert.equal(formatMessage(es, 'time.years', { n: 1 }, 'es'), 'hace 1 año')
+  assert.equal(formatMessage(es, 'time.years', { n: 2 }, 'es'), 'hace 2 años')
+  assert.equal(formatMessage(pt, 'time.years', { n: 1 }, 'pt'), 'há 1 ano')
+  assert.equal(formatMessage(pt, 'time.years', { n: 2 }, 'pt'), 'há 2 anos')
+  assert.equal(formatMessage(en, 'time.minutes', { n: 1 }, 'en'), '1 min ago')
+  assert.equal(formatMessage(ja, 'time.minutes', { n: 1 }, 'ja'), '1 分前')
+})
+
 test('formatMessage substitutes {name} placeholders and falls back to keys', () => {
   assert.equal(formatMessage(zh, 'group.sessionCount', { n: 3 }, 'zh'), '3 个会话')
   assert.equal(formatMessage(en, 'group.sessionCount', { n: 3 }, 'en'), '3 sessions')
