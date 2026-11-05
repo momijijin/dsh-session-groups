@@ -1,4 +1,4 @@
-# dsh-session-groups — 项目开发与发布规则
+# dsh-session-grove — 项目开发与发布规则
 
 本文件只适用于本仓库；与全局 `~/.dsh/AGENTS.md` 或外层工作区规则冲突时，以本文件为准。
 
@@ -108,7 +108,7 @@ git branch -d feature/<slug>
 ```bash
 git switch main
 git merge --no-ff dev -m "release: v<version>"
-git tag -a v<version> -m "dsh-session-groups <version>"
+git tag -a v<version> -m "dsh-session-grove <version>"
 ```
 
 确认 `main` 上只有发布边界，随后按用户授权推送：
@@ -140,7 +140,7 @@ git switch -c hotfix/<slug>
 git switch main
 git merge --no-ff hotfix/<slug> -m "hotfix: <简述>"
 git tag -a archive/hotfix/<slug> -m "archive hotfix/<slug>" hotfix/<slug>
-git tag -a v<version> -m "dsh-session-groups <version>"
+git tag -a v<version> -m "dsh-session-grove <version>"
 git push origin main v<version>
 git branch -d hotfix/<slug>
 
@@ -162,7 +162,7 @@ git merge --no-ff main -m "merge: hotfix v<version> back to dev"
 ## 6. 当前基线
 
 - 最新已发布版本：`0.3.0-beta.76`（`v0.3.0-beta.76` 已发布）
-- 当前开发候选版本：以 `package.json` 的 `version` 为准；`.4.0` 系列身份重置后仍处于本地 beta 候选，尚未发布
-- 当前测试：510/510，coverage 约 92.44/82.38/88.73；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文；日文有 onboarding 语言包 fixture；19 种语言有全语言 header/dialog/group-menu/settings smoke；阿拉伯语 RTL 有菜单/弹窗 bounds + 设置面板 dir smoke）
+- 当前开发候选版本：以 `package.json` 的 `version` 为准；`0.4.0` 系列身份重置后仍处于本地 beta 候选，尚未发布
+- 当前测试：514/514，coverage 约 92.45/82.44/88.73；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文；日文有 onboarding 语言包 fixture；19 种语言有全语言 header/dialog/group-menu/settings smoke；阿拉伯语 RTL 有菜单/弹窗 bounds + 设置面板 dir smoke）
 - main / dev：以 `git log --oneline -1` 为准，允许分叉
 - 下一次开发从 `dev` 开新 feature 分支，不从 main 拉功能分支

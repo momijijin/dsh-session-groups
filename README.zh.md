@@ -9,7 +9,7 @@
 - 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
 - 不写入 `workspace.json`。
 
-当前版本：**0.4.0-beta.43**  
+当前版本：**0.4.0-beta.44**  
 主要支持：**DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 与 0.2.1-rc.5**（`engines.dsh: >=0.2.0-rc.2 <0.3.0`）  
 已验证桌面壳：**社区版 DSH Desktop Stable 2.0.18**（rc.2）与**官方 DeepSeek Harness 桌面版 0.2.1.0**（rc.5，隔离运行时 A+）  
 不官方支持、不承诺兼容：**社区版 DSH Desktop Beta**、**社区版 DSH NEXT（`-next` 通道）**
@@ -29,10 +29,10 @@
 | 平台 | Node/单元测试 | 构建/打包 | 真实 DSH UI |
 |---|---|---|---|
 | Windows | 本地已验证 | 本地已验证 | 本地已验证 |
-| Linux | GitHub Actions 已验证 | GitHub Actions 已验证 | 未验证 |
-| macOS | 未验证 | 未验证 | 未验证 |
+| Linux | CI 已验证 | CI 已验证 | 未验证 |
+| macOS | CI 已验证 | CI 已验证 | 未验证 |
 
-当前 CI 只是 Ubuntu 上的 Node 层门禁，不等于跨平台认证。Linux/macOS 的真实 DSH UI 支持在完成真实宿主/UI 验证前属于 experimental。普通用户通过 dshmarket 安装；本地 tarball 和 CLI 仅用于维护者/调试。
+当前 CI 在 Ubuntu、Windows、macOS 上运行 Node 层门禁（coverage gate 仅 Ubuntu），不等于跨平台 DSH UI 认证：真实 DSH UI 只在 Windows 上验证过，Linux/macOS 的真实 DSH UI 支持在完成真实宿主/UI 验证前属于 experimental。普通用户通过 dshmarket 安装；本地 tarball 和 CLI 仅用于维护者/调试。
 
 兼容性首先由内置的 DSH core/API 决定，而不是桌面壳的名字。官方版和社区版各自内置不同 DSH 版本与插件组合，两个受支持的桌面族必须分别对本插件做回归。
 
@@ -139,7 +139,7 @@ dsh-session-grove
 
 ### 从 `dsh-session-groups` 升级
 
-`0.4.0-beta.43` 是新包身份，**不会自动读取、复制或删除**旧 `dsh-session-groups` 的分组文件和浏览器键；这是为了避免把同名社区插件的数据误导入。手动迁移步骤见 [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md)。
+`0.4.0-beta.1` 的身份重置意味着本包**不会自动读取、复制或删除**旧 `dsh-session-groups` 的分组文件和浏览器键；这是为了避免把同名社区插件的数据误导入。手动迁移步骤见 [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md)。
 
 ### 维护者/开发者安装
 
@@ -159,7 +159,7 @@ dsh-session-grove
 - 成功提交前保留单槽 `.bak` 备份
 - 不写官方工作区与会话数据
 
-本地 UI 偏好（localStorage）：
+本地 UI 偏好与可选诊断/性能开关（localStorage）：
 
 - `dsh-session-grove.view.v1`
 - `dsh-session-grove.archive.v1`
@@ -167,8 +167,10 @@ dsh-session-grove
 - `dsh-session-grove.width.v1`
 - `dsh-session-grove.onboarded.v1`
 - `dsh-session-grove.dialog.geometry.v9`
+- `dsh-session-grove.diagnostics`（页面加载时的诊断 trace 开关；`'1'`/`'true'` 开启）
+- `dsh-session-grove.perf`（可选的性能探针开关；`'1'` 开启）
 
-卸载插件后官方工作区视图恢复；分组记录和本地偏好保留，重装可恢复。需要彻底清理时删除上述记录文件、`.bak` 与对应 localStorage 键。
+卸载插件后官方工作区视图恢复；分组记录和本地偏好保留，重装可恢复。需要彻底清理时删除上述记录文件、`.bak`、控制 token、诊断/调试 NDJSON 文件（如有）与对应 localStorage 键。
 
 ## 配置
 
@@ -308,7 +310,7 @@ node scripts/session-grove-control.mjs doctor
 <dshHome>/storages/dsh-session-grove.diagnostics.ndjson
 ```
 
-仅在 `diagnostics` 开启时写入；内容为拖拽事件/ID/timing，不包含会话 transcript。文件不自动轮转，需要时可手工清理。
+仅在 `diagnostics` 开启时写入；内容为拖拽事件/ID/timing，不包含会话 transcript。文件在追加前若将超过 8 MiB 会先清空；不做自动轮转，需要时可手工清理。
 
 ## 语言
 
@@ -328,7 +330,7 @@ node scripts/session-grove-control.mjs doctor
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框移动/缩放已有键盘支持；全量 axe/对比度审计和整棵树的键盘拖拽仍为 deferred。
-- 当前发布验证以 **510 项单元/契约测试**（含 Node 内置 coverage 报告）为准；用户桌面回归是历史证据，不是每个候选版本的 CI 产物；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
+- 当前发布验证以 **514 项单元/契约测试**（含 Node 内置 coverage 报告）为准；用户桌面回归是历史证据，不是每个候选版本的 CI 产物；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前自动化 A+ 为 `e2e/isolated.spec.mjs`。
 
 ## 文档
 
@@ -338,7 +340,7 @@ node scripts/session-grove-control.mjs doctor
 - [兼容策略](docs/COMPATIBILITY.md)
 - [架构](docs/ARCHITECTURE.md)
 - [发布与验证](docs/RELEASE.md)
-- [测试结果](docs/TEST-RESULTS.md)
+- [历史测试结果（0.4.0-beta.13 快照）](docs/TEST-RESULTS.md)
 
 历史 V1/V1.1 契约与计划单独索引，不代表当前行为。
 
@@ -352,8 +354,8 @@ node --check lib/client.js
 npm pack
 ```
 
-- `npm test`：510 项单元/契约测试
-- `npm run check:coverage`：Node 内置 coverage 报告（当前约 92.44% lines / 82.38% branches / 88.73% functions）
+- `npm test`：514 项单元/契约测试
+- `npm run check:coverage`：Node 内置 coverage 报告（当前约 92.45% lines / 82.44% branches / 88.73% functions）
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
 - `npm run check:all`：全文件语法检查 + 测试
 - `npm run check:core`：只加载并测试 src/core，不启动 DSH
@@ -365,9 +367,9 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-grove-0.4.0-beta.43.tgz`
+- 发布包：`dsh-session-grove-0.4.0-beta.44.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
-- 测试摘要见 `docs/TEST-RESULTS.md`
+- 历史测试快照见 `docs/TEST-RESULTS.md`（0.4.0-beta.13；当前状态以 `docs/TEST-MATRIX.md` 为准）
 
 ## 许可
 

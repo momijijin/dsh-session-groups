@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.4.0-beta.43**  
+当前实现：**0.4.0-beta.44**  
 支持宿主：`@deepseek-ai/dsh` 0.2.1-rc.2 / 0.2.1-rc.5  
 已验证壳：社区版 DSH Desktop **Stable** 2.0.18（rc.2）；官方 DeepSeek Harness 桌面版 0.2.1.0（rc.5，隔离 A+ + 桌面窗口验收）  
 明确不支持：社区版 DSH Desktop Beta、社区版 DSH NEXT（`-next`）  
@@ -42,7 +42,7 @@ src/index.js     Cordis host 入口
 
 ## 客户端 i18n 分层
 
-`src/client/locale.js` 只是兼容 facade，实际拆为五个模块：
+`src/client/locale.js` 只是兼容 facade。运行时 i18n 拆为六个模块，另有 1 个 build-only chunk 加载器：
 
 - `src/client/i18n/resources.js`：唯一 import `locale/*.json` 的模块，导出字典注册表与 `FALLBACK_LANGUAGE`
 - `src/client/i18n/locale-id.js`：基础语言归一化、Host snapshot / `<html lang>` / navigator 解析
@@ -50,11 +50,14 @@ src/index.js     Cordis host 入口
 - `src/client/i18n/translator.js`：字典选择与 `createTranslator`
 - `src/client/i18n/direction.js`：RTL 检测（基础语言 + `Intl.Locale` textInfo）
 - `src/client/i18n/date-format.js`：`Intl.DateTimeFormat` 绝对时间格式化（UI 通过 runtime bridge 调用）
+- `src/client/i18n/resources-lazy.js`（build-only，不计入上述六个运行时模块）：构建期 en/zh 子集与 17 个字典 chunk 加载器
+
+以下其余客户端模块不属于 i18n 分层：
+
 - `src/client/groups-view-width.js`：`GroupsView` 的 sidebar width controller hook（持久化/视口 clamp/host DOM 生命周期）
 - `src/client/groups-view-state.js`：framework session/workspace/status hooks 与可见树（纯数据适配）
 - `src/client/groups-view-search.js`：搜索 reveal/highlight 的 DOM 控制器与 timer 生命周期
 - `src/client/command-runtime.js`：非 React 命令/Toast bridge（dispatch 与 toast）
-- `src/client/i18n/resources-lazy.js`：client 构建的 en/zh 子集与 17 个字典 chunk 加载器
 - `scripts/build-client.mjs`：主 bundle + `lib/client.locale-*.js` 懒加载 chunk 生成
 - `src/client/groups-view-menu-handlers.js`：菜单锚点/上下文菜单/导航命令
 - `src/client/groups-view-dialog-handlers.js`：新建/重命名/移动/删除/归档/fork 等 dialog 命令

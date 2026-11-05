@@ -90,6 +90,10 @@ export const registerSessionRoutes = ({
       CONTROL_SESSION_RENAME_PATH,
       async (req, res) => {
         if (controlUnavailable(res)) return
+        if (!controlSessionsEnabled()) {
+          sendJson(res, 404, { ok: false, code: 'session-controls-disabled' })
+          return
+        }
         if (controlDenied(req, res)) return
         if (req.method !== 'POST') {
           sendMethodNotAllowed(res, 'POST')
@@ -159,6 +163,10 @@ export const registerSessionRoutes = ({
       CONTROL_SESSION_ARCHIVE_PATH,
       async (req, res) => {
         if (controlUnavailable(res)) return
+        if (!controlSessionsEnabled()) {
+          sendJson(res, 404, { ok: false, code: 'session-controls-disabled' })
+          return
+        }
         if (controlDenied(req, res)) return
         if (req.method !== 'POST') {
           sendMethodNotAllowed(res, 'POST')

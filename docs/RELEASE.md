@@ -1,28 +1,19 @@
-# 0.4.0-beta.43 发布与安装说明
+# 0.4.0-beta.44 发布与安装说明
 
-- 版本：`0.4.0-beta.43`
+- 版本：`0.4.0-beta.44`
 - 包名：`dsh-session-grove`
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
-- 状态：510/510 测试；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
-- 发布包：`dsh-session-grove-0.4.0-beta.43.tgz`
+- 状态：514/514 测试；A+ 为 `0.4.0-beta.42` 实测证据；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
+- 发布包：`dsh-session-grove-0.4.0-beta.44.tgz`
 
 ## 本版重点
 
-- **全语言注入 smoke**：test-only locale pack 注入 19 种语言及 zh-TW/zh-HK/zh-CN/pt-BR 别名，`test:all-locales` 共 23 例断言 header + 新建分组弹窗 + 组菜单 + settings/config + 阿拉伯语 RTL 根方向。
-- **阿拉伯语 + RTL 审计**：`ar` 资源、`dir` 根方向、核心列表/header/弹窗 RTL；新增菜单/弹窗 viewport bounds、设置面板 `dir` 与 RTL 截图。
-- **i18n 分层**：`locale.js` 拆为 resources / locale-id / message-format / translator；facade 仅 re-export，UI 仍只消费 `t`。
-- **双计数文案**：删除分组改为 `group.sessionCount` + `group.subgroupCount` 两条独立复数 + 静态指令，不再依赖双计数单串。
-- **CLDR 复数**：`Intl.PluralRules` + per-category JSON；`group.sessionCount`、`group.subgroupCount`、`sessions.expand`、`time.*` 已迁移。
-- **第三方语言包 A+**：test-only ja locale bundle 调用 `addLanguage` + `setLocale`，隔离 A+ 断言日文 onboarding/弹窗。
-- **繁体中文**：新增 `zh-Hant` 资源与 script-aware resolver（`zh-TW/zh-HK` → `zh-Hant`，`zh-CN/zh-Hans` → `zh`）。
-- **语言资源**：`en/zh/zh-Hant/ja/ko/de/fr/es/pt/it/nl/pl/tr/vi/th/id/ru/hi/ar` 十九种 locale，每种 288 keys；Host 注册与 manifest 标题/描述同步。
-- **长文案视觉**：ru/hi/ar 在 264px 最小侧栏（内容 252px）截图无根节点横向溢出；session row 在 locale 切换时按 `localeRevision` 重绘。
-- 地区变体解析到基础语言（`ja-JP` → `ja`、`ko-KR` → `ko`、`pt-BR` → `pt` 等）；未支持语言回退英文。
-- **i18n 基础设施**：BCP 47 基础语言归一化、字典注册表、未知语言回退英文；不调用 `addLanguage`，语言目录仍由 Host/第三方语言包拥有。
-- 保留 `0.4.0-beta.1` 身份重置与 `0.4.0-beta.2` 原生官方壳 locale fallback 修复。
-- **不做自动迁移**：旧 `dsh-session-groups` 记录和浏览器键刻意忽略且不删除，避免误导入同名社区插件数据；手动迁移见 [MIGRATION-0.4.md](MIGRATION-0.4.md)。
+- **安全修复**：session rename/archive 现在严格受 `controlSessions` 控制；关闭时在 token/body 检查前返回 404 `session-controls-disabled`，并补了 gate 顺序与零 mutation 测试。
+- **文档 truth pass**：README/CHANGELOG/RELEASE/TEST-MATRIX/I18N/ARCHITECTURE/COMPATIBILITY 统一到当前事实（514 tests、A+ 0.4.0-beta.42、RTL 0.4.0-beta.39、19×288 locale keys）。
+- **版本**：五处版本一致为 `0.4.0-beta.44`；主 bundle 与 17 个 lazy locale chunk 已重建。
+- 本批未发布；没有版本 tag 或 GitHub Release。
 
 ## 安装方式
 
@@ -34,7 +25,7 @@
 # 以本地 desktop profile 为例
 DeepSeek Harness.exe --expose-internals `
   "C:\Users\<user>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
-  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.43.tgz"
+  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.44.tgz"
 ```
 
 安装后必须重启对应桌面客户端。先卸载旧的 `dsh-session-groups`；不要在同一 profile 中并存两个身份。
@@ -79,6 +70,6 @@ npm run test:all-locales
 
 完整覆盖矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)；本候选版本的可重复门禁为：
 
-- 510/510 单元/契约测试。
-- coverage：92.44% lines / 82.38% branches / 88.73% functions。
-- community A+：`0.4.0-beta.43` PASS；official A+：`0.4.0-beta.43` PASS（隔离 official host）；official all-locales 23/23 PASS；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。
+- 514/514 单元/契约测试。
+- coverage：92.45% lines / 82.44% branches / 88.73% functions。
+- community A+：`0.4.0-beta.42` PASS；official A+：`0.4.0-beta.42` PASS（隔离 official host）；official all-locales 23/23 PASS；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。

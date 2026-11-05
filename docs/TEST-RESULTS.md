@@ -1,6 +1,6 @@
-# 0.4.0-beta.13 测试结果
+# 0.4.0-beta.13 测试结果（历史快照）
 
-> 本文件是 `0.4.0-beta.13` 的历史证据快照。当前可重复验证状态、语言覆盖范围和测试缺口以 [TEST-MATRIX.md](TEST-MATRIX.md) 为准。
+> 本文件是 `0.4.0-beta.13` 的历史证据快照，**不是当前测试摘要**。当前可重复验证状态、语言覆盖范围和测试缺口以 [TEST-MATRIX.md](TEST-MATRIX.md) 为准。
 
 日期：2026-11-05  
 版本：`0.4.0-beta.13`  
@@ -8,7 +8,7 @@
 已验证壳：community DSH Desktop **Stable** 2.0.18（rc.2）；official DeepSeek Harness desktop 0.2.1.0（rc.5，隔离 A+ + 维护者桌面窗口验收）  
 不官方支持：community DSH Desktop Beta、community DSH NEXT（`-next`）
 
-## 结论
+## 当时的结论（0.4.0-beta.13 历史）
 
 - 本地候选 0.4.0-beta.13：**486/486 PASS**（identity reset + i18n fallback + 15 locales + CLDR plural templates + a11y + maintainability + perf + icon/title + session reorder + official rc.5 compatibility）
 - 身份边界：package/manifest/bundle、host 路由、record/token/diagnostics/debug、client localStorage、skill/tool 名称全部为 grove；旧 `dsh-session-groups` 标识没有残留于 active source。
@@ -90,7 +90,7 @@ A+ 使用独立 `DSH_HOME`、隔离端口和临时 profile（community `sg-e2e` 
 ## 运行方式
 
 ```powershell
-cd C:\Users\Momiji\Projects\dsh-session-grove
+cd C:\Users\Momiji\Projects\dsh-session-groups
 npm test
 npm run check:core
 npm run check:coverage
@@ -98,7 +98,7 @@ npm run build
 npm run test:isolated   # 需先启动隔离 web
 ```
 
-## 未决验证
+## 当时的未决验证（历史快照，后续版本可能已覆盖）
 
 - 真实桌面回归（首次引导、侧栏宽度、主题、中文视觉）
 - 非空会话 Fork 成功路径已在隔离实例真实 E2E 验证（beta.53）

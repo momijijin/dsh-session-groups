@@ -1,7 +1,7 @@
 /**
  * Pure session search index + reveal logic for the groups view (v1.1).
  *
- * Requirements: docs/superpowers/specs/2026-10-28-session-groups-v1.1-design.md
+ * Requirements: historical design archive (see docs/archive/README.md)
  * §3.3 / §4.4. This module is DOM-free: the SearchBox component owns rendering,
  * keyboard state and scrolling; it only builds an immutable index, filters it and
  * computes the collapsed patch needed to reveal one session.
