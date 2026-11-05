@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.28`  
+Status: `0.4.0-beta.29`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -20,7 +20,7 @@ The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 every packaged dictionary and checks the header + new-group dialog.
 
 A+ C/O cells are historical runtime evidence (last recorded on earlier
-candidates). `0.4.0-beta.28` was not A+-re-run; do not use those cells as a
+candidates). `0.4.0-beta.29` was not A+-re-run; do not use those cells as a
 fresh candidate artifact until the release gate records a new run.
 
 ## Environment matrix
