@@ -182,6 +182,13 @@ try {
     await groupMenuButton.first().click()
     const menu = page.locator('[data-testid="session-groups-menu"]')
     await menu.waitFor({ state: 'visible' })
+    // Lazy locale chunks may arrive one render after the header label; wait for
+    // the menu dictionary before asserting the whole menu text.
+    await page.waitForFunction(
+      (expected) => document.querySelector('[data-testid="session-groups-menu"]')?.innerText?.includes(expected),
+      dictionaries[dictionaryId]['group.newSession'],
+      { timeout: 5000 },
+    )
     if (localeId === 'ar') {
       const box = await menu.boundingBox()
       const viewport = page.viewportSize()

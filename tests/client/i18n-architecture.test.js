@@ -39,9 +39,9 @@ test('src/core stays free of locale dictionaries, Intl and locale-sensitive form
   }
 })
 
-test('locale JSON imports live only in the i18n resources module', () => {
+test('locale JSON imports live only in the i18n resource modules', () => {
   const importers = clientFiles.filter((file) => /locale\/[^'"]+\.json/.test(read(file)))
-  assert.deepEqual(importers.map(rel), ['src/client/i18n/resources.js'])
+  assert.deepEqual(importers.map(rel).sort(), ['src/client/i18n/resources-lazy.js', 'src/client/i18n/resources.js'])
 })
 
 test('the locale facade stays a thin re-export surface', () => {
