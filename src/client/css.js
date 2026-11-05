@@ -835,6 +835,14 @@ export const CSS = `
 .dsg-root[dir="rtl"] .dsg-session-row[data-current="true"] {
   box-shadow: inset -2px 0 0 var(--dsw-alias-state-business-primary, #4d6bfe);
 }
+.dsg-settings-panel[dir="rtl"] .dsg-config-dependent {
+  margin-left: 0;
+  margin-right: 18px;
+  padding-left: 0;
+  padding-right: 12px;
+  border-left: 0;
+  border-right: 2px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 16%, transparent));
+}
 .dsg-root[dir="rtl"] .dsg-group-caret svg { transform: scaleX(-1); }
 `
 

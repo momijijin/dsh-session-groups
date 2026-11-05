@@ -31,6 +31,7 @@ const readFormValue = (form) => {
  */
 export const SkillRepairCard = ({ form }) => {
   const t = clientRuntime()?.t ?? ((key) => key)
+  const direction = clientRuntime()?.direction === 'rtl' ? 'rtl' : 'ltr'
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
   const [pending, setPending] = useState({})
@@ -146,7 +147,7 @@ export const SkillRepairCard = ({ form }) => {
 
   return h(
     'div',
-    { class: 'dsg-settings-panel', 'data-testid': 'session-groups-settings-panel' },
+    { class: 'dsg-settings-panel', 'data-testid': 'session-groups-settings-panel', dir: direction },
     form
       ? h(
           'div',
