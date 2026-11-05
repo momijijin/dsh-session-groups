@@ -57,8 +57,6 @@
   "session.open": "Sessie openen",
   "status.idle": "Inactief",
   "status.running": "Actief",
-  "status.subagentsRunning.one": "{n} subagent actief",
-  "status.subagentsRunning.other": "{n} subagenten actief",
   "status.waitingApproval": "Wacht op goedkeuring",
   "status.planReview": "Plan wacht op beoordeling",
   "status.waitingAnswer": "Wacht op antwoord",
@@ -307,5 +305,9 @@
   "dialog.moveGroup": "Groep verplaatsen",
   "dialog.moveSession": "Sessie aan een groep toewijzen",
   "dialog.destinationGroup": "Doelgroep kiezen",
-  "config.requiresControlApi": "Vereist de AI-besturings-API"
+  "config.requiresControlApi": "Vereist de AI-besturings-API",
+  "status.subagentsRunning": {
+    "one": "{n} subagent actief",
+    "other": "{n} subagenten actief"
+  }
 }

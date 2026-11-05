@@ -35,7 +35,7 @@ export const subagentStatus = (runningSubagentCount) => {
     state: 'ongoing',
     kind: 'subagents',
     count,
-    labelKey: count === 1 ? 'status.subagentsRunning.one' : 'status.subagentsRunning.other',
+    labelKey: 'status.subagentsRunning',
     params: { n: count },
   }
 }

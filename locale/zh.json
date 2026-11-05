@@ -57,8 +57,6 @@
   "session.open": "打开会话",
   "status.idle": "空闲",
   "status.running": "进行中",
-  "status.subagentsRunning.one": "{n} 个子智能体运行中",
-  "status.subagentsRunning.other": "{n} 个子智能体运行中",
   "status.waitingApproval": "等待审批",
   "status.planReview": "计划待审",
   "status.waitingAnswer": "等待回答",
@@ -307,5 +305,9 @@
   "dialog.moveGroup": "移动分组",
   "dialog.moveSession": "归入分组",
   "dialog.destinationGroup": "选择目标分组",
-  "config.requiresControlApi": "需要先开启 AI 控制接口"
+  "config.requiresControlApi": "需要先开启 AI 控制接口",
+  "status.subagentsRunning": {
+    "one": "{n} 个子智能体运行中",
+    "other": "{n} 个子智能体运行中"
+  }
 }
