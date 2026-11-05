@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.13`  
+Status: `0.4.0-beta.14`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -8,7 +8,7 @@ and at which level. Other docs should link here instead of restating counts.
 
 | Code | Meaning |
 |---|---|
-| `U` | Unit/contract tests: `npm test` (486 tests) |
+| `U` | Unit/contract tests: `npm test` (490 tests) |
 | `A+ C` | Isolated Playwright, community DSH Desktop 2.0.18 / DSH `0.2.1-rc.2` |
 | `A+ O` | Isolated Playwright, official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5` |
 | `LP` | Test-only language-pack fixture (`e2e/fixtures/ja-locale-pack`) |
