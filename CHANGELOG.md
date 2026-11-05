@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.17 (test: all-locale injection)
+
+- Extended the test-only locale pack to add every packaged language plus zh-TW/zh-HK/zh-MO/zh-CN/zh-SG/pt-BR aliases and expose a locale switch hook.
+- Added `e2e/all-locales.spec.mjs`: 22 switch cases assert header + new-group dialog copy for all 18 packaged dictionaries and aliases.
+- Updated TEST-MATRIX with LP header/dialog coverage; no plugin runtime behavior changed.
+
 ## 0.4.0-beta.16 (local i18n zh-Hant)
 
 - Added Traditional Chinese (`locale/zh-Hant.json`, 287 keys) with manifest metadata.

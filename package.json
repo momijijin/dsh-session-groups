@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-grove",
-  "version": "0.4.0-beta.16",
+  "version": "0.4.0-beta.17",
   "description": "A free-form grouping layer for the DSH Desktop sidebar: assign sessions from different workspaces to the same group without changing their official workspace membership or logs.",
   "icon": "assets/icon-180.png",
   "author": "momiji-gz302ea <2648863351@qq.com>",
@@ -72,7 +72,8 @@
     "test:isolated": "node e2e/isolated.spec.mjs",
     "check:all": "node scripts/check-all.mjs",
     "check": "node --check src/index.js && node --check src/shared/model.js && node --check src/client/index.js",
-    "test:locale-pack": "node e2e/locale-pack.spec.mjs"
+    "test:locale-pack": "node e2e/locale-pack.spec.mjs",
+    "test:all-locales": "node e2e/all-locales.spec.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.5",

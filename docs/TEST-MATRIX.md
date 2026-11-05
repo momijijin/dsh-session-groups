@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.16`  
+Status: `0.4.0-beta.17`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -11,16 +11,17 @@ and at which level. Other docs should link here instead of restating counts.
 | `U` | Unit/contract tests: `npm test` (491 tests) |
 | `A+ C` | Isolated Playwright, community DSH Desktop 2.0.18 / DSH `0.2.1-rc.2` |
 | `A+ O` | Isolated Playwright, official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5` |
-| `LP` | Test-only language-pack fixture (`e2e/fixtures/ja-locale-pack`) |
+| `LP` | Test-only all-locale pack (`e2e/fixtures/ja-locale-pack`): host catalog injection + active locale switch |
 | `H` | Historical/manual evidence in an earlier release note or test-results snapshot; not a current default automation |
 | `—` | Not tested |
 
 The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
-`e2e/locale-pack.spec.mjs`.
+`e2e/locale-pack.spec.mjs`, and `e2e/all-locales.spec.mjs` switches through
+every packaged dictionary and checks the header + new-group dialog.
 
 ## Environment matrix
 
-| Area | U | A+ C | A+ O | LP ja | Native manual |
+| Area | U | A+ C | A+ O | LP | Native manual |
 |---|---|---|---|---|---|
 | Group CRUD, move, delete, session assignment | PASS | PASS | PASS | — | PASS (maintainer) |
 | Persistence, CAS, conflict/SSE convergence | PASS | PASS | PASS | — | PASS |
@@ -28,45 +29,48 @@ The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 | English onboarding/settings/menu/dialog copy | PASS | PASS | PASS | — | — |
 | English plural/time labels | PASS | PASS | PASS | — | — |
 | Third-party language activation (`ja`) | PASS | — | — | PASS | — |
-| Full non-English UI surfaces | PASS (resources only) | — | — | ja onboarding/dialog only | — |
+| All-locale switch: header + new-group dialog (18 languages + zh-TW/zh-HK/zh-CN/pt-BR aliases) | PASS | — | — | PASS (22 cases) | — |
+| Full non-English UI surfaces | PASS (resources only) | — | — | LP header/dialog + ja onboarding/dialog only | — |
 
 ## Language matrix
 
 | Locale | Packaged | U parity | Runtime A+ | Language-pack A+ | Native/manual | Claim |
 |---|---|---|---|---|---|---|
-| `en` English | yes | PASS | A+ C + A+ O | — | PASS | fully exercised |
-| `zh` Simplified Chinese | yes | PASS | H (old `TEST-RESULTS` snapshot) | — | H | **not a current default A+ assertion** |
-| `ja` Japanese | yes | PASS | — | PASS (onboarding/dialog only) | — | follows a third-party pack |
-| `ko` Korean | yes | PASS | — | — | — | resources only |
-| `de` German | yes | PASS | — | — | — | resources only |
-| `fr` French | yes | PASS | — | — | — | resources only |
-| `es` Spanish | yes | PASS | — | — | — | resources only |
-| `pt` Brazilian Portuguese | yes | PASS | — | — | — | resources only |
-| `it` Italian | yes | PASS | — | — | — | resources only |
-| `nl` Dutch | yes | PASS | — | — | — | resources only |
-| `pl` Polish | yes | PASS (one/few/many/other) | — | — | — | resources only |
-| `tr` Turkish | yes | PASS | — | — | — | resources only |
-| `vi` Vietnamese | yes | PASS | — | — | — | resources only |
-| `th` Thai | yes | PASS | — | — | — | resources only |
-| `id` Indonesian | yes | PASS | — | — | — | resources only |
-| `ru` Russian | yes | PASS (one/few/many/other) | — | — | — | resources only |
-| `hi` Hindi | yes | PASS (one/other) | — | — | — | resources only |
+| `en` English | yes | PASS | A+ C + A+ O | PASS (header/dialog) | PASS | fully exercised |
+| `zh` Simplified Chinese | yes | PASS | H (old `TEST-RESULTS` snapshot) | PASS (header/dialog) | H | **not a current default A+ assertion** |
+| `ja` Japanese | yes | PASS | — | PASS (onboarding/dialog; all-locale) | — | follows a third-party pack |
+| `ko` Korean | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `de` German | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `fr` French | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `es` Spanish | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `pt` Brazilian Portuguese | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `it` Italian | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `nl` Dutch | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `pl` Polish | yes | PASS (one/few/many/other) | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `tr` Turkish | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `vi` Vietnamese | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `th` Thai | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `id` Indonesian | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `ru` Russian | yes | PASS (one/few/many/other) | — | PASS (header/dialog) | — | resources + locale-pack smoke |
+| `hi` Hindi | yes | PASS (one/other) | — | PASS (header/dialog) | — | resources + locale-pack smoke |
 | `ar` Arabic | no | — | — | — | — | not packaged; RTL also missing |
-| `zh-Hant` Traditional Chinese | yes | PASS | — | — | — | script-aware resolver; runtime unit-only |
+| `zh-Hant` Traditional Chinese | yes | PASS | — | PASS (header/dialog) | — | script-aware resolver; locale-pack smoke |
 
 Important distinction:
 
 ```text
 U parity PASS = the resource has the right keys, placeholders and plural
 categories; it does not prove translation quality or visual fit.
+LP PASS = the active locale changes and the header + new-group dialog render
+that dictionary; it does not cover every menu, settings or drag surface.
 ```
 
 ## Locale aliases
 
-All ids are trimmed, lowercased, `_` is treated as `-`, and only the first
-language subtag is used for dictionary selection. `Intl.PluralRules` still
-receives the original normalized id, so regional plural rules are used for
-plural selection.
+All ids are trimmed, lowercased and `_` is treated as `-`. Script/region
+candidates are tried before the base language (see `zh-Hant` rows).
+`Intl.PluralRules` still receives the original normalized id, so regional
+plural rules are used for plural selection.
 
 | Input family | Selected dictionary | Notes |
 |---|---|---|
