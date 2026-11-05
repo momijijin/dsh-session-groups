@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.31`  
+Status: `0.4.0-beta.32`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
