@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0-beta.3 (local i18n foundation)
+
+- Locale ids are normalized to their base language (`ja-JP` → `ja`, `zh-Hant` → `zh`).
+- Dictionaries are selected through a registry; unsupported languages now fall back to English instead of Chinese.
+- Every bundled dictionary is registered with the host locale service; the host/language-pack catalog remains authoritative and no `addLanguage` call is added.
+- Tests: 480/480, including base-language and unknown-locale fallback coverage. No new language resources yet; no tag or Release.
+
+## 0.4.0-beta.2 (local i18n hotfix)
+
+- Locale fallback: if the native official shell does not expose the community locale translator, resolve from the host snapshot, then `<html lang>`, then navigator language instead of defaulting to Chinese.
+- Fixes Chinese onboarding, settings copy, right-click menus and dialogs on an English client.
+- Tests: 479/479, including English-surface assertions; coverage 93.67/82.42/88.94. No tag or Release.
+
 ## 0.4.0-beta.1 (local identity-reset candidate)
 
 - Identity reset: package, plugin/bundle ids, host routes, storage/token/diagnostics/debug files and client localStorage namespaces now use `dsh-session-grove`; the display title remains Free Groups / 自由分组.
