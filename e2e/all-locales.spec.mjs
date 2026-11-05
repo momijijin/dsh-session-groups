@@ -23,7 +23,7 @@ if (!testHome) fail('DSH_TEST_HOME is required')
 if (resolve(testHome).toLowerCase().startsWith(realHome.toLowerCase())) fail(`refusing real DSH home: ${testHome}`)
 
 const dictionaries = Object.fromEntries(
-  ['en', 'zh', 'zh-Hant', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'it', 'nl', 'pl', 'tr', 'vi', 'th', 'id', 'ru', 'hi'].map(
+  ['en', 'zh', 'zh-Hant', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'it', 'nl', 'pl', 'tr', 'vi', 'th', 'id', 'ru', 'hi', 'ar'].map(
     (id) => [id, JSON.parse(readFileSync(new URL(`../locale/${id}.json`, import.meta.url), 'utf8'))],
   ),
 )
@@ -50,6 +50,7 @@ const cases = [
   ['id', 'id'],
   ['ru', 'ru'],
   ['hi', 'hi'],
+  ['ar', 'ar'],
 ]
 
 const browser = await chromium.launch({
@@ -122,6 +123,11 @@ try {
       const label = document.querySelector('.dsg-header-label')
       return label?.textContent?.trim() === expected
     }, expectedTitle)
+    const expectedDirection = localeId === 'ar' ? 'rtl' : 'ltr'
+    const actualDirection = await page.locator('[data-testid="session-groups-view"]').getAttribute('dir')
+    if (actualDirection !== expectedDirection) {
+      throw new Error(`${localeId}: direction ${actualDirection} != ${expectedDirection}`)
+    }
 
     await page.locator('[data-testid="session-groups-new-group"]').click()
     const dialog = page.locator('[data-testid="session-groups-dialog"]')

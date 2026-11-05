@@ -17,6 +17,7 @@
 export {
   FALLBACK_LANGUAGE,
   LOCALE_NS,
+  ar,
   de,
   dictionaries,
   en,
@@ -38,5 +39,6 @@ export {
   zhHant,
 } from './i18n/resources.js'
 export { baseLanguage, detectEnvironmentLocale, localeCandidates, normalizeLocaleId, resolveLocaleId } from './i18n/locale-id.js'
+export { directionForLocale, isRtlLocale } from './i18n/direction.js'
 export { formatMessage } from './i18n/message-format.js'
 export { createTranslator, dictionaryFor } from './i18n/translator.js'

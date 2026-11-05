@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-beta.18 (ar + RTL foundation)
+
+- Added Arabic (`locale/ar.json`, 287 keys, CLDR zero/one/two/few/many/other) and manifest metadata.
+- Added locale direction detection and root `dir` propagation; Arabic gets core list/header/dialog RTL overrides.
+- All-locale injection now covers 19 languages plus aliases (23 cases), including Arabic RTL direction. Full RTL visual audit remains deferred.
+- Tests: 493/493. No tag or Release.
+
 ## 0.4.0-beta.17 (test: all-locale injection)
 
 - Extended the test-only locale pack to add every packaged language plus zh-TW/zh-HK/zh-MO/zh-CN/zh-SG/pt-BR aliases and expose a locale switch hook.

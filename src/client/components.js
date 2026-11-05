@@ -421,6 +421,7 @@ export const GroupsView = (props) => {
   }
 
   const t = rt()?.t ?? ((key) => key)
+  const direction = rt()?.direction === 'rtl' ? 'rtl' : 'ltr'
 
   // Auto-expand ancestors of the current session when the view opens.
   useEffect(() => {
@@ -448,7 +449,7 @@ export const GroupsView = (props) => {
 
   if (!wide) return h(Rail, { props })
 
-  if (store === null) return h('div', { class: 'dsg-root', 'data-testid': 'session-groups-view' }, t('flat.title'))
+  if (store === null) return h('div', { class: 'dsg-root', 'data-testid': 'session-groups-view', dir: direction }, t('flat.title'))
 
   // Flat fallback for load/route/commit failures (CONTRACTS §6).
   if (store.docState === 'error') return h(FlatFallback, { props, store, reason: store.banner?.code === 'route-unavailable' ? 'route-unavailable' : 'error' })
@@ -1311,7 +1312,7 @@ export const GroupsView = (props) => {
 
   return h(
     'div',
-    { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', 'data-mode': store.viewMode, 'data-wide': 'true', 'data-narrow': appliedWidth !== null && appliedWidth <= 320 ? 'true' : 'false', 'data-optimistic': store.optimistic ? 'true' : 'false' },
+    { ref: rootRef, class: 'dsg-root', 'data-testid': 'session-groups-view', dir: direction, 'data-mode': store.viewMode, 'data-wide': 'true', 'data-narrow': appliedWidth !== null && appliedWidth <= 320 ? 'true' : 'false', 'data-optimistic': store.optimistic ? 'true' : 'false' },
     h(Header, { store: viewState, handlers: stableHandlers, sessionsById: byId, workspaces: workspaceItems, archivedSessionIds, runningSessions, blockedSessions, unreadSessions }),
     wide && widthSupported && appliedWidth !== null
       ? h(ResizeHandle, {

@@ -801,6 +801,39 @@ export const CSS = `
   text-overflow: ellipsis;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
 }
+
+/* RTL: direction flips flex/text flow; these overrides cover the physical
+ * margins, guides and scroll rail that cannot be expressed by direction alone. */
+.dsg-root[dir="rtl"] { direction: rtl; }
+.dsg-root[dir="rtl"] .dsg-status-actions { margin-right: 0; margin-left: 28px; }
+.dsg-root[dir="rtl"][data-narrow="true"] .dsg-status-actions { margin-left: 0; }
+.dsg-root[dir="rtl"] .dsg-group-line {
+  margin-left: 0;
+  margin-right: 16px;
+  padding-left: 0;
+  padding-right: 4px;
+}
+.dsg-root[dir="rtl"] .dsg-group-line::before { left: auto; right: -1px; }
+.dsg-root[dir="rtl"] .dsg-group-count,
+.dsg-root[dir="rtl"] .dsg-session-time { text-align: left; }
+.dsg-root[dir="rtl"] .dsg-menu-item,
+.dsg-root[dir="rtl"] .dsg-running-item,
+.dsg-root[dir="rtl"] .dsg-session-overflow { text-align: right; }
+.dsg-root[dir="rtl"] .dsg-session-overflow { padding: 0 28px 0 12px; }
+.dsg-root[dir="rtl"] .dsg-scroll-rail { right: auto; left: 2px; }
+.dsg-root[dir="rtl"] .dsg-scroll-thumb { left: auto; right: 0; }
+.dsg-root[dir="rtl"] .dsg-config-dependent {
+  margin-left: 0;
+  margin-right: 18px;
+  padding-left: 0;
+  padding-right: 12px;
+  border-left: 0;
+  border-right: 2px solid var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 16%, transparent));
+}
+.dsg-root[dir="rtl"] .dsg-session-row[data-current="true"] {
+  box-shadow: inset -2px 0 0 var(--dsw-alias-state-business-primary, #4d6bfe);
+}
+.dsg-root[dir="rtl"] .dsg-group-caret svg { transform: scaleX(-1); }
 `
 
 /**

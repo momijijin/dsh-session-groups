@@ -34,6 +34,7 @@ window.__ModuleLoader__.load({
       'id',
       'ru',
       'hi',
+      'ar',
     ]
 
     exports.name = 'e2e-ja-locale-pack'

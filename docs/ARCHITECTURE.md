@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.4.0-beta.17**  
+当前实现：**0.4.0-beta.18**  
 支持宿主：`@deepseek-ai/dsh` 0.2.1-rc.2 / 0.2.1-rc.5  
 已验证壳：社区版 DSH Desktop **Stable** 2.0.18（rc.2）；官方 DeepSeek Harness 桌面版 0.2.1.0（rc.5，隔离 A+ + 桌面窗口验收）  
 明确不支持：社区版 DSH Desktop Beta、社区版 DSH NEXT（`-next`）  
@@ -42,12 +42,13 @@ src/index.js     Cordis host 入口
 
 ## 客户端 i18n 分层
 
-`src/client/locale.js` 只是兼容 facade，实际拆为四个模块：
+`src/client/locale.js` 只是兼容 facade，实际拆为五个模块：
 
 - `src/client/i18n/resources.js`：唯一 import `locale/*.json` 的模块，导出字典注册表与 `FALLBACK_LANGUAGE`
 - `src/client/i18n/locale-id.js`：基础语言归一化、Host snapshot / `<html lang>` / navigator 解析
 - `src/client/i18n/message-format.js`：CLDR 类别选择、`{placeholder}` 插值、英文兜底
 - `src/client/i18n/translator.js`：字典选择与 `createTranslator`
+- `src/client/i18n/direction.js`：RTL 检测（基础语言 + `Intl.Locale` textInfo）
 
 边界规则：
 

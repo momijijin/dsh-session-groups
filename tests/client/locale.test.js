@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   FALLBACK_LANGUAGE,
+  ar,
   baseLanguage,
   createTranslator,
   detectEnvironmentLocale,
@@ -81,6 +82,8 @@ test('packaged count strings use plural templates', () => {
   assert.equal(formatMessage(ru, 'group.sessionCount', { n: 2 }, 'ru'), '2 сессии')
   assert.equal(formatMessage(ru, 'group.sessionCount', { n: 5 }, 'ru'), '5 сессий')
   assert.equal(formatMessage(hi, 'group.sessionCount', { n: 2 }, 'hi'), '2 सत्र')
+  assert.equal(formatMessage(ar, 'group.sessionCount', { n: 2 }, 'ar'), '2 جلستان')
+  assert.equal(formatMessage(ar, 'group.sessionCount', { n: 5 }, 'ar'), '5 جلسات')
   assert.equal(formatMessage(tr, 'group.sessionCount', { n: 2 }, 'tr'), '2 oturum')
   assert.equal(formatMessage(ja, 'group.sessionCount', { n: 2 }, 'ja'), '2 件のセッション')
 })
@@ -176,6 +179,8 @@ test('dictionaryFor handles base language prefixes and falls back to English', (
   assert.equal(dictionaryFor('id-ID'), dictionaries.id)
   assert.equal(dictionaryFor('ru-RU'), dictionaries.ru)
   assert.equal(dictionaryFor('hi-IN'), dictionaries.hi)
+  assert.equal(dictionaryFor('ar'), dictionaries.ar)
+  assert.equal(dictionaryFor('ar-EG'), dictionaries.ar)
   assert.equal(dictionaryFor('unknown-language'), dictionaries.en)
   assert.equal(dictionaryFor(undefined), dictionaries.en)
 })
@@ -207,6 +212,8 @@ test('the first language batch resolves each base dictionary and region variant'
     ['id-ID', 'id'],
     ['ru-RU', 'ru'],
     ['hi-IN', 'hi'],
+    ['ar', 'ar'],
+    ['ar-EG', 'ar'],
   ]) {
     const translate = createTranslator(() => ({ active: localeId }))
     assert.equal(translate('view.title'), dictionaries[language]['view.title'], localeId)
