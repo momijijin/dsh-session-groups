@@ -682,12 +682,12 @@ export const createPlugin = () => {
     } catch {
       /* compatible with host versions without the plugins settings slot */
     }
-    // Register our dictionaries with the host locale service when available.
-    // Register only the locales the host currently exposes. Do not call
-    // addLanguage and do not add a plugin picker: extra locale files remain
-    // dormant until the host catalog supports them.
+    // Register all packaged dictionaries with the host locale service when
+    // available. Do not call addLanguage and do not add a plugin picker: the
+    // host (or a third-party language pack) owns the catalog, while these
+    // dictionaries stay dormant until their language becomes active.
     try {
-      const disposer = localeService?.register?.(LOCALE_NS, { zh: dictionaries.zh, en: dictionaries.en })
+      const disposer = localeService?.register?.(LOCALE_NS, dictionaries)
       if (typeof disposer === 'function') localeDisposer = disposer
       const unsubscribe = localeService?.subscribe?.(() => {
         try {
