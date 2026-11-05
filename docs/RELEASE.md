@@ -1,12 +1,12 @@
-# 0.4.0-beta.41 发布与安装说明
+# 0.4.0-beta.42 发布与安装说明
 
-- 版本：`0.4.0-beta.41`
+- 版本：`0.4.0-beta.42`
 - 包名：`dsh-session-grove`
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
-- 状态：504/504 测试；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
-- 发布包：`dsh-session-grove-0.4.0-beta.41.tgz`
+- 状态：510/510 测试；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
+- 发布包：`dsh-session-grove-0.4.0-beta.42.tgz`
 
 ## 本版重点
 
@@ -34,7 +34,7 @@
 # 以本地 desktop profile 为例
 DeepSeek Harness.exe --expose-internals `
   "C:\Users\<user>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
-  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.41.tgz"
+  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.42.tgz"
 ```
 
 安装后必须重启对应桌面客户端。先卸载旧的 `dsh-session-groups`；不要在同一 profile 中并存两个身份。
@@ -79,6 +79,6 @@ npm run test:all-locales
 
 完整覆盖矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)；本候选版本的可重复门禁为：
 
-- 504/504 单元/契约测试。
-- coverage：91.97% lines / 82.41% branches / 87.05% functions。
+- 510/510 单元/契约测试。
+- coverage：92.44% lines / 82.38% branches / 88.73% functions。
 - community A+：`0.4.0-beta.36` PASS；official A+：`0.4.0-beta.36` PASS（隔离 official host）；official all-locales 23/23 PASS；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。

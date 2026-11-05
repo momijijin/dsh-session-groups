@@ -136,6 +136,49 @@ test('session dialog commands forward archive/fork/copy and rename payloads', ()
   assert.deepEqual(calls.copy, ['s1'])
 })
 
+test('session menu anchors cover row/session context and session commands', () => {
+  globalThis.innerWidth = 1280
+  globalThis.innerHeight = 800
+  const calls = installRuntime()
+  const menu = menuHandlers(calls)
+  const event = { preventDefault: () => {}, stopPropagation: () => {}, clientX: 30, clientY: 40 }
+  const sessionNode = { session: { id: 's1', title: 'Session one' }, archived: false, sessionId: 's1' }
+  menu.openSessionMenu(event, sessionNode)
+  assert.equal(calls.dispatch.at(-1)[1].menu.sessionId, 's1')
+  menu.openSessionMenuAtRow({ getBoundingClientRect: () => ({ left: 10, top: 20, width: 100, height: 30 }) }, sessionNode)
+  assert.equal(calls.dispatch.at(-1)[1].menu.sessionId, 's1')
+  menu.onSessionContextMenu(event, sessionNode)
+  assert.equal(calls.dispatch.at(-1)[1].menu.sessionId, 's1')
+  menu.openGroupMenuAtRow({ getBoundingClientRect: () => ({ left: 10, top: 20, width: 100, height: 30 }) }, { id: 'g1' })
+  assert.equal(calls.dispatch.at(-1)[1].menu.groupId, 'g1')
+  menu.openSession('s1')
+  menu.onGroupClick('g1')
+  assert.ok(calls.dispatch.some(([action]) => action === 'toggle-group'))
+})
+
+test('move steps execute the updater and swallow errors without a crash', async () => {
+  const calls = installRuntime({ commitOptimistic: (updater) => Promise.resolve().then(() => updater(makeDoc())) })
+  const dialog = dialogHandlers(calls)
+  dialog.moveGroupStep('g1', 1)
+  dialog.moveSessionStep('s1', 1)
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(calls.notify.length, 0)
+  const rejected = installRuntime({ commitOptimistic: () => Promise.reject(new Error('nope')) })
+  const dialog2 = dialogHandlers(rejected)
+  dialog2.moveGroupStep('g1', 1)
+  dialog2.moveSessionStep('s1', 1)
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(rejected.notify.length, 0)
+})
+
+test('new session without a workspace emits the localized error toast', () => {
+  const calls = installRuntime()
+  const dialog = dialogHandlers(calls)
+  dialog.openNewSession(undefined, 'g1')
+  assert.equal(calls.notify.at(-1).kind, 'error')
+  assert.equal(calls.notify.at(-1).message, 'dialog.noWorkspace')
+})
+
 test('dialog move steps reject a no-op task without surfacing an error', async () => {
   const calls = installRuntime({ commitOptimistic: () => Promise.resolve({ ok: true }) })
   const dialog = dialogHandlers(calls)

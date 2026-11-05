@@ -2,10 +2,10 @@
  * Plugin settings slot wiring for the package-detail page.
  *
  * The package detail page renders `plugins.bundle.config`; this module owns the
- * config-form lookup and the SkillRepairCard slot registration. It is optional:
- * hosts without the bundle-config slot simply get null.
+ * config-form lookup and the SkillRepairCard slot registration. The card is
+ * injected by the composition root so this module stays React-free and can be
+ * tested without a browser.
  */
-import { SkillRepairCard } from './skill-repair.js'
 
 const currentConfigForm = (ctx) => {
   try {
@@ -17,9 +17,11 @@ const currentConfigForm = (ctx) => {
 
 /**
  * Register the settings card against the live Cordis context.
+ * @param {object} ctx
+ * @param {unknown} card
  * @returns {(() => void) | null} slot disposer, or null when unsupported
  */
-export const installSettingsSlot = (ctx) => {
+export const installSettingsSlot = (ctx, card) => {
   try {
     const disposer = ctx.slots?.inject?.('plugins.bundle.config', () =>
       ctx.slots.register(
@@ -28,7 +30,7 @@ export const installSettingsSlot = (ctx) => {
           key: 'dsh-session-grove',
           inject: () => ({ form: currentConfigForm(ctx) }),
         },
-        SkillRepairCard,
+        card,
       ),
     )
     return typeof disposer === 'function' ? disposer : null
