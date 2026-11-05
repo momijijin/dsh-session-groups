@@ -1,7 +1,7 @@
 {
   "id": "dsh-session-grove",
   "name": "dsh-session-grove",
-  "version": "0.4.0-beta.12",
+  "version": "0.4.0-beta.13",
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": {
@@ -16,7 +16,10 @@
     "it": "Un livello di raggruppamento libero per la barra laterale di DSH Desktop: consente di assegnare sessioni di spazi di lavoro diversi allo stesso gruppo senza modificarne l'appartenenza ufficiale allo spazio di lavoro né i log.",
     "nl": "Een vrij indeelbare groeperingslaag voor de zijbalk van DSH Desktop: wijs sessies uit verschillende werkruimtes toe aan dezelfde groep zonder hun officiële werkruimtetoewijzing of logboeken te wijzigen.",
     "pl": "Swobodna warstwa grupowania sesji w pasku bocznym DSH Desktop: sesje z różnych obszarów roboczych można przypisać do tej samej grupy bez zmiany ich oficjalnej przynależności do obszaru roboczego i bez modyfikowania dzienników.",
-    "tr": "DSH Desktop kenar çubuğu için serbest biçimli bir gruplama katmanı: farklı çalışma alanlarındaki oturumları, resmî çalışma alanı üyeliklerini veya günlüklerini değiştirmeden aynı gruba atamanızı sağlar."
+    "tr": "DSH Desktop kenar çubuğu için serbest biçimli bir gruplama katmanı: farklı çalışma alanlarındaki oturumları, resmî çalışma alanı üyeliklerini veya günlüklerini değiştirmeden aynı gruba atamanızı sağlar.",
+    "vi": "Một lớp phân nhóm tự do cho thanh bên của DSH Desktop: gán phiên từ các không gian làm việc khác nhau vào cùng một nhóm mà không thay đổi không gian làm việc chính thức hay nhật ký của phiên.",
+    "th": "ชั้นการจัดกลุ่มแบบอิสระสำหรับแถบด้านข้างของ DSH Desktop: กำหนดเซสชันจากพื้นที่ทำงานที่ต่างกันให้อยู่ในกลุ่มเดียวกันได้ โดยไม่เปลี่ยนสังกัดพื้นที่ทำงานหรือบันทึกเหตุการณ์อย่างเป็นทางการของเซสชัน",
+    "id": "Lapisan pengelompokan bebas untuk sidebar DSH Desktop: tetapkan sesi dari berbagai ruang kerja ke grup yang sama tanpa mengubah keanggotaan ruang kerja resmi atau lognya."
   },
   "title": {
     "en": "Free Groups",
@@ -30,6 +33,9 @@
     "it": "Gruppi liberi",
     "nl": "Vrije groepen",
     "pl": "Wolne grupy",
-    "tr": "Serbest Gruplar"
+    "tr": "Serbest Gruplar",
+    "vi": "Nhóm tự do",
+    "th": "กลุ่มอิสระ",
+    "id": "Grup Bebas"
   }
 }
