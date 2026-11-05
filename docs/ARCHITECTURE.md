@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.4.0-beta.39**  
+当前实现：**0.4.0-beta.40**  
 支持宿主：`@deepseek-ai/dsh` 0.2.1-rc.2 / 0.2.1-rc.5  
 已验证壳：社区版 DSH Desktop **Stable** 2.0.18（rc.2）；官方 DeepSeek Harness 桌面版 0.2.1.0（rc.5，隔离 A+ + 桌面窗口验收）  
 明确不支持：社区版 DSH Desktop Beta、社区版 DSH NEXT（`-next`）  
@@ -59,6 +59,8 @@ src/index.js     Cordis host 入口
 - `src/client/groups-view-menu-handlers.js`：菜单锚点/上下文菜单/导航命令
 - `src/client/groups-view-dialog-handlers.js`：新建/重命名/移动/删除/归档/fork 等 dialog 命令
 - `src/client/plugin-locale.js`：locale service 注册/订阅、translator/direction/time 运行时
+- `src/client/plugin-settings.js`：`plugins.bundle.config` slot 注册与 config form
+- `src/client/plugin-workspace-chrome.js`：workspace overlay toggle + width retry 生命周期
 
 边界规则：
 
