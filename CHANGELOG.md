@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.5 (local i18n first language batch)
+
+- Added complete Korean, German, French, Spanish and Brazilian Portuguese locale dictionaries (288 keys each), plus manifest titles/descriptions.
+- All eight packaged languages are registered with the host; regional ids resolve by base language and unsupported languages still fall back to English.
+- Tests: 482/482, including per-language key/placeholder/non-empty parity and base-variant selection. No tag or Release.
+
 ## 0.4.0-beta.4 (local i18n first language)
 
 - Added the complete Japanese locale (`locale/ja.json`, 288 keys) with host locale registration and Japanese plugin manifest title/description.

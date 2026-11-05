@@ -101,9 +101,27 @@ test('dictionaryFor handles base language prefixes and falls back to English', (
   assert.equal(dictionaryFor('zh-Hans'), dictionaries.zh)
   assert.equal(dictionaryFor('zh-TW'), dictionaries.zh)
   assert.equal(dictionaryFor('ja-JP'), dictionaries.ja)
-  assert.equal(dictionaryFor('ko-KR'), dictionaries.en)
+  assert.equal(dictionaryFor('ko-KR'), dictionaries.ko)
+  assert.equal(dictionaryFor('de-DE'), dictionaries.de)
+  assert.equal(dictionaryFor('fr-CA'), dictionaries.fr)
+  assert.equal(dictionaryFor('es-419'), dictionaries.es)
+  assert.equal(dictionaryFor('pt-BR'), dictionaries.pt)
   assert.equal(dictionaryFor('unknown-language'), dictionaries.en)
   assert.equal(dictionaryFor(undefined), dictionaries.en)
+})
+
+test('the first language batch resolves each base dictionary and region variant', () => {
+  for (const [localeId, language] of [
+    ['ja-JP', 'ja'],
+    ['ko-KR', 'ko'],
+    ['de-AT', 'de'],
+    ['fr-CA', 'fr'],
+    ['es-MX', 'es'],
+    ['pt-BR', 'pt'],
+  ]) {
+    const translate = createTranslator(() => ({ active: localeId }))
+    assert.equal(translate('view.title'), dictionaries[language]['view.title'], localeId)
+  }
 })
 
 test('a supported regional locale uses its base-language dictionary', () => {
@@ -113,7 +131,7 @@ test('a supported regional locale uses its base-language dictionary', () => {
 })
 
 test('an unsupported host locale follows the English fallback instead of Chinese', () => {
-  const korean = createTranslator(() => ({ active: 'ko-KR' }))
-  assert.equal(korean('view.title'), 'Free Groups')
-  assert.equal(korean('onboarding.title'), 'Welcome to Free Groups')
+  const unsupported = createTranslator(() => ({ active: 'xx-XX' }))
+  assert.equal(unsupported('view.title'), 'Free Groups')
+  assert.equal(unsupported('onboarding.title'), 'Welcome to Free Groups')
 })
