@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.4.0-beta.13**  
+当前实现：**0.4.0-beta.14**  
 支持宿主：`@deepseek-ai/dsh` 0.2.1-rc.2 / 0.2.1-rc.5  
 已验证壳：社区版 DSH Desktop **Stable** 2.0.18（rc.2）；官方 DeepSeek Harness 桌面版 0.2.1.0（rc.5，隔离 A+ + 桌面窗口验收）  
 明确不支持：社区版 DSH Desktop Beta、社区版 DSH NEXT（`-next`）  
@@ -39,6 +39,22 @@ src/index.js     Cordis host 入口
   - `host` 只能依赖 `host` / `core` / `shared`
   - `src/index.js` 是 composition root，可依赖 `host` / `core` / `shared` / `adapters`；`adapters` 只承载 DSH 版本相关能力检测，不向上依赖 client/host。
 - `npm run check:core` 独立加载全部核心模块，不启动 DSH。
+
+## 客户端 i18n 分层
+
+`src/client/locale.js` 只是兼容 facade，实际拆为四个模块：
+
+- `src/client/i18n/resources.js`：唯一 import `locale/*.json` 的模块，导出字典注册表与 `FALLBACK_LANGUAGE`
+- `src/client/i18n/locale-id.js`：基础语言归一化、Host snapshot / `<html lang>` / navigator 解析
+- `src/client/i18n/message-format.js`：CLDR 类别选择、`{placeholder}` 插值、英文兜底
+- `src/client/i18n/translator.js`：字典选择与 `createTranslator`
+
+边界规则：
+
+- UI 组件只调用 `t(key, params)`；不 import 语言 JSON，不判断语言，不直接调用 `Intl.PluralRules`
+- `src/core` 不依赖 locale 字典或格式化；`statusLabel` 只接收注入的 translator
+- 新语言只增加资源、registry、manifest 和测试，不把分支写进组件
+- 架构测试 `tests/client/i18n-architecture.test.js` 校验以上边界
 
 ## 当前核心
 

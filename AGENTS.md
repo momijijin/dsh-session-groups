@@ -158,6 +158,6 @@ git merge --no-ff main -m "merge: hotfix v<version> back to dev"
 
 - 最新已发布版本：`0.3.0-beta.76`（`v0.3.0-beta.76` 已发布）
 - 当前开发候选版本：以 `package.json` 的 `version` 为准；`.4.0` 系列身份重置后仍处于本地 beta 候选，尚未发布
-- 当前测试：486/486，coverage 约 93.63/82.20/88.98；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文，日文有语言包 fixture）
+- 当前测试：490/490，coverage 约 93.67/82.25/88.98；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文，日文有语言包 fixture）
 - main / dev：以 `git log --oneline -1` 为准，允许分叉
 - 下一次开发从 `dev` 开新 feature 分支，不从 main 拉功能分支

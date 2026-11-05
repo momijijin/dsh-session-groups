@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.14 (local i18n layering)
+
+- Split `src/client/locale.js` into `i18n/resources.js`, `locale-id.js`, `message-format.js` and `translator.js`; the old file is now a thin re-export facade.
+- Added architecture tests that keep locale JSON imports, plural selection and translation internals out of UI components and `src/core`.
+- Behavior is unchanged; tests: 490/490. No tag or Release.
+
 ## 0.4.0-beta.13 (local i18n vi/th/id)
 
 - Added complete Vietnamese, Thai and Indonesian dictionaries (287 keys each), preserving one/other plural objects for invariant numeral languages.
