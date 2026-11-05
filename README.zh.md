@@ -9,7 +9,7 @@
 - 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
 - 不写入 `workspace.json`。
 
-当前版本：**0.3.0-beta.78**  
+当前版本：**0.3.0-beta.79**  
 主要支持：**DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 与 0.2.1-rc.5**（`engines.dsh: >=0.2.0-rc.2 <0.3.0`）  
 已验证桌面壳：**社区版 DSH Desktop Stable 2.0.18**（rc.2）与**官方 DeepSeek Harness 桌面版 0.2.1.0**（rc.5，隔离运行时 A+）  
 不官方支持、不承诺兼容：**社区版 DSH Desktop Beta**、**社区版 DSH NEXT（`-next` 通道）**
@@ -227,6 +227,10 @@ doctor
 返回 `ambiguous-path` 并给出 candidates。`plan` 返回 `changes` 和 `planHash`；
 `apply` 必须带同一个 `planHash` 和 `baseRevision`，用 CAS 提交。
 
+外观字段严格校验：`icon`/`color` 必须来自 `catalog`，`colorHex` 接受
+`#RGB`、`RGB`、`#RRGGBB` 或 `RRGGBB` 并持久化为小写 `#rrggbb`，`color` 与
+`colorHex` 互斥。非法值返回 `invalid-icon`/`invalid-color`，不再静默回退。
+
 会话动作必须显式传 `sessionId`；缺失就是 `invalid-session-id`，不猜最近会话。
 改名用 `expectedTitle`，归档用 `expectedArchived`；运行中的会话归档需要显式
 `stopActivity: true`。
@@ -351,7 +355,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.78.tgz`
+- 发布包：`dsh-session-groups-0.3.0-beta.79.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 

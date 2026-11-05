@@ -2,7 +2,7 @@
 
 ## Current documentation
 
-Use these for the current `0.3.0-beta.78` implementation:
+Use these for the current `0.3.0-beta.79` implementation:
 
 - [README](../README.md) — English default
 - [README.zh.md](../README.zh.md) — Chinese
