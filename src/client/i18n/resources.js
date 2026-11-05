@@ -25,12 +25,13 @@ import th from '../../../locale/th.json' with { type: 'json' }
 import id from '../../../locale/id.json' with { type: 'json' }
 import ru from '../../../locale/ru.json' with { type: 'json' }
 import hi from '../../../locale/hi.json' with { type: 'json' }
+import ar from '../../../locale/ar.json' with { type: 'json' }
 import zhHant from '../../../locale/zh-Hant.json' with { type: 'json' }
 
-export { zh, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id, ru, hi, zhHant }
+export { zh, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id, ru, hi, ar, zhHant }
 
 /** Language used whenever the active locale has no packaged dictionary. */
 export const FALLBACK_LANGUAGE = 'en'
 
 /** Dictionaries keyed by base language, plus the zh-Hant script variant. */
-export const dictionaries = Object.freeze({ zh, 'zh-Hant': zhHant, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id, ru, hi })
+export const dictionaries = Object.freeze({ zh, 'zh-Hant': zhHant, en, ja, ko, de, fr, es, pt, it, nl, pl, tr, vi, th, id, ru, hi, ar })
