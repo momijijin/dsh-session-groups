@@ -57,8 +57,6 @@
   "session.open": "セッションを開く",
   "status.idle": "待機中",
   "status.running": "実行中",
-  "status.subagentsRunning.one": "サブエージェント {n} 件が実行中",
-  "status.subagentsRunning.other": "サブエージェント {n} 件が実行中",
   "status.waitingApproval": "承認待ち",
   "status.planReview": "プラン確認待ち",
   "status.waitingAnswer": "回答待ち",
@@ -307,5 +305,9 @@
   "dialog.moveGroup": "グループを移動",
   "dialog.moveSession": "セッションをグループに割り当て",
   "dialog.destinationGroup": "移動先のグループを選択",
-  "config.requiresControlApi": "AI 制御 API が必要です"
+  "config.requiresControlApi": "AI 制御 API が必要です",
+  "status.subagentsRunning": {
+    "one": "サブエージェント {n} 件が実行中",
+    "other": "サブエージェント {n} 件が実行中"
+  }
 }

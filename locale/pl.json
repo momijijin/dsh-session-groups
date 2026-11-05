@@ -59,8 +59,6 @@
   "session.open": "Otwórz sesję",
   "status.idle": "Bezczynna",
   "status.running": "Działa",
-  "status.subagentsRunning.one": "Subagent w toku: {n}",
-  "status.subagentsRunning.other": "Subagenty w toku: {n}",
   "status.waitingApproval": "Czeka na zatwierdzenie",
   "status.planReview": "Plan czeka na przegląd",
   "status.waitingAnswer": "Czeka na odpowiedź",
@@ -319,5 +317,11 @@
   "dialog.moveGroup": "Przenieś grupę",
   "dialog.moveSession": "Przypisz sesję do grupy",
   "dialog.destinationGroup": "Wybierz grupę docelową",
-  "config.requiresControlApi": "Wymaga API sterowania przez AI"
+  "config.requiresControlApi": "Wymaga API sterowania przez AI",
+  "status.subagentsRunning": {
+    "one": "Subagent w toku: {n}",
+    "few": "Subagenty w toku: {n}",
+    "many": "Subagentów w toku: {n}",
+    "other": "Subagenta w toku: {n}"
+  }
 }

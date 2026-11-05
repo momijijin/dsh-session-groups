@@ -57,8 +57,6 @@
   "session.open": "Oturumu aç",
   "status.idle": "Boşta",
   "status.running": "Çalışıyor",
-  "status.subagentsRunning.one": "{n} alt ajan çalışıyor",
-  "status.subagentsRunning.other": "{n} alt ajan çalışıyor",
   "status.waitingApproval": "Onay bekliyor",
   "status.planReview": "Plan incelemesi bekliyor",
   "status.waitingAnswer": "Yanıt bekliyor",
@@ -307,5 +305,9 @@
   "dialog.moveGroup": "Grubu taşı",
   "dialog.moveSession": "Oturumu gruba ata",
   "dialog.destinationGroup": "Hedef grubu seç",
-  "config.requiresControlApi": "Yapay zekâ denetim API'si gerekli"
+  "config.requiresControlApi": "Yapay zekâ denetim API'si gerekli",
+  "status.subagentsRunning": {
+    "one": "{n} alt ajan çalışıyor",
+    "other": "{n} alt ajan çalışıyor"
+  }
 }

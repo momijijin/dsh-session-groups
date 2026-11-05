@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0-beta.12 (local i18n subagent status plural)
+
+- Replaced the flat `status.subagentsRunning.one/other` keys with one plural object `status.subagentsRunning`.
+- Polish now uses one/few/many/other for the subagent status; other languages keep one/other.
+- `subagentStatus()` emits one stable label key and passes `{n}` through the plural selector.
+- Tests: 486/486. No tag or Release.
+
+## 0.4.0-beta.11 (local i18n pl/tr)
+
+- Added complete Polish and Turkish dictionaries (288 keys each), including plural objects; Polish exercises one/few/many/other categories and Turkish keeps one/other invariant forms.
+- Twelve packaged languages now share the registry and English fallback.
+- Tests: 486/486. No tag or Release.
+
 ## 0.4.0-beta.10 (local i18n build fix)
 
 - Rebuilt `lib/client.js` after the final Italian review copy; the published bundle now matches `locale/it.json` exactly. No runtime behavior change.

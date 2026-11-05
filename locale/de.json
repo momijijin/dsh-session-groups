@@ -57,8 +57,6 @@
   "session.open": "Sitzung öffnen",
   "status.idle": "Inaktiv",
   "status.running": "Läuft",
-  "status.subagentsRunning.one": "{n} Subagent läuft",
-  "status.subagentsRunning.other": "{n} Subagenten laufen",
   "status.waitingApproval": "Wartet auf Genehmigung",
   "status.planReview": "Plan wartet auf Prüfung",
   "status.waitingAnswer": "Wartet auf Antwort",
@@ -307,5 +305,9 @@
   "dialog.moveGroup": "Gruppe verschieben",
   "dialog.moveSession": "Sitzung einer Gruppe zuordnen",
   "dialog.destinationGroup": "Zielgruppe auswählen",
-  "config.requiresControlApi": "Erfordert die KI-Steuerungs-API"
+  "config.requiresControlApi": "Erfordert die KI-Steuerungs-API",
+  "status.subagentsRunning": {
+    "one": "{n} Subagent läuft",
+    "other": "{n} Subagenten laufen"
+  }
 }

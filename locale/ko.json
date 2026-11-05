@@ -57,8 +57,6 @@
   "session.open": "세션 열기",
   "status.idle": "대기 중",
   "status.running": "실행 중",
-  "status.subagentsRunning.one": "서브에이전트 {n}개 실행 중",
-  "status.subagentsRunning.other": "서브에이전트 {n}개 실행 중",
   "status.waitingApproval": "승인 대기 중",
   "status.planReview": "계획 검토 대기",
   "status.waitingAnswer": "답변 대기 중",
@@ -307,5 +305,9 @@
   "dialog.moveGroup": "그룹 이동",
   "dialog.moveSession": "세션을 그룹에 배정",
   "dialog.destinationGroup": "대상 그룹 선택",
-  "config.requiresControlApi": "AI 제어 API가 필요합니다"
+  "config.requiresControlApi": "AI 제어 API가 필요합니다",
+  "status.subagentsRunning": {
+    "one": "서브에이전트 {n}개 실행 중",
+    "other": "서브에이전트 {n}개 실행 중"
+  }
 }

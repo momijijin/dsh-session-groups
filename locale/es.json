@@ -57,8 +57,6 @@
   "session.open": "Abrir sesión",
   "status.idle": "Inactiva",
   "status.running": "En ejecución",
-  "status.subagentsRunning.one": "{n} subagente en ejecución",
-  "status.subagentsRunning.other": "{n} subagentes en ejecución",
   "status.waitingApproval": "En espera de aprobación",
   "status.planReview": "Plan en espera de revisión",
   "status.waitingAnswer": "En espera de respuesta",
@@ -307,5 +305,9 @@
   "dialog.moveGroup": "Mover grupo",
   "dialog.moveSession": "Asignar sesión a un grupo",
   "dialog.destinationGroup": "Elegir grupo de destino",
-  "config.requiresControlApi": "Requiere la API de control de IA"
+  "config.requiresControlApi": "Requiere la API de control de IA",
+  "status.subagentsRunning": {
+    "one": "{n} subagente en ejecución",
+    "other": "{n} subagentes en ejecución"
+  }
 }
