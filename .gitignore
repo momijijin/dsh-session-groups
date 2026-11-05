@@ -33,3 +33,6 @@ Thumbs.db
 
 # Local Gate 0 spike packages/reports (summarized in docs/GATE0-SUMMARY.md)
 spike/
+
+# Local visual-review screenshots (not shipped)
+qa-artifacts/
