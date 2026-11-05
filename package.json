@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-grove",
-  "version": "0.4.0-beta.9",
+  "version": "0.4.0-beta.10",
   "description": "A free-form grouping layer for the DSH Desktop sidebar: assign sessions from different workspaces to the same group without changing their official workspace membership or logs.",
   "icon": "assets/icon-180.png",
   "author": "momiji-gz302ea <2648863351@qq.com>",
