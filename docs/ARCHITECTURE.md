@@ -1,6 +1,6 @@
 # 架构：纯函数核心 + DSH 适配器
 
-当前实现：**0.3.0-beta.78**  
+当前实现：**0.3.0-beta.79**  
 支持宿主：`@deepseek-ai/dsh` 0.2.1-rc.2 / 0.2.1-rc.5  
 已验证壳：社区版 DSH Desktop **Stable** 2.0.18（rc.2）；官方 DeepSeek Harness 桌面版 0.2.1.0（rc.5，隔离 A+ + 桌面窗口验收）  
 明确不支持：社区版 DSH Desktop Beta、社区版 DSH NEXT（`-next`）  
@@ -99,7 +99,7 @@ src/index.js     Cordis host 入口
   - 本地 bearer token（0600）+ host fence；token 目前会预生成，合法 token 在插件内部放行 control 路由，但不绕过 Host 外层浏览器 fence
   - revision CAS、planHash、idempotency、审计日志
   - `change-hub` 在每次 commit 后广播 revision；浏览器通过 `/events` SSE 重新 load
-  - 0.3.0-beta.78 拆分：`routes.js` 只保留注册编排；纯响应/解析在 `route-contract.js`，控制路由在 `control-routes.js`
+  - 0.3.0-beta.79 拆分：`routes.js` 只保留注册编排；纯响应/解析在 `route-contract.js`，控制路由在 `control-routes.js`
 - `src/client/components.js` + `components-*.js`
   - `components.js` 只保留 GroupsView 编排；primitives、rows、ungrouped、resize-handle、search-box、header 分模块
   - DOM、testid、CSS 类与 props 契约不变

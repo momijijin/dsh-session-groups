@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0-beta.79 (local batch, no release tag)
+
+- Control validation: unknown icon -> `invalid-icon`, unknown palette color -> `invalid-color`, malformed `colorHex` -> `invalid-color` consistently for create and update, and `color` + `colorHex` together -> `invalid-operation`.
+- The shared model normalizers remain for legacy persisted documents; control input is no longer silently rewritten.
+- Verification: 472/472 tests, coverage 93.71/82.39/88.91; no runtime UI behavior change, no tag or Release.
+
+## 0.3.0-beta.78 (local batch, no release tag)
+
+- Control catalog: expose a read-only catalog of icon ids/categories/style, palette ids/hex/label keys, colorHex input grammar/canonical form, operation names and limits through `session_groups_control` and GET /control/catalog.
+- Data source: move icon category data into shared `src/shared/control-catalog.js`; the client picker and control API now consume one vocabulary.
+- Verification: 468/468 tests, coverage 93.69/82.27/88.89; no runtime behavior change, no tag or Release.
+
 ## 0.3.0-beta.77 (local batch, no release tag)
 
 - Packaging: move `@deepseek-ai/schemastery` from `dependencies` to `peerDependencies` (and keep it as a devDependency for tests), matching the market recommendation that official `@deepseek-ai/*` packages be host-provided instead of bundled. No runtime behavior change; no tag or Release.
