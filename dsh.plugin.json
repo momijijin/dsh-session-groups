@@ -1,7 +1,7 @@
 {
   "id": "dsh-session-grove",
   "name": "dsh-session-grove",
-  "version": "0.4.0-beta.10",
+  "version": "0.4.0-beta.11",
   "entry": "src/index.js",
   "client": "lib/client.js",
   "description": {
@@ -14,7 +14,9 @@
     "es": "Una capa de agrupación libre para la barra lateral de DSH Desktop: permite asignar sesiones de distintos espacios de trabajo a un mismo grupo sin cambiar su pertenencia oficial al espacio de trabajo ni sus registros.",
     "pt": "Uma camada de agrupamento livre para a barra lateral do DSH Desktop: agrupe sessões de diferentes espaços de trabalho no mesmo grupo sem alterar a vinculação oficial ao espaço de trabalho nem os registros.",
     "it": "Un livello di raggruppamento libero per la barra laterale di DSH Desktop: consente di assegnare sessioni di spazi di lavoro diversi allo stesso gruppo senza modificarne l'appartenenza ufficiale allo spazio di lavoro né i log.",
-    "nl": "Een vrij indeelbare groeperingslaag voor de zijbalk van DSH Desktop: wijs sessies uit verschillende werkruimtes toe aan dezelfde groep zonder hun officiële werkruimtetoewijzing of logboeken te wijzigen."
+    "nl": "Een vrij indeelbare groeperingslaag voor de zijbalk van DSH Desktop: wijs sessies uit verschillende werkruimtes toe aan dezelfde groep zonder hun officiële werkruimtetoewijzing of logboeken te wijzigen.",
+    "pl": "Swobodna warstwa grupowania sesji w pasku bocznym DSH Desktop: sesje z różnych obszarów roboczych można przypisać do tej samej grupy bez zmiany ich oficjalnej przynależności do obszaru roboczego i bez modyfikowania dzienników.",
+    "tr": "DSH Desktop kenar çubuğu için serbest biçimli bir gruplama katmanı: farklı çalışma alanlarındaki oturumları, resmî çalışma alanı üyeliklerini veya günlüklerini değiştirmeden aynı gruba atamanızı sağlar."
   },
   "title": {
     "en": "Free Groups",
@@ -26,6 +28,8 @@
     "es": "Grupos libres",
     "pt": "Grupos livres",
     "it": "Gruppi liberi",
-    "nl": "Vrije groepen"
+    "nl": "Vrije groepen",
+    "pl": "Wolne grupy",
+    "tr": "Serbest Gruplar"
   }
 }
