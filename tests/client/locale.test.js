@@ -13,9 +13,11 @@ import {
   es,
   formatMessage,
   fr,
+  hi,
   ja,
   pl,
   pt,
+  ru,
   tr,
   zh,
 } from '../../src/client/locale.js'
@@ -73,6 +75,9 @@ test('packaged count strings use plural templates', () => {
   assert.equal(formatMessage(pt, 'group.sessionCount', { n: 1 }, 'pt'), '1 sessão')
   assert.equal(formatMessage(pl, 'group.sessionCount', { n: 2 }, 'pl'), '2 sesje')
   assert.equal(formatMessage(pl, 'group.sessionCount', { n: 5 }, 'pl'), '5 sesji')
+  assert.equal(formatMessage(ru, 'group.sessionCount', { n: 2 }, 'ru'), '2 сессии')
+  assert.equal(formatMessage(ru, 'group.sessionCount', { n: 5 }, 'ru'), '5 сессий')
+  assert.equal(formatMessage(hi, 'group.sessionCount', { n: 2 }, 'hi'), '2 सत्र')
   assert.equal(formatMessage(tr, 'group.sessionCount', { n: 2 }, 'tr'), '2 oturum')
   assert.equal(formatMessage(ja, 'group.sessionCount', { n: 2 }, 'ja'), '2 件のセッション')
 })
@@ -161,6 +166,8 @@ test('dictionaryFor handles base language prefixes and falls back to English', (
   assert.equal(dictionaryFor('vi-VN'), dictionaries.vi)
   assert.equal(dictionaryFor('th-TH'), dictionaries.th)
   assert.equal(dictionaryFor('id-ID'), dictionaries.id)
+  assert.equal(dictionaryFor('ru-RU'), dictionaries.ru)
+  assert.equal(dictionaryFor('hi-IN'), dictionaries.hi)
   assert.equal(dictionaryFor('unknown-language'), dictionaries.en)
   assert.equal(dictionaryFor(undefined), dictionaries.en)
 })
@@ -180,6 +187,8 @@ test('the first language batch resolves each base dictionary and region variant'
     ['vi-VN', 'vi'],
     ['th-TH', 'th'],
     ['id-ID', 'id'],
+    ['ru-RU', 'ru'],
+    ['hi-IN', 'hi'],
   ]) {
     const translate = createTranslator(() => ({ active: localeId }))
     assert.equal(translate('view.title'), dictionaries[language]['view.title'], localeId)
