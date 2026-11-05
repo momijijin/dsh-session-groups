@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Local CLI for the opt-in dsh-session-groups AI control API.
+ * Local CLI for the opt-in dsh-session-grove AI control API.
  *
  * It reads the per-run bearer token written under DSH_HOME/storages and talks
  * only to the local DSH web server. It never reads or writes the group JSON
@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-const TOKEN_FILE = 'dsh-session-groups.control-token'
+const TOKEN_FILE = 'dsh-session-grove.control-token'
 const configuredUrl = new URL(process.env.DSH_WEB_URL ?? `http://127.0.0.1:${process.env.DSH_WEB_PORT ?? '43120'}`)
 const webToken = configuredUrl.searchParams.get('token')
 configuredUrl.searchParams.delete('token')
@@ -43,7 +43,7 @@ const usage = () => {
       ok: false,
       code: 'usage',
       message:
-        'usage: session-groups-control.mjs state | doctor | resolve <body.json> | plan <body.json> | apply <body.json>\n' +
+        'usage: session-grove-control.mjs state | doctor | resolve <body.json> | plan <body.json> | apply <body.json>\n' +
         '       | session-inspect <body.json> | session-rename <body.json> | session-archive <body.json>\n' +
         'body.json: { path?, baseRevision, operations?, planHash?, idempotencyKey?, sessionId?, title?, archived? }',
     },
@@ -78,7 +78,7 @@ if (!TOKEN) {
 }
 
 const controlPath = command.startsWith('session-') ? command.slice(8) : command
-const path = `/dsh-session-groups/control/${command.startsWith('session-') ? `session/${controlPath}` : controlPath}`
+const path = `/dsh-session-grove/control/${command.startsWith('session-') ? `session/${controlPath}` : controlPath}`
 
 const webCookie = async () => {
   const supplied = process.env.DSH_WEB_COOKIE?.trim()

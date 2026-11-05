@@ -1,16 +1,16 @@
 ---
-name: session-groups-control
+name: session-grove-control
 description: Read and safely change the DSH free-groups sidebar or a session's title/archive state. Use when the user asks to create, rename, move, color, delete groups, assign sessions to groups, rename a session, or archive/restore it without clicking the sidebar.
 ---
 
-<!-- managed-by: dsh-session-groups -->
+<!-- managed-by: dsh-session-grove -->
 
-# session-groups-control
+# session-grove-control
 
 Use the native DSH tool:
 
 ```text
-session_groups_control
+session_grove_control
 ```
 
 It runs in-process, so it does not use the Host HTTP fence, the browser cookie,
@@ -117,7 +117,7 @@ Apply with the exact returned hash:
 
 `apply` is CAS-protected. On `conflict`, re-read state and rebuild the plan.
 Never blindly retry. No raw document commit is allowed; do not edit
-`dsh-session-groups.json`.
+`dsh-session-grove.json`.
 
 ### session actions
 
