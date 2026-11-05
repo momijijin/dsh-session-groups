@@ -137,16 +137,16 @@ test('subagentsRunning is an official secondary status, never a new primary', ()
   const pending = sessionStatuses({ pendingInteraction: { kind: 'question' } }, { runningSubagentCount: 2 })
   assert.equal(pending.length, 2)
   assert.equal(pending[0].labelKey, 'status.waitingAnswer')
-  assert.deepEqual(shape(secondary(pending)), ['ongoing', 'status.subagentsRunning.other', 2])
+  assert.deepEqual(shape(secondary(pending)), ['ongoing', 'status.subagentsRunning', 2])
 
   const running = sessionStatuses({ running: true }, { runningSubagentCount: 1 })
   assert.equal(running.length, 2)
   assert.equal(running[0].labelKey, 'status.running')
-  assert.deepEqual(shape(secondary(running)), ['ongoing', 'status.subagentsRunning.one', 1])
+  assert.deepEqual(shape(secondary(running)), ['ongoing', 'status.subagentsRunning', 1])
 
   // Subagents-only outranks completion and uses the official ongoing renderer.
   const only = sessionStatuses({ completionUnread: true }, { runningSubagentCount: 3 })
-  assert.deepEqual(shape(only[0]), ['ongoing', 'status.subagentsRunning.other', 3])
+  assert.deepEqual(shape(only[0]), ['ongoing', 'status.subagentsRunning', 3])
 
   // Invalid counts are ignored instead of inventing a status.
   for (const count of [0, -1, 1.5, '2', NaN, null, undefined]) {
