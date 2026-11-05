@@ -43,7 +43,7 @@ export const normalizeColor = (color) => (isKnownColor(color) ? color : DEFAULT_
 /**
  * Display color of a group: the persisted palette id or the blue default.
  * 0.2.7 keeps this palette helper stable for the existing `data-color` contract;
- * `groupColorHex`/`groupColorValue` add the custom-color precedence.
+ * `groupColorHex` adds the custom-color precedence.
  */
 export const groupColor = (group) => normalizeColor(group?.color)
 
@@ -71,8 +71,6 @@ export const normalizeColorHex = (value) => {
 /** Custom color of a group, or null when absent/invalid (display falls back to palette). */
 export const groupColorHex = (group) => (isColorHex(group?.colorHex) ? group.colorHex : null)
 
-/** Effective display value: custom hex first, then the palette id. */
-export const groupColorValue = (group) => groupColorHex(group) ?? groupColor(group)
 
 
 /** C0/C1 control characters are forbidden in user-visible group names. */
@@ -289,12 +287,6 @@ export const assignSession = (doc, sessionId, groupId, index) => {
   return next
 }
 
-export const removeSession = (doc, sessionId) => {
-  const next = cloneDoc(doc)
-  removeSessionEverywhere(next, sessionId)
-  return next
-}
-
 export const reorderUngrouped = (doc, sessionIds) => {
   const next = cloneDoc(doc)
   const seen = new Set()
@@ -404,17 +396,6 @@ export const buildRenderTree = (doc, sessionsById = {}, workspaces = [], options
   return { groups, ungrouped }
 }
 
-export const flattenRenderTree = (tree) => {
-  const out = []
-  const walk = (node, depth) => {
-    out.push({ ...node, depth })
-    if (node.kind === 'group') for (const child of node.children) walk(child, depth + 1)
-  }
-  for (const group of tree.groups) walk(group, 0)
-  for (const session of tree.ungrouped) walk(session, 0)
-  return out
-}
-
 export const validateDoc = (doc) => {
   const errors = []
   if (!isObject(doc)) return { ok: false, errors: ['doc-not-object'] }
@@ -497,55 +478,4 @@ export const validateDoc = (doc) => {
     }
   }
   return { ok: errors.length === 0, errors }
-}
-
-export const normalizeDoc = (doc) => {
-  const source = isObject(doc) ? doc : {}
-  const groups = []
-  const known = new Set()
-  const firstRawById = new Map()
-  for (const raw of Array.isArray(source.groups) ? source.groups : []) {
-    if (!isObject(raw) || typeof raw.id !== 'string' || raw.id === '' || known.has(raw.id)) continue
-    known.add(raw.id)
-    firstRawById.set(raw.id, raw)
-    const cleanName = asString(raw.name).replace(CONTROL_CHARS_RE, '').trim().slice(0, MAX_GROUP_NAME)
-    const name = cleanName || '未命名'
-    const hex = normalizeColorHex(raw.colorHex)
-    groups.push({
-      id: raw.id,
-      name,
-      icon: normalizeIcon(raw.icon),
-      color: normalizeColor(raw.color),
-      ...(hex ? { colorHex: hex } : {}),
-      parentId: typeof raw.parentId === 'string' && raw.parentId !== '' ? raw.parentId : null,
-      sessionIds: [],
-    })
-  }
-  const byId = new Map(groups.map((group) => [group.id, group]))
-  for (const group of groups) {
-    if (group.parentId !== null && !byId.has(group.parentId)) group.parentId = null
-  }
-  const seen = new Set()
-  for (const raw of Array.isArray(source.groups) ? source.groups : []) {
-    if (!isObject(raw) || firstRawById.get(raw.id) !== raw) continue
-    const group = byId.get(raw.id)
-    if (!group) continue
-    for (const sessionId of Array.isArray(raw.sessionIds) ? raw.sessionIds : []) {
-      if (typeof sessionId !== 'string' || sessionId === '' || seen.has(sessionId)) continue
-      seen.add(sessionId)
-      group.sessionIds.push(sessionId)
-    }
-  }
-  const ungrouped = []
-  for (const sessionId of Array.isArray(source.ungrouped) ? source.ungrouped : []) {
-    if (typeof sessionId !== 'string' || sessionId === '' || seen.has(sessionId)) continue
-    seen.add(sessionId)
-    ungrouped.push(sessionId)
-  }
-  return {
-    version: DOC_VERSION,
-    revision: Number.isInteger(source.revision) && source.revision >= 0 ? source.revision : 0,
-    groups,
-    ungrouped,
-  }
 }

@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { DSH_0_2_ADAPTER } from '../../src/adapters/dsh-0.2.js'
-import { DSH_ADAPTERS, adapterMatrix, resolveDshVersion, selectDshAdapter } from '../../src/adapters/dsh-selector.js'
+import { DSH_ADAPTERS, resolveDshVersion, selectDshAdapter } from '../../src/adapters/dsh-selector.js'
 
 test('DSH 0.2 adapter supports the current prerelease and patch line', () => {
   assert.equal(DSH_0_2_ADAPTER.id, 'dsh-0.2')
@@ -24,7 +24,12 @@ test('selector returns one exact adapter and rejects unsupported/unknown version
 
 test('adapter matrix is explicit and additive', () => {
   assert.equal(DSH_ADAPTERS.length, 1)
-  assert.deepEqual(adapterMatrix(), [{ id: 'dsh-0.2', range: '>=0.2.0-rc.2 <0.3.0' }])
+  assert.deepEqual(
+    DSH_ADAPTERS.map((adapter) => ({ id: adapter.id, range: adapter.range })),
+    [{ id: 'dsh-0.2', range: '>=0.2.0-rc.2 <0.3.0' }],
+  )
+  // The selector only ever returns a registered adapter.
+  assert.equal(DSH_ADAPTERS.includes(selectDshAdapter('0.2.99')), true)
 })
 
 test('host version resolution is optional and fail-soft', () => {

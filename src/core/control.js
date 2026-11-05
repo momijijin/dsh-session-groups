@@ -351,19 +351,6 @@ export const applyControlOperations = (doc, operations, options = {}) => {
   return { ok: true, doc: next, changes }
 }
 
-/** Minimal state validation used by the adapter before planning. */
-export const validateControlDoc = (doc) => {
-  try {
-    const validation = validateDoc(doc)
-    if (!validation.ok) {
-      return { ok: false, code: 'invalid-doc', message: validation.errors.join('; ') || 'invalid doc' }
-    }
-    return { ok: true }
-  } catch (error) {
-    return { ok: false, code: 'invalid-doc', message: error instanceof Error ? error.message : String(error) }
-  }
-}
-
 /** Option list for a future skill; kept in core so adapter/skill share one vocabulary. */
 export const CONTROL_OPERATIONS = Object.freeze([
   'group.create',

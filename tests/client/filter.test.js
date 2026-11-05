@@ -6,8 +6,6 @@ import {
   currentSessionIdOf,
   mainSessionIdOf,
   isArchived,
-  isSubagent,
-  nextArchiveFilter,
   sessionTitle,
 } from '../../src/core/filter.js'
 import { assignSession, createGroup, emptyDoc } from '../../src/shared/model.js'
@@ -41,11 +39,19 @@ test('sessionTitle follows blank/displayTitle/title rules', () => {
   assert.equal(sessionTitle(null), '未命名')
 })
 
-test('subagent detection uses origin only and tolerates missing fields', () => {
-  assert.equal(isSubagent(sessionsById.s4), true)
-  assert.equal(isSubagent(sessionsById.s1), false)
-  assert.equal(isSubagent({ id: 'fork', parentId: 's1' }), false)
-  assert.equal(isSubagent(undefined), false)
+test('subagent visibility keys off origin only and tolerates missing rows', () => {
+  let doc = emptyDoc()
+  doc = assignSession(doc, 'fork', null)
+  doc = assignSession(doc, 'sub', null)
+  doc = assignSession(doc, 'ghost', null)
+  const rows = {
+    // Fork lineage carries parentId but no origin: it is a main session.
+    fork: { id: 'fork', title: 'fork', parentId: 's1' },
+    // Only the host origin flag marks a subagent; parentId alone must not.
+    sub: { id: 'sub', title: 'sub', origin: 'subagent', parentId: 's1' },
+  }
+  const tree = buildVisibleTree(doc, rows, [], { filter: 'all' })
+  assert.deepEqual(tree.ungrouped.map((node) => node.session.id), ['fork'], 'subagent rows are hidden, forks and dangling ids do not throw')
 })
 
 test('current session derives from retainedBy.mainView > 0', () => {
@@ -118,10 +124,11 @@ test('ungrouped derives unassigned sessions newest-first', () => {
   assert.deepEqual(tree.ungrouped.map((node) => node.session.id), ['u2', 'u1'])
 })
 
-test('archive filter cycles and isArchived uses the host array', () => {
-  assert.equal(nextArchiveFilter('hidden'), 'all')
-  assert.equal(nextArchiveFilter('all'), 'only')
-  assert.equal(nextArchiveFilter('only'), 'hidden')
+test('unknown archive filters fall back to hidden and isArchived uses the host array', () => {
+  const { doc } = docWithGroups()
+  const fallback = buildVisibleTree(doc, sessionsById, [], { archivedSessionIds: ['s5'], filter: 'bogus' })
+  const hidden = buildVisibleTree(doc, sessionsById, [], { archivedSessionIds: ['s5'], filter: 'hidden' })
+  assert.deepEqual(fallback, hidden, 'an out-of-vocabulary filter is treated as "hidden"')
   assert.equal(isArchived(['a'], 'a'), true)
   assert.equal(isArchived(['a'], 'b'), false)
   assert.equal(isArchived('a', 'a'), false)

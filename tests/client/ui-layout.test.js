@@ -199,9 +199,6 @@ test('0.2.29 status aggregation is one pass and subscriptions compare visible fi
   assert.match(components, /statusMapEqual/)
   assert.match(components, /workspaceViewEqual/)
   assert.match(components, /useMemo\(/)
-  assert.equal(components.includes('runningSessionsByGroup('), false)
-  assert.equal(components.includes('blockedSessionsByGroup('), false)
-  assert.equal(components.includes('unreadSessionsByGroup('), false)
 })
 
 test('0.2.28 blocked and unread counters reuse the grouped dropdown contract', () => {

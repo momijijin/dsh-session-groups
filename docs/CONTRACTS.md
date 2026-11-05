@@ -179,7 +179,6 @@ deleteGroup(doc, groupId): GroupDoc
 deleteGroupTo(doc, groupId, destinationId: string | null): GroupDoc
 moveGroup(doc, groupId, parentId, index): GroupDoc
 assignSession(doc, sessionId, groupId, index): GroupDoc
-removeSession(doc, sessionId): GroupDoc
 reorderUngrouped(doc, sessionIds): GroupDoc
 workspaceOfSession(workspaces, sessionId): WorkspaceRef | null
 inferWorkspaceId(doc, groupId, sessionsById, workspaces, currentSessionId): string | null

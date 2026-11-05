@@ -14,7 +14,7 @@ import { createMenuHandlers } from './groups-view-menu-handlers.js'
 import { createDialogHandlers } from './groups-view-dialog-handlers.js'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
 import { findGroup, moveGroup } from '../shared/model.js'
-import { currentGroupIdOf, findGroupsFlat } from '../core/dialog-selection.js'
+import { currentGroupIdOf } from '../core/dialog-selection.js'
 import { MenuPopover, Toast } from './session-menu.js'
 import { DialogHost } from './dialog-host.js'
 import { countTreeSessions, sessionTitle } from '../core/filter.js'
@@ -857,5 +857,3 @@ export const GroupsViewBoundary = (props) =>
     },
     h(GroupsView, props)
   )
-// Keep the module-level runtime reachable for plugin.js helpers.
-export const __internal = { findGroupsFlat, currentGroupIdOf }

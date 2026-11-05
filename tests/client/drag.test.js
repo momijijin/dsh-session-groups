@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyDrop, canDropGroupInto, hitTest, sameDropTarget, sessionLocation, stickyDropTarget, ungroupedBodyTarget } from '../../src/core/drag.js'
+import { applyDrop, hitTest, sameDropTarget, sessionLocation, stickyDropTarget, ungroupedBodyTarget } from '../../src/core/drag.js'
+import { isCurrentGroupPosition, resolveGroupDrop } from '../../src/core/group-drag.js'
 import { assignSession, createGroup, emptyDoc, findGroup } from '../../src/shared/model.js'
 
 const docWithTwoGroups = () => {
@@ -97,14 +98,27 @@ test('sessionLocation finds group and index', () => {
   assert.deepEqual(sessionLocation(doc, 'missing'), { groupId: null, index: -1 })
 })
 
-test('canDropGroupInto rejects cycles', () => {
+test('group drop resolution rejects cycles and treats the current slot as a no-op', () => {
   const { doc, a } = docWithTwoGroups()
   const withChild = createGroup(doc, { name: 'child', parentId: a })
   const child = withChild.groups.find((group) => group.name === 'child')
   const withGrand = createGroup(withChild, { name: 'grand', parentId: child.id })
-  assert.equal(canDropGroupInto(withGrand, a, child.id), false)
-  assert.equal(canDropGroupInto(withGrand, child.id, child.id), false)
-  assert.equal(canDropGroupInto(withGrand, child.id, a), true)
+
+  // A parent cannot move below its own descendant, nor a group onto itself.
+  assert.deepEqual(
+    resolveGroupDrop({ doc: withGrand, draggedId: a, target: { kind: 'child', parentId: child.id } }),
+    { invalid: true, reason: 'descendant' },
+  )
+  assert.deepEqual(
+    resolveGroupDrop({ doc: withGrand, draggedId: child.id, target: { kind: 'child', parentId: child.id } }),
+    { invalid: true, reason: 'self' },
+  )
+
+  // The child's current slot resolves, but the client skips the no-op move.
+  const target = { kind: 'child', parentId: a, beforeGroupId: null }
+  const resolved = resolveGroupDrop({ doc: withGrand, draggedId: child.id, target })
+  assert.deepEqual(resolved, { parentId: a, index: 0 })
+  assert.equal(isCurrentGroupPosition(withGrand, child.id, resolved, target), true)
 })
 
 test('sameDropTarget treats equivalent dragover targets as equal (0.2.2 hover dedupe)', () => {

@@ -86,9 +86,6 @@ export const ICON_PATHS = Object.freeze({
   'stop-circle': ['M8 2.4a5.6 5.6 0 1 0 0 11.2A5.6 5.6 0 0 0 8 2.4z', 'M5.9 5.9h4.2v4.2H5.9z'],
 })
 
-/** All icon names the plugin accepts (contract set). */
-export const ICON_NAMES = GROUP_ICONS
-
 /** Canonical icon categories live in the shared control catalog. */
 export { ICON_GROUPS } from '../shared/control-catalog.js'
 
@@ -183,9 +180,6 @@ export const HEADER_ICON_ARTWORK = Object.freeze({
     circles: Object.freeze([]),
   }),
 })
-
-/** Header action names mapped to the official artwork above. */
-export const HEADER_ICON_NAMES = Object.freeze(['search', 'view-options', 'project-add'])
 
 /**
  * Render one official header artwork at `size` (default 16, matching the

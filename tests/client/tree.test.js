@@ -3,24 +3,19 @@ import assert from 'node:assert/strict'
 import {
   UI_SOFT_DEPTH,
   displayDepth,
-  emptyGroups,
   expandAncestors,
-  flattenTree,
   groupAncestors,
   groupPath,
   isExpanded,
   runningSubagentCount,
   runningSubagentCounts,
-  runningSessionsByGroup,
-  blockedSessionsByGroup,
-  unreadSessionsByGroup,
   statusSectionsByGroup,
   sessionStatuses,
   siblingNeighbors,
   sessionContainer,
   sessionNeighbors,
 } from '../../src/core/tree.js'
-import { assignSession, createGroup, emptyDoc } from '../../src/shared/model.js'
+import { assignSession, buildRenderTree, createGroup, emptyDoc } from '../../src/shared/model.js'
 
 const nestedDoc = () => {
   let doc = emptyDoc()
@@ -35,45 +30,20 @@ const nestedDoc = () => {
   return { doc, a, a1 }
 }
 
-const makeTree = () => ({
-  groups: [
-    {
-      kind: 'group',
-      group: { id: 'a', name: 'A', parentId: null, sessionIds: ['s2'] },
-      visibleCount: 2,
-      emptyVisible: false,
-      children: [
-        {
-          kind: 'group',
-          group: { id: 'a1', name: 'A1', parentId: 'a', sessionIds: ['s1'] },
-          visibleCount: 1,
-          emptyVisible: false,
-          children: [{ kind: 'session', session: { id: 's1' }, archived: false }],
-        },
-        { kind: 'session', session: { id: 's2' }, archived: false },
-      ],
-    },
-    { kind: 'group', group: { id: 'b', name: 'B', parentId: null, sessionIds: [] }, visibleCount: 0, emptyVisible: true, children: [] },
-  ],
-  ungrouped: [{ kind: 'session', session: { id: 'u1' }, archived: false }],
-})
-
-test('flattenTree keeps subgroups before sessions and appends ungrouped', () => {
-  const rows = flattenTree(makeTree(), {})
-  assert.deepEqual(
-    rows.map((row) => (row.kind === 'group' ? `g:${row.node.group.id}` : `s:${row.node.session.id}`)),
-    ['g:a', 'g:a1', 's:s1', 's:s2', 'g:b', 's:u1']
+test('buildRenderTree renders subgroups before group sessions and appends ungrouped', () => {
+  const { doc, a, a1 } = nestedDoc()
+  const a2 = doc.groups.find((group) => group.name === 'A2').id
+  const withInbox = assignSession(doc, 'u1', null)
+  const tree = buildRenderTree(
+    withInbox,
+    { s1: { id: 's1', updatedAt: 1 }, s2: { id: 's2', updatedAt: 2 }, u1: { id: 'u1', updatedAt: 3 } },
+    [],
+    { filter: 'all' },
   )
-  assert.equal(rows[1].depth, 1)
-  assert.equal(rows[4].depth, 0)
-})
-
-test('flattenTree hides children of collapsed groups only', () => {
-  const rows = flattenTree(makeTree(), { a1: true, b: true })
-  assert.deepEqual(
-    rows.map((row) => (row.kind === 'group' ? `g:${row.node.group.id}` : `s:${row.node.session.id}`)),
-    ['g:a', 'g:a1', 's:s2', 'g:b', 's:u1']
-  )
+  const root = tree.groups.find((node) => node.group.id === a)
+  const label = (node) => (node.kind === 'group' ? `g:${node.group.id}` : `s:${node.session.id}`)
+  assert.deepEqual(root.children.map(label), [`g:${a1}`, `g:${a2}`, 's:s2'], 'subgroup rows keep document order above the group sessions')
+  assert.deepEqual(tree.ungrouped.map((node) => node.session.id), ['u1'], 'ungrouped rows are appended after the group tree')
 })
 
 test('ancestors and expansion patches walk to the root', () => {
@@ -94,9 +64,17 @@ test('groupPath and displayDepth', () => {
   assert.equal(displayDepth(UI_SOFT_DEPTH + 3), UI_SOFT_DEPTH)
 })
 
-test('emptyGroups lists zero-visible groups', () => {
-  const groups = emptyGroups(makeTree())
-  assert.deepEqual(groups.map((node) => node.group.id), ['b'])
+test('buildRenderTree marks nested zero-visible groups through emptyVisible', () => {
+  const { doc, a, a1 } = nestedDoc()
+  const a2 = doc.groups.find((group) => group.name === 'A2').id
+  const tree = buildRenderTree(doc, { s1: { id: 's1' }, s2: { id: 's2' } }, [], { filter: 'hidden' })
+  const root = tree.groups.find((node) => node.group.id === a)
+  const child = (id) => root.children.find((node) => node.kind === 'group' && node.group.id === id)
+  assert.equal(child(a1).visibleCount, 1)
+  assert.equal(child(a1).emptyVisible, false)
+  assert.equal(child(a2).visibleCount, 0)
+  assert.equal(child(a2).emptyVisible, true, 'a zero-visible child group drives the empty-state row')
+  assert.equal(tree.groups.find((node) => node.group.name === 'B').emptyVisible, true)
 })
 
 test('sessionStatuses follows the official priority and labels', () => {
@@ -191,7 +169,7 @@ test('siblingNeighbors reports previous/next ids in display order', () => {
   assert.deepEqual(siblingNeighbors(doc, b), { previous: a, next: null })
 })
 
-test('runningSessionsByGroup counts spinner sessions by direct parent group', () => {
+test('statusSectionsByGroup lists running sessions by direct parent group', () => {
   let doc = emptyDoc()
   doc = createGroup(doc, { name: 'Alpha' })
   const alpha = doc.groups[0].id
@@ -215,12 +193,14 @@ test('runningSessionsByGroup counts spinner sessions by direct parent group', ()
     ['u1', { running: true }],
     ['sub', { running: true }],
   ])
-  const result = runningSessionsByGroup(doc, byId, statuses, ['b1'], new Map())
-  assert.equal(result.count, 3)
-  assert.deepEqual(result.sections.map((section) => section.groupName), ['Alpha', 'Beta', ''])
-  assert.deepEqual(result.sections[0].sessions, [{ sessionId: 'a1', archived: false }])
-  assert.deepEqual(result.sections[1].sessions, [{ sessionId: 'b1', archived: true }])
-  assert.deepEqual(result.sections[2].sessions, [{ sessionId: 'u1', archived: false }])
+  const buckets = statusSectionsByGroup(doc, byId, statuses, ['b1'], new Map())
+  assert.equal(buckets.running.count, 3, 'subagent rows are never counted')
+  assert.deepEqual(buckets.running.sections.map((section) => section.groupName), ['Alpha', 'Beta', ''])
+  assert.deepEqual(buckets.running.sections[0].sessions, [{ sessionId: 'a1', archived: false }])
+  assert.deepEqual(buckets.running.sections[1].sessions, [{ sessionId: 'b1', archived: true }])
+  assert.deepEqual(buckets.running.sections[2].sessions, [{ sessionId: 'u1', archived: false }])
+  assert.equal(buckets.blocked.count, 0)
+  assert.equal(buckets.unread.count, 0)
 })
 
 test('blocked and unread status projections use the same grouped shape', () => {
@@ -242,16 +222,13 @@ test('blocked and unread status projections use the same grouped shape', () => {
     ['unread', { completionUnread: true }],
     ['running', { running: true, completionUnread: true }],
   ])
-  const blocked = blockedSessionsByGroup(doc, byId, statuses, [], new Map())
-  assert.equal(blocked.count, 1)
-  assert.deepEqual(blocked.sections[0].sessions, [{ sessionId: 'wait', archived: false }])
-  const unread = unreadSessionsByGroup(doc, byId, statuses, [], new Map())
-  assert.equal(unread.count, 1, 'a running unread session stays in running, not unread')
-  assert.deepEqual(unread.sections[0].sessions, [{ sessionId: 'unread', archived: false }])
-  const all = statusSectionsByGroup(doc, byId, statuses, [], new Map())
-  assert.equal(all.blocked.count, 1)
-  assert.equal(all.unread.count, 1)
-  assert.equal(all.running.count, 1)
+  const buckets = statusSectionsByGroup(doc, byId, statuses, [], new Map())
+  assert.equal(buckets.blocked.count, 1)
+  assert.deepEqual(buckets.blocked.sections[0].sessions, [{ sessionId: 'wait', archived: false }])
+  assert.equal(buckets.unread.count, 1, 'a running unread session stays in running, not unread')
+  assert.deepEqual(buckets.unread.sections[0].sessions, [{ sessionId: 'unread', archived: false }])
+  assert.equal(buckets.running.count, 1)
+  assert.deepEqual(buckets.running.sections[0].sessions, [{ sessionId: 'running', archived: false }])
 })
 
 test('session move neighbors follow the stored group or ungrouped order', () => {
