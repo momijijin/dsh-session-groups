@@ -20,12 +20,9 @@ Use these for the current `0.4.0-beta.13` implementation:
 These document earlier design gates or V1/V1.1 decisions. They are kept for traceability and must not be read as current behavior:
 
 - [CONTRACTS.md](CONTRACTS.md) — frozen V1/V1.1 contract
-- [archive/README.md](archive/README.md) — archived historical records index
-- [archive/TEST-PLAN.md](archive/TEST-PLAN.md) — V1/V1.1 test plan (archived)
-- [archive/V1-PLAN.md](archive/V1-PLAN.md) — V1/V1.1 design plan (archived)
-- [archive/GATE0-SUMMARY.md](archive/GATE0-SUMMARY.md) — original Gate 0 record (archived)
-- [archive/SPIKE.md](archive/SPIKE.md) — Gate 0 host capability spike (archived)
+- [archive/README.md](archive/README.md) — pointer to historical records moved outside Git
 - [adr/](adr/) — architecture decision records
-- [superpowers/plans/](superpowers/plans/) — historical implementation plans
+- [release-notes/](release-notes/) — historical release notes
+- External maintainer archive — V1 plans, Gate 0/Spike, superpowers plans/specs
 
 For current behavior, current docs above win over historical records.

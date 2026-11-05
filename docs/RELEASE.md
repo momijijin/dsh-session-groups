@@ -42,8 +42,8 @@ DeepSeek Harness.exe --expose-internals `
 
 ## 验证基线
 
+完整覆盖矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)；本候选版本的可重复门禁为：
+
 - 486/486 单元/契约测试。
 - coverage：93.63% lines / 82.20% branches / 88.98% functions。
-- community DSH Desktop 2.0.18 / DSH 0.2.1-rc.2 A+：PASS。
-- official DeepSeek Harness desktop 0.2.1.0 / DSH 0.2.1-rc.5 A+：PASS。
-- 新增英文界面断言：onboarding、group menu、dialog title、settings copy。
+- community / official 隔离 A+：PASS。
