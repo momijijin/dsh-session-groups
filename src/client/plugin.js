@@ -11,7 +11,7 @@ import { placeForkedSession } from '../core/fork.js'
 import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
 import { createActions } from './actions.js'
-import { dictionaries, createTranslator, directionForLocale, formatDateTime, LOCALE_NS, resolveLocaleId } from './locale.js'
+import { createLocaleRuntime } from './plugin-locale.js'
 import { createFloatingLabel } from './floating-label.js'
 import { installStyles } from './css.js'
 import { createOptimisticQueue } from './optimistic.js'
@@ -627,28 +627,9 @@ export const createPlugin = () => {
     if (diagnosticsEnabled()) initDiagnostics()
     api = createApi({ documentRef: globalThis.document, trace: (type, detail) => diagTrace(type, detail) })
     if (diagEnabled()) diagContext({ mode: store.getSnapshot().viewMode })
-    localeService = safeGet(ctx, 'locale')
-    if (localeService === null) {
-      try {
-        // Cordis services are normally read through ctx.get, but native shells
-        // have also exposed the same face as a direct context property.
-        localeService = typeof ctx?.locale === 'object' && ctx.locale !== null ? ctx.locale : null
-      } catch {
-        /* optional direct service face */
-      }
-    }
-    const getLocaleSnapshot = () => {
-      try {
-        return localeService?.getSnapshot?.() ?? localeService?.getLocale?.() ?? null
-      } catch {
-        return null
-      }
-    }
-    // Use the packaged dictionaries with the host snapshot and the document
-    // language fallback. Native and web shells expose different locale handles;
-    // binding through the host alone leaves this plugin on the Chinese fallback
-    // in the native official shell even when the UI is English.
-    t = createTranslator(getLocaleSnapshot)
+    localeRuntime = createLocaleRuntime({ ctx, store })
+    t = localeRuntime.t
+
     queue = createOptimisticQueue({
       store,
       commit: (doc, revision) => api.commit(doc, revision),
@@ -682,42 +663,13 @@ export const createPlugin = () => {
     } catch {
       /* compatible with host versions without the plugins settings slot */
     }
-    // Register all packaged dictionaries with the host locale service when
-    // available. Do not call addLanguage and do not add a plugin picker: the
-    // host (or a third-party language pack) owns the catalog, while these
-    // dictionaries stay dormant until their language becomes active.
-    try {
-      const disposer = localeService?.register?.(LOCALE_NS, dictionaries)
-      if (typeof disposer === 'function') localeDisposer = disposer
-      const unsubscribe = localeService?.subscribe?.(() => {
-        try {
-          store?.dispatch('locale-changed')
-        } catch {
-          /* locale refresh must not break the view */
-        }
-      })
-      if (typeof unsubscribe === 'function') localeSubscriptionDisposer = unsubscribe
-    } catch {
-      /* locale service optional */
-    }
-
     bridge = {
       store,
       t,
       get direction() {
-        try {
-          return directionForLocale(resolveLocaleId(getLocaleSnapshot))
-        } catch {
-          return 'ltr'
-        }
+        return localeRuntime?.direction() ?? 'ltr'
       },
-      formatAbsoluteTime: (value) => {
-        try {
-          return formatDateTime(value, resolveLocaleId(getLocaleSnapshot))
-        } catch {
-          return null
-        }
-      },
+      formatAbsoluteTime: (value) => localeRuntime?.formatAbsoluteTime(value) ?? null,
       api,
       actions,
       get debugProbe() {

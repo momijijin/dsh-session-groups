@@ -6,18 +6,17 @@
  * `usePanelInfo`, `…`) plus the slot owner share. Everything host-derived is read
  * from those hooks; the only local state is this plugin's view store.
  */
-import { createElement, useEffect, useMemo, useRef, useState } from 'react'
+import { createElement, useEffect, useRef, useState } from 'react'
 import { useGroupsSidebarWidth } from './groups-view-width.js'
+import { useGroupsViewData } from './groups-view-data.js'
 import { clientRuntime as rt } from '../adapters/client-runtime.js'
 import { GROUP_ICONS } from '../shared/constants.js'
 import { assignSession, childrenOf, findGroup, groupColor, moveGroup } from '../shared/model.js'
 import { currentColorHexOf, currentColorOf, currentGroupIdOf, currentIconOf, currentParentOf, deleteGroupNeedsDialog, findGroupsFlat } from '../core/dialog-selection.js'
 import { workspaceChoices } from './actions.js'
 import { MenuPopover, Toast } from './session-menu.js'
-import { selectMainSessionView } from './main-session-view.js'
 import { DialogHost } from './dialog-host.js'
-import { sessionViewEqual, statusMapEqual, workspaceViewEqual } from './session-equality.js'
-import { buildVisibleTree, countTreeSessions, mainSessionIdOf, sessionTitle } from '../core/filter.js'
+import { countTreeSessions, sessionTitle } from '../core/filter.js'
 import { applyDrop, hitTest, sameDropTarget, stickyDropTarget, ungroupedBodyTarget } from '../core/drag.js'
 import { diagContext, diagDragEnd, diagDragStart, diagDropState, diagEnabled, diagHandler, diagRender, diagTargetChange, diagTrace } from './diagnostics.js'
 import { GROUP_DRAG_MIME, groupHeaderZoneFromRect, isCurrentGroupPosition, resolveGroupDrop } from '../core/group-drag.js'
@@ -26,7 +25,7 @@ import { perfDragOver, perfDropTarget, perfEnabled, perfMark, perfNow, perfRende
 import { revealSession } from '../core/search.js'
 import { readOnboardingDone, writeOnboardingDone } from './state.js'
 import { SIDEBAR_WIDTH_MIN } from './sidebar-width.js'
-import { expandAncestors, isExpanded, runningSubagentCounts, statusSectionsByGroup, sessionContainer } from '../core/tree.js'
+import { expandAncestors, isExpanded, sessionContainer } from '../core/tree.js'
 
 import { useViewStore, usePerfCommit, dispatch, toast, TextButton, DropPlaceholder, GROUP_PLACEHOLDER_HEIGHT } from './components-primitives.js'
 import { SessionRow, GroupNode } from './components-rows.js'
@@ -82,59 +81,22 @@ export const GroupsView = (props) => {
   perfRender('GroupsView')
   diagRender('GroupsView')
 
-  // Hook order must stay stable when the host switches wide -> rail. The
-  // handlers object is built later (and is skipped by rail/error early returns),
-  // so keep a stable proxy before every conditional return.
-  const handlersRef = useRef(null)
-  const stableHandlers = useMemo(
-    () =>
-      new Proxy(
-        {},
-        {
-          get: (_target, property) => (...args) => handlersRef.current?.[property]?.(...args),
-        }
-      ),
-    []
-  )
-
-  // Framework standard hooks: always called (rules of hooks), feature-detected.
-  const sessions = typeof props?.useSessions === 'function' ? props.useSessions(selectMainSessionView, sessionViewEqual) : null
-  const workspaces = typeof props?.useWorkspaces === 'function' ? props.useWorkspaces((snapshot) => snapshot, workspaceViewEqual) : null
-  const statuses = typeof props?.useSessionStatus === 'function' ? props.useSessionStatus((snapshot) => snapshot, statusMapEqual) : null
-  const subagentCounts = useMemo(() => runningSubagentCounts(sessions, statuses), [sessions, statuses])
-  const statusBuckets = useMemo(
-    () =>
-      statusSectionsByGroup(
-        store?.doc,
-        sessions?.byId ?? {},
-        statuses,
-        workspaces?.archivedSessionIds ?? [],
-        subagentCounts
-      ),
-    [store?.doc, sessions?.byId, statuses, workspaces?.archivedSessionIds, subagentCounts]
-  )
-  const runningSessions = statusBuckets.running
-  const blockedSessions = statusBuckets.blocked
-  const unreadSessions = statusBuckets.unread
-
-  const byId = sessions?.byId ?? {}
-  const workspaceItems = workspaces?.items ?? []
-  const archivedSessionIds = Array.isArray(workspaces?.archivedSessionIds) ? workspaces.archivedSessionIds : []
-  const currentId = mainSessionIdOf(sessions)
-  const highlightCurrent = currentId
-  const tree = useMemo(
-    () =>
-      store
-        ? buildVisibleTree(store.doc, byId, workspaceItems, {
-            archivedSessionIds,
-            filter: store.archiveFilter,
-            currentSessionId: highlightCurrent,
-            statuses: statuses instanceof Map ? statuses : null,
-            subagentCounts,
-          })
-        : { groups: [], ungrouped: [] },
-    [store?.doc, store?.archiveFilter, byId, workspaceItems, archivedSessionIds, highlightCurrent, statuses, subagentCounts]
-  )
+  const {
+    handlersRef,
+    stableHandlers,
+    sessions,
+    workspaces,
+    statuses,
+    runningSessions,
+    blockedSessions,
+    unreadSessions,
+    byId,
+    workspaceItems,
+    archivedSessionIds,
+    currentId,
+    highlightCurrent,
+    tree,
+  } = useGroupsViewData({ store, props })
 
   const [dragState, setDragState] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
