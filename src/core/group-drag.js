@@ -13,6 +13,9 @@
  */
 import { childrenOf, findGroup, isDescendant } from '../shared/model.js'
 
+/** Sentinel thrown inside a queued updater to abandon a no-op group drop. */
+export const GROUP_DROP_NOOP = Symbol('dsh-session-grove/group-drop-noop')
+
 /** DataTransfer type carrying the dragged group id. */
 export const GROUP_DRAG_MIME = 'application/x-dsh-group-id'
 
