@@ -24,7 +24,10 @@
   "group.moveDown": "下へ移動",
   "group.icon": "アイコンを変更",
   "group.color": "色を変更",
-  "group.sessionCount": "{n} 件のセッション",
+  "group.sessionCount": {
+    "one": "{n} 件のセッション",
+    "other": "{n} 件のセッション"
+  },
   "drag.groupBefore": "「{name}」の前にドロップ",
   "drag.groupAfter": "「{name}」の後にドロップ",
   "drag.groupInto": "「{name}」の中にドロップ",
@@ -184,7 +187,10 @@
   "iconGroup.status": "ステータス",
   "iconGroup.work": "開発",
   "iconGroup.general": "一般",
-  "sessions.expand": "残り {n} 件のセッションを表示",
+  "sessions.expand": {
+    "one": "残り {n} 件のセッションを表示",
+    "other": "残り {n} 件のセッションを表示"
+  },
   "sessions.collapse": "折りたたむ",
   "color.teal": "ティール",
   "color.pink": "ピンク",

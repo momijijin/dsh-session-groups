@@ -24,7 +24,10 @@
   "group.moveDown": "Bajar",
   "group.icon": "Cambiar icono",
   "group.color": "Cambiar color",
-  "group.sessionCount": "{n} sesiones",
+  "group.sessionCount": {
+    "one": "{n} sesión",
+    "other": "{n} sesiones"
+  },
   "drag.groupBefore": "Suelta antes de «{name}»",
   "drag.groupAfter": "Suelta después de «{name}»",
   "drag.groupInto": "Suelta dentro de «{name}»",
@@ -184,7 +187,10 @@
   "iconGroup.status": "Estado",
   "iconGroup.work": "Desarrollo",
   "iconGroup.general": "General",
-  "sessions.expand": "Mostrar {n} sesiones más",
+  "sessions.expand": {
+    "one": "Mostrar {n} sesión más",
+    "other": "Mostrar {n} sesiones más"
+  },
   "sessions.collapse": "Mostrar menos",
   "color.teal": "Turquesa",
   "color.pink": "Rosa",

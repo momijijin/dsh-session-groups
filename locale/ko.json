@@ -24,7 +24,10 @@
   "group.moveDown": "아래로 이동",
   "group.icon": "아이콘 변경",
   "group.color": "색상 변경",
-  "group.sessionCount": "세션 {n}개",
+  "group.sessionCount": {
+    "one": "세션 {n}개",
+    "other": "세션 {n}개"
+  },
   "drag.groupBefore": "“{name}” 앞에 놓기",
   "drag.groupAfter": "“{name}” 뒤에 놓기",
   "drag.groupInto": "“{name}” 안에 놓기",
@@ -184,7 +187,10 @@
   "iconGroup.status": "상태",
   "iconGroup.work": "개발",
   "iconGroup.general": "일반",
-  "sessions.expand": "나머지 세션 {n}개 표시",
+  "sessions.expand": {
+    "one": "나머지 세션 {n}개 표시",
+    "other": "나머지 세션 {n}개 표시"
+  },
   "sessions.collapse": "접기",
   "color.teal": "청록",
   "color.pink": "분홍",

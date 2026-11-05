@@ -24,7 +24,10 @@
   "group.moveDown": "下移",
   "group.icon": "更换图标",
   "group.color": "修改颜色",
-  "group.sessionCount": "{n} 个会话",
+  "group.sessionCount": {
+    "one": "{n} 个会话",
+    "other": "{n} 个会话"
+  },
   "drag.groupBefore": "放入『{name}』前",
   "drag.groupAfter": "放入『{name}』后",
   "drag.groupInto": "放入『{name}』内",
@@ -184,7 +187,10 @@
   "iconGroup.status": "状态",
   "iconGroup.work": "开发与工作",
   "iconGroup.general": "通用",
-  "sessions.expand": "展开其余 {n} 个会话",
+  "sessions.expand": {
+    "one": "展开其余 {n} 个会话",
+    "other": "展开其余 {n} 个会话"
+  },
   "sessions.collapse": "收起",
   "color.teal": "青绿",
   "color.pink": "粉色",

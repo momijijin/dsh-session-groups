@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.6 (local i18n plural foundation)
+
+- `formatMessage` now accepts per-category plural objects and selects them with `Intl.PluralRules`.
+- Migrated `group.sessionCount` and `sessions.expand` to one/other templates in all eight packaged languages; missing counts fall back to `other`.
+- Tests: 484/484. No tag or Release.
+
 ## 0.4.0-beta.5 (local i18n first language batch)
 
 - Added complete Korean, German, French, Spanish and Brazilian Portuguese locale dictionaries (288 keys each), plus manifest titles/descriptions.

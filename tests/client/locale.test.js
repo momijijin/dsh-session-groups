@@ -8,9 +8,13 @@ import {
   detectEnvironmentLocale,
   dictionaries,
   dictionaryFor,
+  de,
   en,
+  es,
   formatMessage,
+  fr,
   ja,
+  pt,
   zh,
 } from '../../src/client/locale.js'
 
@@ -40,10 +44,29 @@ test('locale JSON files mirror the dictionaries', () => {
   }
 })
 
+test('formatMessage selects plural categories by language', () => {
+  const plural = { one: '{n} item', other: '{n} items' }
+  assert.equal(formatMessage({ count: plural }, 'count', { n: 1 }, 'en'), '1 item')
+  assert.equal(formatMessage({ count: plural }, 'count', { n: 2 }, 'en'), '2 items')
+  assert.equal(formatMessage({ count: plural }, 'count', { n: 1 }, 'ja'), '1 items')
+  assert.equal(formatMessage({ count: plural }, 'count', { n: 2 }, 'zh'), '2 items')
+  assert.equal(formatMessage({ count: plural }, 'count', {}, 'en'), '{n} items')
+})
+
+test('packaged count strings use plural templates', () => {
+  assert.equal(formatMessage(en, 'group.sessionCount', { n: 1 }, 'en'), '1 session')
+  assert.equal(formatMessage(en, 'group.sessionCount', { n: 2 }, 'en'), '2 sessions')
+  assert.equal(formatMessage(de, 'group.sessionCount', { n: 1 }, 'de'), '1 Sitzung')
+  assert.equal(formatMessage(fr, 'group.sessionCount', { n: 1 }, 'fr'), '1 session')
+  assert.equal(formatMessage(es, 'group.sessionCount', { n: 1 }, 'es'), '1 sesión')
+  assert.equal(formatMessage(pt, 'group.sessionCount', { n: 1 }, 'pt'), '1 sessão')
+  assert.equal(formatMessage(ja, 'group.sessionCount', { n: 2 }, 'ja'), '2 件のセッション')
+})
+
 test('formatMessage substitutes {name} placeholders and falls back to keys', () => {
-  assert.equal(formatMessage(zh, 'group.sessionCount', { n: 3 }), '3 个会话')
-  assert.equal(formatMessage(en, 'group.sessionCount', { n: 3 }), '3 sessions')
-  assert.equal(formatMessage(ja, 'group.sessionCount', { n: 3 }), ja['group.sessionCount'].replace('{n}', '3'))
+  assert.equal(formatMessage(zh, 'group.sessionCount', { n: 3 }, 'zh'), '3 个会话')
+  assert.equal(formatMessage(en, 'group.sessionCount', { n: 3 }, 'en'), '3 sessions')
+  assert.equal(formatMessage(ja, 'group.sessionCount', { n: 3 }, 'ja'), '3 件のセッション')
   assert.equal(formatMessage(zh, 'missing.key'), 'missing.key')
   assert.equal(formatMessage(zh, 'group.sessionCount'), '{n} 个会话')
 })
