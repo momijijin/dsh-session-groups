@@ -799,7 +799,8 @@ test('0.2.13 active row, official session watermark and semantic icon sections',
   assert.match(components, /session-groups-session-overflow/)
   assert.match(CSS, /\.dsg-session-overflow\s*\{/)
   assert.match(CSS, /\.dsg-session-overflow:hover/)
-  assert.equal(zh['sessions.expand'], '展开其余 {n} 个会话')
+  assert.equal(zh['sessions.expand'].other, '展开其余 {n} 个会话')
+  assert.equal(zh['sessions.expand'].one, '展开其余 {n} 个会话')
   assert.equal(zh['sessions.collapse'], '收起')
   const icons = ICON_GROUPS.flatMap((group) => group.icons)
   for (const icon of ['check-circle', 'check', 'x-circle', 'x', 'pause-circle', 'pause', 'play-circle', 'play', 'stop-circle', 'stop', 'ban']) {
