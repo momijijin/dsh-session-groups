@@ -35,7 +35,7 @@ test('control routes stay behind the API switch without changing their paths', a
   const on = await mountRoutes({ connection: connection(), controlApiEnabled: true })
   t.after(() => on.cleanup())
   assert.deepEqual(
-    on.mounted.routes.filter((path) => path.startsWith('/dsh-session-groups/control/') && !path.includes('/session/')),
+    on.mounted.routes.filter((path) => path.startsWith('/dsh-session-grove/control/') && !path.includes('/session/')),
     [CONTROL_DOCTOR_PATH, CONTROL_STATE_PATH, CONTROL_CATALOG_PATH, CONTROL_RESOLVE_PATH, CONTROL_PLAN_PATH, CONTROL_APPLY_PATH],
   )
 })

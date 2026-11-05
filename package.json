@@ -1,13 +1,18 @@
 {
-  "name": "dsh-session-groups",
-  "version": "0.3.0-beta.79",
+  "name": "dsh-session-grove",
+  "version": "0.4.0-beta.1",
   "description": "A free-form grouping layer for the DSH Desktop sidebar: assign sessions from different workspaces to the same group without changing their official workspace membership or logs.",
   "icon": "assets/icon-180.png",
   "author": "momiji-gz302ea <2648863351@qq.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/momijijin/dsh-session-grove.git"
+  },
   "keywords": [
     "dsh",
     "dsh-plugin",
     "session-groups",
+    "session-grove",
     "sidebar"
   ],
   "type": "module",
@@ -23,7 +28,7 @@
     "lib",
     "locale",
     "assets/icon-180.png",
-    "scripts/session-groups-control.mjs",
+    "scripts/session-grove-control.mjs",
     "skills",
     "cordis.patch.yml",
     "dsh.plugin.json",

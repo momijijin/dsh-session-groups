@@ -502,7 +502,7 @@ export const GroupsView = (props) => {
     } catch (error) {
       if (error?.reported === true) return
       toast('error', t('toast.dropFailed'))
-      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] drop failed', error)
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] drop failed', error)
     }
   }
 
@@ -556,7 +556,7 @@ export const GroupsView = (props) => {
         return
       }
       toast('error', t('toast.dropFailed'))
-      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] group drop failed', error)
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] group drop failed', error)
     }
   }
 
@@ -574,7 +574,7 @@ export const GroupsView = (props) => {
     task?.catch((error) => {
       if (error === GROUP_DROP_NOOP || error?.reported === true) return
       toast('error', t('toast.dropFailed'))
-      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] group move failed', error)
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] group move failed', error)
     })
   }
 
@@ -591,7 +591,7 @@ export const GroupsView = (props) => {
     task?.catch((error) => {
       if (error === GROUP_DROP_NOOP || error?.reported === true) return
       toast('error', t('toast.dropFailed'))
-      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-groups] session move failed', error)
+      if (globalThis.console?.warn) globalThis.console.warn('[dsh-session-grove] session move failed', error)
     })
   }
 

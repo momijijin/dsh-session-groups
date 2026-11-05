@@ -4,7 +4,7 @@
 #
 # Verifies, against the running isolated spike server on port 4402:
 #   * the token-authenticated web UI answers 200;
-#   * GET /dsh-session-groups/load answers 200 {ok:true, revision, doc};
+#   * GET /dsh-session-grove/load answers 200 {ok:true, revision, doc};
 #   * (optional) POST /commit works and the request fence rejects a foreign Origin;
 #   * a headless Chromium loads the page with no client-plugin console error and
 #     with the client plugin present in the boot payload;
@@ -35,7 +35,7 @@ param(
     [switch]$StrictNetwork,
     [switch]$CommitProbe,
     [switch]$FenceProbe,
-    [string[]]$ExpectBootContains = @('dsh-session-groups'),
+    [string[]]$ExpectBootContains = @('dsh-session-grove'),
     [string]$ExpectSelector = '[data-testid="session-groups-toggle"]',
     [string]$ExpectText,
     [string[]]$AllowConsoleError = @(),

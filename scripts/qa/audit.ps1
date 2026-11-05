@@ -4,7 +4,7 @@
 #
 # Contract under test (docs/V1-PLAN.md D2/D10, docs/CONTRACTS.md §2 File, docs/TEST-PLAN.md §7):
 #   inside <repo>\.spike-home, the only file this plugin may create or modify is
-#       .spike-home\storages\dsh-session-groups.json
+#       .spike-home\storages\dsh-session-grove.json
 #   (~ plus its .bak/.tmp/.corrupt-* siblings while writing).
 #   .spike-home\storages\workspace.json and the sample session logs must not change.
 #   The REAL %USERPROFILE%\.dsh is never written by the harness (setup/teardown prove it);
@@ -319,7 +319,7 @@ function Compare-AuditSnapshots {
         'unchanged' { 'expected to stay unchanged' }
         default { 'any change accepted' }
     }
-    Add-QaCheck -Id 'AUD-3' -Description ("dsh-session-groups.json {0}" -f $expectedText) -Pass $groupExpectationMet `
+    Add-QaCheck -Id 'AUD-3' -Description ("dsh-session-grove.json {0}" -f $expectedText) -Pass $groupExpectationMet `
         -Detail ("exists(before={0}, after={1}); revision(before={2}, after={3}); sha(before={4}, after={5})" -f `
             $beforeGroup.exists, $afterGroup.exists, $beforeGroup.revision, $afterGroup.revision, `
             $beforeGroup.sha256, $afterGroup.sha256)
@@ -446,7 +446,7 @@ function Invoke-ExerciseHttp {
         return $result
     }
 
-    $loadUrl = $target.baseUrl + 'dsh-session-groups/load'
+    $loadUrl = $target.baseUrl + 'dsh-session-grove/load'
     try {
         $load = Invoke-WebRequest -Uri $loadUrl -UseBasicParsing -WebSession $session -TimeoutSec 15 -SkipHttpErrorCheck
         $result.loadStatus = [int]$load.StatusCode
@@ -456,16 +456,16 @@ function Invoke-ExerciseHttp {
         $ok = ([int]$load.StatusCode -eq 200) -and ($parsed -and $parsed.ok -eq $true)
         $result.loadOk = [bool]$ok
         if ($parsed -and $null -ne $parsed.revision) { $result.revisionBefore = $parsed.revision }
-        Add-QaCheck -Id 'AUD-6' -Description 'GET /dsh-session-groups/load returns 200 {ok:true}' -Pass $ok `
+        Add-QaCheck -Id 'AUD-6' -Description 'GET /dsh-session-grove/load returns 200 {ok:true}' -Pass $ok `
             -Detail ("status={0}; revision={1}; body={2}" -f $load.StatusCode, $result.revisionBefore, $bodyText.Substring(0, [Math]::Min(220, $bodyText.Length)))
     } catch {
-        Add-QaCheck -Id 'AUD-6' -Description 'GET /dsh-session-groups/load returns 200 {ok:true}' -Pass $false -Detail $_.Exception.Message
+        Add-QaCheck -Id 'AUD-6' -Description 'GET /dsh-session-grove/load returns 200 {ok:true}' -Pass $false -Detail $_.Exception.Message
         $result.error = $_.Exception.Message
         return $result
     }
 
     if ($CommitProbe) {
-        $commitUrl = $target.baseUrl + 'dsh-session-groups/commit'
+        $commitUrl = $target.baseUrl + 'dsh-session-grove/commit'
         try {
             $loadBody = [string]$load.Content
             $parsed = $loadBody | ConvertFrom-Json
@@ -480,10 +480,10 @@ function Invoke-ExerciseHttp {
             $commitOk = ([int]$commit.StatusCode -eq 200) -and ($commitParsed -and $commitParsed.ok -eq $true)
             $result.commitOk = [bool]$commitOk
             if ($commitParsed -and $null -ne $commitParsed.revision) { $result.revisionAfter = $commitParsed.revision }
-            Add-QaCheck -Id 'AUD-7' -Description 'POST /dsh-session-groups/commit (no-op probe) returns 200' -Pass $commitOk `
+            Add-QaCheck -Id 'AUD-7' -Description 'POST /dsh-session-grove/commit (no-op probe) returns 200' -Pass $commitOk `
                 -Detail ("status={0}; revision {1} -> {2}" -f $commit.StatusCode, $result.revisionBefore, $result.revisionAfter)
         } catch {
-            Add-QaCheck -Id 'AUD-7' -Description 'POST /dsh-session-groups/commit (no-op probe) returns 200' -Pass $false -Detail $_.Exception.Message
+            Add-QaCheck -Id 'AUD-7' -Description 'POST /dsh-session-grove/commit (no-op probe) returns 200' -Pass $false -Detail $_.Exception.Message
         }
     }
     return $result

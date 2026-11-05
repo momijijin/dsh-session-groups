@@ -1,4 +1,4 @@
-# dsh-session-groups
+# dsh-session-grove
 
 [English](README.md) | [中文](README.zh.md)
 
@@ -9,7 +9,7 @@
 - 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
 - 不写入 `workspace.json`。
 
-当前版本：**0.3.0-beta.79**  
+当前版本：**0.4.0-beta.1**  
 主要支持：**DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 与 0.2.1-rc.5**（`engines.dsh: >=0.2.0-rc.2 <0.3.0`）  
 已验证桌面壳：**社区版 DSH Desktop Stable 2.0.18**（rc.2）与**官方 DeepSeek Harness 桌面版 0.2.1.0**（rc.5，隔离运行时 A+）  
 不官方支持、不承诺兼容：**社区版 DSH Desktop Beta**、**社区版 DSH NEXT（`-next` 通道）**
@@ -128,12 +128,16 @@ Beta 和 NEXT 即使能加载插件，也不构成发布门禁，不扩大支持
 在 **dshmarket** 中搜索并安装：
 
 ```text
-dsh-session-groups
+dsh-session-grove
 ```
 
 市场条目正在准备中。上架后，普通用户应完全通过 dshmarket 安装和更新，不需要本地路径或命令行。
 
 更新由 dshmarket / 插件管理器负责。插件不做自更新，也不知道下一版本的下载地址。如果之前用本地 tarball 安装，需要通过市场重新安装一次，让安装来源绑定到目录。
+
+### 从 `dsh-session-groups` 升级
+
+`0.4.0-beta.1` 是新包身份，**不会自动读取、复制或删除**旧 `dsh-session-groups` 的分组文件和浏览器键；这是为了避免把同名社区插件的数据误导入。手动迁移步骤见 [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md)。
 
 ### 维护者/开发者安装
 
@@ -144,7 +148,7 @@ dsh-session-groups
 分组记录：
 
 ```text
-<dshHome>/storages/dsh-session-groups.json
+<dshHome>/storages/dsh-session-grove.json
 ```
 
 - 写入使用 revision 比较与串行队列
@@ -155,24 +159,24 @@ dsh-session-groups
 
 本地 UI 偏好（localStorage）：
 
-- `dsh-session-groups.view.v1`
-- `dsh-session-groups.archive.v1`
-- `dsh-session-groups.collapsed.v1`
-- `dsh-session-groups.width.v1`
-- `dsh-session-groups.onboarded.v1`
-- `dsh-session-groups.dialog.geometry.v9`
+- `dsh-session-grove.view.v1`
+- `dsh-session-grove.archive.v1`
+- `dsh-session-grove.collapsed.v1`
+- `dsh-session-grove.width.v1`
+- `dsh-session-grove.onboarded.v1`
+- `dsh-session-grove.dialog.geometry.v9`
 
 卸载插件后官方工作区视图恢复；分组记录和本地偏好保留，重装可恢复。需要彻底清理时删除上述记录文件、`.bak` 与对应 localStorage 键。
 
 ## 配置
 
-插件管理器提供五个开关，默认都关闭。设置卡位于 **Plugins → dsh-session-groups 插件详情第一层**，无需进入组件行。所有开关使用标准 DSH `Switch`，信息按钮使用标准 `Tooltip`。
+插件管理器提供五个开关，默认都关闭。设置卡位于 **Plugins → dsh-session-grove 插件详情第一层**，无需进入组件行。所有开关使用标准 DSH `Switch`，信息按钮使用标准 `Tooltip`。
 
 | 配置 | 默认 | 作用 |
 |---|---|---|
 | `diagnostics` | 关闭 | 拖拽 HUD 与本地 NDJSON trace；切换后热生效 |
 | `debugProbe` | 关闭 | 临时弹窗布局探针与 `.debug.ndjson` 路由；生产使用不要开启 |
-| `controlApi` | 关闭 | AI 控制总开关：原生 `session_groups_control` 工具 + 浏览器/调试 HTTP 路由 |
+| `controlApi` | 关闭 | AI 控制总开关：原生 `session_grove_control` 工具 + 浏览器/调试 HTTP 路由 |
 | `controlDestructive` | 关闭 | 允许 AI 控制接口执行删除等破坏性操作；开启前需二次确认 |
 | `controlSessions` | 关闭 | 允许会话改名、归档状态切换；需同时开启 `controlApi` |
 
@@ -193,14 +197,14 @@ dsh-session-groups
 AI 的主通道是 Host 原生工具：
 
 ```text
-session_groups_control
+session_grove_control
 ```
 
 它直接在 DSH Host 进程内执行，不经过 HTTP、不需要浏览器 Cookie、不需要
 control token，也不依赖 CLI。`controlApi` 必须是开启状态；`controlSessions`
 控制会话改名/归档；`controlDestructive` 控制删除。
 
-Host 在每次分组 commit（原生工具或 HTTP）后通过 `/dsh-session-groups/events` 广播新 revision；浏览器收到后重新 load 对账。切回自由分组视图时也会主动重新 load。
+Host 在每次分组 commit（原生工具或 HTTP）后通过 `/dsh-session-grove/events` 广播新 revision；浏览器收到后重新 load 对账。切回自由分组视图时也会主动重新 load。
 
 `doctor` 是只读兼容性诊断，可在 `controlApi` 关闭时调用；
 它返回宿主能力、适配器/版本范围、控制门禁、存储路径、存储健康（status/revision、backupStatus/backupRevision/backupError、quarantine）、服务存在性与已挂载路由。
@@ -237,11 +241,11 @@ doctor
 
 ### 可直接复制的 AI 提示词
 
-先开启 **AI 控制接口**；改名提示还需要开启 **会话操作**。不需要命令行、HTTP、Cookie 或 token——把下面的话发给会话里的 AI，让它调用 `session_groups_control`。
+先开启 **AI 控制接口**；改名提示还需要开启 **会话操作**。不需要命令行、HTTP、Cookie 或 token——把下面的话发给会话里的 AI，让它调用 `session_grove_control`。
 
 #### 批量创建项目分组架构
 
-> 用 `session_groups_control` 创建或复用以下分组层级：
+> 用 `session_grove_control` 创建或复用以下分组层级：
 >
 > `〈项目名〉项目组` — 图标 `server`，颜色 `blue`
 > - `设计中` — 图标 `book`，颜色 `purple`
@@ -254,22 +258,22 @@ doctor
 
 #### 改名并归入分组，一条指令完成
 
-> 把当前会话改名为「〈新名称〉」，然后归入「〈项目名〉项目组 / 开发中」。使用 `session_groups_control`；先拿到当前会话明确的 `sessionId`，不要猜。先改名，再用 `plan`/`apply` 执行 `session.assign`。任一步失败就停止，并告诉我卡在哪一步。这是一条指令里的两个连续操作，不是单个事务。
+> 把当前会话改名为「〈新名称〉」，然后归入「〈项目名〉项目组 / 开发中」。使用 `session_grove_control`；先拿到当前会话明确的 `sessionId`，不要猜。先改名，再用 `plan`/`apply` 执行 `session.assign`。任一步失败就停止，并告诉我卡在哪一步。这是一条指令里的两个连续操作，不是单个事务。
 
 ### HTTP 路由（浏览器/调试）
 
 以下路由保留给浏览器设置页和本地调试，不作为 AI CLI 的主通道：
 
 ```text
-GET  /dsh-session-groups/control/doctor
-GET  /dsh-session-groups/control/catalog
-GET  /dsh-session-groups/control/state
-POST /dsh-session-groups/control/resolve
-POST /dsh-session-groups/control/plan
-POST /dsh-session-groups/control/apply
-POST /dsh-session-groups/control/session/inspect
-POST /dsh-session-groups/control/session/rename
-POST /dsh-session-groups/control/session/archive
+GET  /dsh-session-grove/control/doctor
+GET  /dsh-session-grove/control/catalog
+GET  /dsh-session-grove/control/state
+POST /dsh-session-grove/control/resolve
+POST /dsh-session-grove/control/plan
+POST /dsh-session-grove/control/apply
+POST /dsh-session-grove/control/session/inspect
+POST /dsh-session-grove/control/session/rename
+POST /dsh-session-grove/control/session/archive
 ```
 
 真实 DSH Desktop 的 Host 浏览器会话 fence 在插件路由之前执行。CLI 使用
@@ -279,7 +283,7 @@ POST /dsh-session-groups/control/session/archive
 ```powershell
 $env:DSH_HOME = "$env:USERPROFILE\.dsh"
 $env:DSH_WEB_URL = "http://127.0.0.1:43120/?token=启动时打印的token"
-node scripts/session-groups-control.mjs doctor
+node scripts/session-grove-control.mjs doctor
 ```
 
 原生工具仍是 AI 的主通道；CLI 只用于本地只读诊断和调试。`doctor` 在 host compatibility 不支持时返回非零退出码，可直接用于升级前/后脚本门禁。
@@ -291,15 +295,15 @@ node scripts/session-groups-control.mjs doctor
 外的控制路由仍返回 404，token 本身不能绕过 Host 浏览器 fence：
 
 ```text
-<dshHome>/storages/dsh-session-groups.control-token
+<dshHome>/storages/dsh-session-grove.control-token
 ```
 
-包内置 skill：`skills/session-groups-control/SKILL.md`。开启 `controlApi` 后，插件会自动安装到 `<dshHome>/skills/session-groups-control/SKILL.md`；插件详情页设置卡提供“校验 / 重装技能”按钮，可修复丢失或损坏的 managed skill，无需卸载整个插件。用户自己创建的同名 skill 不会被强制覆盖。
+包内置 skill：`skills/session-grove-control/SKILL.md`。开启 `controlApi` 后，插件会自动安装到 `<dshHome>/skills/session-grove-control/SKILL.md`；插件详情页设置卡提供“校验 / 重装技能”按钮，可修复丢失或损坏的 managed skill，无需卸载整个插件。用户自己创建的同名 skill 不会被强制覆盖。
 
 诊断文件位置：
 
 ```text
-<dshHome>/storages/dsh-session-groups.diagnostics.ndjson
+<dshHome>/storages/dsh-session-grove.diagnostics.ndjson
 ```
 
 仅在 `diagnostics` 开启时写入；内容为拖拽事件/ID/timing，不包含会话 transcript。文件不自动轮转，需要时可手工清理。
@@ -355,7 +359,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-groups-0.3.0-beta.79.tgz`
+- 发布包：`dsh-session-grove-0.4.0-beta.1.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 测试摘要见 `docs/TEST-RESULTS.md`
 

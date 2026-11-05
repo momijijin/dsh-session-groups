@@ -10,13 +10,13 @@ import { ARCHIVE_FILTERS } from '../shared/constants.js'
 import { emptyDoc } from '../shared/model.js'
 
 /** localStorage key for the sidebar mode (`groups` | `workspace`). */
-export const VIEW_MODE_KEY = 'dsh-session-groups.view.v1'
+export const VIEW_MODE_KEY = 'dsh-session-grove.view.v1'
 /** localStorage key for the archive tri-state filter. */
-export const ARCHIVE_FILTER_KEY = 'dsh-session-groups.archive.v1'
+export const ARCHIVE_FILTER_KEY = 'dsh-session-grove.archive.v1'
 /** localStorage key for persisted group expansion (collapsed ids only). */
-export const COLLAPSED_KEY = 'dsh-session-groups.collapsed.v1'
+export const COLLAPSED_KEY = 'dsh-session-grove.collapsed.v1'
 /** localStorage key for the one-time groups-view onboarding card. */
-export const ONBOARDING_KEY = 'dsh-session-groups.onboarded.v1'
+export const ONBOARDING_KEY = 'dsh-session-grove.onboarded.v1'
 
 /** Modes understood by the sidebar controller. */
 export const VIEW_MODES = Object.freeze(['workspace', 'groups'])

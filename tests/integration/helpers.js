@@ -17,7 +17,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const GROUP_FILE_NAME = 'dsh-session-groups.json';
+export const GROUP_FILE_NAME = 'dsh-session-grove.json';
 
 export function hostReady() {
   return existsSync(join(REPO_ROOT, 'src', 'host', 'store.js')) &&
@@ -68,7 +68,7 @@ export async function createTestStore(dir, fileName = GROUP_FILE_NAME) {
 }
 
 /** Minimal IncomingMessage double accepted by both Node http and the spike routes. */
-export function makeRequest({ method = 'GET', url = '/dsh-session-groups/load', headers = {}, body = null } = {}) {
+export function makeRequest({ method = 'GET', url = '/dsh-session-grove/load', headers = {}, body = null } = {}) {
   const chunks = [];
   if (body !== null && body !== undefined) {
     chunks.push(Buffer.isBuffer(body) ? body : Buffer.from(String(body), 'utf8'));
@@ -168,8 +168,8 @@ export async function createHarness({ store, fence = 'allow', ctxOverrides = {} 
   };
 }
 
-export const LOAD_PATH = '/dsh-session-groups/load';
-export const COMMIT_PATH = '/dsh-session-groups/commit';
+export const LOAD_PATH = '/dsh-session-grove/load';
+export const COMMIT_PATH = '/dsh-session-grove/commit';
 
 export const validDoc = (overrides = {}) => ({
   version: 1,

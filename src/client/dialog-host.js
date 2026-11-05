@@ -290,7 +290,7 @@ export const DialogHost = ({ store, props }) => {
           }),
           tokens,
         }
-        void globalThis.fetch?.('/dsh-session-groups/debug', {
+        void globalThis.fetch?.('/dsh-session-grove/debug', {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'content-type': 'application/json' },

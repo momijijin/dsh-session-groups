@@ -167,7 +167,7 @@ async function main() {
     await driver.navigate(web.url);
     await boot();
     // Enable the opt-in probe and reload so the client caches the flag at boot.
-    await evaluate(`localStorage.setItem('dsh-session-groups.perf', '1')`);
+    await evaluate(`localStorage.setItem('dsh-session-grove.perf', '1')`);
     await driver.navigate(web.url);
     await boot();
     await enterGroups();
@@ -429,7 +429,7 @@ async function main() {
     let stressPhase = null;
     if (args.stressGroups > 0) {
       const added = await evaluate(`(async () => {
-        const load = await fetch('dsh-session-groups/load', { credentials: 'same-origin' }).then((response) => response.json());
+        const load = await fetch('dsh-session-grove/load', { credentials: 'same-origin' }).then((response) => response.json());
         if (!load?.ok) return { error: 'load failed' };
         const doc = { version: 1, groups: [...load.doc.groups], ungrouped: [...load.doc.ungrouped] };
         const seed = Date.now().toString(16).slice(-4);
@@ -437,7 +437,7 @@ async function main() {
           const suffix = (seed + index.toString(16).padStart(8, '0')).slice(-12);
           doc.groups.push({ id: 'g-' + suffix, name: 'Stress-' + String(index).padStart(3, '0'), icon: 'folder', parentId: null, sessionIds: [] });
         }
-        const response = await fetch('dsh-session-groups/commit', {
+        const response = await fetch('dsh-session-grove/commit', {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'content-type': 'application/json', accept: 'application/json' },

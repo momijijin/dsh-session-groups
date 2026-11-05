@@ -4,7 +4,7 @@
  * Frozen contract: docs/CONTRACTS.md §2.
  */
 
-export const BASE_PATH = '/dsh-session-groups'
+export const BASE_PATH = '/dsh-session-grove'
 
 export const LOAD_PATH = `${BASE_PATH}/load`
 
@@ -29,17 +29,17 @@ export const CONTROL_SESSION_RENAME_PATH = `${BASE_PATH}/control/session/rename`
 export const CONTROL_SESSION_ARCHIVE_PATH = `${BASE_PATH}/control/session/archive`
 export const SKILL_REPAIR_PATH = `${BASE_PATH}/skill/repair`
 export const MAX_CONTROL_BODY_BYTES = 256 * 1024
-export const CONTROL_TOKEN_FILE_NAME = 'dsh-session-groups.control-token'
+export const CONTROL_TOKEN_FILE_NAME = 'dsh-session-grove.control-token'
 
 /** Diagnostics trace file under the Harness `storages` directory. */
-export const DIAGNOSTICS_FILE_NAME = 'dsh-session-groups.diagnostics.ndjson'
-export const DEBUG_FILE_NAME = 'dsh-session-groups.debug.ndjson'
+export const DIAGNOSTICS_FILE_NAME = 'dsh-session-grove.diagnostics.ndjson'
+export const DEBUG_FILE_NAME = 'dsh-session-grove.debug.ndjson'
 
 /** Directory under the Harness home that holds the record file. */
 export const STORAGE_DIR_NAME = 'storages'
 
 /** Record file name under the storages directory. */
-export const RECORD_FILE_NAME = 'dsh-session-groups.json'
+export const RECORD_FILE_NAME = 'dsh-session-grove.json'
 
 /** Wire body ceiling from the contract: 256 KiB. */
 export const MAX_BODY_BYTES = 256 * 1024

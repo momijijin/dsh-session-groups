@@ -1,5 +1,5 @@
-# dsh-session-groups bundle layer: one host row; the client half attaches through
+# dsh-session-grove bundle layer: one host row; the client half attaches through
 # the package's dsh.client metadata.
 - insert:
-    - id: dsh-session-groups
-      name: 'dsh-session-groups'
+    - id: dsh-session-grove
+      name: 'dsh-session-grove'

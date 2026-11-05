@@ -30,7 +30,7 @@ test('load resolves the relative route against document.baseURI', async () => {
   const result = await api.load()
   assert.equal(result.ok, true)
   assert.equal(result.revision, 3)
-  assert.equal(fetchImpl.calls[0].url, 'http://127.0.0.1:4401/dsh-session-groups/load')
+  assert.equal(fetchImpl.calls[0].url, 'http://127.0.0.1:4401/dsh-session-grove/load')
   assert.match(fetchImpl.calls[0].url, new RegExp(LOAD_PATH))
 })
 
@@ -63,7 +63,7 @@ test('commit success returns the new revision and doc', async () => {
   const fetchImpl = fakeFetch((url, init) => {
     const payload = JSON.parse(init.body)
     assert.equal(payload.baseRevision, 3)
-    assert.equal(url, 'http://x/dsh-session-groups/commit')
+    assert.equal(url, 'http://x/dsh-session-grove/commit')
     assert.match(init.headers['content-type'], /json/)
     return response(200, { ok: true, revision: 4, doc: next })
   })

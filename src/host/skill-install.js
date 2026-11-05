@@ -1,5 +1,5 @@
 /**
- * Managed installation of the plugin's session-groups-control skill.
+ * Managed installation of the plugin's session-grove-control skill.
  *
  * DSH discovers skills from <DSH_HOME>/skills. The plugin package contains the
  * source skill; this adapter copies it there on opt-in and can repair it from
@@ -10,10 +10,10 @@ import { existsSync, mkdirSync, readFileSync, rmdirSync, unlinkSync, writeFileSy
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const SKILL_NAME = 'session-groups-control'
-export const SKILL_MARKER = '<!-- managed-by: dsh-session-groups -->'
+export const SKILL_NAME = 'session-grove-control'
+export const SKILL_MARKER = '<!-- managed-by: dsh-session-grove -->'
 export const SKILL_SOURCE_PATH = fileURLToPath(
-  new URL('../../skills/session-groups-control/SKILL.md', import.meta.url),
+  new URL('../../skills/session-grove-control/SKILL.md', import.meta.url),
 )
 
 export const skillTargetPath = (dshHome) => join(dshHome, 'skills', SKILL_NAME, 'SKILL.md')

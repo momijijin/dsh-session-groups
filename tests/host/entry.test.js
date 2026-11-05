@@ -20,7 +20,7 @@ const walk = async (dir) => {
 }
 
 test('the entry exports the Cordis row name and injects webServer', () => {
-  assert.equal(name, 'dsh-session-groups')
+  assert.equal(name, 'dsh-session-grove')
   assert.deepEqual(inject, ['webServer'])
 })
 
@@ -51,7 +51,7 @@ test('apply registers the native control tool when the tools service is present'
   }
   const { ctx } = makeContext({ services: { tools } })
   apply(ctx, { filePath: temp.filePath })
-  assert.equal(registered?.name, 'session_groups_control')
+  assert.equal(registered?.name, 'session_grove_control')
   assert.equal(registered.parameters.required.includes('action'), true)
   assert.equal(registered.parameters.properties.action.enum.includes('doctor'), true)
   assert.equal(typeof registered.execute, 'function')
@@ -85,8 +85,8 @@ test('native control tool doctor reports live host compatibility, gates, storage
   assert.equal(report.storage.filePath, temp.filePath)
   assert.equal(typeof report.storage.source, 'string')
   assert.equal(report.storage.health.status, 'missing')
-  assert.equal(report.routes.includes('/dsh-session-groups/control/doctor'), true)
-  assert.equal(report.routes.includes('/dsh-session-groups/load'), true)
+  assert.equal(report.routes.includes('/dsh-session-grove/control/doctor'), true)
+  assert.equal(report.routes.includes('/dsh-session-grove/load'), true)
 })
 
 test('apply() returns void synchronously and mounts the host routes inside ctx.effect', async (t) => {
@@ -104,10 +104,10 @@ test('apply() returns void synchronously and mounts the host routes inside ctx.e
   // Cordis 4.0.5 treats the return value as the plugin effect list.
   assert.equal(returned, undefined)
   assert.equal(routes.length, 15)
-  assert.equal(routes.some((route) => route.path === '/dsh-session-groups/control/catalog'), true)
+  assert.equal(routes.some((route) => route.path === '/dsh-session-grove/control/catalog'), true)
   assert.equal(ready.filePath, temp.filePath)
-  assert.equal(ready.diagnosticsFilePath, join(temp.storages, 'dsh-session-groups.diagnostics.ndjson'))
-  assert.equal(ready.debugFilePath, join(temp.storages, 'dsh-session-groups.debug.ndjson'))
+  assert.equal(ready.diagnosticsFilePath, join(temp.storages, 'dsh-session-grove.diagnostics.ndjson'))
+  assert.equal(ready.debugFilePath, join(temp.storages, 'dsh-session-grove.debug.ndjson'))
   assert.equal(ready.mounted.registered, true)
   assert.equal(typeof ready.store.load, 'function')
   assert.equal(typeof ready.storageSource, 'string')

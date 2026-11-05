@@ -26,9 +26,9 @@ test('managed skill can be installed, verified, repaired and removed', () => {
 test('user-owned skill is not overwritten unless force is requested', () => {
   const home = tempHome()
   const target = skillTargetPath(home)
-  const path = join(home, 'skills', 'session-groups-control')
+  const path = join(home, 'skills', 'session-grove-control')
   mkdirSync(path, { recursive: true })
-  writeFileSync(target, '---\nname: session-groups-control\ndescription: custom\n---\n')
+  writeFileSync(target, '---\nname: session-grove-control\ndescription: custom\n---\n')
   assert.equal(repairManagedSkill({ dshHome: home }).status, 'skipped-user-owned')
   assert.equal(removeManagedSkill(home), false)
   assert.equal(repairManagedSkill({ dshHome: home, force: true }).status, 'repaired')

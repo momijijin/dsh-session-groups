@@ -8,7 +8,7 @@
 #   3. client build   `node scripts/build-client.mjs` when lib/client.js is missing (esbuild installed)
 #   4. smoke          HTTP + headless-browser console check against 4402
 #   5. e2e            e2e/groups.spec.mjs (22-step acceptance; zero-dependency CDP runner)
-#   6. audit          only dsh-session-groups.json may change; real home fingerprint unchanged
+#   6. audit          only dsh-session-grove.json may change; real home fingerprint unchanged
 #   7. teardown       stop server + delete .spike-homes/qa (unless -KeepProfile)
 #
 # Exit codes: 0 = all executed phases PASS (E2E BLOCKED is recorded, not failed, unless
@@ -152,7 +152,7 @@ try {
             $smokeArgs = @{
                 Port           = $Port
                 EvidenceDir    = $evidence
-                ExpectBootContains = @('dsh-session-groups')
+                ExpectBootContains = @('dsh-session-grove')
                 ExpectSelector = ''
             }
             if ($SkipBrowser) { $smokeArgs['Browser'] = 'none' }

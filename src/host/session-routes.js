@@ -81,7 +81,7 @@ export const registerSessionRoutes = ({
         }
         sendJson(res, 200, { ok: true, sessionId: body.sessionId, live: live !== null, archived, title })
       },
-      `dsh-session-groups: POST ${CONTROL_SESSION_INSPECT_PATH}`,
+      `dsh-session-grove: POST ${CONTROL_SESSION_INSPECT_PATH}`,
     )
   }
 
@@ -150,7 +150,7 @@ export const registerSessionRoutes = ({
           })
         }
       },
-      `dsh-session-groups: POST ${CONTROL_SESSION_RENAME_PATH}`,
+      `dsh-session-grove: POST ${CONTROL_SESSION_RENAME_PATH}`,
     )
   }
 
@@ -216,7 +216,7 @@ export const registerSessionRoutes = ({
           })
         }
       },
-      `dsh-session-groups: POST ${CONTROL_SESSION_ARCHIVE_PATH}`,
+      `dsh-session-grove: POST ${CONTROL_SESSION_ARCHIVE_PATH}`,
     )
   }
 

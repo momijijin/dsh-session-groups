@@ -96,7 +96,7 @@ client optional:
 侧栏不注册 / 设置卡不出现 / 原生工具不可用
 ```
 
-但不会主动删除 `dsh-session-groups.json`；分组数据文件仍可作为恢复源。最坏情况下需要安装更新版本的插件或回滚 DSH。
+但不会主动删除 `dsh-session-grove.json`；分组数据文件仍可作为恢复源。最坏情况下需要安装更新版本的插件或回滚 DSH。
 
 ## 版本适配器选择器
 
@@ -136,9 +136,9 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 1. 用目标 DSH 安装新包。
 2. 打开 Plugins 详情，确认第一层设置卡出现。
 3. 做一次分组拖动/commit。
-4. 检查 `/load` 和 `/dsh-session-groups/events`。
-5. 调用 `session_groups_control` action `doctor`，或运行 `node scripts/session-groups-control.mjs doctor`，核对 host capabilities、storage、gates 和 routes。
-6. 开启 `controlApi` 后调用一次 `session_groups_control` state。
+4. 检查 `/load` 和 `/dsh-session-grove/events`。
+5. 调用 `session_grove_control` action `doctor`，或运行 `node scripts/session-grove-control.mjs doctor`，核对 host capabilities、storage、gates 和 routes。
+6. 开启 `controlApi` 后调用一次 `session_grove_control` state。
 7. 运行 `npm test` 和 `npm run test:isolated`。
 
 ## 平台支持矩阵

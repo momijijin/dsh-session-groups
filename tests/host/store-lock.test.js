@@ -17,7 +17,7 @@ const makePath = async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsg-lock-'))
   const storages = join(dir, 'storages')
   await mkdir(storages, { recursive: true })
-  return join(storages, 'dsh-session-groups.json')
+  return join(storages, 'dsh-session-grove.json')
 }
 
 const runCommitChild = (filePath) =>

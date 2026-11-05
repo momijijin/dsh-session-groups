@@ -1,9 +1,9 @@
 /**
  * The host routes.
  *
- * GET  /dsh-session-groups/load         -> current revision + document
- * POST /dsh-session-groups/commit       -> compare-and-set write
- * POST /dsh-session-groups/diagnostics  -> append-only drag trace (0.2.5)
+ * GET  /dsh-session-grove/load         -> current revision + document
+ * POST /dsh-session-grove/commit       -> compare-and-set write
+ * POST /dsh-session-grove/diagnostics  -> append-only drag trace (0.2.5)
  *
  * Frozen contract: docs/CONTRACTS.md §2.
  * Status matrix: 200 / 400 (unreadable body) / 405+Allow / 409 conflict /
@@ -65,7 +65,7 @@ export { loadResponse, commitResponse, parseCommitBody, parseDiagnosticsBody } f
 
 export const registerRoutes = (ctx, store, options = {}) => {
   if (typeof ctx?.webServer?.register !== 'function') {
-    logWarn(ctx, 'dsh-session-groups: webServer.register is unavailable; host routes are not mounted')
+    logWarn(ctx, 'dsh-session-grove: webServer.register is unavailable; host routes are not mounted')
     return { registered: false, routes: [] }
   }
   const diagnosticsFilePath =
@@ -151,7 +151,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
       const probe = probeConnection(ctx)
       logInfo(
         ctx,
-        `[dsh-session-groups] request fence: ${fence.via} (mode=${probe.mode} requestRejection=${String(
+        `[dsh-session-grove] request fence: ${fence.via} (mode=${probe.mode} requestRejection=${String(
           probe.requestRejection,
         )} fetchRegister=${String(probe.fetchRegister)})${
           fence.allowed ? '' : `; first request rejected: ${String(fence.status)}`
@@ -197,7 +197,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
         if (result.warning !== undefined) {
           logWarn(
             ctx,
-            `dsh-session-groups: load warning ${result.warning}: ${result.detail ?? ''} (quarantined: ${
+            `dsh-session-grove: load warning ${result.warning}: ${result.detail ?? ''} (quarantined: ${
               result.quarantinedTo ?? 'no'
             })`,
           )
@@ -205,11 +205,11 @@ export const registerRoutes = (ctx, store, options = {}) => {
         const { status, body } = loadResponse(result)
         sendJson(res, status, { ...body, diagnostics: diagnosticsEnabled(), debugProbe: debugProbeEnabled() })
       } catch (error) {
-        logWarn(ctx, `dsh-session-groups: load failed: ${error instanceof Error ? error.message : String(error)}`)
+        logWarn(ctx, `dsh-session-grove: load failed: ${error instanceof Error ? error.message : String(error)}`)
         sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
       }
     },
-    `dsh-session-groups: GET ${LOAD_PATH}`,
+    `dsh-session-grove: GET ${LOAD_PATH}`,
   )
 
   const commitPath = register(
@@ -266,11 +266,11 @@ export const registerRoutes = (ctx, store, options = {}) => {
         if (status === 200) publishChange(payload.revision, 'http-commit')
         sendJson(res, status, payload)
       } catch (error) {
-        logWarn(ctx, `dsh-session-groups: commit failed: ${error instanceof Error ? error.message : String(error)}`)
+        logWarn(ctx, `dsh-session-grove: commit failed: ${error instanceof Error ? error.message : String(error)}`)
         sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
       }
     },
-    `dsh-session-groups: POST ${COMMIT_PATH}`,
+    `dsh-session-grove: POST ${COMMIT_PATH}`,
   )
 
   const diagnosticsPath = register(
@@ -356,12 +356,12 @@ export const registerRoutes = (ctx, store, options = {}) => {
       } catch (error) {
         logWarn(
           ctx,
-          `dsh-session-groups: diagnostics append failed: ${error instanceof Error ? error.message : String(error)}`,
+          `dsh-session-grove: diagnostics append failed: ${error instanceof Error ? error.message : String(error)}`,
         )
         sendJson(res, 503, { ok: false, code: 'io', message: error instanceof Error ? error.message : String(error) })
       }
     },
-    `dsh-session-groups: POST ${DIAGNOSTICS_PATH}`,
+    `dsh-session-grove: POST ${DIAGNOSTICS_PATH}`,
   )
 
   const debugPath = register(
@@ -406,7 +406,7 @@ export const registerRoutes = (ctx, store, options = {}) => {
         })
       }
     },
-    `dsh-session-groups: POST ${DEBUG_PATH}`,
+    `dsh-session-grove: POST ${DEBUG_PATH}`,
   )
 
   let controlStatePath = null
@@ -501,7 +501,7 @@ const sessionRoutes = registerSessionRoutes({
           })
         }
       },
-      `dsh-session-groups: POST ${SKILL_REPAIR_PATH}`,
+      `dsh-session-grove: POST ${SKILL_REPAIR_PATH}`,
     )
   }
 

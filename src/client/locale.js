@@ -9,7 +9,7 @@
  */
 
 /** Locale namespace owned by this plugin. */
-export const LOCALE_NS = 'dsh-session-groups'
+export const LOCALE_NS = 'dsh-session-grove'
 
 import zh from '../../locale/zh.json' with { type: 'json' }
 import en from '../../locale/en.json' with { type: 'json' }

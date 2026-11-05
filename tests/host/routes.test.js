@@ -51,9 +51,9 @@ test('route registration mounts the frozen paths and diagnostics by default', as
     assert.equal(mounted.routes.some((route) => route.path === path), true)
   }
   assert.deepEqual(mounted.mounted.routes.slice(0, 3), [LOAD_PATH, COMMIT_PATH, DIAGNOSTICS_PATH])
-  assert.equal(mounted.mounted.routes.includes('/dsh-session-groups/control/state'), true)
-  assert.equal(mounted.mounted.routes.includes('/dsh-session-groups/control/catalog'), true)
-  assert.equal(mounted.mounted.routes.includes('/dsh-session-groups/control/session/inspect'), true)
+  assert.equal(mounted.mounted.routes.includes('/dsh-session-grove/control/state'), true)
+  assert.equal(mounted.mounted.routes.includes('/dsh-session-grove/control/catalog'), true)
+  assert.equal(mounted.mounted.routes.includes('/dsh-session-grove/control/session/inspect'), true)
 })
 
 test('diagnostics and debugProbe flags are live per request', async (t) => {
@@ -97,7 +97,7 @@ test('the debug probe route mounts only when explicitly enabled', async (t) => {
 test('skill repair never overwrites a user-owned skill file', async (t) => {
   const temp = await makeTempStore()
   t.after(temp.cleanup)
-  const skillDir = join(temp.dir, 'skills', 'session-groups-control')
+  const skillDir = join(temp.dir, 'skills', 'session-grove-control')
   const skillPath = join(skillDir, 'SKILL.md')
   await mkdir(skillDir, { recursive: true })
   await writeFile(skillPath, 'my own skill\n', 'utf8')
@@ -388,7 +388,7 @@ test('load maps unsupported-version to 409 and corrupt/invalid files to 200 + wa
   const corrupt = await mounted.call(LOAD_PATH, makeRequest({ headers: { cookie: 'token=ok' } }))
   assert.equal(corrupt.res.statusCode, 200)
   assert.equal(corrupt.json.warning, 'corrupt-file')
-  assert.match(corrupt.json.quarantinedTo, /dsh-session-groups\.corrupt-.*\.json$/)
+  assert.match(corrupt.json.quarantinedTo, /dsh-session-grove\.corrupt-.*\.json$/)
   assert.deepEqual(corrupt.json.doc, { version: 1, revision: 0, groups: [], ungrouped: [] })
 })
 
@@ -481,7 +481,7 @@ test('POST diagnostics appends NDJSON under storages and never touches the recor
 
   // The official record file must not exist: diagnostics only writes its file.
   await assert.rejects(access(mounted.filePath), /ENOENT/)
-  assert.deepEqual((await readdir(mounted.storages)).sort(), ['dsh-session-groups.diagnostics.ndjson'])
+  assert.deepEqual((await readdir(mounted.storages)).sort(), ['dsh-session-grove.diagnostics.ndjson'])
 })
 
 test('POST diagnostics status matrix: methods, content type, JSON shape, size', async (t) => {

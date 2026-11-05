@@ -171,7 +171,7 @@ const ArchiveFilterPopover = ({ filter, t, onPick, onResetLayout }) =>
     h(
       'div',
       { class: 'dsg-view-options-about', 'data-testid': 'session-groups-about' },
-      h('span', { class: 'dsg-view-options-version' }, `dsh-session-groups ${PLUGIN_VERSION}`),
+      h('span', { class: 'dsg-view-options-version' }, `dsh-session-grove ${PLUGIN_VERSION}`),
       h('span', { class: 'dsg-view-options-scope' }, t('about.scope'))
     )
   )
@@ -569,7 +569,7 @@ class ErrorBoundary extends Component {
     return { error }
   }
   componentDidCatch(error) {
-    globalThis.console?.error?.('[dsh-session-groups] render error', error)
+    globalThis.console?.error?.('[dsh-session-grove] render error', error)
   }
   render() {
     if (this.state.error) return this.props.fallback(this.state.error)

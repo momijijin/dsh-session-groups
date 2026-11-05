@@ -130,7 +130,7 @@ try {
     $storagesDir = Join-Path $qaHomePath 'storages'
     $recordFamily = @()
     if (Test-Path -LiteralPath $storagesDir -PathType Container) {
-        $recordFamily = @(Get-ChildItem -LiteralPath $storagesDir -File -Force -Filter 'dsh-session-groups.json*' -ErrorAction SilentlyContinue)
+        $recordFamily = @(Get-ChildItem -LiteralPath $storagesDir -File -Force -Filter 'dsh-session-grove.json*' -ErrorAction SilentlyContinue)
         foreach ($recordFile in $recordFamily) { Remove-Item -LiteralPath $recordFile.FullName -Force }
     }
     Add-QaCheck -Id 'HOME-0' -Description 'previous run plugin record reset (fresh empty group doc)' -Pass $true `
@@ -224,7 +224,7 @@ try {
         # Stage the publishable files under the isolated home. `link:<repoRoot>` is
         # forbidden: it creates a junction back into the repo, pnpm recurses into
         # .spike-homes, and Remove-Item -Recurse on teardown can follow it into .git.
-        $stagingRoot = Join-Path (Get-QaHome) 'staging\dsh-session-groups'
+        $stagingRoot = Join-Path (Get-QaHome) 'staging\dsh-session-grove'
         $stagingFull = [System.IO.Path]::GetFullPath($stagingRoot)
         $homeFull = [System.IO.Path]::GetFullPath((Get-QaHome))
         $stagingSafe = $stagingFull.StartsWith($homeFull + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)

@@ -71,7 +71,7 @@ export const SkillRepairCard = ({ form }) => {
     setBusy(true)
     setResult(null)
     try {
-      const response = await fetch('/dsh-session-groups/skill/repair', {
+      const response = await fetch('/dsh-session-grove/skill/repair', {
         method: 'POST',
         credentials: 'same-origin',
       })

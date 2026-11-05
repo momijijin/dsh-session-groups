@@ -1,6 +1,6 @@
 # scripts/spike/common.ps1
 #
-# Shared helpers for the Gate 0 QA harness of dsh-session-groups.
+# Shared helpers for the Gate 0 QA harness of dsh-session-grove.
 #
 # SAFETY MODEL (Gate 0 architecture review M0 + docs/SPIKE.md §0-§2 + docs/TEST-PLAN.md §7):
 #   * Every agent gets its own throw-away DSH_HOME under <repo>\.spike-homes\:
@@ -41,9 +41,9 @@ if (-not $script:QaDefaultPort) { $script:QaDefaultPort = 4402 }
 $script:QaAllowedProfile = 'groups-spike'
 $script:QaReservedProfiles = @('desktop', 'web')
 $script:QaReservedPorts = @(43120)
-$script:QaGroupFileName = 'dsh-session-groups.json'
+$script:QaGroupFileName = 'dsh-session-grove.json'
 # 0.2.5 drag diagnostics append-only NDJSON (plugin-owned, expected to grow).
-$script:QaDiagnosticsFileName = 'dsh-session-groups.diagnostics.ndjson'
+$script:QaDiagnosticsFileName = 'dsh-session-grove.diagnostics.ndjson'
 $script:QaWorkspaceFileName = 'workspace.json'
 
 # ---------------------------------------------------------------------------

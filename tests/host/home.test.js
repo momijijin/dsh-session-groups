@@ -75,7 +75,7 @@ test('resolveRecordPath joins the frozen record file name and keeps an explicit 
   const resolved = resolveRecordPath(ctx, {
     homePathModule: { dshHomePath: () => join('X:\\home', 'storages') },
   })
-  assert.equal(resolved.filePath, join('X:\\home', 'storages', 'dsh-session-groups.json'))
+  assert.equal(resolved.filePath, join('X:\\home', 'storages', 'dsh-session-grove.json'))
   assert.equal(resolved.storageSource, 'dshHomePath("storages")')
 
   const explicit = resolveRecordPath(ctx, {

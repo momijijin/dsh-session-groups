@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // scripts/spike/smoke.mjs
 //
-// Gate 0 QA smoke check for the dsh-session-groups spike.
+// Gate 0 QA smoke check for the dsh-session-grove spike.
 //
 // Deliberately dependency-free: Node 22+/24 provides global fetch and WebSocket,
 // and the machine already has a Chromium build (Playwright cache) plus Edge/Chrome.
@@ -11,8 +11,8 @@
 // Checks performed:
 //   HTTP-1  web UI root answers 200 after the token handshake (401 without token)
 //   HTTP-2  HTML is the DSH web app shell (<div id="root"> + __DSH_BOOT__ payload)
-//   HTTP-3  GET /dsh-session-groups/load -> 200 {ok:true, revision, doc}
-//   HTTP-4  (opt) POST /dsh-session-groups/commit -> 200, revision +1
+//   HTTP-3  GET /dsh-session-grove/load -> 200 {ok:true, revision, doc}
+//   HTTP-4  (opt) POST /dsh-session-grove/commit -> 200, revision +1
 //   HTTP-5  (opt) commit with a foreign Origin is rejected (fence)
 //   UI-1    Chromium loads the page, React root mounts
 //   UI-2    boot payload contains the expected plugin marker (client plugin loaded)
@@ -45,8 +45,8 @@ function parseArgs(argv) {
     baseUrl: null,
     tokenUrl: null,
     webState: null,
-    loadPath: '/dsh-session-groups/load',
-    commitPath: '/dsh-session-groups/commit',
+    loadPath: '/dsh-session-grove/load',
+    commitPath: '/dsh-session-grove/commit',
     browser: 'auto',
     expectBootContains: [],
     expectSelector: null,
@@ -219,10 +219,10 @@ async function httpChecks(args, evidence) {
     try { loaded = JSON.parse(bodyText); } catch { loaded = null; }
     const shapeOk = loaded && loaded.ok === true && loaded.revision != null && loaded.doc &&
       loaded.doc.version === 1 && Array.isArray(loaded.doc.groups) && Array.isArray(loaded.doc.ungrouped);
-    addCheck('HTTP-3', 'GET /dsh-session-groups/load returns 200 {ok:true, revision, doc}', loadResponse.status === 200 && shapeOk,
+    addCheck('HTTP-3', 'GET /dsh-session-grove/load returns 200 {ok:true, revision, doc}', loadResponse.status === 200 && shapeOk,
       `status=${loadResponse.status}; revision=${loaded ? loaded.revision : 'n/a'}; body=${bodyText.slice(0, 240)}`);
   } catch (error) {
-    addCheck('HTTP-3', 'GET /dsh-session-groups/load returns 200 {ok:true, revision, doc}', false, String(error));
+    addCheck('HTTP-3', 'GET /dsh-session-grove/load returns 200 {ok:true, revision, doc}', false, String(error));
   }
 
   // HTTP-4: optional commit probe (mutates the plugin record file - QA only).
@@ -239,11 +239,11 @@ async function httpChecks(args, evidence) {
       let commitJson = null;
       try { commitJson = JSON.parse(commitText); } catch { }
       const revisionOk = commitJson && typeof commitJson.revision === 'number' && commitJson.revision > loaded.revision;
-      addCheck('HTTP-4', 'POST /dsh-session-groups/commit (no-op probe) returns 200 and bumps revision',
+      addCheck('HTTP-4', 'POST /dsh-session-grove/commit (no-op probe) returns 200 and bumps revision',
         commitResponse.status === 200 && revisionOk,
         `status=${commitResponse.status}; revision ${loaded.revision} -> ${commitJson ? commitJson.revision : 'n/a'}; body=${commitText.slice(0, 200)}`);
     } catch (error) {
-      addCheck('HTTP-4', 'POST /dsh-session-groups/commit (no-op probe) returns 200 and bumps revision', false, String(error));
+      addCheck('HTTP-4', 'POST /dsh-session-grove/commit (no-op probe) returns 200 and bumps revision', false, String(error));
     }
   }
 
@@ -578,7 +578,7 @@ async function browserChecks(args, evidence, tokenUrl) {
     // UI-3/UI-4/UI-5: exception and console-error classification.
     addCheck('UI-3', 'no uncaught page exception', result.exceptions.length === 0,
       result.exceptions.length ? JSON.stringify(result.exceptions.slice(0, 5)) : 'none');
-    const pluginErrorPattern = /dsh-session-groups|session-groups|Failed to (load|fetch)[^]*?(module|client)|Cannot find module|ERR_MODULE_NOT_FOUND|module resolution|Uncaught/i;
+    const pluginErrorPattern = /dsh-session-grove|session-groups|Failed to (load|fetch)[^]*?(module|client)|Cannot find module|ERR_MODULE_NOT_FOUND|module resolution|Uncaught/i;
     const pluginErrors = result.consoleErrors.filter((entry) => pluginErrorPattern.test(entry.text || ''));
     result.pluginErrors = pluginErrors;
     addCheck('UI-4', 'no plugin/module console error', pluginErrors.length === 0,

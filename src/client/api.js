@@ -9,9 +9,9 @@
 import { perfMark, perfNow } from './perf.js'
 
 /** Relative load route (host mounts it at the origin root). */
-export const LOAD_PATH = 'dsh-session-groups/load'
+export const LOAD_PATH = 'dsh-session-grove/load'
 /** Relative commit route. */
-export const COMMIT_PATH = 'dsh-session-groups/commit'
+export const COMMIT_PATH = 'dsh-session-grove/commit'
 
 /** Error codes surfaced to the shell (all non-ok outcomes). */
 export const API_ERRORS = Object.freeze({

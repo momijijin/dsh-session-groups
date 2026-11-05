@@ -6,7 +6,7 @@
  * the plugin mounts with either
  *
  *   globalThis.__DSG_PERF__ = true
- *   localStorage['dsh-session-groups.perf'] = '1'
+ *   localStorage['dsh-session-grove.perf'] = '1'
  *
  * and read results through `globalThis.__dsgPerfApi.snapshot()`. The probe
  * runner (`scripts/qa/probe-drag-perf.mjs`) toggles the localStorage flag and
@@ -18,7 +18,7 @@
  */
 
 /** localStorage opt-in key (read once per page load). */
-export const PERF_STORAGE_KEY = 'dsh-session-groups.perf'
+export const PERF_STORAGE_KEY = 'dsh-session-grove.perf'
 const MAX_MARKS = 4000
 const MAX_SAMPLES = 400
 const SAMPLE_NAMES = ['dragOverMs', 'dropTargetUpdateMs', 'floatingLabelMs', 'dropHandlerMs']

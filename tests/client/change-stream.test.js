@@ -36,13 +36,13 @@ test('change stream wires revision and reconnect callbacks', () => {
   const errors = []
   const stream = createChangeStream({
     EventSourceImpl: Fake,
-    url: '/dsh-session-groups/events',
+    url: '/dsh-session-grove/events',
     onRevision: (event) => revisions.push(event.data),
     onOpen: () => opens.push(true),
     onError: (error) => errors.push(error),
   })
   const source = Fake.instances[0]
-  assert.equal(source.url, '/dsh-session-groups/events')
+  assert.equal(source.url, '/dsh-session-grove/events')
   assert.deepEqual(source.options, { withCredentials: true })
 
   source.emit('revision', { data: '{"revision":3}' })
