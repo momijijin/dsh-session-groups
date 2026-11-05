@@ -129,6 +129,10 @@ The market entry is being prepared. Once it is listed, install and update the pl
 
 Updates are owned by dshmarket / the plugin manager. The plugin does not self-update and does not know where its next version is hosted. If you previously installed a local tarball, reinstall once from the market so the installed source is bound to the catalog.
 
+### Upgrading from `dsh-session-groups`
+
+`0.4.0-beta.1` is a new package identity. It does **not** auto-read, copy or delete the old `dsh-session-groups` record or browser keys; this avoids importing data from the same-named community plugins. The manual migration checklist is in [docs/MIGRATION-0.4.md](docs/MIGRATION-0.4.md).
+
 ### Maintainer/developer install
 
 Local tarball and command-line installation are maintainer/debug workflows only. They are documented in [docs/RELEASE.md](docs/RELEASE.md); ordinary users should use the market entry.
