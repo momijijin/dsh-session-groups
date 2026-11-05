@@ -79,7 +79,7 @@ src/index.js     Cordis host 入口
   - `src/client/menu-position.js` 只保留兼容 re-export
 - `src/core/control.js`
   - `resolveGroupPath`：完整根路径 → 唯一 ID；不存在/同名歧义/控制字符均结构化失败
-  - AI 控制协议：state、结构化 operation、plan/apply 候选 doc
+  - AI 控制协议：catalog（共享图标/色板词表）、state、结构化 operation、plan/apply 候选 doc
   - 无 HTTP、无设置、无 revision/CAS、无审计；这些在 `src/host/routes.js` 与 `src/index.js`
   - 删除操作必须显式 `allowDestructive`，无 raw-doc 写入
   - 严格 operation schema：未知字段、错误类型、负数/非整数 index 一律 422，不做静默降级

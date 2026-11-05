@@ -208,6 +208,7 @@ Host 在每次分组 commit（原生工具或 HTTP）后通过 `/dsh-session-gro
 工具动作：
 
 ```text
+catalog
 state
 resolve
 plan
@@ -217,6 +218,9 @@ session_rename
 session_archive
 doctor
 ```
+
+`catalog` 是只读词表与格式参考：图标 id/分类/style、色板 id/hex/label、`colorHex`
+输入形式与 canonical `#rrggbb`、操作名和限制。它不读取分组状态或 revision。
 
 `state` 返回稳定 `revision`、每个分组的 `id`/`path`/icon/color 和 sessionIds。
 `resolve` 只把完整 path 数组解析成 ID；不存在返回 `group-not-found`，同名同级
@@ -254,6 +258,7 @@ doctor
 
 ```text
 GET  /dsh-session-groups/control/doctor
+GET  /dsh-session-groups/control/catalog
 GET  /dsh-session-groups/control/state
 POST /dsh-session-groups/control/resolve
 POST /dsh-session-groups/control/plan

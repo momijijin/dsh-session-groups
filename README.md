@@ -199,6 +199,7 @@ After every group commit (native tool or HTTP), the Host publishes the new revis
 Tool actions:
 
 ```text
+catalog
 state
 resolve
 plan
@@ -208,6 +209,10 @@ session_rename
 session_archive
 doctor
 ```
+
+`catalog` is a read-only vocabulary reference: icon ids/categories/style,
+palette ids/hex/labels, documented `colorHex` input forms and canonical
+`#rrggbb`, operation names and limits. It does not read group state.
 
 `state` returns a stable `revision`, each group's `id`/`path`/icon/color and sessionIds.  
 `resolve` maps a complete path array to an id; missing paths return `group-not-found`, duplicate siblings return `ambiguous-path` with candidates.  
@@ -242,6 +247,7 @@ These routes are for browser settings pages and local debugging, not the primary
 
 ```text
 GET  /dsh-session-groups/control/doctor
+GET  /dsh-session-groups/control/catalog
 GET  /dsh-session-groups/control/state
 POST /dsh-session-groups/control/resolve
 POST /dsh-session-groups/control/plan
