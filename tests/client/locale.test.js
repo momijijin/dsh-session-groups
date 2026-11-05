@@ -10,6 +10,7 @@ import {
   dictionaryFor,
   en,
   formatMessage,
+  ja,
   zh,
 } from '../../src/client/locale.js'
 
@@ -26,21 +27,23 @@ const withDocumentLang = (lang, run) => {
   }
 }
 
-test('zh and en dictionaries have identical key sets', () => {
+test('all packaged dictionaries have identical key sets', () => {
   assert.deepEqual(Object.keys(zh).sort(), Object.keys(en).sort())
-  assert.ok(Object.keys(zh).length > 60)
+  assert.deepEqual(Object.keys(ja).sort(), Object.keys(en).sort())
+  assert.ok(Object.keys(en).length > 60)
 })
 
 test('locale JSON files mirror the dictionaries', () => {
-  const zhJson = JSON.parse(readFileSync(new URL('../../locale/zh.json', import.meta.url), 'utf8'))
-  const enJson = JSON.parse(readFileSync(new URL('../../locale/en.json', import.meta.url), 'utf8'))
-  assert.deepEqual(zhJson, zh)
-  assert.deepEqual(enJson, en)
+  for (const [language, dictionary] of Object.entries(dictionaries)) {
+    const json = JSON.parse(readFileSync(new URL(`../../locale/${language}.json`, import.meta.url), 'utf8'))
+    assert.deepEqual(json, dictionary)
+  }
 })
 
 test('formatMessage substitutes {name} placeholders and falls back to keys', () => {
   assert.equal(formatMessage(zh, 'group.sessionCount', { n: 3 }), '3 个会话')
   assert.equal(formatMessage(en, 'group.sessionCount', { n: 3 }), '3 sessions')
+  assert.equal(formatMessage(ja, 'group.sessionCount', { n: 3 }), ja['group.sessionCount'].replace('{n}', '3'))
   assert.equal(formatMessage(zh, 'missing.key'), 'missing.key')
   assert.equal(formatMessage(zh, 'group.sessionCount'), '{n} 个会话')
 })
@@ -97,13 +100,20 @@ test('dictionaryFor handles base language prefixes and falls back to English', (
   assert.equal(dictionaryFor('en-GB'), dictionaries.en)
   assert.equal(dictionaryFor('zh-Hans'), dictionaries.zh)
   assert.equal(dictionaryFor('zh-TW'), dictionaries.zh)
-  assert.equal(dictionaryFor('ja-JP'), dictionaries.en)
+  assert.equal(dictionaryFor('ja-JP'), dictionaries.ja)
+  assert.equal(dictionaryFor('ko-KR'), dictionaries.en)
   assert.equal(dictionaryFor('unknown-language'), dictionaries.en)
   assert.equal(dictionaryFor(undefined), dictionaries.en)
 })
 
-test('an unsupported host locale follows the English fallback instead of Chinese', () => {
+test('a supported regional locale uses its base-language dictionary', () => {
   const japanese = createTranslator(() => ({ active: 'ja-JP' }))
-  assert.equal(japanese('view.title'), 'Free Groups')
-  assert.equal(japanese('onboarding.title'), 'Welcome to Free Groups')
+  assert.equal(japanese('view.title'), ja['view.title'])
+  assert.equal(japanese('onboarding.title'), ja['onboarding.title'])
+})
+
+test('an unsupported host locale follows the English fallback instead of Chinese', () => {
+  const korean = createTranslator(() => ({ active: 'ko-KR' }))
+  assert.equal(korean('view.title'), 'Free Groups')
+  assert.equal(korean('onboarding.title'), 'Welcome to Free Groups')
 })
