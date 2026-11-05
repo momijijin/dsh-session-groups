@@ -71,5 +71,5 @@ npm run test:all-locales
 完整覆盖矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)；本候选版本的可重复门禁为：
 
 - 514/514 单元/契约测试。
-- coverage：92.45% lines / 82.47% branches / 88.73% functions。
+- coverage：92.45% lines / 82.44% branches / 88.73% functions。
 - community A+：`0.4.0-beta.42` PASS；official A+：`0.4.0-beta.42` PASS（隔离 official host）；official all-locales 23/23 PASS；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。

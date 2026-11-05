@@ -341,7 +341,7 @@ npm pack
 
 - `npm test`: 514 unit/contract tests;
 - `npm run test:all-locales`: all 19 packaged languages + aliases through the test-only locale pack (requires an isolated web instance);
-- `npm run check:coverage`: Node built-in coverage (currently about 92.45% lines / 82.47% branches / 88.73% functions, `src/**` scope);
+- `npm run check:coverage`: Node built-in coverage (currently about 92.45% lines / 82.44% branches / 88.73% functions, `src/**` scope);
 - layers: `src/core` is the pure-function core and `src/adapters` holds DSH-version-specific adapters; see `docs/ARCHITECTURE.md`;
 - `npm run check:all`: syntax check plus the test suite;
 - `npm run check:core`: load and test `src/core` without DSH;
