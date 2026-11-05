@@ -50,6 +50,7 @@ src/index.js     Cordis host 入口
 - `src/client/i18n/translator.js`：字典选择与 `createTranslator`
 - `src/client/i18n/direction.js`：RTL 检测（基础语言 + `Intl.Locale` textInfo）
 - `src/client/i18n/date-format.js`：`Intl.DateTimeFormat` 绝对时间格式化（UI 通过 runtime bridge 调用）
+- `src/client/i18n/resources-lazy.js`：构建期 en/zh 子集与 17 个字典 chunk 加载器（build-only，不改变运行时分层）
 
 以下其余客户端模块不属于 i18n 分层：
 

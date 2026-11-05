@@ -40,7 +40,15 @@
     "docs/COMPATIBILITY.md",
     "docs/INDEX.md",
     "docs/RELEASE.md",
-    "docs/TEST-RESULTS.md"
+    "docs/TEST-RESULTS.md",
+    "docs/TEST-MATRIX.md",
+    "docs/I18N.md",
+    "docs/MIGRATION-0.4.md",
+    "docs/CONTRACTS.md",
+    "docs/BACKLOG.md",
+    "docs/archive/README.md",
+    "docs/adr",
+    "docs/release-notes"
   ],
   "dsh": {
     "bundle": {

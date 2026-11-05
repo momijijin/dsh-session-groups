@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.44 (security gate + docs truth)
+
+- Fixed controlSessions authorization on session rename/archive (404 before token/body checks) and added gate-order/no-mutation tests.
+- Aligned README/CHANGELOG/RELEASE/TEST-MATRIX/I18N/ARCHITECTURE/COMPATIBILITY with current facts: 514 tests, A+ .42, RTL .39, locale 19x288.
+- Added docs consistency coverage for version, locale parity, release note and TEST-MATRIX status.
+
 ## 0.4.0-beta.43 (A+ .42 evidence refresh)
 
 - Recorded community and official A+ PASS on `0.4.0-beta.42`, plus community all-locales 23/23 on `.40` and official all-locales 23/23 on `.42`; no runtime change.

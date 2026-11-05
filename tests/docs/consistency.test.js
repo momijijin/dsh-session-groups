@@ -26,8 +26,11 @@ test('all packaged locale dictionaries are complete and aligned', () => {
   }
 })
 
-test('current release note exists and TEST-MATRIX status names the current version', () => {
+test('current release note exists and TEST-MATRIX/CHANGELOG/bundle name the current version', () => {
   const version = json('package.json').version
+  const escaped = version.replaceAll('.', '\\.')
   assert.ok(readdirSync(resolve(root, 'docs/release-notes')).includes(`v${version}.md`))
-  assert.match(read('docs/TEST-MATRIX.md'), new RegExp(`Status: \`${version.replaceAll('.', '\\.')}\``))
+  assert.match(read('docs/TEST-MATRIX.md'), new RegExp(`Status: \`${escaped}\``))
+  assert.match(read('CHANGELOG.md'), new RegExp(`## ${escaped} `))
+  assert.match(read('lib/client.js'), new RegExp(`PLUGIN_VERSION = "${escaped}"`))
 })
