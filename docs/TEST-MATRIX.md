@@ -1,6 +1,6 @@
 # Test Matrix
 
-Status: `0.4.0-beta.19`  
+Status: `0.4.0-beta.20`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
@@ -29,33 +29,33 @@ every packaged dictionary and checks the header + new-group dialog.
 | English onboarding/settings/menu/dialog copy | PASS | PASS | PASS | — | — |
 | English plural/time labels | PASS | PASS | PASS | — | — |
 | Third-party language activation (`ja`) | PASS | — | — | PASS | — |
-| All-locale switch: header + new-group dialog (19 languages + zh-TW/zh-HK/zh-CN/pt-BR aliases) | PASS | — | — | PASS (23 cases) | — |
+| All-locale switch: header + new-group dialog + group menu (19 languages + zh-TW/zh-HK/zh-CN/pt-BR aliases) | PASS | — | — | PASS (23 cases) | — |
 | Arabic RTL root: `dir="rtl"` + core list/header/dialog overrides | PASS | — | — | PASS (header/dialog/direction) | — |
-| Full non-English UI surfaces | PASS (resources only) | — | — | LP header/dialog + ja onboarding/dialog only | — |
+| Full non-English UI surfaces | PASS (resources only) | — | — | LP header/dialog/group menu + ja onboarding/dialog only | — |
 
 ## Language matrix
 
 | Locale | Packaged | U parity | Runtime A+ | Language-pack A+ | Native/manual | Claim |
 |---|---|---|---|---|---|---|
-| `en` English | yes | PASS | A+ C + A+ O | PASS (header/dialog) | PASS | fully exercised |
-| `zh` Simplified Chinese | yes | PASS | H (old `TEST-RESULTS` snapshot) | PASS (header/dialog) | H | **not a current default A+ assertion** |
+| `en` English | yes | PASS | A+ C + A+ O | PASS (header/dialog/group menu) | PASS | fully exercised |
+| `zh` Simplified Chinese | yes | PASS | H (old `TEST-RESULTS` snapshot) | PASS (header/dialog/group menu) | H | **not a current default A+ assertion** |
 | `ja` Japanese | yes | PASS | — | PASS (onboarding/dialog; all-locale) | — | follows a third-party pack |
-| `ko` Korean | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `de` German | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `fr` French | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `es` Spanish | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `pt` Brazilian Portuguese | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `it` Italian | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `nl` Dutch | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `pl` Polish | yes | PASS (one/few/many/other) | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `tr` Turkish | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `vi` Vietnamese | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `th` Thai | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `id` Indonesian | yes | PASS | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `ru` Russian | yes | PASS (one/few/many/other) | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `hi` Hindi | yes | PASS (one/other) | — | PASS (header/dialog) | — | resources + locale-pack smoke |
-| `ar` Arabic | yes | PASS (zero/one/two/few/many/other) | — | PASS (header/dialog + RTL root) | — | RTL foundation; full visual mirror not audited |
-| `zh-Hant` Traditional Chinese | yes | PASS | — | PASS (header/dialog) | — | script-aware resolver; locale-pack smoke |
+| `ko` Korean | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `de` German | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `fr` French | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `es` Spanish | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `pt` Brazilian Portuguese | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `it` Italian | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `nl` Dutch | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `pl` Polish | yes | PASS (one/few/many/other) | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `tr` Turkish | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `vi` Vietnamese | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `th` Thai | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `id` Indonesian | yes | PASS | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `ru` Russian | yes | PASS (one/few/many/other) | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `hi` Hindi | yes | PASS (one/other) | — | PASS (header/dialog/group menu) | — | resources + locale-pack smoke |
+| `ar` Arabic | yes | PASS (zero/one/two/few/many/other) | — | PASS (header/dialog/group menu + RTL root) | — | RTL foundation; full visual mirror not audited |
+| `zh-Hant` Traditional Chinese | yes | PASS | — | PASS (header/dialog/group menu) | — | script-aware resolver; locale-pack smoke |
 
 Important distinction:
 
@@ -107,7 +107,7 @@ plural rules are used for plural selection.
 | Drag labels | U + English A+ C/O | |
 | Search/empty/flat fallback | U + English A+ C/O | |
 | Plural objects | U parity for all 19 locales | translations are not native-reviewed |
-| Long strings / narrow sidebar | English A+ only | de/fr/th/pl resources are not visually measured |
+| Long strings / narrow sidebar | English A+ only | ru/hi/ar 252px screenshots: no root overflow; title ellipsizes at minimum width |
 | RTL | Root `dir` + header/dialog/list overrides | menu/dialog geometry and fine icon mirroring not visually audited |
 
 ## Not verified
@@ -115,7 +115,7 @@ plural rules are used for plural selection.
 - Full A+ remains English-only; Japanese has the onboarding/dialog fixture.
 - All 19 packaged dictionaries have header/dialog/group-menu smoke coverage,
   not full-surface A+; settings/config is not in the all-locale smoke.
-- No native/client visual pass for non-English translations.
+- No native/client visual pass beyond ru/hi/ar narrow-sidebar screenshots.
 - No translation-quality review beyond structural parity.
 - Arabic RTL has root direction and core list/header/dialog overrides, but no
   full visual mirror audit (menu/dialog geometry, resize handle, extra icons).

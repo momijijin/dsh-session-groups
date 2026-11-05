@@ -61,6 +61,7 @@ test('sessionRowPropsEqual rejects identity and structural changes', () => {
 test('sessionRowPropsEqual tracks active-session and status changes', () => {
   const base = props(node())
   assert.equal(sessionRowPropsEqual(base, props(node(), { store: { currentSessionId: 's1' } })), false)
+  assert.equal(sessionRowPropsEqual(base, props(node(), { store: { currentSessionId: null, localeRevision: 1 } })), false)
   assert.equal(
     sessionRowPropsEqual(base, props(node({ status: { running: false, completionUnread: false, pendingInteraction: null } }))),
     false,
