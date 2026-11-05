@@ -10,7 +10,7 @@
 //   * orphan session ids preserved in the doc but never rendered
 //   * inferWorkspaceId D6 matrix
 //   * deterministic tree building / doc immutability
-//   * validate/normalize error taxonomy
+//   * validate error taxonomy
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,8 +23,6 @@ import {
   emptyDoc,
   inferWorkspaceId,
   moveGroup,
-  normalizeDoc,
-  removeSession,
   assignSession,
   validateDoc,
 } from '../../src/shared/model.js';
@@ -162,13 +160,7 @@ test('assignSession: cross-group move never duplicates; index clamps; groupId nu
   assert.deepEqual(toUngrouped.groups[1].sessionIds, ['s3']);
 });
 
-test('removeSession / deleteGroup are non-destructive and idempotent', () => {
-  const doc = docOf([{ ...group('a'), sessionIds: ['s1', 's2'] }]);
-  const removed = removeSession(doc, 'missing');
-  assert.deepEqual(removed, doc, 'removing an absent session is a no-op');
-  const twice = removeSession(removeSession(doc, 's1'), 's1');
-  assert.deepEqual(twice.groups[0].sessionIds, ['s2']);
-
+test('deleteGroup promotes children to root and moves sessions to the ungrouped head', () => {
   const deleted = deleteGroup(docOf([group('a'), { ...group('child', 'a') }]), 'a');
   assert.equal(deleted.groups.find((item) => item.id === 'child').parentId, null, 'children promoted to root');
   const withSessions = deleteGroup(docOf([{ ...group('withSessions'), sessionIds: ['s1'] }]), 'withSessions');
@@ -191,26 +183,6 @@ test('validateDoc taxonomy: version/revision/duplicates/cycles/missing parents/d
     assert.match(result.errors.join(';'), pattern);
   }
   assert.equal(validateDoc(emptyDoc()).ok, true);
-});
-
-test('normalizeDoc: repairs duplicate ids, missing parents and over-long names (server-side tolerance)', () => {
-  const raw = {
-    version: 1,
-    revision: 3,
-    groups: [
-      { id: 'g1', name: 'a'.repeat(120), icon: 'folder', parentId: 'missing', sessionIds: [] },
-      { id: 'g1', name: 'dupe', icon: 'folder', parentId: null, sessionIds: [] },
-      { id: 'g2', name: '  ', icon: 'not-an-icon', parentId: null, sessionIds: [] },
-    ],
-    ungrouped: ['s1', 's1'],
-  };
-  const normalized = normalizeDoc(raw);
-  assert.equal(normalized.groups.length, 2);
-  assert.equal(normalized.groups[0].name.length, 80);
-  assert.equal(normalized.groups[0].parentId, null);
-  assert.equal(normalized.groups[1].name, '未命名');
-  assert.deepEqual(normalized.ungrouped, ['s1']);
-  assert.equal(validateDoc(normalized).ok, true);
 });
 
 test('cloneDoc deep-copies (callers cannot mutate a returned doc through nested arrays)', () => {

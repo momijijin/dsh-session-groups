@@ -3,8 +3,8 @@
  *
  * The authoritative tree builder lives in `src/shared/model.js`
  * (`buildRenderTree`); this module adapts it to the client's options shape and
- * owns the pure presentation rules (title text, subagent detection, current
- * session) so they can be unit-tested without React.
+ * owns the pure presentation rules (title text, current session and archive
+ * visibility) so they can be unit-tested without React.
  */
 import { ARCHIVE_FILTERS } from '../shared/constants.js'
 import { buildRenderTree, workspaceOfSession } from '../shared/model.js'
@@ -17,19 +17,6 @@ export const ARCHIVE_FILTER_LABEL_KEYS = Object.freeze({
   all: 'archive.all',
   only: 'archive.only',
 })
-
-/** Next filter in the cycle hidden -> all -> only -> hidden. */
-export const nextArchiveFilter = (current) => {
-  const index = ARCHIVE_FILTERS.indexOf(current)
-  return ARCHIVE_FILTERS[(index + 1) % ARCHIVE_FILTERS.length]
-}
-
-/**
- * A tree row is a subagent exactly when the host marks `origin === 'subagent'`.
- * Ordinary rows may omit `origin`/`parentId` entirely (Gate 0 finding), so no
- * other field may be used for this decision.
- */
-export const isSubagent = (row) => row !== null && typeof row === 'object' && row.origin === 'subagent'
 
 /** Current session id from the global session snapshot (`retainedBy.mainView`). */
 export const currentSessionIdOf = (sessionsSnapshot) => {

@@ -21,8 +21,6 @@ import {
   moveGroup,
   normalizeColor,
   normalizeColorHex,
-  normalizeDoc,
-  removeSession,
   renameGroup,
   reorderUngrouped,
   setGroupColor,
@@ -133,10 +131,6 @@ test('custom colorHex: normalization, precedence, validation and quarantine shap
     const invalid = { ...doc, groups: [{ ...doc.groups[0], colorHex: bad }] }
     assert.equal(validateDoc(invalid).ok, false, `colorHex ${JSON.stringify(bad)} must be rejected`)
   }
-
-  const normalized = normalizeDoc({ version: 1, revision: 0, groups: [{ id: 'g1', name: 'A', icon: 'folder', colorHex: '#A1B2C3', parentId: null, sessionIds: [] }], ungrouped: [] })
-  assert.equal(normalized.groups[0].colorHex, '#a1b2c3')
-  assert.equal(validateDoc(normalized).ok, true)
 })
 
 test('validateDoc: color is optional but must be a known palette id when present', () => {
@@ -316,8 +310,9 @@ test('assignSession moves across groups without duplication', () => {
   assert.deepEqual(doc.groups.find((g) => g.id === b).sessionIds, ['s1'])
   doc = assignSession(doc, 's2', null, 0)
   assert.deepEqual(doc.ungrouped, ['s2'])
-  doc = removeSession(doc, 's2')
-  assert.deepEqual(doc.ungrouped, [])
+  doc = assignSession(doc, 's2', a)
+  assert.deepEqual(doc.ungrouped, [], 'assigning a session back into a group removes it from Ungrouped')
+  assert.deepEqual(doc.groups.find((g) => g.id === a).sessionIds, ['s2'])
 })
 
 test('reorderUngrouped dedupes and keeps order', () => {
@@ -428,36 +423,6 @@ test('workspace mapping and inference follow D6', () => {
   assert.equal(inferWorkspaceId(empty, empty.groups[1].id, sessions, [w1, w2], 's4'), 'w2')
   assert.equal(workspaceLabel(w1), 'W1')
   assert.equal(workspaceLabel({ path: 'C:/p/foo' }), 'foo')
-})
-
-test('normalizeDoc drops duplicates and repairs bad parents', () => {
-  const doc = normalizeDoc({
-    version: 1,
-    revision: 4,
-    groups: [
-      { id: 'g1', name: ' A ', icon: 'star', parentId: 'missing', sessionIds: ['s1', 's1'] },
-      { id: 'g1', name: 'dup', icon: 'folder', parentId: null, sessionIds: ['s2'] },
-    ],
-    ungrouped: ['s1', 's3', 's3'],
-  })
-  assert.equal(doc.groups.length, 1)
-  assert.equal(doc.groups[0].name, 'A')
-  assert.equal(doc.groups[0].parentId, null)
-  assert.deepEqual(doc.groups[0].sessionIds, ['s1'])
-  assert.deepEqual(doc.ungrouped, ['s3'])
-  assert.equal(doc.groups[0].color, 'blue', 'normalizeDoc fills the blue default for legacy docs')
-  const colored = normalizeDoc({
-    version: 1,
-    revision: 0,
-    groups: [
-      { id: 'g1', name: 'A', icon: 'folder', color: 'purple', parentId: null, sessionIds: [] },
-      { id: 'g2', name: 'B', icon: 'folder', color: 'chartreuse', parentId: null, sessionIds: [] },
-    ],
-    ungrouped: [],
-  })
-  assert.equal(colored.groups[0].color, 'purple')
-  assert.equal(colored.groups[1].color, 'blue')
-  assert.equal(validateDoc(colored).ok, true)
 })
 
 test('0.2.12 group icon palette is expanded with common glyphs', () => {

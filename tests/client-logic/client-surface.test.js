@@ -124,7 +124,7 @@ test('drag: hitTest maps geometry to before/after/append/ungrouped/invalid; appl
   assert.equal(noop.applied, false, 'dropping an element onto its current position is a no-op');
 });
 
-test('tree: expansion helpers expose ancestors, path and flattened order (C5/C6 helpers)', async (t) => {
+test('tree: expansion helpers expose ancestors and path (C5/C6 helpers)', async (t) => {
   if (!has('tree.js')) { t.skip('src/client/tree.js not implemented yet (task-5)'); return; }
   const module = await importClient('tree.js');
   const { emptyDoc, createGroup } = await import('../../src/shared/model.js');
@@ -137,13 +137,6 @@ test('tree: expansion helpers expose ancestors, path and flattened order (C5/C6 
   }
   if (typeof module.groupPath === 'function') {
     assert.equal(module.groupPath(doc, childId), '根 / 子');
-  }
-  const tree = (await import('../../src/shared/model.js')).buildRenderTree(doc, {}, [], {});
-  if (typeof module.flattenTree === 'function') {
-    const flat = module.flattenTree(tree, {});
-    assert.deepEqual(flat.filter((row) => row.kind === 'group').map((row) => row.node.group.id), [rootId, childId]);
-    const collapsedFlat = module.flattenTree(tree, { [rootId]: true });
-    assert.deepEqual(collapsedFlat.map((row) => row.kind), ['group'], 'a collapsed group renders only its own header row');
   }
 });
 

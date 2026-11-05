@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { applyControlOperations, buildControlState, CONTROL_OPERATIONS, CONTROL_PROTOCOL, resolveGroupPath, validateControlDoc } from '../../src/core/control.js'
-import { assignSession, createGroup, emptyDoc, findGroup, normalizeDoc } from '../../src/shared/model.js'
+import { assignSession, createGroup, emptyDoc, findGroup, validateDoc } from '../../src/shared/model.js'
 
 const fixture = () => {
   let doc = emptyDoc()
@@ -50,18 +50,16 @@ test('control resolves full paths and rejects missing, ambiguous and control-cha
   assert.equal(resolveGroupPath(doc, ['Work', 1]).code, 'invalid-path')
 })
 
-test('group names reject control characters and normalize strips them on load', () => {
+test('group names reject control characters both on input and at validation', () => {
   assert.throws(() => createGroup(emptyDoc(), { name: 'bad\nname' }), /name-control-chars/)
-  const normalized = buildControlState(
-    normalizeDoc({
-      version: 1,
-      revision: 0,
-      groups: [{ id: 'g-x', name: 'bad\nname', icon: 'folder', parentId: null, sessionIds: [] }],
-      ungrouped: [],
-    }),
-    0,
-  )
-  assert.equal(normalized.groups[0].name, 'badname')
+  const verdict = validateDoc({
+    version: 1,
+    revision: 0,
+    groups: [{ id: 'g-x', name: 'bad\nname', icon: 'folder', parentId: null, sessionIds: [] }],
+    ungrouped: [],
+  })
+  assert.equal(verdict.ok, false)
+  assert.match(verdict.errors.join(';'), /group-name:g-x/)
 })
 
 test('control creates, renames, updates, moves and assigns without mutating input', () => {

@@ -1,6 +1,6 @@
 /**
- * Tree presentation helpers (pure): flatten visible tree for row rendering,
- * ancestor expansion, status tone, group paths and depth clamping.
+ * Tree presentation helpers (pure): ancestor expansion, status tone, group
+ * paths and depth clamping.
  */
 import { childrenOf, findGroup } from '../shared/model.js'
 
@@ -96,54 +96,6 @@ export const runningSubagentCounts = (sessions, statuses) => {
 }
 
 /**
- * Running (spinner) sessions grouped by their direct parent group, in document
- * order, plus the ungrouped inbox at the end. `statuses` is the host Map; only
- * main sessions are listed (subagent rows stay with their parent).
- *
- * @returns {{ sections: Array<{ groupId: string|null, groupName: string, sessions: Array<{ sessionId: string, archived: boolean }> }>, count: number }}
- */
-export const sessionsByGroupMatching = (doc, sessionsById = {}, statuses = null, archivedSessionIds = [], subagentCounts = new Map(), match = () => false) => {
-  const archived = new Set(Array.isArray(archivedSessionIds) ? archivedSessionIds : [])
-  const seen = new Set()
-  const sections = []
-  const add = (sessionId, groupId, groupName) => {
-    if (typeof sessionId !== 'string' || seen.has(sessionId)) return
-    const row = sessionsById?.[sessionId]
-    if (!row || row.origin === 'subagent') return
-    const status = typeof statuses?.get === 'function' ? statuses.get(sessionId) : null
-    const projected = typeof subagentCounts?.get === 'function' ? subagentCounts.get(sessionId) : 0
-    const primary = sessionStatuses(status, { runningSubagentCount: projected })[0]
-    if (!match(primary, status)) return
-    seen.add(sessionId)
-    let section = sections.find((item) => item.groupId === groupId)
-    if (!section) {
-      section = { groupId, groupName: groupName ?? '', sessions: [] }
-      sections.push(section)
-    }
-    section.sessions.push({ sessionId, archived: archived.has(sessionId) })
-  }
-  const walk = (parentId) => {
-    for (const group of childrenOf(doc, parentId)) {
-      for (const sessionId of group.sessionIds ?? []) add(sessionId, group.id, group.name ?? '')
-      walk(group.id)
-    }
-  }
-  walk(null)
-  for (const sessionId of doc?.ungrouped ?? []) add(sessionId, null, '')
-  const count = sections.reduce((total, section) => total + section.sessions.length, 0)
-  return { sections, count }
-}
-
-export const runningSessionsByGroup = (...args) =>
-  sessionsByGroupMatching(...args, (primary) => primary?.state === 'ongoing')
-
-export const blockedSessionsByGroup = (...args) =>
-  sessionsByGroupMatching(...args, (primary) => primary?.state === 'warning')
-
-export const unreadSessionsByGroup = (...args) =>
-  sessionsByGroupMatching(...args, (primary) => primary?.kind === 'completed')
-
-/**
  * One traversal for all three header counters. The three independent scans were
  * O(3n) on every stream snapshot; this returns the same grouped shape in O(n).
  */
@@ -234,44 +186,6 @@ export const groupPath = (doc, groupId, separator = ' / ') => {
 
 /** Depth used for indentation (CSS clamps deeper nesting visually). */
 export const displayDepth = (depth) => Math.min(Math.max(depth, 0), UI_SOFT_DEPTH)
-
-/**
- * Flatten a render tree into rows in display order: groups (subgroups below the
- * group row, then sessions) and finally the ungrouped sessions. Collapsed groups
- * emit only their own header row.
- *
- * @param {{ groups: object[], ungrouped: object[] }} tree
- * @param {Record<string, true>} collapsed
- * @returns {Array<{ kind: 'group'|'session', depth: number, node: object, parentId: string|null }>}
- */
-export const flattenTree = (tree, collapsed = {}) => {
-  const rows = []
-  const walkGroup = (node, depth, parentId) => {
-    rows.push({ kind: 'group', depth, node, parentId })
-    if (!isExpanded(collapsed, node.group.id)) return
-    for (const child of node.children) {
-      if (child.kind === 'group') walkGroup(child, depth + 1, node.group.id)
-      else rows.push({ kind: 'session', depth: depth + 1, node: child, parentId: node.group.id })
-    }
-  }
-  for (const node of tree?.groups ?? []) walkGroup(node, 0, null)
-  for (const node of tree?.ungrouped ?? []) rows.push({ kind: 'session', depth: 0, node, parentId: null })
-  return rows
-}
-
-/** Group ids that render nothing (used to show the empty-state row). */
-export const emptyGroups = (tree) => {
-  const out = []
-  const walk = (nodes) => {
-    for (const node of nodes ?? []) {
-      if (node.kind !== 'group') continue
-      if (node.emptyVisible === true) out.push(node)
-      walk(node.children)
-    }
-  }
-  walk(tree?.groups)
-  return out
-}
 
 /** Direct children ids of a parent (null = root groups), display order. */
 export const siblingGroupIds = (doc, parentId) => childrenOf(doc, parentId).map((group) => group.id)
