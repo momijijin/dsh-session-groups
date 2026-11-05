@@ -218,6 +218,8 @@ palette ids/hex/labels, documented `colorHex` input forms and canonical
 `resolve` maps a complete path array to an id; missing paths return `group-not-found`, duplicate siblings return `ambiguous-path` with candidates.  
 `plan` returns `changes` and `planHash`; `apply` must send the same `planHash` and `baseRevision` and commits with CAS.
 
+Appearance input is strict: `icon`/`color` must come from `catalog`, `colorHex` accepts `#RGB`, `RGB`, `#RRGGBB` or `RRGGBB` and persists canonical lowercase `#rrggbb`, and `color`/`colorHex` are mutually exclusive. Invalid values fail with `invalid-icon` or `invalid-color` instead of silently falling back.
+
 Session actions require an explicit `sessionId`; a missing id is `invalid-session-id` and the plugin never guesses the "most recent" session. Rename supports `expectedTitle`; archive supports `expectedArchived`; archiving a running session requires explicit `stopActivity: true`.
 
 ### Copy-paste AI prompts

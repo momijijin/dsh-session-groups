@@ -82,7 +82,7 @@ src/index.js     Cordis host 入口
   - AI 控制协议：catalog（共享图标/色板词表）、state、结构化 operation、plan/apply 候选 doc
   - 无 HTTP、无设置、无 revision/CAS、无审计；这些在 `src/host/routes.js` 与 `src/index.js`
   - 删除操作必须显式 `allowDestructive`，无 raw-doc 写入
-  - 严格 operation schema：未知字段、错误类型、负数/非整数 index 一律 422，不做静默降级
+  - 严格 operation schema：未知字段、错误类型、负数/非整数 index、未知 icon/color、非法 colorHex、color+colorHex 并用一律结构化拒绝，不做静默降级
   - `group.create` 的 plan 不返回随机 ID；apply 后通过 state 读取
 - `src/core/color.js`
   - `groupColorCss` 自定义 hex 优先、palette token 回退

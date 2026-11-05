@@ -227,6 +227,10 @@ doctor
 返回 `ambiguous-path` 并给出 candidates。`plan` 返回 `changes` 和 `planHash`；
 `apply` 必须带同一个 `planHash` 和 `baseRevision`，用 CAS 提交。
 
+外观字段严格校验：`icon`/`color` 必须来自 `catalog`，`colorHex` 接受
+`#RGB`、`RGB`、`#RRGGBB` 或 `RRGGBB` 并持久化为小写 `#rrggbb`，`color` 与
+`colorHex` 互斥。非法值返回 `invalid-icon`/`invalid-color`，不再静默回退。
+
 会话动作必须显式传 `sessionId`；缺失就是 `invalid-session-id`，不猜最近会话。
 改名用 `expectedTitle`，归档用 `expectedArchived`；运行中的会话归档需要显式
 `stopActivity: true`。
