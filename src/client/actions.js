@@ -56,6 +56,11 @@ export const workspaceChoices = (doc, groupId, sessionsById, workspaces, current
 }
 
 /** Append a newly created workspace once; missing workspace ids are ignored. */
+export const workspaceDialogState = (dialog, workspace) => ({
+  choices: mergeWorkspaceChoices(dialog?.choices, workspace),
+  inferred: typeof workspace?.workspaceId === 'string' && workspace.workspaceId !== '' ? workspace.workspaceId : null,
+})
+
 export const mergeWorkspaceChoices = (choices, workspace) => {
   const list = Array.isArray(choices) ? choices.slice() : []
   const workspaceId = workspace?.workspaceId

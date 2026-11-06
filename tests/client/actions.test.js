@@ -5,6 +5,7 @@ import {
   createActions,
   formatActivity,
   mergeWorkspaceChoices,
+  workspaceDialogState,
   workspaceChoices,
   workspaceLabel,
 } from '../../src/client/actions.js'
@@ -303,4 +304,12 @@ test('createWorkspaceFromDirectory treats blank paths as cancel and surfaces cre
     throw new Error('permission denied')
   }
   await assert.rejects(() => actions.createWorkspaceFromDirectory(), /permission denied/)
+})
+
+
+test('workspaceDialogState merges the new workspace and selects it (B flow)', () => {
+  const dialog = { choices: [{ workspaceId: 'w1' }], inferred: 'w1' }
+  const next = workspaceDialogState(dialog, { workspaceId: 'w2', title: 'Two' })
+  assert.deepEqual(next.choices.map((entry) => entry.workspaceId), ['w1', 'w2'])
+  assert.equal(next.inferred, 'w2')
 })

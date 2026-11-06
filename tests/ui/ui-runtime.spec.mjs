@@ -351,3 +351,12 @@ test('DialogHost shows the new-workspace action only when the host exposes it', 
   const hidden = DialogHost({ store, props: {} })
   assert.equal(byTestId(hidden, 'session-groups-dialog-new-workspace'), undefined)
 })
+
+
+test('new-session dialog shows the create-workspace hint when there are no workspaces', async () => {
+  installClientRuntime({ t: (key) => key, canCreateWorkspace: () => true })
+  const { DialogHost } = await import(new URL('../../src/client/dialog-host.js', import.meta.url))
+  const tree = DialogHost({ store: { doc: { groups: [], ungrouped: [] }, dialog: { kind: 'new-session', groupId: 'g1', choices: [] } }, props: {} })
+  assert.match(JSON.stringify(tree), /dialog\.noWorkspaceCreate/)
+  assert.ok(byTestId(tree, 'session-groups-dialog-new-workspace'))
+})
