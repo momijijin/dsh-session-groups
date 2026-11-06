@@ -171,18 +171,9 @@ const moveSessionToGroup = async (sessionId, targetId) => {
 
 const addSessionToGroup = async (groupId) => {
   const before = groupSessionIds(groupId).length
-  const addButton = groupRowById(groupId).locator('[data-testid="session-groups-group-add"]')
-  await addButton.click({ force: true })
-  await page.locator('[data-testid="session-groups-dialog"]').waitFor({ state: 'visible' })
-  const workspaceOption = page.locator('[data-testid="session-groups-dialog-workspace"]').first()
-  if ((await workspaceOption.count()) > 0) await workspaceOption.click({ force: true })
-  const confirm = page.locator('[data-testid="session-groups-dialog-confirm"]')
-  if (!(await confirm.isEnabled())) throw new Error('new-session dialog has no enabled workspace/confirm')
-  await confirm.click()
-  // DSH 0.2.1-rc.5 may not expose the optional `sessions` client service at
-  // mount, so the plugin falls back to connectWorkspace and the commit can take
-  // longer than the rc.2 path. Wait for the persisted placement, not a fixed
-  // sleep.
+  await groupRowById(groupId).locator('[data-testid="session-groups-group-add"]').click({ force: true })
+  // The group action now creates in the inferred workspace directly; there is
+  // no intermediate workspace dialog. Wait for the persisted placement.
   for (let attempt = 0; attempt < 40; attempt += 1) {
     if (groupSessionIds(groupId).length > before) return
     await page.waitForTimeout(250)
@@ -264,9 +255,8 @@ try {
   await createChildGroup(targetId, childName)
   const sourceId = await createGroup(sourceName)
 
-  // The group menu's first action must be the same new-session entry as the
-  // group row's first + button; checking the dialog proves the handler wiring
-  // without creating a throwaway session.
+  // The group menu's first action is the direct new-session entry. Close the
+  // menu without running it, then use the subgroup dialog for modal a11y.
   await groupRowById(targetId).locator('[data-testid="session-groups-group-menu"]').click({ force: true })
   const firstGroupMenuItem = page.locator('[role="menuitem"]').first()
   await firstGroupMenuItem.waitFor({ state: 'visible' })
@@ -276,7 +266,11 @@ try {
   if (!/New session/.test((await firstGroupMenuItem.textContent()) ?? '')) {
     throw new Error(`English host rendered a non-English group menu label: ${await firstGroupMenuItem.innerText()}`)
   }
-  await firstGroupMenuItem.click()
+  await page.keyboard.press('Escape')
+  await page.locator('[data-testid="session-groups-menu"]').waitFor({ state: 'hidden' })
+
+  await groupRowById(targetId).locator('[data-testid="session-groups-group-menu"]').click({ force: true })
+  await menuItem(/新建子分组|New subgroup/).click()
   const a11yDialog = page.locator('[data-testid="session-groups-dialog"]')
   await a11yDialog.waitFor({ state: 'visible' })
   const labelledBy = await a11yDialog.getAttribute('aria-labelledby')
@@ -284,7 +278,7 @@ try {
     throw new Error('dialog has no single accessible title reference')
   }
   const dialogTitle = (await page.locator(`#${labelledBy}`).innerText()).trim()
-  if (dialogTitle !== 'New session in group') {
+  if (dialogTitle !== 'New subgroup') {
     throw new Error(`English host rendered a non-English dialog title: ${dialogTitle}`)
   }
   for (let index = 0; index < 8; index += 1) await page.keyboard.press('Tab')
