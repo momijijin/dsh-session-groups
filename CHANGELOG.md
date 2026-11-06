@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.48 (UI component runtime slice)
+
+- Rendered OnboardingCard, Banner, Rail, Toast and VirtualSpacer under the test React peer; 5 UI runtime cases total.
+- Fixed a real Banner bug: dismiss called an undefined dispatch and would throw on click; it now uses the command bridge.
+- Tests: 522 unit/contract + 5 UI runtime cases; no browser/A+ claim.
+
 ## 0.4.0-beta.47 (UI runtime smoke gate)
 
 - Added a test-only React peer loader and `check:ui`: 19 client/UI modules are actually imported and their main component exports checked without a browser or production dependency.

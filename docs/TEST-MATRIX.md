@@ -1,12 +1,12 @@
 # Test Matrix
 
-Status: `0.4.0-beta.47`  
+Status: `0.4.0-beta.48`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
 Automated gates are `npm test`, `npm run check:coverage` and `npm run check:ui`
 in CI, plus `npm run check:ui` and `npm run check:release` in the release
-workflow. `check:ui` is a module-load smoke, not full UI render coverage. The A+ / LP rows below are
+workflow. `check:ui` is a module-load + 5 component-render smoke, not full browser UI coverage. The A+ / LP rows below are
 manual local evidence: the release workflow does not start an isolated DSH
 instance or run Playwright, so a release note cannot claim A+ or all-locales as
 an automated CI result.
