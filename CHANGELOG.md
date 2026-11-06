@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.47 (UI runtime smoke gate)
+
+- Added a test-only React peer loader and `check:ui`: 19 client/UI modules are actually imported and their main component exports checked without a browser or production dependency.
+- CI/release workflow now run `npm run check:ui`; line coverage remains scoped to the existing logic gate, UI render coverage is the next step.
+- Tests: 522 unit/contract; UI smoke is a separate 1-case gate.
+
 ## 0.4.0-beta.46 (release gate hardening)
 
 - Release workflow now runs `check:coverage` + `check:release`, uploads a SHA256SUMS file, and only marks tags with a prerelease suffix as prerelease.

@@ -86,6 +86,7 @@ git branch -d feature/<slug>
    npm run build
    node --check lib/client.js
    npm run check:coverage
+   npm run check:ui
    npm run check:release
    npm pack --dry-run
    npm run test:isolated
