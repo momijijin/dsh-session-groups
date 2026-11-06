@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.52 (U2 closeout)
+
+- Added session MenuPopover and rename-group DialogHost runtime cases; U2 now covers 15 UI runtime cases (1 module-load + 14 component tests, 11 components).
+- No new production bug in this slice; existing 3 missing-import bugs remain covered.
+- Tests: 522 unit/contract + 15 UI runtime cases.
+
 ## 0.4.0-beta.51 (header/row-status runtime slice)
 
 - Rendered Header with running/blocked/unread counts and new-group/toggle wiring; added current/running SessionRow state assertions.
