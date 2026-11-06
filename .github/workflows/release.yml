@@ -45,19 +45,41 @@ jobs:
           npm test
           npm run build
           node --check lib/client.js
+          npm run check:coverage
+          npm run check:release
           npm pack --dry-run
 
-      - name: Pack asset
-        run: npm pack
+      - name: Pack asset and checksum
+        id: pack
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TGZ="dsh-session-grove-${VERSION}.tgz"
+          npm pack
+          test -f "$TGZ"
+          sha256sum "$TGZ" > SHA256SUMS
+          cat SHA256SUMS
+          echo "tgz=$TGZ" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TGZ: ${{ steps.pack.outputs.tgz }}
         run: |
           NOTES_FILE="docs/release-notes/${GITHUB_REF_NAME}.md"
           test -f "$NOTES_FILE"
+          test -f "$TGZ"
+          test -f SHA256SUMS
+
+          # Only prerelease tags (e.g. v1.2.3-beta.4) get the prerelease flag.
+          PRERELEASE_ARGS=()
+          case "$GITHUB_REF_NAME" in
+            *-*) PRERELEASE_ARGS+=(--prerelease) ;;
+          esac
+
+          cat SHA256SUMS
           gh release create "$GITHUB_REF_NAME" \
-            dsh-session-grove-*.tgz \
+            "$TGZ" \
+            SHA256SUMS \
             --title "dsh-session-grove ${GITHUB_REF_NAME#v}" \
             --notes-file "$NOTES_FILE" \
-            --prerelease
+            "${PRERELEASE_ARGS[@]}"
