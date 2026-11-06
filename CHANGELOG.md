@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.53 (real-browser UI runtime spec)
+
+- Added a manual real-browser UI runtime spec using the isolated host; it drives the main UI and records Chromium JS coverage for the bundled dsh-session-grove client.
+- Added `npm run test:ui-browser`; intentionally not CI because CI has no isolated DSH host. No A+ claim changed.
+- Tests: 522 unit/contract + 15 component runtime cases + 1 browser runtime spec.
+
 ## 0.4.0-beta.52 (U2 closeout)
 
 - Added session MenuPopover and rename-group DialogHost runtime cases; U2 now covers 15 UI runtime cases (1 module-load + 14 component tests, 11 components).
