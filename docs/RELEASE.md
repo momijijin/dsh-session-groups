@@ -1,19 +1,19 @@
-# 0.4.0-beta.46 发布与安装说明
+# 0.4.0-beta.47 发布与安装说明
 
-- 版本：`0.4.0-beta.46`
+- 版本：`0.4.0-beta.47`
 - 包名：`dsh-session-grove`
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
 - 状态：522/522 测试；A+ 为 `0.4.0-beta.42` 实测证据（手工本地，非 CI 自动门禁）；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
-- 发布包：`dsh-session-grove-0.4.0-beta.46.tgz`
+- 发布包：`dsh-session-grove-0.4.0-beta.47.tgz`
 
 ## 本版重点
 
-- **Release gate**：workflow 现在执行 `check:coverage` + `check:release`，pack 后生成并上传 `SHA256SUMS`；仅 prerelease tag 加 `--prerelease`。
-- **Preflight**：新增 `scripts/qa/check-release.mjs`，校验四处版本一致、`GITHUB_REF_NAME` 与版本匹配、release note、`lib/client.js` 版本戳和 `package.json.files` 全部路径。
-- **证据边界**：A+ / all-locales 仍是手工本地证据，release workflow 不启动隔离实例、不伪装成自动门禁。
-- **记录**：522 tests，coverage 约 92.3/82.9/89.1；A+ 证据仍为 `.42`。
+- **UI runtime smoke**：新增 test-only React peer loader，`npm run check:ui` 实际 import 19 个 client/UI 模块并断言核心组件导出；CI/release workflow 已执行该门禁。
+- **覆盖边界**：逻辑 coverage 仍由 `check:coverage` 守 92/80/85；UI render/line coverage 是下一步，不把模块加载冒充成完整 UI 覆盖率。
+- **Release gate**：workflow 执行 `check:coverage` + `check:ui` + `check:release`，并已有 SHA256SUMS/条件 prerelease。
+- **记录**：522 unit/contract tests + 1 UI smoke；coverage 约 92.3/82.9/89.1；A+ 证据仍为 `.42`。
 - 本批未发布；没有版本 tag 或 GitHub Release。
 
 ## 安装方式
@@ -26,7 +26,7 @@
 # 以本地 desktop profile 为例
 DeepSeek Harness.exe --expose-internals `
   "C:\Users\<user>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
-  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.46.tgz"
+  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.47.tgz"
 ```
 
 安装后必须重启对应桌面客户端。先卸载旧的 `dsh-session-groups`；不要在同一 profile 中并存两个身份。
