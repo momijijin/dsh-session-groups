@@ -316,5 +316,6 @@
   },
   "dialog.newWorkspace": "Nieuwe werkruimte…",
   "dialog.newWorkspaceBusy": "Map kiezen…",
-  "dialog.newWorkspaceFailed": "Werkruimte maken mislukt. Probeer het opnieuw."
+  "dialog.newWorkspaceFailed": "Werkruimte maken mislukt. Probeer het opnieuw.",
+  "dialog.noWorkspaceCreate": "Geen werkruimte beschikbaar — gebruik hieronder ‘Nieuwe werkruimte’."
 }

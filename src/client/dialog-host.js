@@ -439,7 +439,7 @@ export const DialogHost = ({ store, props }) => {
   }
   if (dialog.kind === 'archive-running') bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.archiveRunningBody', { families: formatActivity(dialog.activity) })))
   if (dialog.kind === 'new-session') {
-    if ((dialog.choices ?? []).length === 0) bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.noWorkspace')))
+    if ((dialog.choices ?? []).length === 0) bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, rt()?.canCreateWorkspace?.() === true ? t('dialog.noWorkspaceCreate') : t('dialog.noWorkspace')))
     else {
       bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.newSessionWorkspace')))
       bodyNodes.push(

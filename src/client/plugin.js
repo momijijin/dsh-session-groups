@@ -10,7 +10,7 @@ import { createGroup, deleteGroup, deleteGroupTo, moveGroup, renameGroup, setGro
 import { placeForkedSession } from '../core/fork.js'
 import { createApi } from './api.js'
 import { createStore, safeStorage } from './state.js'
-import { createActions } from './actions.js'
+import { createActions, mergeWorkspaceChoices } from './actions.js'
 import { createLocaleRuntime } from './plugin-locale.js'
 import { installSettingsSlot } from './plugin-settings.js'
 import { SkillRepairCard } from './skill-repair.js'
@@ -386,8 +386,7 @@ export const createPlugin = () => {
     const workspace = result.workspace
     const workspaceId = workspace?.workspaceId
     if (typeof workspaceId !== 'string' || workspaceId === '') throw new Error('workspace-create-failed')
-    const choices = Array.isArray(dialog.choices) ? [...dialog.choices] : []
-    if (!choices.some((entry) => entry?.workspaceId === workspaceId)) choices.push(workspace)
+    const choices = mergeWorkspaceChoices(dialog.choices, workspace)
     openDialog({ ...dialog, choices, inferred: workspaceId })
     return { cancelled: false, workspaceId }
   }

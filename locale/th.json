@@ -316,5 +316,6 @@
   },
   "dialog.newWorkspace": "พื้นที่ทำงานใหม่…",
   "dialog.newWorkspaceBusy": "กำลังเลือกโฟลเดอร์…",
-  "dialog.newWorkspaceFailed": "สร้างพื้นที่ทำงานไม่สำเร็จ โปรดลองอีกครั้ง"
+  "dialog.newWorkspaceFailed": "สร้างพื้นที่ทำงานไม่สำเร็จ โปรดลองอีกครั้ง",
+  "dialog.noWorkspaceCreate": "ไม่มีพื้นที่ทำงาน — ใช้ “พื้นที่ทำงานใหม่” ด้านล่าง"
 }

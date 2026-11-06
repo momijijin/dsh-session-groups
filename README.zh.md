@@ -330,7 +330,7 @@ node scripts/session-grove-control.mjs doctor
 - 搜索最多返回 20 条，只匹配标题/工作区/组路径。
 - 宽度覆盖依赖 DSH 左侧栏 DOM；宿主大改布局时 fail-soft，分组功能不受影响。
 - 对话框移动/缩放已有键盘支持；全量 axe/对比度审计和整棵树的键盘拖拽仍为 deferred。
-- 当前发布验证以 **525 项单元/契约测试 + 16 个 UI runtime case + 1 个浏览器 runtime specs**（含 Node 内置 coverage 报告）为准；用户桌面回归是历史证据，不是每个候选版本的 CI 产物；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前脚本化 A+ 为 `e2e/isolated.spec.mjs`（需手工对隔离宿主运行，不在 CI 内）。`npm run check:release` 是 release workflow 强制的发布结构门禁（版本一致、tag 匹配、release note、客户端版本戳、打包路径）；A+ 和 all-locales 是手工本地证据，不是 CI 产物。
+- 当前发布验证以 **527 项单元/契约测试 + 16 个 UI runtime case + 1 个浏览器 runtime specs**（含 Node 内置 coverage 报告）为准；用户桌面回归是历史证据，不是每个候选版本的 CI 产物；`e2e/groups.spec.mjs` 是历史手工脚本，不进入默认门禁，当前脚本化 A+ 为 `e2e/isolated.spec.mjs`（需手工对隔离宿主运行，不在 CI 内）。`npm run check:release` 是 release workflow 强制的发布结构门禁（版本一致、tag 匹配、release note、客户端版本戳、打包路径）；A+ 和 all-locales 是手工本地证据，不是 CI 产物。
 
 ## 文档
 
@@ -358,7 +358,7 @@ npm run check:release
 npm pack
 ```
 
-- `npm test`：525 项单元/契约测试
+- `npm test`：527 项单元/契约测试
 - `npm run check:style`: zero-dependency style guard (tabs/trailing whitespace/final newline)
 - `npm run check:lib`: rebuild and verify lib/ is current with src/
 - `npm run test:ui-browser`: real-browser UI runtime coverage (isolated host; manual)

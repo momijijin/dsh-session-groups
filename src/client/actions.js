@@ -55,6 +55,16 @@ export const workspaceChoices = (doc, groupId, sessionsById, workspaces, current
   return { inferred: inferredId, choices: ordered }
 }
 
+/** Append a newly created workspace once; missing workspace ids are ignored. */
+export const mergeWorkspaceChoices = (choices, workspace) => {
+  const list = Array.isArray(choices) ? choices.slice() : []
+  const workspaceId = workspace?.workspaceId
+  if (typeof workspaceId === 'string' && workspaceId !== '' && !list.some((entry) => entry?.workspaceId === workspaceId)) {
+    list.push(workspace)
+  }
+  return list
+}
+
 /** Result of a host rename call: RemoteResult. */
 const assertRemoteOk = (result, fallback) => {
   if (result && result.ok === true) return result

@@ -316,5 +316,6 @@
   },
   "dialog.newWorkspace": "新建工作区…",
   "dialog.newWorkspaceBusy": "正在选择文件夹…",
-  "dialog.newWorkspaceFailed": "创建工作区失败，请重试。"
+  "dialog.newWorkspaceFailed": "创建工作区失败，请重试。",
+  "dialog.noWorkspaceCreate": "暂无工作区——使用下方的新建工作区。"
 }

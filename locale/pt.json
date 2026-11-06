@@ -316,5 +316,6 @@
   },
   "dialog.newWorkspace": "Novo espaço de trabalho…",
   "dialog.newWorkspaceBusy": "Escolhendo pasta…",
-  "dialog.newWorkspaceFailed": "Não foi possível criar o espaço de trabalho. Tente novamente."
+  "dialog.newWorkspaceFailed": "Não foi possível criar o espaço de trabalho. Tente novamente.",
+  "dialog.noWorkspaceCreate": "Nenhum espaço de trabalho — use “Novo espaço de trabalho” abaixo."
 }

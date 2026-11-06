@@ -316,5 +316,6 @@
   },
   "dialog.newWorkspace": "Yeni çalışma alanı…",
   "dialog.newWorkspaceBusy": "Klasör seçiliyor…",
-  "dialog.newWorkspaceFailed": "Çalışma alanı oluşturulamadı. Lütfen tekrar deneyin."
+  "dialog.newWorkspaceFailed": "Çalışma alanı oluşturulamadı. Lütfen tekrar deneyin.",
+  "dialog.noWorkspaceCreate": "Çalışma alanı yok — aşağıdaki “Yeni çalışma alanı”nı kullanın."
 }

@@ -316,5 +316,6 @@
   },
   "dialog.newWorkspace": "새 작업 공간…",
   "dialog.newWorkspaceBusy": "폴더 선택 중…",
-  "dialog.newWorkspaceFailed": "작업 공간을 만들지 못했습니다. 다시 시도하세요."
+  "dialog.newWorkspaceFailed": "작업 공간을 만들지 못했습니다. 다시 시도하세요.",
+  "dialog.noWorkspaceCreate": "작업 공간이 없습니다. 아래의 새 작업 공간을 사용하세요."
 }

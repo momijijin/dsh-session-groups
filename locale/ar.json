@@ -348,5 +348,6 @@
   },
   "dialog.newWorkspace": "مساحة عمل جديدة…",
   "dialog.newWorkspaceBusy": "جارٍ اختيار المجلد…",
-  "dialog.newWorkspaceFailed": "تعذر إنشاء مساحة العمل. يرجى المحاولة مرة أخرى."
+  "dialog.newWorkspaceFailed": "تعذر إنشاء مساحة العمل. يرجى المحاولة مرة أخرى.",
+  "dialog.noWorkspaceCreate": "لا توجد مساحة عمل — استخدم «مساحة عمل جديدة» أدناه."
 }

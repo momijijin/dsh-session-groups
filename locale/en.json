@@ -316,5 +316,6 @@
   "dialog.deleteMoveInstruction": "Choose where to reassign them before deleting the group; no session is deleted or archived.",
   "dialog.newWorkspace": "New workspace…",
   "dialog.newWorkspaceBusy": "Choosing folder…",
-  "dialog.newWorkspaceFailed": "Could not create the workspace. Please retry."
+  "dialog.newWorkspaceFailed": "Could not create the workspace. Please retry.",
+  "dialog.noWorkspaceCreate": "No workspace is available — use New workspace below."
 }

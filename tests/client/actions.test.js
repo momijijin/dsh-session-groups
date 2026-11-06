@@ -4,6 +4,7 @@ import {
   classifyArchiveError,
   createActions,
   formatActivity,
+  mergeWorkspaceChoices,
   workspaceChoices,
   workspaceLabel,
 } from '../../src/client/actions.js'
@@ -277,4 +278,29 @@ test('createWorkspaceFromDirectory reports missing host capabilities', async () 
   const { actions, services } = makeActions()
   services.uiWorkspace.pickDirectory = undefined
   await assert.rejects(() => actions.createWorkspaceFromDirectory(), /workspace-picker-unavailable/)
+})
+
+
+test('mergeWorkspaceChoices appends once and ignores a missing workspace id', () => {
+  const choices = [{ workspaceId: 'w1' }]
+  const workspace = { workspaceId: 'w2', title: 'Two' }
+  assert.deepEqual(mergeWorkspaceChoices(choices, workspace).map((entry) => entry.workspaceId), ['w1', 'w2'])
+  assert.deepEqual(mergeWorkspaceChoices([...choices, workspace], workspace).map((entry) => entry.workspaceId), ['w1', 'w2'])
+  assert.deepEqual(mergeWorkspaceChoices(choices, { title: 'missing' }), choices)
+})
+
+test('createWorkspaceFromDirectory treats blank paths as cancel and surfaces create failures', async () => {
+  const { actions, services } = makeActions()
+  services.uiWorkspace.pickDirectory = async () => '   '
+  services.workspaces.create = async () => ({ workspaceId: 'w-new' })
+  assert.deepEqual(await actions.createWorkspaceFromDirectory(), { cancelled: true })
+
+  services.uiWorkspace.pickDirectory = async () => 'C:\\new'
+  services.workspaces.create = undefined
+  await assert.rejects(() => actions.createWorkspaceFromDirectory(), /workspace-create-unavailable/)
+
+  services.workspaces.create = async () => {
+    throw new Error('permission denied')
+  }
+  await assert.rejects(() => actions.createWorkspaceFromDirectory(), /permission denied/)
 })

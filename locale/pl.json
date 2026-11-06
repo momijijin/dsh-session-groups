@@ -332,5 +332,6 @@
   },
   "dialog.newWorkspace": "Nowa przestrzeń robocza…",
   "dialog.newWorkspaceBusy": "Wybieranie folderu…",
-  "dialog.newWorkspaceFailed": "Nie udało się utworzyć przestrzeni roboczej. Spróbuj ponownie."
+  "dialog.newWorkspaceFailed": "Nie udało się utworzyć przestrzeni roboczej. Spróbuj ponownie.",
+  "dialog.noWorkspaceCreate": "Brak przestrzeni roboczej — użyj „Nowa przestrzeń robocza” poniżej."
 }

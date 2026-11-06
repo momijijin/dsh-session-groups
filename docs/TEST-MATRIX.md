@@ -17,7 +17,7 @@ an automated CI result.
 
 | Code | Meaning |
 |---|---|
-| `U` | Unit/contract tests: `npm test` (522 tests) |
+| `U` | Unit/contract tests: `npm test` (527 tests) |
 | `A+ C` | Isolated Playwright, community DSH Desktop 2.0.18 / DSH `0.2.1-rc.2` |
 | `A+ O` | Isolated Playwright, official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5` |
 | `LP` | Test-only all-locale pack (`e2e/fixtures/ja-locale-pack`): host catalog injection + active locale switch |

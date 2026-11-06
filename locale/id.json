@@ -316,5 +316,6 @@
   },
   "dialog.newWorkspace": "Ruang kerja baru…",
   "dialog.newWorkspaceBusy": "Memilih folder…",
-  "dialog.newWorkspaceFailed": "Tidak dapat membuat ruang kerja. Coba lagi."
+  "dialog.newWorkspaceFailed": "Tidak dapat membuat ruang kerja. Coba lagi.",
+  "dialog.noWorkspaceCreate": "Tidak ada ruang kerja — gunakan “Ruang kerja baru” di bawah."
 }
