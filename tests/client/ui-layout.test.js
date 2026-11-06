@@ -488,36 +488,6 @@ test('0.2.15 group palette: twelve distinct ids, color-token rules and a menu co
   assert.match(plugin, /setGroupColor\(latest, dialog\.groupId, payload\.color\)/)
 })
 
-test('0.2.6 selection dialogs only highlight; Confirm applies, Cancel closes unchanged', () => {
-  // Initial highlight, validity and payload all come from the pure helper module.
-  assert.match(components, /initialDialogSelection\(dialog, store\.doc\)/)
-  assert.match(components, /selectionIsValid\(dialog, selection, store\.doc\)/)
-  assert.match(components, /dialogConfirmPayload\(dialog, selection\)/)
-  // Option clicks set the selection only: no direct confirm/commit calls in the
-  // option handlers (the footer owns apply).
-  assert.equal(components.includes('onClick: () => confirm({'), false)
-  assert.equal(components.includes('onPick: (groupId)'), false)
-  assert.equal((components.match(/setSelection\(/g) ?? []).length >= 4, true)
-  // Footer is rendered for every dialog kind and disabled without a valid value.
-  assert.match(components, /class: 'dsg-dialog-confirm'/)
-  assert.match(components, /disabled: !canConfirm/)
-  assert.match(components, /class: 'dsg-dialog-cancel'/)
-  // Every selection dialog exposes a stable test id + ARIA state.
-  for (const testId of [
-    'session-groups-dialog-workspace',
-    'session-groups-dialog-icon',
-    'session-groups-dialog-color',
-  ]) {
-    assert.equal(components.includes(testId), true, `missing ${testId}`)
-  }
-  assert.equal(groupPicker.includes('session-groups-dialog-group'), true)
-  assert.match(components, /'aria-selected': active \? 'true' : 'false'/)
-  assert.match(components, /'aria-checked': active \? 'true' : 'false'/)
-  // Input/delete/archive dialogs keep their existing behavior.
-  assert.match(components, /needsInput \? \{ value: value\.trim\(\) \}/)
-  assert.match(components, /t\('dialog\.stopAndArchive'\)/)
-})
-
 test('0.2.11 row order: title → workspace → actions → archived → time', () => {
   const name = components.indexOf("class: 'dsg-group-name'")
   const actions = components.indexOf("class: 'dsg-group-actions'", name)

@@ -7,7 +7,7 @@ import { clientRuntime as rt } from '../adapters/client-runtime.js'
 import { deleteGroupOptions, dialogConfirmPayload, findGroupsFlat, initialDialogSelection, isSelectionDialog, moveGroupOptions, selectionIsValid } from '../core/dialog-selection.js'
 import { GROUP_COLORS, GROUP_COLOR_HEX, MAX_GROUP_NAME, PLUGIN_VERSION } from '../shared/constants.js'
 import { isColorHex, normalizeColorHex } from '../shared/model.js'
-import { formatActivity, workspaceLabel } from './actions.js'
+import { formatActivity } from './actions.js'
 import { centeredDialogRect, clampDialogRect, dragDialogRect, readDialogGeometries, resizeDialogRect, saveDialogGeometry } from './dialog-geometry.js'
 import { dialogKeyboardDelta } from './dialog-keyboard.js'
 import { GroupListPicker } from './group-list-picker.js'
@@ -34,8 +34,6 @@ export const DialogHost = ({ store, props }) => {
   const [value, setValue] = useState('')
   const [selection, setSelection] = useState(undefined)
   const [hexInput, setHexInput] = useState('')
-  const [workspaceBusy, setWorkspaceBusy] = useState(false)
-  const [workspaceError, setWorkspaceError] = useState('')
   const inputRef = useRef(null)
   const dialogRef = useRef(null)
   const restoreFocusRef = useRef(null)
@@ -335,8 +333,6 @@ export const DialogHost = ({ store, props }) => {
   )
   useEffect(() => {
     setValue(dialog?.value ?? '')
-    setWorkspaceBusy(false)
-    setWorkspaceError('')
     // Every selection dialog opens with a visible current/inferred highlight;
     // when nothing usable exists Confirm stays disabled until the user picks.
     const initial = dialog ? initialDialogSelection(dialog, store.doc) : undefined
@@ -351,18 +347,6 @@ export const DialogHost = ({ store, props }) => {
   if (!dialog) return null
   const close = () => dispatch('dialog', { dialog: null })
   const confirm = (payload) => rt()?.confirmDialog(dialog, payload)
-  const pickWorkspaceForNewSession = async () => {
-    if (workspaceBusy) return
-    setWorkspaceBusy(true)
-    setWorkspaceError('')
-    try {
-      await rt()?.createWorkspaceForNewSession?.(dialog)
-    } catch {
-      setWorkspaceError(t('dialog.newWorkspaceFailed'))
-    } finally {
-      setWorkspaceBusy(false)
-    }
-  }
   const persistDialogRect = () => {
     if (dialogRectRef.current) saveDialogGeometry(dialog.kind, dialogRectRef.current)
   }
@@ -438,70 +422,6 @@ export const DialogHost = ({ store, props }) => {
     )
   }
   if (dialog.kind === 'archive-running') bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.archiveRunningBody', { families: formatActivity(dialog.activity) })))
-  if (dialog.kind === 'new-session') {
-    if ((dialog.choices ?? []).length === 0) bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, rt()?.canCreateWorkspace?.() === true ? t('dialog.noWorkspaceCreate') : t('dialog.noWorkspace')))
-    else {
-      bodyNodes.push(h('div', { class: 'dsg-dialog-body' }, t('dialog.newSessionWorkspace')))
-      bodyNodes.push(
-        h(
-          ScrollArea,
-          {
-            className: 'dsg-menu dsg-dialog-list',
-            role: 'listbox',
-            'data-testid': 'session-groups-dialog-options',
-            'aria-label': t('dialog.newSessionWorkspace'),
-          },
-          ...dialog.choices.map((workspace) => {
-            const active = selection === workspace.workspaceId
-            return h(
-              'button',
-              {
-                key: workspace.workspaceId,
-                type: 'button',
-                role: 'option',
-                'aria-selected': active ? 'true' : 'false',
-                class: 'dsg-menu-item dsg-dialog-option',
-                'data-testid': 'session-groups-dialog-workspace',
-                'data-workspace-id': workspace.workspaceId,
-                'data-selected': active ? 'true' : 'false',
-                onClick: (event) => {
-                  event.stopPropagation()
-                  setSelection(workspace.workspaceId)
-                },
-              },
-              h(
-                'span',
-                { class: 'dsg-dialog-option-label' },
-                `${workspaceLabel(workspace)}${workspace.workspaceId === dialog.inferred ? ' ★' : ''}`
-              ),
-              active ? optionCheck() : null
-            )
-          })
-        )
-      )
-    }
-    if (rt()?.canCreateWorkspace?.() === true) {
-      bodyNodes.push(
-        h(
-          'div',
-          { class: 'dsg-dialog-new-workspace' },
-          h(
-            'button',
-            {
-              type: 'button',
-              class: 'dsg-text-button',
-              'data-testid': 'session-groups-dialog-new-workspace',
-              disabled: workspaceBusy,
-              'aria-busy': workspaceBusy ? 'true' : 'false',
-              onClick: pickWorkspaceForNewSession,
-            },
-            workspaceBusy ? t('dialog.newWorkspaceBusy') : `+ ${t('dialog.newWorkspace')}`
-          )
-        )
-      )
-      if (workspaceError) bodyNodes.push(h('div', { class: 'dsg-dialog-error' }, workspaceError))
-    }
-  }
   if (dialog.kind === 'move-session' || dialog.kind === 'move-group') {
     const options = dialog.kind === 'move-group' ? moveGroupOptions(store.doc, dialog.groupId) : findGroupsFlat(store.doc)
     bodyNodes.push(h(GroupListPicker, {

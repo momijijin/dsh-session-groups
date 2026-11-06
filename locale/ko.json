@@ -73,8 +73,6 @@
   "dialog.renameGroup": "그룹 이름 변경",
   "dialog.renameSession": "세션 이름 변경",
   "dialog.deleteGroup": "그룹 삭제",
-  "dialog.newSession": "그룹에 새 세션",
-  "dialog.newSessionWorkspace": "워크스페이스 선택",
   "dialog.groupColor": "색상 변경",
   "dialog.namePlaceholder": "그룹 이름",
   "dialog.confirm": "확인",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "서브에이전트 {n}개 실행 중",
     "other": "서브에이전트 {n}개 실행 중"
-  },
-  "dialog.newWorkspace": "새 작업 공간…",
-  "dialog.newWorkspaceBusy": "폴더 선택 중…",
-  "dialog.newWorkspaceFailed": "작업 공간을 만들지 못했습니다. 다시 시도하세요.",
-  "dialog.noWorkspaceCreate": "작업 공간이 없습니다. 아래의 새 작업 공간을 사용하세요."
+  }
 }

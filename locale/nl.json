@@ -73,8 +73,6 @@
   "dialog.renameGroup": "Groep hernoemen",
   "dialog.renameSession": "Sessie hernoemen",
   "dialog.deleteGroup": "Groep verwijderen",
-  "dialog.newSession": "Nieuwe sessie in een groep",
-  "dialog.newSessionWorkspace": "Kies een werkruimte",
   "dialog.groupColor": "Kleur wijzigen",
   "dialog.namePlaceholder": "Groepsnaam",
   "dialog.confirm": "Bevestigen",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "{n} subagent actief",
     "other": "{n} subagenten actief"
-  },
-  "dialog.newWorkspace": "Nieuwe werkruimte…",
-  "dialog.newWorkspaceBusy": "Map kiezen…",
-  "dialog.newWorkspaceFailed": "Werkruimte maken mislukt. Probeer het opnieuw.",
-  "dialog.noWorkspaceCreate": "Geen werkruimte beschikbaar — gebruik hieronder ‘Nieuwe werkruimte’."
+  }
 }

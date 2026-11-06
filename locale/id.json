@@ -73,8 +73,6 @@
   "dialog.renameGroup": "Ganti nama grup",
   "dialog.renameSession": "Ganti nama sesi",
   "dialog.deleteGroup": "Hapus grup",
-  "dialog.newSession": "Sesi baru di grup",
-  "dialog.newSessionWorkspace": "Pilih ruang kerja",
   "dialog.groupColor": "Ganti warna",
   "dialog.namePlaceholder": "Nama grup",
   "dialog.confirm": "Konfirmasi",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "{n} subagen berjalan",
     "other": "{n} subagen berjalan"
-  },
-  "dialog.newWorkspace": "Ruang kerja baru…",
-  "dialog.newWorkspaceBusy": "Memilih folder…",
-  "dialog.newWorkspaceFailed": "Tidak dapat membuat ruang kerja. Coba lagi.",
-  "dialog.noWorkspaceCreate": "Tidak ada ruang kerja — gunakan “Ruang kerja baru” di bawah."
+  }
 }

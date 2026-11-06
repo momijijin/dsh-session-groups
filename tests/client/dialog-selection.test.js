@@ -48,7 +48,6 @@ const fixture = () => {
 
 test('selection dialog kinds are exactly the small pickers plus group-color and delete-group', () => {
   assert.deepEqual([...SELECTION_DIALOG_KINDS], [
-    'new-session',
     'move-session',
     'move-group',
     'icon',
@@ -72,10 +71,6 @@ test('initial highlight: current icon/color/parent/group, inferred workspace, el
   assert.equal(initialDialogSelection({ kind: 'move-group', currentId: b }, doc), b)
   assert.equal(initialDialogSelection({ kind: 'move-group', currentId: null }, doc), null)
   assert.equal(initialDialogSelection({ kind: 'move-session' }, doc), undefined, 'missing current => nothing selected')
-  const choices = [{ workspaceId: 'w1' }, { workspaceId: 'w2' }]
-  assert.equal(initialDialogSelection({ kind: 'new-session', choices, inferred: 'w2' }, doc), 'w2')
-  assert.equal(initialDialogSelection({ kind: 'new-session', choices, inferred: 'w9' }, doc), undefined)
-  assert.equal(initialDialogSelection({ kind: 'new-session', choices: [] }, doc), undefined)
   assert.equal(initialDialogSelection(null, doc), undefined)
 })
 
@@ -87,10 +82,6 @@ test('validity: only offered options confirm; move-group rejects self and descen
   for (const bad of ['chartreuse', '', undefined, null, 3]) {
     assert.equal(selectionIsValid({ kind: 'group-color' }, bad, doc), false, `color ${String(bad)} must be invalid`)
   }
-  const choices = [{ workspaceId: 'w1' }, { workspaceId: 'w2' }]
-  assert.equal(selectionIsValid({ kind: 'new-session', choices }, 'w1', doc), true)
-  assert.equal(selectionIsValid({ kind: 'new-session', choices }, 'w9', doc), false)
-  assert.equal(selectionIsValid({ kind: 'new-session', choices: [] }, undefined, doc), false)
   assert.equal(selectionIsValid({ kind: 'move-session' }, a, doc), true)
   assert.equal(selectionIsValid({ kind: 'move-session' }, null, doc), true, 'Ungrouped is a valid move-session target')
   assert.equal(selectionIsValid({ kind: 'move-session' }, 'missing', doc), false)
@@ -112,7 +103,6 @@ test('unknown dialog kinds are invalid and never produce a partial payload', () 
 test('confirm payloads map to the host/model contract', () => {
   assert.deepEqual(dialogConfirmPayload({ kind: 'icon' }, 'star'), { icon: 'star' })
   assert.deepEqual(dialogConfirmPayload({ kind: 'group-color' }, 'purple'), { color: 'purple' })
-  assert.deepEqual(dialogConfirmPayload({ kind: 'new-session' }, 'w1'), { workspaceId: 'w1' })
   assert.deepEqual(dialogConfirmPayload({ kind: 'move-session' }, 'g1'), { groupId: 'g1' })
   assert.deepEqual(dialogConfirmPayload({ kind: 'move-session' }, null), { groupId: null })
   assert.deepEqual(dialogConfirmPayload({ kind: 'move-group' }, null), { groupId: null })

@@ -55,21 +55,6 @@ export const workspaceChoices = (doc, groupId, sessionsById, workspaces, current
   return { inferred: inferredId, choices: ordered }
 }
 
-/** Append a newly created workspace once; missing workspace ids are ignored. */
-export const workspaceDialogState = (dialog, workspace) => ({
-  choices: mergeWorkspaceChoices(dialog?.choices, workspace),
-  inferred: typeof workspace?.workspaceId === 'string' && workspace.workspaceId !== '' ? workspace.workspaceId : null,
-})
-
-export const mergeWorkspaceChoices = (choices, workspace) => {
-  const list = Array.isArray(choices) ? choices.slice() : []
-  const workspaceId = workspace?.workspaceId
-  if (typeof workspaceId === 'string' && workspaceId !== '' && !list.some((entry) => entry?.workspaceId === workspaceId)) {
-    list.push(workspace)
-  }
-  return list
-}
-
 /** Result of a host rename call: RemoteResult. */
 const assertRemoteOk = (result, fallback) => {
   if (result && result.ok === true) return result
@@ -90,15 +75,6 @@ const assertRemoteOk = (result, fallback) => {
  */
 export const createActions = ({ getServices, getDoc, commitDoc, notify, t, clipboard = null }) => {
   const services = () => getServices() ?? {}
-  const normalizeWorkspace = (workspace) => ({ ...workspace, workspaceId: workspace?.workspaceId ?? workspace?.id })
-  const workspaceFromResult = (result) => {
-    if (result?.ok === true) {
-      const value = result.value
-      return value?.workspace ?? value
-    }
-    if (result?.ok === false) throw new Error(result.error?.message ?? 'workspace-create-failed')
-    return result
-  }
 
   const renameSession = async (sessionId, title) => {
     const sessions = services().sessions
@@ -241,23 +217,6 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t, clipb
    * Returns `{ cancelled: true }` when the picker is dismissed, otherwise
    * `{ cancelled: false, workspace }` with the host workspace snapshot entry.
    */
-  const createWorkspaceFromDirectory = async () => {
-    const { uiWorkspace, workspaces } = services()
-    if (typeof uiWorkspace?.pickDirectory !== 'function') throw new Error('workspace-picker-unavailable')
-    if (typeof workspaces?.create !== 'function') throw new Error('workspace-create-unavailable')
-    const path = await uiWorkspace.pickDirectory()
-    if (typeof path !== 'string' || path.trim() === '') return { cancelled: true }
-    try {
-      const created = await workspaces.create({ path })
-      return { cancelled: false, workspace: normalizeWorkspace(workspaceFromResult(created)) }
-    } catch (error) {
-      // A directory that is already a workspace is not a failure: adopt it.
-      const items = workspaces?.list?.getSnapshot?.()?.items
-      const existing = Array.isArray(items) ? items.find((entry) => entry?.path === path) : null
-      if (existing) return { cancelled: false, workspace: normalizeWorkspace(existing) }
-      throw error
-    }
-  }
 
   /** Move a session to a group at an index (omit index = append) or out of all groups. */
   const moveSession = async (sessionId, groupId, index) => {
@@ -299,7 +258,6 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t, clipb
     forkSession,
     copySessionId,
     createSessionInGroup,
-    createWorkspaceFromDirectory,
     moveSession,
     workspaceForSession,
   }

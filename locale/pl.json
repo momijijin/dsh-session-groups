@@ -77,8 +77,6 @@
   "dialog.renameGroup": "Zmień nazwę grupy",
   "dialog.renameSession": "Zmień nazwę sesji",
   "dialog.deleteGroup": "Usuń grupę",
-  "dialog.newSession": "Nowa sesja w grupie",
-  "dialog.newSessionWorkspace": "Wybierz obszar roboczy",
   "dialog.groupColor": "Zmień kolor",
   "dialog.namePlaceholder": "Nazwa grupy",
   "dialog.confirm": "Potwierdź",
@@ -329,9 +327,5 @@
     "few": "Subagenty w toku: {n}",
     "many": "Subagentów w toku: {n}",
     "other": "Subagenta w toku: {n}"
-  },
-  "dialog.newWorkspace": "Nowa przestrzeń robocza…",
-  "dialog.newWorkspaceBusy": "Wybieranie folderu…",
-  "dialog.newWorkspaceFailed": "Nie udało się utworzyć przestrzeni roboczej. Spróbuj ponownie.",
-  "dialog.noWorkspaceCreate": "Brak przestrzeni roboczej — użyj „Nowa przestrzeń robocza” poniżej."
+  }
 }

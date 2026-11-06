@@ -617,8 +617,6 @@ export const CSS = `
 .dsg-dialog-input::placeholder { color: var(--dsw-alias-label-secondary, CanvasText); }
 .dsg-dialog-input:focus { outline: var(--dsw-focus-ring-width, 2px) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, #4d6bfe)); outline-offset: -1px; }
 .dsg-dialog-error { font-size: var(--dsg-font-11, 11px); color: var(--dsw-alias-state-error-primary, #f85149); }
-.dsg-dialog-new-workspace { flex: none; padding: 0 2px 4px; }
-.dsg-dialog-new-workspace .dsg-text-button { color: var(--dsw-alias-label-secondary, CanvasText); }
 .dsg-dialog-actions { flex: none; display: flex; justify-content: flex-end; gap: 10px; padding: 0; }
 .dsg-dialog-resizer { position: absolute; z-index: 3; touch-action: none; }
 .dsg-dialog-resizer[data-dir="n"] { top: -3px; left: 12px; right: 12px; height: 8px; cursor: ns-resize; }

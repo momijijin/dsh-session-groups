@@ -77,11 +77,12 @@ export const createDialogHandlers = ({ store, t, byId, workspaceItems, currentId
     },
     openNewSession: (event, groupId) => {
       const choices = workspaceChoices(store.doc, groupId, byId, workspaceItems, currentId)
-      if (choices.choices.length === 0 && rt()?.canCreateWorkspace?.() !== true) {
+      const workspaceId = choices.inferred ?? choices.choices[0]?.workspaceId
+      if (!workspaceId) {
         rt()?.showToast('error', t('dialog.noWorkspace'))
         return
       }
-      rt()?.openDialog({ kind: 'new-session', groupId, titleKey: 'dialog.newSession', choices: choices.choices, inferred: choices.inferred })
+      rt()?.newSessionInGroup?.(groupId, workspaceId)?.catch?.(() => {})
     },
     openRenameSession: (sessionId, title) => rt()?.openDialog({ kind: 'rename-session', sessionId, titleKey: 'dialog.renameSession', value: title ?? '' }),
     openMoveSession: (sessionId) =>

@@ -73,8 +73,6 @@
   "dialog.renameGroup": "เปลี่ยนชื่อกลุ่ม",
   "dialog.renameSession": "เปลี่ยนชื่อเซสชัน",
   "dialog.deleteGroup": "ลบกลุ่ม",
-  "dialog.newSession": "สร้างเซสชันใหม่ในกลุ่ม",
-  "dialog.newSessionWorkspace": "เลือกพื้นที่ทำงาน",
   "dialog.groupColor": "เปลี่ยนสี",
   "dialog.namePlaceholder": "ชื่อกลุ่ม",
   "dialog.confirm": "ยืนยัน",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "เอเจนต์ย่อย {n} รายการกำลังทำงาน",
     "other": "เอเจนต์ย่อย {n} รายการกำลังทำงาน"
-  },
-  "dialog.newWorkspace": "พื้นที่ทำงานใหม่…",
-  "dialog.newWorkspaceBusy": "กำลังเลือกโฟลเดอร์…",
-  "dialog.newWorkspaceFailed": "สร้างพื้นที่ทำงานไม่สำเร็จ โปรดลองอีกครั้ง",
-  "dialog.noWorkspaceCreate": "ไม่มีพื้นที่ทำงาน — ใช้ “พื้นที่ทำงานใหม่” ด้านล่าง"
+  }
 }

@@ -73,8 +73,6 @@
   "dialog.renameGroup": "Gruppe umbenennen",
   "dialog.renameSession": "Sitzung umbenennen",
   "dialog.deleteGroup": "Gruppe löschen",
-  "dialog.newSession": "Neue Sitzung in der Gruppe",
-  "dialog.newSessionWorkspace": "Arbeitsbereich auswählen",
   "dialog.groupColor": "Farbe ändern",
   "dialog.namePlaceholder": "Gruppenname",
   "dialog.confirm": "Bestätigen",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "{n} Subagent läuft",
     "other": "{n} Subagenten laufen"
-  },
-  "dialog.newWorkspace": "Neuer Arbeitsbereich…",
-  "dialog.newWorkspaceBusy": "Ordner wird ausgewählt…",
-  "dialog.newWorkspaceFailed": "Arbeitsbereich konnte nicht erstellt werden. Bitte erneut versuchen.",
-  "dialog.noWorkspaceCreate": "Kein Arbeitsbereich verfügbar — nutze unten „Neuer Arbeitsbereich“."
+  }
 }

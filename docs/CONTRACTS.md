@@ -220,10 +220,6 @@ Injected services:
 - `connection` — same-origin HTTP; `fetch` uses `document.baseURI` relative path.
 - `locale`, `ui` optional.
 
-### New-session workspace creation (0.4.0-beta.55)
-
-The `new-session` dialog offers **New workspace…** only when the host exposes both `uiWorkspace.pickDirectory()` and `workspaces.create({ path })`. The B flow picks a directory, creates the workspace, then reopens the same dialog with the new workspace selected (`inferred`); the user still presses Confirm. Cancellation leaves the dialog untouched. A duplicate directory is adopted from the workspace snapshot instead of creating a duplicate.
-
 Lifecycle:
 
 - One `ctx.effect`-managed controller owns the current `slots.inject('sidebar.workspaces')` disposer.
