@@ -7,7 +7,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
-const outfile = resolve(root, 'lib/client.js')
+const outDir = process.env.DSH_GROVE_BUILD_OUT ? resolve(process.env.DSH_GROVE_BUILD_OUT) : resolve(root, 'lib')
+const outfile = resolve(outDir, 'client.js')
 const lazyResources = resolve(root, 'src/client/i18n/resources-lazy.js')
 
 // The static resources module stays the Node/test truth; the browser bundle
@@ -88,7 +89,7 @@ window.__ModuleLoader__.load({
   factory: () => ({ language: '${language}', dictionary: ${JSON.stringify(dictionary)} })
 });
 `
-  const target = resolve(root, 'lib', chunkName)
+  const target = resolve(outDir, chunkName)
   await writeFile(target, chunk, 'utf8')
   chunkBytes += Buffer.byteLength(chunk)
 }

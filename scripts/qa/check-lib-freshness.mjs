@@ -1,14 +1,15 @@
 /**
  * Verify the committed lib/ output matches a fresh build from src/.
  *
- * The gate rebuilds into lib/ and compares content hashes before/after; a stale
- * bundle (or a source change without a rebuild) fails. It is intentionally
- * dependency-free and uses the same build script as the release workflow.
+ * Builds into a system temp directory and compares normalized content hashes;
+ * the repository's lib/ is never modified. A stale bundle (or a source change
+ * without a rebuild) fails.
  */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { tmpdir } from 'node:os'
 
 const root = process.cwd()
 const libDir = join(root, 'lib')
@@ -25,10 +26,10 @@ const walk = (dir, out = []) => {
   }
   return out
 }
-const digest = () => {
+const digest = (dir) => {
   const hash = createHash('sha256')
-  for (const file of walk(libDir).sort()) {
-    hash.update(relative(libDir, file).replaceAll('\\', '/'))
+  for (const file of walk(dir).sort()) {
+    hash.update(relative(dir, file).replaceAll('\\', '/'))
     hash.update('\0')
     hash.update(readFileSync(file, 'utf8').replaceAll('\r\n', '\n'))
     hash.update('\0')
@@ -36,11 +37,16 @@ const digest = () => {
   return hash.digest('hex')
 }
 
-const before = digest()
-execFileSync(process.execPath, [join(root, 'scripts', 'build-client.mjs')], { cwd: root, stdio: 'inherit' })
-const after = digest()
-if (before !== after) {
-  console.error(`lib freshness: FAILED; lib/ was stale (${before.slice(0, 12)} -> ${after.slice(0, 12)})`)
+const expected = digest(libDir)
+const tmp = mkdtempSync(join(tmpdir(), 'dsh-grove-lib-'))
+execFileSync(process.execPath, [join(root, 'scripts', 'build-client.mjs')], {
+  cwd: root,
+  stdio: 'inherit',
+  env: { ...process.env, DSH_GROVE_BUILD_OUT: tmp },
+})
+const built = digest(tmp)
+if (expected !== built) {
+  console.error(`lib freshness: FAILED; lib/ is stale (${expected.slice(0, 12)} -> ${built.slice(0, 12)})`)
   process.exit(1)
 }
-console.log(`lib freshness: OK (${after.slice(0, 12)})`)
+console.log(`lib freshness: OK (${expected.slice(0, 12)})`)
