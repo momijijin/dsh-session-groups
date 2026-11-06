@@ -171,6 +171,6 @@ git merge --no-ff main -m "merge: hotfix v<version> back to dev"
 
 - 最新已发布版本：`0.3.0-beta.76`（`v0.3.0-beta.76` 已发布）
 - 当前开发候选版本：以 `package.json` 的 `version` 为准；`0.4.0` 系列身份重置后仍处于本地 beta 候选，尚未发布
-- 当前测试：522/522 + 15 UI runtime cases + 1 browser runtime spec，coverage 约 92.3/82.9/89.1；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文；日文有 onboarding 语言包 fixture；19 种语言有全语言 header/dialog/group-menu/settings smoke；阿拉伯语 RTL 有菜单/弹窗 bounds + 设置面板 dir smoke）
+- 当前测试：529/529 + 17 UI runtime cases + 1 browser runtime spec，coverage 约 92.3/82.9/89.1；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文；日文有 onboarding 语言包 fixture；19 种语言有全语言 header/dialog/group-menu/settings smoke；阿拉伯语 RTL 有菜单/弹窗 bounds + 设置面板 dir smoke）
 - main / dev：以 `git log --oneline -1` 为准，允许分叉
 - 下一次开发从 `dev` 开新 feature 分支，不从 main 拉功能分支

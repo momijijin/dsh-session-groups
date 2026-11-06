@@ -216,9 +216,13 @@ Injected services:
 - `slots` — `sidebar.workspaces` (single, priority -1), `sidebar.footer.action` (list, id required).
 - `sessions` — `useSessions`; `sessions.using(id, { source:'workspaceOperation' }, ref => ref.binding.session.rename(title))` (exact shape Gate 0).
 - `workspaces` — `useWorkspaces`; membership。`workspaceDisplayTitle` **未暴露**，V1 自实现 `workspaceLabel(ws)`：`title?.trim() || basename(path) || workspaceId`。
-- `uiWorkspace` — `connectWorkspace(workspaceId)` returns session id, **does not navigate**; `startSession` returns void; `openSession(id)`; `archiveSession(id, { stopActivity:true })`; `unarchiveSession`; `pinSession`/`unpinSession`.
+- `uiWorkspace` — `pickDirectory()` returns a folder path or null; `connectWorkspace(workspaceId)` returns session id, **does not navigate**; `startSession` returns void; `openSession(id)`; `archiveSession(id, { stopActivity:true })`; `unarchiveSession`; `pinSession`/`unpinSession`.
 - `connection` — same-origin HTTP; `fetch` uses `document.baseURI` relative path.
 - `locale`, `ui` optional.
+
+### New-session workspace creation (0.4.0-beta.55)
+
+The `new-session` dialog offers **New workspace…** only when the host exposes both `uiWorkspace.pickDirectory()` and `workspaces.create({ path })`. The B flow picks a directory, creates the workspace, then reopens the same dialog with the new workspace selected (`inferred`); the user still presses Confirm. Cancellation leaves the dialog untouched. A duplicate directory is adopted from the workspace snapshot instead of creating a duplicate.
 
 Lifecycle:
 

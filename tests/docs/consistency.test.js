@@ -19,7 +19,7 @@ test('all packaged locale dictionaries are complete and aligned', () => {
   const files = readdirSync(resolve(root, 'locale')).filter((name) => name.endsWith('.json')).sort()
   assert.equal(files.length, 19)
   const reference = Object.keys(JSON.parse(readFileSync(resolve(root, 'locale', 'en.json'), 'utf8'))).sort()
-  assert.equal(reference.length, 288)
+  assert.equal(reference.length, 292)
   for (const file of files) {
     const keys = Object.keys(JSON.parse(readFileSync(resolve(root, 'locale', file), 'utf8'))).sort()
     assert.deepEqual(keys, reference, file)

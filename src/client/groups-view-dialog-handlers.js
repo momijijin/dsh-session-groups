@@ -77,7 +77,7 @@ export const createDialogHandlers = ({ store, t, byId, workspaceItems, currentId
     },
     openNewSession: (event, groupId) => {
       const choices = workspaceChoices(store.doc, groupId, byId, workspaceItems, currentId)
-      if (choices.choices.length === 0) {
+      if (choices.choices.length === 0 && rt()?.canCreateWorkspace?.() !== true) {
         rt()?.showToast('error', t('dialog.noWorkspace'))
         return
       }

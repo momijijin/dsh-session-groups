@@ -187,3 +187,14 @@ test('dialog move steps reject a no-op task without surfacing an error', async (
   await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(calls.notify.length, 0)
 })
+
+
+test('new session opens the dialog without workspaces when the host can create one', () => {
+  const calls = installRuntime({ canCreateWorkspace: () => true })
+  const dialog = dialogHandlers(calls)
+  dialog.openNewSession(undefined, 'g1')
+  assert.equal(calls.notify.length, 0)
+  assert.equal(calls.dialog.length, 1)
+  assert.equal(calls.dialog[0].kind, 'new-session')
+  assert.deepEqual(calls.dialog[0].choices, [])
+})

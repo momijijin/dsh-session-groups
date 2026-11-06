@@ -313,5 +313,9 @@
   "status.subagentsRunning": {
     "one": "{n} subagent actief",
     "other": "{n} subagenten actief"
-  }
+  },
+  "dialog.newWorkspace": "Nieuwe werkruimte…",
+  "dialog.newWorkspaceBusy": "Map kiezen…",
+  "dialog.newWorkspaceFailed": "Werkruimte maken mislukt. Probeer het opnieuw.",
+  "dialog.noWorkspaceCreate": "Geen werkruimte beschikbaar — gebruik hieronder ‘Nieuwe werkruimte’."
 }

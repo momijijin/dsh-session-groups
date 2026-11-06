@@ -313,5 +313,9 @@
   "status.subagentsRunning": {
     "one": "{n} subagente en ejecución",
     "other": "{n} subagentes en ejecución"
-  }
+  },
+  "dialog.newWorkspace": "Nuevo espacio de trabajo…",
+  "dialog.newWorkspaceBusy": "Eligiendo carpeta…",
+  "dialog.newWorkspaceFailed": "No se pudo crear el espacio de trabajo. Inténtalo de nuevo.",
+  "dialog.noWorkspaceCreate": "No hay ningún espacio de trabajo: usa «Nuevo espacio de trabajo» abajo."
 }

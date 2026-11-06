@@ -1,13 +1,13 @@
 # Test Matrix
 
-Status: `0.4.0-beta.54`  
+Status: `0.4.0-beta.55`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
 Automated gates are `npm run check:style`, `npm run check:lib`, `npm test`,
 `npm run check:coverage` and `npm run check:ui` in CI, plus
 `npm run check:style`, `npm run check:lib`, `npm run check:ui` and
-`npm run check:release` in the release workflow. `check:ui` is 15 UI runtime cases (1 module-load + 14 component tests, covering
+`npm run check:release` in the release workflow. `check:ui` is 17 UI runtime cases (1 module-load + 16 component tests, covering
 11 components) + 1 browser runtime spec, not full browser UI coverage. The A+ / LP rows below are
 manual local evidence: the release workflow does not start an isolated DSH
 instance or run Playwright, so a release note cannot claim A+ or all-locales as
@@ -17,7 +17,7 @@ an automated CI result.
 
 | Code | Meaning |
 |---|---|
-| `U` | Unit/contract tests: `npm test` (522 tests) |
+| `U` | Unit/contract tests: `npm test` (529 tests) |
 | `A+ C` | Isolated Playwright, community DSH Desktop 2.0.18 / DSH `0.2.1-rc.2` |
 | `A+ O` | Isolated Playwright, official DeepSeek Harness desktop 0.2.1.0 / DSH `0.2.1-rc.5` |
 | `LP` | Test-only all-locale pack (`e2e/fixtures/ja-locale-pack`): host catalog injection + active locale switch |
@@ -28,7 +28,7 @@ The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 `e2e/locale-pack.spec.mjs`, and `e2e/all-locales.spec.mjs` switches through
 every packaged dictionary and checks the header + new-group dialog.
 
-A+ C cell was re-run on `0.4.0-beta.53`; A+ O cell was re-run on `0.4.0-beta.54`; LP was re-run on `0.4.0-beta.54` (community and official isolated
+A+ C cell was re-run on `0.4.0-beta.53`; A+ O cell was re-run on `0.4.0-beta.55`; LP was re-run on `0.4.0-beta.55` (community and official isolated
 hosts). Earlier `.22` and `.30` cells remain historical artifacts.
 
 ## Environment matrix

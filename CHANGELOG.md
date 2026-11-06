@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.55 (new-session workspace creation)
+
+- Added "New workspace…" to the new-session dialog (only when host picker/create APIs exist).
+- B flow: pick folder -> create workspace -> return to dialog with it selected -> user confirms.
+- Added 4 locale keys across all 19 dictionaries; 529 tests.
+
 ## 0.4.0-beta.54 (audit closeout)
 
 - Added zero-dependency style and lib freshness gates in CI/release.
