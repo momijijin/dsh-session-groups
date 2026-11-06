@@ -91,6 +91,14 @@ const assertRemoteOk = (result, fallback) => {
 export const createActions = ({ getServices, getDoc, commitDoc, notify, t, clipboard = null }) => {
   const services = () => getServices() ?? {}
   const normalizeWorkspace = (workspace) => ({ ...workspace, workspaceId: workspace?.workspaceId ?? workspace?.id })
+  const workspaceFromResult = (result) => {
+    if (result?.ok === true) {
+      const value = result.value
+      return value?.workspace ?? value
+    }
+    if (result?.ok === false) throw new Error(result.error?.message ?? 'workspace-create-failed')
+    return result
+  }
 
   const renameSession = async (sessionId, title) => {
     const sessions = services().sessions
@@ -241,7 +249,7 @@ export const createActions = ({ getServices, getDoc, commitDoc, notify, t, clipb
     if (typeof path !== 'string' || path.trim() === '') return { cancelled: true }
     try {
       const created = await workspaces.create({ path })
-      return { cancelled: false, workspace: normalizeWorkspace(created) }
+      return { cancelled: false, workspace: normalizeWorkspace(workspaceFromResult(created)) }
     } catch (error) {
       // A directory that is already a workspace is not a failure: adopt it.
       const items = workspaces?.list?.getSnapshot?.()?.items

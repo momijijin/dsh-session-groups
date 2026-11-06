@@ -156,7 +156,7 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 ```text
 npm ci
 语法检查
-529 项单元/契约测试
+530 项单元/契约测试
 客户端构建
 coverage gate
 UI runtime smoke

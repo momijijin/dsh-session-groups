@@ -313,3 +313,16 @@ test('workspaceDialogState merges the new workspace and selects it (B flow)', ()
   assert.deepEqual(next.choices.map((entry) => entry.workspaceId), ['w1', 'w2'])
   assert.equal(next.inferred, 'w2')
 })
+
+
+test('createWorkspaceFromDirectory unwraps the host RemoteResult shape', async () => {
+  const { actions, services } = makeActions()
+  services.uiWorkspace.pickDirectory = async () => 'C:\\remote-result'
+  services.workspaces.create = async () => ({
+    ok: true,
+    value: { workspace: { workspaceId: 'w-remote', path: 'C:\\remote-result', title: 'Remote' } },
+  })
+  const result = await actions.createWorkspaceFromDirectory()
+  assert.equal(result.cancelled, false)
+  assert.equal(result.workspace.workspaceId, 'w-remote')
+})
