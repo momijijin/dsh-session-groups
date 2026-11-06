@@ -48,6 +48,7 @@ npm test
 npm run build
 node --check lib/client.js
 npm run check:coverage
+npm run check:ui
 npm run check:release
 npm run test:isolated
 ```
@@ -75,6 +76,7 @@ npm run test:all-locales
 
 - `npm test`、`npm run build`、`node --check lib/client.js`；
 - `npm run check:coverage`；
+- `npm run check:ui`（模块加载 smoke，不计入逻辑 coverage）；
 - `npm run check:release`：`package.json` / `dsh.plugin.json` / `src/shared/constants.js` / `package-lock.json` 四处版本一致，tag 必须为 `v<package.version>`，当前版本的 release note 存在，`lib/client.js` 已打上当前版本戳，`package.json.files` 中的每个路径存在；
 - 打包后生成 `SHA256SUMS`，并随 tgz 一起上传到 GitHub Release。
 

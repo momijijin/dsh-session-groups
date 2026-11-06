@@ -336,6 +336,7 @@ npm test
 npm run build
 node --check lib/client.js
 npm run check:coverage
+npm run check:ui
 npm run check:release
 npm pack
 ```
