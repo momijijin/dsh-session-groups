@@ -17,6 +17,13 @@ const flatten = (node, out = []) => {
   return out
 }
 const byTestId = (tree, id) => flatten(tree).find((node) => node.props?.['data-testid'] === id)
+const expand = (node) => {
+  if (Array.isArray(node)) return node.map(expand)
+  if (!node || typeof node !== 'object') return node
+  if (typeof node.type === 'function') return expand(node.type(node.props))
+  if (!node.type) return node
+  return { ...node, props: { ...node.props, children: expand(node.props?.children) } }
+}
 
 const uiModules = [
   'components.js',
@@ -230,4 +237,53 @@ test('FlatFallback renders session rows and retry/return actions', async () => {
   byTestId(tree, 'session-groups-return').props.onClick({ stopPropagation() {} })
   assert.equal(retried, 1)
   assert.equal(mode, 'workspace')
+})
+
+
+test('Header renders title/status counts/options and wires new-group/toggle', async () => {
+  const calls = []
+  installClientRuntime({
+    t: (key) => 'T:' + key,
+    toggleMode: () => calls.push('toggle'),
+  })
+  const { Header } = await import(new URL('../../src/client/components-header.js', import.meta.url))
+  const handlers = new Proxy({}, { get: (_target, prop) => (...args) => calls.push([String(prop), ...args]) })
+  const tree = expand(Header({
+    store: { archiveFilter: 'hidden', viewMode: 'groups' },
+    handlers,
+    sessionsById: {},
+    workspaces: [],
+    archivedSessionIds: [],
+    runningSessions: { count: 2, sections: [] },
+    blockedSessions: { count: 0, sections: [] },
+    unreadSessions: { count: 1, sections: [] },
+  }))
+  assert.equal(tree.props['data-testid'], 'session-groups-header')
+  assert.match(JSON.stringify(tree), /T:view\.title/)
+  assert.equal(byTestId(tree, 'session-groups-running-button').props['data-count'], '2')
+  assert.equal(byTestId(tree, 'session-groups-blocked-button').props['data-count'], '0')
+  assert.equal(byTestId(tree, 'session-groups-view-options').props['data-filter'], 'hidden')
+  byTestId(tree, 'session-groups-new-group').props.onClick({ stopPropagation() {} })
+  byTestId(tree, 'session-groups-toggle').props.onClick({ stopPropagation() {} })
+  assert.equal(calls[0][0], 'openNewGroup')
+  assert.equal(calls[0][2], null)
+  assert.equal(calls[1], 'toggle')
+})
+
+test('SessionRow renders current/running/archived data attributes', async () => {
+  installClientRuntime({ t: (key) => 'T:' + key, capabilities: { archive: true, unarchive: true } })
+  const { SessionRow } = await import(new URL('../../src/client/components-rows.js', import.meta.url))
+  const handlers = new Proxy({}, { get: () => () => {} })
+  const sessionNode = {
+    session: { id: 's-running', updatedAt: Date.now(), blank: false },
+    archived: false,
+    status: { running: true },
+    workspace: null,
+    runningSubagentCount: 1,
+  }
+  const tree = SessionRow({ sessionNode, depth: 0, groupId: 'g1', props: {}, handlers, store: { currentSessionId: 's-running' } })
+  assert.equal(tree.props['data-current'], 'true')
+  assert.equal(tree.props['data-archived'], 'false')
+  assert.equal(tree.props['data-depth'], '0')
+  assert.match(tree.props.class, /dsg-session-row/)
 })
