@@ -29,6 +29,7 @@ const uiModules = [
 ]
 
 test('client UI modules execute under a test React peer', async () => {
+  assert.equal(uiModules.length, 19)
   for (const file of uiModules) {
     const module = await import(new URL(`../../src/client/${file}`, import.meta.url))
     assert.ok(module && typeof module === 'object', `${file} did not load`)
