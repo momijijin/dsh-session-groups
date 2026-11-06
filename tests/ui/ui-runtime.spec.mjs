@@ -98,7 +98,9 @@ test('Rail renders the expand action and Toast renders only an active toast', as
   byTestId(rail, 'session-groups-rail-expand').props.onClick()
   assert.equal(expanded, 1)
   assert.equal(Toast({ store: { toast: null } }), null)
-  assert.equal(Toast({ store: { toast: { message: 'saved' } } }).props['data-testid'], 'session-groups-toast')
+  const toast = Toast({ store: { toast: { message: 'saved' } } });
+  assert.equal(toast.props['data-testid'], 'session-groups-toast')
+  assert.equal(toast.props.children, 'saved')
 })
 
 test('VirtualSpacer is deterministic and null-state surfaces return null', async () => {

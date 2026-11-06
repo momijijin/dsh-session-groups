@@ -342,7 +342,7 @@ npm pack
 ```
 
 - `npm test`: 522 unit/contract tests;
-- `npm run check:ui`: UI runtime smoke (19 client/UI modules + 5 component runtime cases; separate from logic coverage);
+- `npm run check:ui`: UI runtime smoke (5 UI runtime cases total (1 module-load + 4 component tests, covering 5 components); separate from logic coverage);
 - `npm run test:all-locales`: all 19 packaged languages + aliases through the test-only locale pack (requires an isolated web instance; manual local evidence, not a CI gate);
 - `npm run check:coverage`: Node built-in coverage (currently about 92.3% lines / 82.9% branches / 89.1% functions, `src/**` scope);
 - `npm run check:release`: release-workflow release gate; checks version consistency across `package.json` / `dsh.plugin.json` / `src/shared/constants.js` / `package-lock.json`, requires `GITHUB_REF_NAME` to equal `v<version>` when set, checks the release note, the `lib/client.js` version stamp and every `package.json.files` path;

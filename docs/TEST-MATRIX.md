@@ -6,7 +6,7 @@ and at which level. Other docs should link here instead of restating counts.
 
 Automated gates are `npm test`, `npm run check:coverage` and `npm run check:ui`
 in CI, plus `npm run check:ui` and `npm run check:release` in the release
-workflow. `check:ui` is a module-load + 5 component-render smoke, not full browser UI coverage. The A+ / LP rows below are
+workflow. `check:ui` is 5 UI runtime cases total (1 module-load + 4 component tests, covering 5 components), not full browser UI coverage. The A+ / LP rows below are
 manual local evidence: the release workflow does not start an isolated DSH
 instance or run Playwright, so a release note cannot claim A+ or all-locales as
 an automated CI result.

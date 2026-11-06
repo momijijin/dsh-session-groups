@@ -13,7 +13,7 @@
 - **UI component runtime**：`check:ui` 现在渲染 OnboardingCard / Banner / Rail / Toast / VirtualSpacer，共 5 个 runtime case；同时修复 Banner dismiss 调用未定义 `dispatch` 的真实崩溃。
 - **覆盖边界**：逻辑 coverage 仍由 `check:coverage` 守 92/80/85；UI runtime 仍是组件级 smoke，不等于完整浏览器 UI/A+。
 - **Release gate**：workflow 执行 `check:coverage` + `check:ui` + `check:release`；A+/all-locales 仍是手工本地证据。
-- **记录**：522 unit/contract + 5 UI runtime；coverage 约 92.3/82.9/89.1；A+ 证据仍为 `.42`。
+- **记录**：522 unit/contract + 5 UI runtime cases；coverage 约 92.3/82.9/89.1；A+ 证据仍为 `.42`。
 - 本批未发布；没有版本 tag 或 GitHub Release。
 
 ## 安装方式
@@ -93,6 +93,7 @@ release workflow 不运行 Playwright、不启动隔离 DSH 实例，也不会�
 
 - 522/522 单元/契约测试。
 - coverage：92.3% lines / 82.9% branches / 89.1% functions（Node coverage 合并存在 ±0.05 的重复运行抖动）。
+- UI runtime：5/5 cases（`npm run check:ui`）。
 - community A+：`0.4.0-beta.42` PASS；official A+：`0.4.0-beta.42` PASS（隔离 official host）；official all-locales 23/23 PASS；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。
 
 A+ / all-locales 结论均为手工本地证据（见上节），不是 CI 自动门禁的产物。

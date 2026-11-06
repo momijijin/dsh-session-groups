@@ -357,7 +357,7 @@ npm pack
 ```
 
 - `npm test`：522 项单元/契约测试
-- `npm run check:ui`：UI runtime smoke（19 个 client/UI 模块 + 5 个组件 runtime case；不并入逻辑 coverage）
+- `npm run check:ui`：UI runtime smoke（5 个 UI runtime case（1 个模块加载 + 4 个组件测试，覆盖 5 个组件）；不并入逻辑 coverage）
 - `npm run check:coverage`：Node 内置 coverage 报告（当前约 92.3% lines / 82.9% branches / 89.1% functions）
 - `npm run check:release`：release workflow 发布门禁；校验 `package.json` / `dsh.plugin.json` / `src/shared/constants.js` / `package-lock.json` 版本一致；设置了 `GITHUB_REF_NAME` 时要求 tag 等于 `v<version>`；并检查 release note、`lib/client.js` 版本戳和 `package.json.files` 的全部路径
 - 分层：`src/core` 纯函数核心，`src/adapters` 承载 DSH 版本适配；见 `docs/ARCHITECTURE.md`
