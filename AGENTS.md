@@ -86,13 +86,14 @@ git branch -d feature/<slug>
    npm run build
    node --check lib/client.js
    npm run check:coverage
+   npm run check:release
    npm pack --dry-run
    npm run test:isolated
    # 隔离 web + -LocalePack 上运行：
    # npm run test:locale-pack
    # npm run test:all-locales
    ```
-   全语言门禁结果必须记录在发布验证中；未跑或失败不得 release。
+   全语言门禁结果必须记录在发布验证中；未跑或失败不得 release。`check:release` 是可自动执行的结构门禁；A+ / all-locales 属于手工本地证据，release workflow 不会代跑。
 5. UI/行为改动必须有用户本地验收或对应 A+ 证据。
 
 ### 3.1.1 版本号消费策略
@@ -155,6 +156,10 @@ git merge --no-ff main -m "merge: hotfix v<version> back to dev"
 
 - `.github/workflows/ci.yml`：只检查 dev push / PR，不发布、不 bump 版本。
 - `.github/workflows/release.yml`：只监听 `v<semver>` 形态的版本 tag；`archive/*` 等分支归档 tag 永不触发发布。
+- release workflow 在 tag push 时运行 `npm test`、`npm run build`、`npm run check:coverage`、`npm run check:release`，并保留 tag 可达 `main` 的检查。
+- `npm run check:release` 校验：四处版本一致（`package.json` / `dsh.plugin.json` / `src/shared/constants.js` / `package-lock.json`）、tag 必须等于 `v<package.version>`、当前版本 release note 存在、`lib/client.js` 带版本戳、`package.json.files` 路径全部存在。
+- 打包后生成 `SHA256SUMS` 并随 tgz 上传到 GitHub Release；仅 prerelease tag（含 `-` 后缀，如 `-beta`）加 `--prerelease`，稳定版不加。
+- **A+ / all-locales 是手工本地证据，不是 CI 自动 gate**：release workflow 不运行 Playwright、不启动隔离 DSH 实例；未跑或失败不得 release，结果必须人工记录在发布说明。
 - CI 不自动决定版本号；版本号由发布准备阶段人工写入并验证。
 - release notes 文件名必须与版本 tag 对应；发布前检查 workflow 引用的 notes 路径。
 - 当前 repo 若仍是 `main` 为 GitHub 默认分支，建议在仓库设置中把默认分支改为 `dev`；main 保持发布视图。
@@ -163,6 +168,6 @@ git merge --no-ff main -m "merge: hotfix v<version> back to dev"
 
 - 最新已发布版本：`0.3.0-beta.76`（`v0.3.0-beta.76` 已发布）
 - 当前开发候选版本：以 `package.json` 的 `version` 为准；`0.4.0` 系列身份重置后仍处于本地 beta 候选，尚未发布
-- 当前测试：513/513，coverage 约 92.3/82.9/89.1；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文；日文有 onboarding 语言包 fixture；19 种语言有全语言 header/dialog/group-menu/settings smoke；阿拉伯语 RTL 有菜单/弹窗 bounds + 设置面板 dir smoke）
+- 当前测试：522/522，coverage 约 92.3/82.9/89.1；真实运行时证据以 `docs/TEST-MATRIX.md` 为准（完整 A+ 仅英文；日文有 onboarding 语言包 fixture；19 种语言有全语言 header/dialog/group-menu/settings smoke；阿拉伯语 RTL 有菜单/弹窗 bounds + 设置面板 dir smoke）
 - main / dev：以 `git log --oneline -1` 为准，允许分叉
 - 下一次开发从 `dev` 开新 feature 分支，不从 main 拉功能分支

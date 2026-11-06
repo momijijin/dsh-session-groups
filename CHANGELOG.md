@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-beta.46 (release gate hardening)
+
+- Release workflow now runs `check:coverage` + `check:release`, uploads a SHA256SUMS file, and only marks tags with a prerelease suffix as prerelease.
+- Added a zero-dependency release preflight for version/tag/release-note/bundle/packaged-path consistency, with 9 tests.
+- A+/all-locales remain documented manual evidence; the workflow does not fake them.
+- Tests: 522/522; no runtime/UI behavior change.
+
 ## 0.4.0-beta.45 (dead-export cleanup + guard)
 
 - Removed 27 production-unused exports across shared model, core tree/filter/virtual-list/drag/control, client components/diagnostics/icons/state and the DSH selector: 16 planned + 1 cascading session helper + 9 guard-discovered + `groupColorValue` exposed after the guard started ignoring comments; valuable assertions now run through production paths.
