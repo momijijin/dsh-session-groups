@@ -16,7 +16,7 @@ const makeDoc = () => ({
 })
 
 const installRuntime = (overrides = {}) => {
-  const calls = { dispatch: [], dialog: [], notify: [], resetLayout: 0, deleteGroupDirect: [], copy: [], archive: [] }
+  const calls = { dispatch: [], dialog: [], notify: [], resetLayout: 0, deleteGroupDirect: [], copy: [], archive: [], newSessions: [] }
   const runtime = {
     store: {
       doc: makeDoc(),
@@ -30,6 +30,10 @@ const installRuntime = (overrides = {}) => {
     },
     deleteGroupDirect: (groupId) => calls.deleteGroupDirect.push(groupId),
     copySessionId: (sessionId) => calls.copy.push(sessionId),
+    newSessionInGroup: (groupId, workspaceId) => {
+      calls.newSessions.push([groupId, workspaceId])
+      return Promise.resolve()
+    },
     archiveSession: (sessionId) => calls.archive.push(sessionId),
     unarchiveSession: () => {},
     forkSession: () => {},
@@ -179,6 +183,20 @@ test('new session without a workspace emits the localized error toast', () => {
   assert.equal(calls.notify.at(-1).message, 'dialog.noWorkspace')
 })
 
+test('new session uses the inferred workspace and does not open a dialog', () => {
+  const calls = installRuntime()
+  const dialog = createDialogHandlers({
+    store: { doc: makeDoc() },
+    t,
+    byId: {},
+    workspaceItems: [{ workspaceId: 'w1', title: 'Workspace one' }],
+    currentId: null,
+  })
+  dialog.openNewSession(undefined, 'g1')
+  assert.deepEqual(calls.newSessions, [['g1', 'w1']])
+  assert.deepEqual(calls.dialog, [])
+})
+
 test('dialog move steps reject a no-op task without surfacing an error', async () => {
   const calls = installRuntime({ commitOptimistic: () => Promise.resolve({ ok: true }) })
   const dialog = dialogHandlers(calls)
@@ -189,12 +207,4 @@ test('dialog move steps reject a no-op task without surfacing an error', async (
 })
 
 
-test('new session opens the dialog without workspaces when the host can create one', () => {
-  const calls = installRuntime({ canCreateWorkspace: () => true })
-  const dialog = dialogHandlers(calls)
-  dialog.openNewSession(undefined, 'g1')
-  assert.equal(calls.notify.length, 0)
-  assert.equal(calls.dialog.length, 1)
-  assert.equal(calls.dialog[0].kind, 'new-session')
-  assert.deepEqual(calls.dialog[0].choices, [])
-})
+

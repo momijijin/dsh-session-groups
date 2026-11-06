@@ -24,7 +24,6 @@ import {
 
 /** Dialog kinds whose body is a selectable option list. */
 export const SELECTION_DIALOG_KINDS = Object.freeze([
-  'new-session',
   'move-session',
   'move-group',
   'icon',
@@ -109,10 +108,6 @@ export const initialDialogSelection = (dialog, doc) => {
       if (hex) return hex
       return isKnownColor(dialog.current) ? dialog.current : DEFAULT_GROUP_COLOR
     }
-    case 'new-session': {
-      const choices = Array.isArray(dialog.choices) ? dialog.choices : []
-      return choices.some((workspace) => workspace?.workspaceId === dialog.inferred) ? dialog.inferred : undefined
-    }
     case 'move-session':
     case 'move-group':
       return dialog.currentId === undefined ? undefined : dialog.currentId
@@ -131,10 +126,6 @@ export const selectionIsValid = (dialog, selection, doc) => {
     }
     case 'group-color':
       return isKnownColor(selection) || isColorHex(selection)
-    case 'new-session': {
-      const choices = Array.isArray(dialog.choices) ? dialog.choices : []
-      return choices.some((workspace) => workspace?.workspaceId === selection)
-    }
     case 'move-session':
       return selection === null || (typeof selection === 'string' && findGroup(doc, selection) !== null)
     case 'move-group': {
@@ -161,8 +152,6 @@ export const dialogConfirmPayload = (dialog, selection) => {
       return { icon: selection }
     case 'group-color':
       return isColorHex(selection) ? { colorHex: selection } : { color: selection }
-    case 'new-session':
-      return { workspaceId: selection }
     case 'move-session':
     case 'move-group':
       return { groupId: selection }

@@ -73,8 +73,6 @@
   "dialog.renameGroup": "重命名分组",
   "dialog.renameSession": "重命名会话",
   "dialog.deleteGroup": "删除分组",
-  "dialog.newSession": "在分组内新建会话",
-  "dialog.newSessionWorkspace": "选择工作区",
   "dialog.groupColor": "修改颜色",
   "dialog.namePlaceholder": "分组名称",
   "dialog.confirm": "确定",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "{n} 个子智能体运行中",
     "other": "{n} 个子智能体运行中"
-  },
-  "dialog.newWorkspace": "新建工作区…",
-  "dialog.newWorkspaceBusy": "正在选择文件夹…",
-  "dialog.newWorkspaceFailed": "创建工作区失败，请重试。",
-  "dialog.noWorkspaceCreate": "暂无工作区——使用下方的新建工作区。"
+  }
 }

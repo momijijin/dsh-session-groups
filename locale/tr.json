@@ -73,8 +73,6 @@
   "dialog.renameGroup": "Grubu yeniden adlandır",
   "dialog.renameSession": "Oturumu yeniden adlandır",
   "dialog.deleteGroup": "Grubu sil",
-  "dialog.newSession": "Grupta yeni oturum",
-  "dialog.newSessionWorkspace": "Çalışma alanı seç",
   "dialog.groupColor": "Rengi değiştir",
   "dialog.namePlaceholder": "Grup adı",
   "dialog.confirm": "Onayla",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "{n} alt ajan çalışıyor",
     "other": "{n} alt ajan çalışıyor"
-  },
-  "dialog.newWorkspace": "Yeni çalışma alanı…",
-  "dialog.newWorkspaceBusy": "Klasör seçiliyor…",
-  "dialog.newWorkspaceFailed": "Çalışma alanı oluşturulamadı. Lütfen tekrar deneyin.",
-  "dialog.noWorkspaceCreate": "Çalışma alanı yok — aşağıdaki “Yeni çalışma alanı”nı kullanın."
+  }
 }

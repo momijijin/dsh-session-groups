@@ -4,8 +4,6 @@ import {
   classifyArchiveError,
   createActions,
   formatActivity,
-  mergeWorkspaceChoices,
-  workspaceDialogState,
   workspaceChoices,
   workspaceLabel,
 } from '../../src/client/actions.js'
@@ -242,87 +240,3 @@ test('workspaceForSession resolves the owning workspace and tolerates missing se
   assert.equal(actions.workspaceForSession('existing'), null)
 })
 
-
-test('createWorkspaceFromDirectory picks a folder, creates it and adopts duplicates', async () => {
-  const { actions, services, calls } = makeActions()
-  const created = []
-  services.uiWorkspace.pickDirectory = async () => 'C:\\new-workspace'
-  services.workspaces.create = async (input) => {
-    created.push(input)
-    return { workspaceId: 'w3', path: input.path, title: 'New workspace' }
-  }
-  const result = await actions.createWorkspaceFromDirectory()
-  assert.deepEqual(created, [{ path: 'C:\\new-workspace' }])
-  assert.equal(result.cancelled, false)
-  assert.equal(result.workspace.workspaceId, 'w3')
-  assert.equal(result.workspace.title, 'New workspace')
-
-  services.uiWorkspace.pickDirectory = async () => null
-  assert.deepEqual(await actions.createWorkspaceFromDirectory(), { cancelled: true })
-})
-
-test('createWorkspaceFromDirectory adopts an existing workspace when create refuses', async () => {
-  const { actions, services } = makeActions()
-  services.uiWorkspace.pickDirectory = async () => 'C:\\existing'
-  services.workspaces.list.getSnapshot = () => ({
-    items: [{ workspaceId: 'w-existing', path: 'C:\\existing', title: 'Existing' }],
-  })
-  services.workspaces.create = async () => {
-    throw new Error('already exists')
-  }
-  const result = await actions.createWorkspaceFromDirectory()
-  assert.equal(result.cancelled, false)
-  assert.equal(result.workspace.workspaceId, 'w-existing')
-})
-
-test('createWorkspaceFromDirectory reports missing host capabilities', async () => {
-  const { actions, services } = makeActions()
-  services.uiWorkspace.pickDirectory = undefined
-  await assert.rejects(() => actions.createWorkspaceFromDirectory(), /workspace-picker-unavailable/)
-})
-
-
-test('mergeWorkspaceChoices appends once and ignores a missing workspace id', () => {
-  const choices = [{ workspaceId: 'w1' }]
-  const workspace = { workspaceId: 'w2', title: 'Two' }
-  assert.deepEqual(mergeWorkspaceChoices(choices, workspace).map((entry) => entry.workspaceId), ['w1', 'w2'])
-  assert.deepEqual(mergeWorkspaceChoices([...choices, workspace], workspace).map((entry) => entry.workspaceId), ['w1', 'w2'])
-  assert.deepEqual(mergeWorkspaceChoices(choices, { title: 'missing' }), choices)
-})
-
-test('createWorkspaceFromDirectory treats blank paths as cancel and surfaces create failures', async () => {
-  const { actions, services } = makeActions()
-  services.uiWorkspace.pickDirectory = async () => '   '
-  services.workspaces.create = async () => ({ workspaceId: 'w-new' })
-  assert.deepEqual(await actions.createWorkspaceFromDirectory(), { cancelled: true })
-
-  services.uiWorkspace.pickDirectory = async () => 'C:\\new'
-  services.workspaces.create = undefined
-  await assert.rejects(() => actions.createWorkspaceFromDirectory(), /workspace-create-unavailable/)
-
-  services.workspaces.create = async () => {
-    throw new Error('permission denied')
-  }
-  await assert.rejects(() => actions.createWorkspaceFromDirectory(), /permission denied/)
-})
-
-
-test('workspaceDialogState merges the new workspace and selects it (B flow)', () => {
-  const dialog = { choices: [{ workspaceId: 'w1' }], inferred: 'w1' }
-  const next = workspaceDialogState(dialog, { workspaceId: 'w2', title: 'Two' })
-  assert.deepEqual(next.choices.map((entry) => entry.workspaceId), ['w1', 'w2'])
-  assert.equal(next.inferred, 'w2')
-})
-
-
-test('createWorkspaceFromDirectory unwraps the host RemoteResult shape', async () => {
-  const { actions, services } = makeActions()
-  services.uiWorkspace.pickDirectory = async () => 'C:\\remote-result'
-  services.workspaces.create = async () => ({
-    ok: true,
-    value: { workspace: { workspaceId: 'w-remote', path: 'C:\\remote-result', title: 'Remote' } },
-  })
-  const result = await actions.createWorkspaceFromDirectory()
-  assert.equal(result.cancelled, false)
-  assert.equal(result.workspace.workspaceId, 'w-remote')
-})

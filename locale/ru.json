@@ -77,8 +77,6 @@
   "dialog.renameGroup": "Переименовать группу",
   "dialog.renameSession": "Переименовать сессию",
   "dialog.deleteGroup": "Удалить группу",
-  "dialog.newSession": "Новая сессия в группе",
-  "dialog.newSessionWorkspace": "Выберите рабочее пространство",
   "dialog.groupColor": "Сменить цвет",
   "dialog.namePlaceholder": "Название группы",
   "dialog.confirm": "Подтвердить",
@@ -329,9 +327,5 @@
     "few": "{n} субагента работают",
     "many": "{n} субагентов работают",
     "other": "{n} субагента работает"
-  },
-  "dialog.newWorkspace": "Новое рабочее пространство…",
-  "dialog.newWorkspaceBusy": "Выбор папки…",
-  "dialog.newWorkspaceFailed": "Не удалось создать рабочее пространство. Повторите попытку.",
-  "dialog.noWorkspaceCreate": "Нет рабочего пространства — используйте «Новое рабочее пространство» ниже."
+  }
 }

@@ -73,8 +73,6 @@
   "dialog.renameGroup": "グループ名を変更",
   "dialog.renameSession": "セッション名を変更",
   "dialog.deleteGroup": "グループを削除",
-  "dialog.newSession": "グループ内に新しいセッション",
-  "dialog.newSessionWorkspace": "ワークスペースを選択",
   "dialog.groupColor": "色を変更",
   "dialog.namePlaceholder": "グループ名",
   "dialog.confirm": "OK",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "サブエージェント {n} 件が実行中",
     "other": "サブエージェント {n} 件が実行中"
-  },
-  "dialog.newWorkspace": "新しいワークスペース…",
-  "dialog.newWorkspaceBusy": "フォルダーを選択中…",
-  "dialog.newWorkspaceFailed": "ワークスペースを作成できませんでした。もう一度お試しください。",
-  "dialog.noWorkspaceCreate": "ワークスペースがありません。下の「新しいワークスペース」を使用してください。"
+  }
 }

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.0-beta.58 (new-session cleanup)
+
+- Removed the non-released new-session dialog and workspace-picker compatibility work.
+- Group plus/context menu now creates/reuses a session in the inferred workspace; the host owns workspace switching and creation.
+- Removed 6 dead locale keys (286 total); cleaned tests/docs.
+
+## 0.4.0-beta.57 (workspace creation diagnostics)
+
+- Surface the real host error in the new-workspace dialog/console.
+- 530 tests.
+
+## 0.4.0-beta.56 (install visibility fix)
+
+- Fixed desktop profile bundle registration so the plugin is visible after install.
+- Workspace creation errors now surface their real host detail.
+- 530 tests; 292 locale keys.
+
 ## 0.4.0-beta.55 (new-session workspace creation)
 
 - Added "New workspace…" to the new-session dialog (only when host picker/create APIs exist).

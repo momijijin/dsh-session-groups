@@ -73,8 +73,6 @@
   "dialog.renameGroup": "समूह का नाम बदलें",
   "dialog.renameSession": "सत्र का नाम बदलें",
   "dialog.deleteGroup": "समूह हटाएँ",
-  "dialog.newSession": "समूह में नया सत्र",
-  "dialog.newSessionWorkspace": "वर्कस्पेस चुनें",
   "dialog.groupColor": "रंग बदलें",
   "dialog.namePlaceholder": "समूह का नाम",
   "dialog.confirm": "पुष्टि करें",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "{n} सबएजेंट चल रहा है",
     "other": "{n} सबएजेंट चल रहे हैं"
-  },
-  "dialog.newWorkspace": "नया कार्यक्षेत्र…",
-  "dialog.newWorkspaceBusy": "फ़ोल्डर चुना जा रहा है…",
-  "dialog.newWorkspaceFailed": "कार्यक्षेत्र बनाया नहीं जा सका। कृपया पुनः प्रयास करें।",
-  "dialog.noWorkspaceCreate": "कोई कार्यक्षेत्र नहीं है — नीचे “नया कार्यक्षेत्र” चुनें।"
+  }
 }

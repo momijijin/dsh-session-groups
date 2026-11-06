@@ -73,8 +73,6 @@
   "dialog.renameGroup": "Đổi tên nhóm",
   "dialog.renameSession": "Đổi tên phiên",
   "dialog.deleteGroup": "Xóa nhóm",
-  "dialog.newSession": "Phiên mới trong nhóm",
-  "dialog.newSessionWorkspace": "Chọn không gian làm việc",
   "dialog.groupColor": "Đổi màu",
   "dialog.namePlaceholder": "Tên nhóm",
   "dialog.confirm": "Xác nhận",
@@ -313,9 +311,5 @@
   "status.subagentsRunning": {
     "one": "{n} tác nhân con đang chạy",
     "other": "{n} tác nhân con đang chạy"
-  },
-  "dialog.newWorkspace": "Không gian làm việc mới…",
-  "dialog.newWorkspaceBusy": "Đang chọn thư mục…",
-  "dialog.newWorkspaceFailed": "Không thể tạo không gian làm việc. Vui lòng thử lại.",
-  "dialog.noWorkspaceCreate": "Không có không gian làm việc — dùng “Không gian làm việc mới” bên dưới."
+  }
 }
