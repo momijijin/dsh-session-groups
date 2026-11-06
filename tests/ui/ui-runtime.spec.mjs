@@ -113,3 +113,75 @@ test('VirtualSpacer is deterministic and null-state surfaces return null', async
   assert.equal(MenuPopover({ store: { menu: null }, handlers: {} }), null)
   assert.equal(DialogHost({ store: { dialog: null }, props: {} }), null)
 })
+
+
+test('SessionRow renders title/status and wires open/archive/menu handlers', async () => {
+  installClientRuntime({
+    t: (key) => 'T:' + key,
+    capabilities: { archive: true, unarchive: true },
+    notify: (payload) => calls.push(['notify', payload]),
+  })
+  const calls = []
+  const handlers = {
+    openSession: (id) => calls.push(['open', id]),
+    onSessionContextMenu: () => {},
+    openSessionMenuAtRow: () => {},
+    onDragStart: () => {},
+    onDragEnd: () => {},
+    onDragOverSession: () => {},
+    onDragLeave: () => {},
+    onDropSession: () => {},
+    archiveSession: (id) => calls.push(['archive', id]),
+    unarchiveSession: () => {},
+    openSessionMenu: () => calls.push(['menu']),
+  }
+  const { SessionRow } = await import(new URL('../../src/client/components-rows.js', import.meta.url))
+  const sessionNode = {
+    session: { id: 's1', updatedAt: Date.now(), blank: false },
+    archived: false,
+    status: null,
+    workspace: null,
+    runningSubagentCount: 0,
+  }
+  const tree = SessionRow({ sessionNode, depth: 1, groupId: 'g1', props: {}, handlers, store: { currentSessionId: null } })
+  const row = byTestId(tree, 'session-groups-session')
+  assert.equal(row.props['data-session-id'], 's1')
+  assert.match(row.props.title, /T:session\.untitled|Session/)
+  row.props.onClick()
+  byTestId(tree, 'session-groups-session-archive').props.onClick({ stopPropagation() {} })
+  byTestId(tree, 'session-groups-session-menu').props.onClick({ stopPropagation() {} })
+  assert.deepEqual(calls, [['open', 's1'], ['archive', 's1'], ['menu']])
+})
+
+test('SessionRow archived click reports through the command runtime instead of throwing', async () => {
+  const notices = []
+  installClientRuntime({ t: (key) => key, capabilities: { unarchive: false }, notify: (payload) => notices.push(payload) })
+  const { SessionRow } = await import(new URL('../../src/client/components-rows.js', import.meta.url))
+  const sessionNode = { session: { id: 's2', updatedAt: Date.now(), blank: false }, archived: true, status: null }
+  const tree = SessionRow({ sessionNode, depth: 0, groupId: null, ungrouped: true, props: {}, handlers: {}, store: {} })
+  tree.props.onClick()
+  assert.equal(notices.length, 1)
+  assert.equal(notices[0].kind, 'error')
+})
+
+test('GroupNode renders header metadata and wires click/menu handlers', async () => {
+  const calls = []
+  installClientRuntime({ t: (key) => 'T:' + key })
+  const handlers = new Proxy({}, { get: (_target, prop) => (...args) => calls.push([String(prop), ...args]) })
+  const { GroupNode } = await import(new URL('../../src/client/components-rows.js', import.meta.url))
+  const doc = { groups: [{ id: 'g1', name: 'Group one', icon: 'folder', color: 'blue', parentId: null, sessionIds: [] }], ungrouped: [] }
+  const node = { group: doc.groups[0], children: [], visibleCount: 0, emptyVisible: true }
+  const tree = GroupNode({
+    node,
+    depth: 0,
+    props: {},
+    handlers,
+    store: { doc, collapsed: {}, dropTarget: null, draggedGroupId: null },
+  })
+  const row = byTestId(tree, 'session-groups-group')
+  assert.equal(row.props['data-group-id'], 'g1')
+  assert.equal(byTestId(tree, 'session-groups-group-count').props.children, 0)
+  row.props.onClick()
+  byTestId(tree, 'session-groups-group-menu').props.onClick({ stopPropagation() {} })
+  assert.deepEqual(calls.map((entry) => entry[0]), ['onGroupClick', 'openGroupMenu'])
+})
