@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.50 (menu/dialog/flat runtime slice)
+
+- Rendered non-null MenuPopover, DialogHost and FlatFallback; UI runtime now has 11 cases.
+- Fixed FlatFallback crash caused by a missing SessionStatusCell import (same missing-import class as Banner/SessionRow).
+- Tests: 522 unit/contract + 11 UI runtime cases.
+
 ## 0.4.0-beta.49 (UI row/group runtime slice)
 
 - Rendered SessionRow and GroupNode under the test React peer; UI runtime now has 8 cases.

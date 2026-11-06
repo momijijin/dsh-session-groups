@@ -185,3 +185,49 @@ test('GroupNode renders header metadata and wires click/menu handlers', async ()
   byTestId(tree, 'session-groups-group-menu').props.onClick({ stopPropagation() {} })
   assert.deepEqual(calls.map((entry) => entry[0]), ['onGroupClick', 'openGroupMenu'])
 })
+
+
+test('MenuPopover renders a group menu and dispatches an item through handlers', async () => {
+  const calls = []
+  installClientRuntime({ t: (key) => 'T:' + key, capabilities: { fork: () => false } })
+  const { MenuPopover } = await import(new URL('../../src/client/session-menu.js', import.meta.url))
+  const handlers = new Proxy({}, { get: (_target, prop) => (...args) => calls.push([String(prop), ...args]) })
+  const doc = { groups: [{ id: 'g1', name: 'Group one', icon: 'folder', color: 'blue', parentId: null, sessionIds: [] }], ungrouped: [] }
+  const tree = MenuPopover({ store: { doc, menu: { kind: 'group', groupId: 'g1', x: 10, y: 20, anchorX: 10, anchorY: 20 } }, handlers })
+  assert.equal(tree.props['data-menu-kind'], 'group')
+  assert.equal(tree.props['data-source-id'], 'g1')
+  const newSession = byTestId(tree, 'session-groups-group-new-session')
+  newSession.props.onClick({ stopPropagation() {} })
+  assert.deepEqual(calls[0], ['closeMenu'])
+  assert.deepEqual(calls[1], ['openNewSession', null, 'g1'])
+})
+
+test('DialogHost renders a new-group dialog from non-null store state', async () => {
+  installClientRuntime({ t: (key) => 'T:' + key })
+  const { DialogHost } = await import(new URL('../../src/client/dialog-host.js', import.meta.url))
+  const tree = DialogHost({ store: { dialog: { kind: 'new-group', titleKey: 'dialog.newGroup', parentId: null } }, props: {} })
+  assert.ok(byTestId(tree, 'session-groups-dialog'))
+  assert.ok(byTestId(tree, 'session-groups-dialog-input'))
+  assert.equal(byTestId(tree, 'session-groups-dialog-confirm').props.children, 'T:dialog.confirm')
+})
+
+test('FlatFallback renders session rows and retry/return actions', async () => {
+  let retried = 0
+  let mode = null
+  installClientRuntime({ t: (key) => 'T:' + key, retryLoad: () => { retried += 1 }, setMode: (next) => { mode = next }, actions: { openSession: () => {} } })
+  const { FlatFallback } = await import(new URL('../../src/client/components-header.js', import.meta.url))
+  const tree = FlatFallback({
+    store: {},
+    reason: 'route-unavailable',
+    props: {
+      useSessions: () => ({ ids: ['s1'], byId: { s1: { id: 's1', title: 'Session', origin: 'user' } } }),
+      useWorkspaces: () => ({ items: [] }),
+    },
+  })
+  assert.equal(tree.props['data-reason'], 'route-unavailable')
+  assert.equal(byTestId(tree, 'session-groups-session').props['data-session-id'], 's1')
+  byTestId(tree, 'session-groups-flat-retry').props.onClick({ stopPropagation() {} })
+  byTestId(tree, 'session-groups-return').props.onClick({ stopPropagation() {} })
+  assert.equal(retried, 1)
+  assert.equal(mode, 'workspace')
+})

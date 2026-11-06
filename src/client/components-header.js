@@ -16,7 +16,7 @@ import { renderGlyph, renderIcon } from './icons.js'
 import { perfRender } from './perf.js'
 
 import { SearchBox } from './components-search-box.js'
-import { dispatch, IconButton, TextButton } from './components-primitives.js'
+import { dispatch, IconButton, SessionStatusCell, TextButton } from './components-primitives.js'
 
 const h = createElement
 
