@@ -159,12 +159,13 @@ npm ci
 522 项单元/契约测试
 客户端构建
 coverage gate
+UI runtime smoke
 npm pack --dry-run
 ```
 
 它**不能**证明真实 DSH UI、真实 fence、sidebar slot、dshmarket 安装/更新在三个平台都可用。Linux/macOS 的真实 UI 在完成真实宿主回归前属于 experimental。
 
-发布侧另有 `.github/workflows/release.yml`，只在版本 tag push 时运行 `npm run check:coverage` 与 `npm run check:release`（版本一致 / tag 匹配 / release note / 客户端版本戳 / 打包路径），并生成 `SHA256SUMS` 随 tgz 上传。A+（`npm run test:isolated`）与 all-locales 是维护者本地手工证据，不在 CI / release workflow 中自动执行。
+发布侧另有 `.github/workflows/release.yml`，只在版本 tag push 时运行 `npm run check:coverage`、`npm run check:ui` 与 `npm run check:release`（版本一致 / tag 匹配 / release note / 客户端版本戳 / 打包路径），并生成 `SHA256SUMS` 随 tgz 上传。A+（`npm run test:isolated`）与 all-locales 是维护者本地手工证据，不在 CI / release workflow 中自动执行。
 
 ## 分发与更新
 

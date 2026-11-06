@@ -315,7 +315,7 @@ Only while `diagnostics` is on. It contains drag events, ids and timings, never 
 - writes use an in-process queue plus a short-lived `<record>.lock` file for cross-process serialization; stale locks are reclaimed after the owner PID dies or the lock is 30 seconds old;
 - large-list lazy rendering remains deferred; the current Ungrouped list is virtualized, but a collapsed subtree is still built by `buildRenderTree`;
 - the dshmarket catalog entry is not published yet; local tarball installs are for the beta period;
-- current release validation is **522 unit/contract tests**; the maintainer desktop pass is historical evidence, not a per-candidate CI artifact; `e2e/groups.spec.mjs` is a historical manual script, while the default scripted A+ is `e2e/isolated.spec.mjs` (run manually against an isolated host, not in CI). `npm run check:release` is the release-workflow-enforced structural release gate (version consistency, tag match, release note, bundle stamp, packaged paths); A+ and all-locales runs are manual local evidence, not CI artifacts.
+- current release validation is **522 unit/contract tests + 1 UI runtime smoke**; the maintainer desktop pass is historical evidence, not a per-candidate CI artifact; `e2e/groups.spec.mjs` is a historical manual script, while the default scripted A+ is `e2e/isolated.spec.mjs` (run manually against an isolated host, not in CI). `npm run check:release` is the release-workflow-enforced structural release gate (version consistency, tag match, release note, bundle stamp, packaged paths); A+ and all-locales runs are manual local evidence, not CI artifacts.
 
 ## Documentation
 
