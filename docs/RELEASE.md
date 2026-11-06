@@ -96,7 +96,7 @@ release workflow 不运行 Playwright、不启动隔离 DSH 实例，也不会�
 
 - 529/529 单元/契约测试。
 - coverage：92.3% lines / 82.9% branches / 89.1% functions（Node coverage 合并存在 ±0.05 的重复运行抖动）。
-- UI runtime：16/16 cases（`npm run check:ui`）。
+- UI runtime：17/17 cases（`npm run check:ui`）。
 - community A+：`0.4.0-beta.53` PASS（2026-11-06，隔离 community host）；official A+：`0.4.0-beta.55` PASS（2026-11-06，隔离 official host）；official locale-pack PASS；official all-locales 23/23 PASS（2026-11-06）；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。
 
 A+ / all-locales 结论均为手工本地证据（见上节），不是 CI 自动门禁的产物。
