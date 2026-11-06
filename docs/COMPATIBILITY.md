@@ -25,7 +25,7 @@ DSH 的 plugin client 是 **单个客户端 bundle**，没有为插件准备 `#i
 主支持：@deepseek-ai/dsh 0.2.1-rc.2 / 0.2.1-rc.5
 插件 engines.dsh: >=0.2.0-rc.2 <0.3.0
 
-已验证（最新一轮 A+：0.4.0-beta.42）：
+已验证（最新一轮 community A+：0.4.0-beta.53；official 为 0.4.0-beta.42）：
   community DSH Desktop Stable 2.0.18 (anywhere-labs) / DSH 0.2.1-rc.2
   official DeepSeek Harness desktop 0.2.1.0 / DSH 0.2.1-rc.5
     （官方 bundle DSH host/core 隔离 A+ + 维护者桌面窗口验收）
@@ -125,7 +125,7 @@ dsh-0.2  >=0.2.0-rc.2 <0.3.0
 
 ## 为什么优先能力检测
 
-- 目前 community Stable 与 official 两个桌面族都已有隔离实例证据（最新一轮 A+ 为 `0.4.0-beta.42`）；仍不为“壳名”写死版本分支，写死分支等于发布未测试代码。
+- 目前 community Stable 与 official 两个桌面族都已有隔离实例证据（最新一轮 community A+ 为 `0.4.0-beta.53`（official 仍为 `0.4.0-beta.42`））；仍不为“壳名”写死版本分支，写死分支等于发布未测试代码。
 - DSH 的扩展点本身是 service/slot 组合，能力检测比版本判断更精确。
 - 插件管理器已经承担版本范围拒绝；插件内部重复版本判断会制造双重真相源。
 
@@ -165,7 +165,7 @@ npm pack --dry-run
 
 它**不能**证明真实 DSH UI、真实 fence、sidebar slot、dshmarket 安装/更新在三个平台都可用。Linux/macOS 的真实 UI 在完成真实宿主回归前属于 experimental。
 
-发布侧另有 `.github/workflows/release.yml`，只在版本 tag push 时运行 `npm run check:coverage`、`npm run check:ui` 与 `npm run check:release`（版本一致 / tag 匹配 / release note / 客户端版本戳 / 打包路径），并生成 `SHA256SUMS` 随 tgz 上传。A+（`npm run test:isolated`）与 all-locales 是维护者本地手工证据，不在 CI / release workflow 中自动执行。
+发布侧另有 `.github/workflows/release.yml`，只在版本 tag push 时运行 `npm run check:style`、`npm run check:lib`、`npm run check:coverage`、`npm run check:ui` 与 `npm run check:release`（版本一致 / tag 匹配 / release note / 客户端版本戳 / 打包路径），并生成 `SHA256SUMS` 随 tgz 上传。A+（`npm run test:isolated`）与 all-locales 是维护者本地手工证据，不在 CI / release workflow 中自动执行。
 
 ## 分发与更新
 

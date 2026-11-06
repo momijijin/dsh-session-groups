@@ -9,7 +9,7 @@ A free-form grouping layer over the shipped DSH Desktop workspace/session sideba
 - session titles and archive state change only through explicit user actions or the opt-in `controlSessions` API;
 - `workspace.json` is never written.
 
-Current version: **0.4.0-beta.53**  
+Current version: **0.4.0-beta.54**  
 Primary support: **DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 and 0.2.1-rc.5** (`engines.dsh: >=0.2.0-rc.2 <0.3.0`)  
 Verified shells: **community DSH Desktop Stable 2.0.18** (rc.2) and **official DeepSeek Harness desktop 0.2.1.0** (rc.5, isolated runtime A+)  
 Not supported or promised: **community DSH Desktop Beta** and **community DSH NEXT (`-next` channel)**
@@ -332,8 +332,10 @@ Historical V1/V1.1 contracts and plans are indexed separately and are not curren
 ## Development
 
 ```powershell
+npm run check:style
 npm test
 npm run build
+npm run check:lib
 node --check lib/client.js
 npm run check:coverage
 npm run check:ui
@@ -342,8 +344,10 @@ npm pack
 ```
 
 - `npm test`: 522 unit/contract tests;
+- `npm run check:style`: zero-dependency style guard (tabs/trailing whitespace/final newline)
+- `npm run check:lib`: rebuild and verify lib/ is current with src/
 - `npm run test:ui-browser`: real-browser UI runtime coverage (isolated host; manual)
-- `npm run check:ui`: UI runtime smoke (15 UI runtime cases + 1 browser runtime spec total + 1 browser runtime spec (1 module-load + 14 component tests, covering 11 components); separate from logic coverage);
+- `npm run check:ui`: UI runtime smoke (15 UI runtime cases (1 module-load + 14 component tests, covering 11 components) + 1 browser runtime spec; separate from logic coverage);
 - `npm run test:all-locales`: all 19 packaged languages + aliases through the test-only locale pack (requires an isolated web instance; manual local evidence, not a CI gate);
 - `npm run check:coverage`: Node built-in coverage (currently about 92.3% lines / 82.9% branches / 89.1% functions, `src/**` scope);
 - `npm run check:release`: release-workflow release gate; checks version consistency across `package.json` / `dsh.plugin.json` / `src/shared/constants.js` / `package-lock.json`, requires `GITHUB_REF_NAME` to equal `v<version>` when set, checks the release note, the `lib/client.js` version stamp and every `package.json.files` path;
@@ -354,7 +358,7 @@ npm pack
 - `scripts/qa/lifecycle-isolated.ps1`: isolated install → uninstall → reinstall with record hash preservation;
 - `scripts/qa/start-isolated-web.ps1` + `npm run test:isolated`: A+ isolated Playwright smoke, including two-window concurrent CAS (manual local evidence; the release workflow does not run it);
 - build artifact: `lib/client.js`;
-- package: `dsh-session-grove-0.4.0-beta.53.tgz`;
+- package: `dsh-session-grove-0.4.0-beta.54.tgz`;
 - release steps: `docs/RELEASE.md`;
 - historical test snapshot: `docs/TEST-RESULTS.md` (0.4.0-beta.13; current status is `docs/TEST-MATRIX.md`).
 

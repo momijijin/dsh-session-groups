@@ -442,6 +442,6 @@ if (changeHub !== null) {
     )
   }
 
-  
+
   return { eventsPath, controlStatePath, controlCatalogPath, controlDoctorPath, controlResolvePath, controlPlanPath, controlApplyPath }
 }
