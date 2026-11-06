@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.51 (header/row-status runtime slice)
+
+- Rendered Header with running/blocked/unread counts and new-group/toggle wiring; added current/running SessionRow state assertions.
+- UI runtime now has 13 cases (1 module-load + 12 component tests, covering 11 components).
+- Tests: 522 unit/contract + 13 UI runtime cases.
+
 ## 0.4.0-beta.50 (menu/dialog/flat runtime slice)
 
 - Rendered non-null MenuPopover, DialogHost and FlatFallback; UI runtime now has 11 cases.
