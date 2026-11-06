@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.49 (UI row/group runtime slice)
+
+- Rendered SessionRow and GroupNode under the test React peer; UI runtime now has 8 cases.
+- Fixed SessionRow archived-click crash caused by a missing toast import (same class of bug as Banner dispatch).
+- Tests: 522 unit/contract + 8 UI runtime cases.
+
 ## 0.4.0-beta.48 (UI component runtime slice)
 
 - Rendered OnboardingCard, Banner, Rail, Toast and VirtualSpacer under the test React peer; 5 UI runtime cases total.

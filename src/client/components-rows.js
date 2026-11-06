@@ -20,6 +20,7 @@ import { perfRender } from './perf.js'
 import { displayDepth, groupPath, isExpanded, sessionStatuses } from '../core/tree.js'
 
 import { SessionStatusCell, sessionTime, menuKeyHandler, DropPlaceholder, EmptyDropBox, IconButton, GROUP_PLACEHOLDER_HEIGHT, SESSION_PLACEHOLDER_HEIGHT } from './components-primitives.js'
+import { toast } from './components-primitives.js'
 
 const h = createElement
 
