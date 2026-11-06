@@ -5,16 +5,16 @@
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
-- 状态：522/522 测试；A+ 为 `0.4.0-beta.53` community 实测证据（手工本地，非 CI 自动门禁）；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
+- 状态：522/522 测试；community A+ `0.4.0-beta.53` / official A+ `0.4.0-beta.54` 实测证据（手工本地，非 CI 自动门禁）；official ja 语言包 A+ PASS；all-locales 23/23 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
 - 发布包：`dsh-session-grove-0.4.0-beta.54.tgz`
 
 ## 本版重点
 
 - **Audit closeout**：新增 zero-dependency `check:style` 与 `check:lib`（lib 与 src 重建一致性）门禁，并接入 CI/release。
-- **A+ 证据**：community A+ 已在 `0.4.0-beta.53` 隔离宿主重跑 PASS（2026-11-06）；official A+ 仍为 `.42` 历史证据。
+- **A+ 证据**：community A+ 已在 `0.4.0-beta.53`、official A+ 已在 `0.4.0-beta.54` 隔离宿主重跑 PASS（2026-11-06）；official locale-pack 与 all-locales 23/23 同日 PASS。
 - **锁文件**：删除过期 `pnpm-lock.yaml` 并按当前 peer/dev 依赖重建。
 - **UI runtime**：15 个组件 case + 1 个真实浏览器 spec；不冒充 A+。
-- **记录**：522 unit/contract；coverage 约 92.3/82.9/89.1。本批未发布。
+- **记录**：522 unit/contract；coverage 约 92.3/82.9/89.1；发布 tag `v0.4.0-beta.54`。
 
 ## 安装方式
 
@@ -97,6 +97,6 @@ release workflow 不运行 Playwright、不启动隔离 DSH 实例，也不会�
 - 522/522 单元/契约测试。
 - coverage：92.3% lines / 82.9% branches / 89.1% functions（Node coverage 合并存在 ±0.05 的重复运行抖动）。
 - UI runtime：5/5 cases（`npm run check:ui`）。
-- community A+：`0.4.0-beta.53` PASS（2026-11-06，隔离 community host）；official A+：`0.4.0-beta.42` PASS（历史证据，隔离 official host）；official all-locales 23/23 PASS；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。
+- community A+：`0.4.0-beta.53` PASS（2026-11-06，隔离 community host）；official A+：`0.4.0-beta.54` PASS（2026-11-06，隔离 official host）；official locale-pack PASS；official all-locales 23/23 PASS（2026-11-06）；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。
 
 A+ / all-locales 结论均为手工本地证据（见上节），不是 CI 自动门禁的产物。

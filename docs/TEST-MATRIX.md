@@ -28,7 +28,7 @@ The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 `e2e/locale-pack.spec.mjs`, and `e2e/all-locales.spec.mjs` switches through
 every packaged dictionary and checks the header + new-group dialog.
 
-A+ C cell was re-run on `0.4.0-beta.53`; A+ O cell remains `0.4.0-beta.42` (community and official isolated
+A+ C cell was re-run on `0.4.0-beta.53`; A+ O cell was re-run on `0.4.0-beta.54`; LP was re-run on `0.4.0-beta.54` (community and official isolated
 hosts). Earlier `.22` and `.30` cells remain historical artifacts.
 
 ## Environment matrix
