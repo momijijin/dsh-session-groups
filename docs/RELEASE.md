@@ -1,20 +1,20 @@
-# 0.4.0-beta.53 发布与安装说明
+# 0.4.0-beta.54 发布与安装说明
 
-- 版本：`0.4.0-beta.53`
+- 版本：`0.4.0-beta.54`
 - 包名：`dsh-session-grove`
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
-- 状态：522/522 测试；A+ 为 `0.4.0-beta.42` 实测证据（手工本地，非 CI 自动门禁）；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
-- 发布包：`dsh-session-grove-0.4.0-beta.53.tgz`
+- 状态：522/522 测试；A+ 为 `0.4.0-beta.53` community 实测证据（手工本地，非 CI 自动门禁）；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
+- 发布包：`dsh-session-grove-0.4.0-beta.54.tgz`
 
 ## 本版重点
 
-- **Real-browser UI runtime**：新增 `e2e/ui-runtime.spec.mjs` 与 `npm run test:ui-browser`，在隔离宿主上驱动 UI 并记录 dsh-session-grove client bundle 的 Chromium JS coverage；不放进 CI。
-- **U2 component runtime**：15 个组件级 case（1 模块加载 + 14 组件测试，覆盖 11 个组件）。
-- **真实修复**：Banner dispatch、SessionRow toast、FlatFallback SessionStatusCell 三个缺失导入 bug 已修复并有回归用例。
-- **证据边界**：逻辑 coverage 仍守 92/80/85；browser spec 是手工隔离宿主证据，不等于 A+，A+ 仍为 `.42`。
-- **记录**：522 unit/contract + 15 component runtime + 1 browser runtime；本批未发布。
+- **Audit closeout**：新增 zero-dependency `check:style` 与 `check:lib`（lib 与 src 重建一致性）门禁，并接入 CI/release。
+- **A+ 证据**：community A+ 已在 `0.4.0-beta.53` 隔离宿主重跑 PASS（2026-11-06）；official A+ 仍为 `.42` 历史证据。
+- **锁文件**：删除过期 `pnpm-lock.yaml` 并按当前 peer/dev 依赖重建。
+- **UI runtime**：15 个组件 case + 1 个真实浏览器 spec；不冒充 A+。
+- **记录**：522 unit/contract；coverage 约 92.3/82.9/89.1。本批未发布。
 
 ## 安装方式
 
@@ -26,7 +26,7 @@
 # 以本地 desktop profile 为例
 DeepSeek Harness.exe --expose-internals `
   "C:\Users\<user>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
-  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.53.tgz"
+  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.54.tgz"
 ```
 
 安装后必须重启对应桌面客户端。先卸载旧的 `dsh-session-groups`；不要在同一 profile 中并存两个身份。
@@ -44,8 +44,10 @@ DeepSeek Harness.exe --expose-internals `
 除单元测试外，发布候选必须运行以下门禁并记录结果；任一失败不得进入 release：
 
 ```bash
+npm run check:style
 npm test
 npm run build
+npm run check:lib
 node --check lib/client.js
 npm run check:coverage
 npm run check:ui
@@ -74,7 +76,7 @@ npm run test:all-locales
 
 `.github/workflows/release.yml` 自动执行的结构门禁：
 
-- `npm test`、`npm run build`、`node --check lib/client.js`；
+- `npm run check:style`、`npm test`、`npm run build`、`npm run check:lib`、`node --check lib/client.js`；
 - `npm run check:coverage`；
 - `npm run check:ui`（模块加载 smoke，不计入逻辑 coverage）；
 - `npm run check:release`：`package.json` / `dsh.plugin.json` / `src/shared/constants.js` / `package-lock.json` 四处版本一致，tag 必须为 `v<package.version>`，当前版本的 release note 存在，`lib/client.js` 已打上当前版本戳，`package.json.files` 中的每个路径存在；
@@ -95,6 +97,6 @@ release workflow 不运行 Playwright、不启动隔离 DSH 实例，也不会�
 - 522/522 单元/契约测试。
 - coverage：92.3% lines / 82.9% branches / 89.1% functions（Node coverage 合并存在 ±0.05 的重复运行抖动）。
 - UI runtime：5/5 cases（`npm run check:ui`）。
-- community A+：`0.4.0-beta.42` PASS；official A+：`0.4.0-beta.42` PASS（隔离 official host）；official all-locales 23/23 PASS；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。
+- community A+：`0.4.0-beta.53` PASS（2026-11-06，隔离 community host）；official A+：`0.4.0-beta.42` PASS（历史证据，隔离 official host）；official all-locales 23/23 PASS；Arabic RTL 视觉验收：2026-11-05 PASS（独立 official isolated profile 注入 + 人工审阅截图）。
 
 A+ / all-locales 结论均为手工本地证据（见上节），不是 CI 自动门禁的产物。

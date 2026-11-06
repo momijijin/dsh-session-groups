@@ -82,8 +82,10 @@ git branch -d feature/<slug>
 3. 仅当这一批确定要发 Release 时，才新建或更新 `docs/release-notes/v<version>.md`。
 4. 运行：
    ```bash
+   npm run check:style
    npm test
    npm run build
+   npm run check:lib
    node --check lib/client.js
    npm run check:coverage
    npm run check:ui

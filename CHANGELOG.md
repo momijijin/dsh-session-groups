@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-beta.54 (audit closeout)
+
+- Added zero-dependency style and lib freshness gates in CI/release.
+- Rebuilt pnpm lock from current dependencies.
+- Re-ran community A+ on .53 (2026-11-06 PASS); official remains .42.
+- Bumped version and aligned docs.
+
 ## 0.4.0-beta.53 (real-browser UI runtime spec)
 
 - Added a manual real-browser UI runtime spec using the isolated host; it drives the main UI and records Chromium JS coverage for the bundled dsh-session-grove client.

@@ -9,7 +9,7 @@
 - 会话标题、归档状态只在用户主动操作或开启 `controlSessions` 时由受控接口改变；
 - 不写入 `workspace.json`。
 
-当前版本：**0.4.0-beta.53**  
+当前版本：**0.4.0-beta.54**  
 主要支持：**DSH core/API `@deepseek-ai/dsh` 0.2.1-rc.2 与 0.2.1-rc.5**（`engines.dsh: >=0.2.0-rc.2 <0.3.0`）  
 已验证桌面壳：**社区版 DSH Desktop Stable 2.0.18**（rc.2）与**官方 DeepSeek Harness 桌面版 0.2.1.0**（rc.5，隔离运行时 A+）  
 不官方支持、不承诺兼容：**社区版 DSH Desktop Beta**、**社区版 DSH NEXT（`-next` 通道）**
@@ -347,8 +347,10 @@ node scripts/session-grove-control.mjs doctor
 ## 开发
 
 ```powershell
+npm run check:style
 npm test
 npm run build
+npm run check:lib
 node --check lib/client.js
 npm run check:coverage
 npm run check:ui
@@ -357,6 +359,8 @@ npm pack
 ```
 
 - `npm test`：522 项单元/契约测试
+- `npm run check:style`: zero-dependency style guard (tabs/trailing whitespace/final newline)
+- `npm run check:lib`: rebuild and verify lib/ is current with src/
 - `npm run test:ui-browser`: real-browser UI runtime coverage (isolated host; manual)
 - `npm run check:ui`：UI runtime smoke（15 个 UI runtime case + 1 个浏览器 runtime spec（1 个模块加载 + 14 个组件测试，覆盖 11 个组件）；不并入逻辑 coverage）
 - `npm run check:coverage`：Node 内置 coverage 报告（当前约 92.3% lines / 82.9% branches / 89.1% functions）
@@ -372,7 +376,7 @@ npm pack
   - 必须先启动独立 web，取得 `web.json` 的 URL 和 testHome
   - Playwright 拒绝真实 43120 端口和真实 `~/.dsh`
 - 构建产物：`lib/client.js`
-- 发布包：`dsh-session-grove-0.4.0-beta.53.tgz`
+- 发布包：`dsh-session-grove-0.4.0-beta.54.tgz`
 - 详细发布步骤见 `docs/RELEASE.md`
 - 历史测试快照见 `docs/TEST-RESULTS.md`（0.4.0-beta.13；当前状态以 `docs/TEST-MATRIX.md` 为准）
 

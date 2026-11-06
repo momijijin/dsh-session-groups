@@ -42,8 +42,10 @@ jobs:
 
       - name: Verify release
         run: |
+          npm run check:style
           npm test
           npm run build
+          npm run check:lib
           node --check lib/client.js
           npm run check:coverage
           npm run check:ui

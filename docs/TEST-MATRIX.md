@@ -1,12 +1,14 @@
 # Test Matrix
 
-Status: `0.4.0-beta.53`  
+Status: `0.4.0-beta.54`  
 This file is the single source of truth for **what has actually been verified**
 and at which level. Other docs should link here instead of restating counts.
 
-Automated gates are `npm test`, `npm run check:coverage` and `npm run check:ui`
-in CI, plus `npm run check:ui` and `npm run check:release` in the release
-workflow. `check:ui` is 15 UI runtime cases + 1 browser runtime spec total + 1 browser runtime spec (1 module-load + 14 component tests, covering 11 components), not full browser UI coverage. The A+ / LP rows below are
+Automated gates are `npm run check:style`, `npm run check:lib`, `npm test`,
+`npm run check:coverage` and `npm run check:ui` in CI, plus
+`npm run check:style`, `npm run check:lib`, `npm run check:ui` and
+`npm run check:release` in the release workflow. `check:ui` is 15 UI runtime cases (1 module-load + 14 component tests, covering
+11 components) + 1 browser runtime spec, not full browser UI coverage. The A+ / LP rows below are
 manual local evidence: the release workflow does not start an isolated DSH
 instance or run Playwright, so a release note cannot claim A+ or all-locales as
 an automated CI result.
@@ -26,7 +28,7 @@ The default English A+ is `e2e/isolated.spec.mjs`; the language-pack A+ is
 `e2e/locale-pack.spec.mjs`, and `e2e/all-locales.spec.mjs` switches through
 every packaged dictionary and checks the header + new-group dialog.
 
-A+ C/O cells were re-run on `0.4.0-beta.42` (community and official isolated
+A+ C cell was re-run on `0.4.0-beta.53`; A+ O cell remains `0.4.0-beta.42` (community and official isolated
 hosts). Earlier `.22` and `.30` cells remain historical artifacts.
 
 ## Environment matrix

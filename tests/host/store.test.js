@@ -164,7 +164,7 @@ test('H6a: a corrupt record recovers the previous valid .bak and preserves the c
   const second = await temp.store.commit(1, { ...sampleDoc(), ungrouped: ['s-4', 's-5'] })
   assert.equal(second.kind, 'ok')
   assert.equal(second.revision, 2)
-  const garbage = '{"version":1,"revision":2,"groups":[' 
+  const garbage = '{"version":1,"revision":2,"groups":['
   await writeFile(temp.filePath, garbage, 'utf8')
 
   const result = await temp.store.load()
