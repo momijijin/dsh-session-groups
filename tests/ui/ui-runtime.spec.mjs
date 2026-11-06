@@ -287,3 +287,34 @@ test('SessionRow renders current/running/archived data attributes', async () => 
   assert.equal(tree.props['data-depth'], '0')
   assert.match(tree.props.class, /dsg-session-row/)
 })
+
+
+test('MenuPopover renders a session menu with fork/archive/copy actions', async () => {
+  const calls = []
+  installClientRuntime({ t: (key) => 'T:' + key, capabilities: { fork: () => true } })
+  const { MenuPopover } = await import(new URL('../../src/client/session-menu.js', import.meta.url))
+  const handlers = new Proxy({}, { get: (_target, prop) => (...args) => calls.push([String(prop), ...args]) })
+  const doc = { groups: [{ id: 'g1', name: 'G', icon: 'folder', color: 'blue', parentId: null, sessionIds: ['s1'] }], ungrouped: [] }
+  const tree = MenuPopover({ store: { doc, menu: { kind: 'session', sessionId: 's1', title: 'Session', archived: false, blank: false, x: 10, y: 20 } }, handlers })
+  assert.equal(tree.props['data-menu-kind'], 'session')
+  assert.equal(tree.props['data-source-id'], 's1')
+  const labels = flatten(tree).map((node) => node.props?.children).filter((child) => typeof child === 'string')
+  assert.ok(labels.includes('T:session.fork'))
+  assert.ok(labels.includes('T:session.copyId'))
+  const rename = flatten(tree).find((node) => node.props?.children === 'T:session.rename')
+  rename.props.onClick({ stopPropagation() {} })
+  assert.deepEqual(calls[0], ['closeMenu'])
+  assert.deepEqual(calls[1], ['openRenameSession', 's1', 'Session'])
+})
+
+test('DialogHost renders a rename-group dialog with a non-null title input', async () => {
+  installClientRuntime({ t: (key) => 'T:' + key })
+  const { DialogHost } = await import(new URL('../../src/client/dialog-host.js', import.meta.url))
+  const doc = { groups: [{ id: 'g1', name: 'Group one', icon: 'folder', color: 'blue', parentId: null, sessionIds: [] }], ungrouped: [] }
+  const tree = DialogHost({ store: { doc, dialog: { kind: 'rename-group', groupId: 'g1', titleKey: 'dialog.renameGroup', value: 'Group one' } }, props: {} })
+  const dialog = byTestId(tree, 'session-groups-dialog')
+  assert.ok(dialog)
+  assert.equal(dialog.props['data-kind'], 'rename-group')
+  assert.ok(byTestId(tree, 'session-groups-dialog-input'))
+  assert.equal(byTestId(tree, 'session-groups-dialog-cancel').props.children, 'T:dialog.cancel')
+})

@@ -1,19 +1,19 @@
-# 0.4.0-beta.51 发布与安装说明
+# 0.4.0-beta.52 发布与安装说明
 
-- 版本：`0.4.0-beta.51`
+- 版本：`0.4.0-beta.52`
 - 包名：`dsh-session-grove`
 - 插件显示名：Free Groups / 自由分组
 - DSH core：`@deepseek-ai/dsh` 0.2.1-rc.2（community）/ 0.2.1-rc.5（official）
 - 已验证桌面壳：社区版 DSH Desktop **Stable** 2.0.18；官方 DeepSeek Harness 桌面版 0.2.1.0
 - 状态：522/522 测试；A+ 为 `0.4.0-beta.42` 实测证据（手工本地，非 CI 自动门禁）；第三方 ja 语言包 A+ PASS；23 例全语言注入切换 PASS（含阿拉伯语 RTL）；完整语言/运行时矩阵见 [TEST-MATRIX.md](TEST-MATRIX.md)
-- 发布包：`dsh-session-grove-0.4.0-beta.51.tgz`
+- 发布包：`dsh-session-grove-0.4.0-beta.52.tgz`
 
 ## 本版重点
 
-- **UI component runtime**：`check:ui` 现在 13 个 case（1 模块加载 + 12 组件测试，覆盖 11 个组件）；新增 Header 完整 props 与 current/running SessionRow 状态。
+- **U2 UI runtime closeout**：`check:ui` 现在 15 个 case（1 模块加载 + 14 组件测试，覆盖 11 个组件），包含 session MenuPopover 与 rename-group DialogHost。
 - **真实修复**：Banner dispatch、SessionRow toast、FlatFallback SessionStatusCell 三个缺失导入 bug 已修复并有回归用例。
 - **覆盖边界**：逻辑 coverage 仍守 92/80/85；UI runtime 是组件级 smoke，不等于完整浏览器 UI/A+。
-- **记录**：522 unit/contract + 13 UI runtime cases；coverage 约 92.3/82.9/89.1；A+ 证据仍为 `.42`。
+- **记录**：522 unit/contract + 15 UI runtime cases；coverage 约 92.3/82.9/89.1；A+ 证据仍为 `.42`。
 - 本批未发布；没有版本 tag 或 GitHub Release。
 
 ## 安装方式
@@ -26,7 +26,7 @@
 # 以本地 desktop profile 为例
 DeepSeek Harness.exe --expose-internals `
   "C:\Users\<user>\AppData\Local\Programs\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
-  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.51.tgz"
+  plugin --profile desktop add --force "file:<path>\dsh-session-grove-0.4.0-beta.52.tgz"
 ```
 
 安装后必须重启对应桌面客户端。先卸载旧的 `dsh-session-groups`；不要在同一 profile 中并存两个身份。
