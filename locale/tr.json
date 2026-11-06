@@ -313,5 +313,8 @@
   "status.subagentsRunning": {
     "one": "{n} alt ajan çalışıyor",
     "other": "{n} alt ajan çalışıyor"
-  }
+  },
+  "dialog.newWorkspace": "Yeni çalışma alanı…",
+  "dialog.newWorkspaceBusy": "Klasör seçiliyor…",
+  "dialog.newWorkspaceFailed": "Çalışma alanı oluşturulamadı. Lütfen tekrar deneyin."
 }

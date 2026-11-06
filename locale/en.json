@@ -313,5 +313,8 @@
     "one": "{n} subgroup",
     "other": "{n} subgroups"
   },
-  "dialog.deleteMoveInstruction": "Choose where to reassign them before deleting the group; no session is deleted or archived."
+  "dialog.deleteMoveInstruction": "Choose where to reassign them before deleting the group; no session is deleted or archived.",
+  "dialog.newWorkspace": "New workspace…",
+  "dialog.newWorkspaceBusy": "Choosing folder…",
+  "dialog.newWorkspaceFailed": "Could not create the workspace. Please retry."
 }

@@ -318,3 +318,36 @@ test('DialogHost renders a rename-group dialog with a non-null title input', asy
   assert.ok(byTestId(tree, 'session-groups-dialog-input'))
   assert.equal(byTestId(tree, 'session-groups-dialog-cancel').props.children, 'T:dialog.cancel')
 })
+
+
+test('DialogHost shows the new-workspace action only when the host exposes it', async () => {
+  const calls = []
+  installClientRuntime({
+    t: (key) => key,
+    canCreateWorkspace: () => true,
+    createWorkspaceForNewSession: async (dialog) => {
+      calls.push(dialog)
+      return { cancelled: false, workspaceId: 'w2' }
+    },
+  })
+  const { DialogHost } = await import(new URL('../../src/client/dialog-host.js', import.meta.url))
+  const store = {
+    doc: { groups: [], ungrouped: [] },
+    dialog: {
+      kind: 'new-session',
+      groupId: 'g1',
+      choices: [{ workspaceId: 'w1', title: 'One', path: 'C:\\one' }],
+      inferred: 'w1',
+    },
+  }
+  const tree = DialogHost({ store, props: {} })
+  const button = byTestId(tree, 'session-groups-dialog-new-workspace')
+  assert.ok(button)
+  await button.props.onClick({ stopPropagation() {} })
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].kind, 'new-session')
+
+  installClientRuntime({ t: (key) => key, canCreateWorkspace: () => false })
+  const hidden = DialogHost({ store, props: {} })
+  assert.equal(byTestId(hidden, 'session-groups-dialog-new-workspace'), undefined)
+})

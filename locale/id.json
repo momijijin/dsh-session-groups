@@ -313,5 +313,8 @@
   "status.subagentsRunning": {
     "one": "{n} subagen berjalan",
     "other": "{n} subagen berjalan"
-  }
+  },
+  "dialog.newWorkspace": "Ruang kerja baru…",
+  "dialog.newWorkspaceBusy": "Memilih folder…",
+  "dialog.newWorkspaceFailed": "Tidak dapat membuat ruang kerja. Coba lagi."
 }

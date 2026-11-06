@@ -313,5 +313,8 @@
   "status.subagentsRunning": {
     "one": "서브에이전트 {n}개 실행 중",
     "other": "서브에이전트 {n}개 실행 중"
-  }
+  },
+  "dialog.newWorkspace": "새 작업 공간…",
+  "dialog.newWorkspaceBusy": "폴더 선택 중…",
+  "dialog.newWorkspaceFailed": "작업 공간을 만들지 못했습니다. 다시 시도하세요."
 }

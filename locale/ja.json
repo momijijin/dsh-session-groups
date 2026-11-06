@@ -313,5 +313,8 @@
   "status.subagentsRunning": {
     "one": "サブエージェント {n} 件が実行中",
     "other": "サブエージェント {n} 件が実行中"
-  }
+  },
+  "dialog.newWorkspace": "新しいワークスペース…",
+  "dialog.newWorkspaceBusy": "フォルダーを選択中…",
+  "dialog.newWorkspaceFailed": "ワークスペースを作成できませんでした。もう一度お試しください。"
 }

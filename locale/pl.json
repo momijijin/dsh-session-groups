@@ -329,5 +329,8 @@
     "few": "Subagenty w toku: {n}",
     "many": "Subagentów w toku: {n}",
     "other": "Subagenta w toku: {n}"
-  }
+  },
+  "dialog.newWorkspace": "Nowa przestrzeń robocza…",
+  "dialog.newWorkspaceBusy": "Wybieranie folderu…",
+  "dialog.newWorkspaceFailed": "Nie udało się utworzyć przestrzeni roboczej. Spróbuj ponownie."
 }

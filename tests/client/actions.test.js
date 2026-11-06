@@ -239,3 +239,42 @@ test('workspaceForSession resolves the owning workspace and tolerates missing se
   services.workspaces = undefined
   assert.equal(actions.workspaceForSession('existing'), null)
 })
+
+
+test('createWorkspaceFromDirectory picks a folder, creates it and adopts duplicates', async () => {
+  const { actions, services, calls } = makeActions()
+  const created = []
+  services.uiWorkspace.pickDirectory = async () => 'C:\\new-workspace'
+  services.workspaces.create = async (input) => {
+    created.push(input)
+    return { workspaceId: 'w3', path: input.path, title: 'New workspace' }
+  }
+  const result = await actions.createWorkspaceFromDirectory()
+  assert.deepEqual(created, [{ path: 'C:\\new-workspace' }])
+  assert.equal(result.cancelled, false)
+  assert.equal(result.workspace.workspaceId, 'w3')
+  assert.equal(result.workspace.title, 'New workspace')
+
+  services.uiWorkspace.pickDirectory = async () => null
+  assert.deepEqual(await actions.createWorkspaceFromDirectory(), { cancelled: true })
+})
+
+test('createWorkspaceFromDirectory adopts an existing workspace when create refuses', async () => {
+  const { actions, services } = makeActions()
+  services.uiWorkspace.pickDirectory = async () => 'C:\\existing'
+  services.workspaces.list.getSnapshot = () => ({
+    items: [{ workspaceId: 'w-existing', path: 'C:\\existing', title: 'Existing' }],
+  })
+  services.workspaces.create = async () => {
+    throw new Error('already exists')
+  }
+  const result = await actions.createWorkspaceFromDirectory()
+  assert.equal(result.cancelled, false)
+  assert.equal(result.workspace.workspaceId, 'w-existing')
+})
+
+test('createWorkspaceFromDirectory reports missing host capabilities', async () => {
+  const { actions, services } = makeActions()
+  services.uiWorkspace.pickDirectory = undefined
+  await assert.rejects(() => actions.createWorkspaceFromDirectory(), /workspace-picker-unavailable/)
+})

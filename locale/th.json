@@ -313,5 +313,8 @@
   "status.subagentsRunning": {
     "one": "เอเจนต์ย่อย {n} รายการกำลังทำงาน",
     "other": "เอเจนต์ย่อย {n} รายการกำลังทำงาน"
-  }
+  },
+  "dialog.newWorkspace": "พื้นที่ทำงานใหม่…",
+  "dialog.newWorkspaceBusy": "กำลังเลือกโฟลเดอร์…",
+  "dialog.newWorkspaceFailed": "สร้างพื้นที่ทำงานไม่สำเร็จ โปรดลองอีกครั้ง"
 }

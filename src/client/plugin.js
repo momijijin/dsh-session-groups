@@ -370,6 +370,28 @@ export const createPlugin = () => {
   const getDoc = () => store.getSnapshot().doc
   const actions = createActions({ getServices: services, getDoc, commitDoc, notify, t, clipboard: writeClipboard })
 
+  /** The host exposes the native/browse picker and workspace creation together. */
+  const canCreateWorkspace = () => {
+    const { uiWorkspace, workspaces } = services()
+    return typeof uiWorkspace?.pickDirectory === 'function' && typeof workspaces?.create === 'function'
+  }
+
+  /**
+   * B flow: pick a directory, create the workspace, then stay in the new-session
+   * dialog with that workspace selected. The user still presses Confirm.
+   */
+  const createWorkspaceForNewSession = async (dialog) => {
+    const result = await actions.createWorkspaceFromDirectory()
+    if (result.cancelled) return { cancelled: true }
+    const workspace = result.workspace
+    const workspaceId = workspace?.workspaceId
+    if (typeof workspaceId !== 'string' || workspaceId === '') throw new Error('workspace-create-failed')
+    const choices = Array.isArray(dialog.choices) ? [...dialog.choices] : []
+    if (!choices.some((entry) => entry?.workspaceId === workspaceId)) choices.push(workspace)
+    openDialog({ ...dialog, choices, inferred: workspaceId })
+    return { cancelled: false, workspaceId }
+  }
+
   const capabilities = () => {
     const { uiWorkspace, remoteAccess } = services()
     return {
@@ -644,6 +666,8 @@ export const createPlugin = () => {
       setMode,
       toggleMode,
       openDialog,
+      canCreateWorkspace,
+      createWorkspaceForNewSession,
       confirmDialog,
       deleteGroupDirect,
       setArchiveFilter,

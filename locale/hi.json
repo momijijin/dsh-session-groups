@@ -313,5 +313,8 @@
   "status.subagentsRunning": {
     "one": "{n} सबएजेंट चल रहा है",
     "other": "{n} सबएजेंट चल रहे हैं"
-  }
+  },
+  "dialog.newWorkspace": "नया कार्यक्षेत्र…",
+  "dialog.newWorkspaceBusy": "फ़ोल्डर चुना जा रहा है…",
+  "dialog.newWorkspaceFailed": "कार्यक्षेत्र बनाया नहीं जा सका। कृपया पुनः प्रयास करें।"
 }
