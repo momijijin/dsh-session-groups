@@ -268,20 +268,27 @@ try {
   for (const [localeId, dictionaryId] of cases) {
     await page.evaluate((id) => globalThis.__DSH_E2E_SET_LOCALE__(id), localeId)
     await page.waitForFunction((id) => globalThis.__DSH_E2E_GET_LOCALE__?.().active === id, localeId)
-    const expectedSettings = dictionaries[dictionaryId]['config.title']
-    await page.waitForFunction(
-      (expected) => document.querySelector('[data-testid="session-groups-settings-panel"]')?.innerText?.includes(expected),
-      expectedSettings,
-      { timeout: 5000 },
-    )
-    const text = await settingsPanel.innerText()
-    for (const key of ['config.title', 'config.hint', 'config.controlApi', 'skill.repairTitle']) {
+    const settingsKeys = ['config.title', 'config.hint', 'config.controlApi', 'skill.repairTitle']
+    for (const key of settingsKeys) {
+      await page
+        .waitForFunction(
+          ({ key, expected }) =>
+            document.querySelector('[data-testid="session-groups-settings-panel"]')?.innerText?.includes(expected),
+          { key, expected: dictionaries[dictionaryId][key] },
+          { timeout: 5000 },
+        )
+        .catch(() => {
+          throw new Error(`${localeId}: settings missing ${key}`)
+        })
+    }
+    const text = await page.locator('[data-testid="session-groups-settings-panel"]').first().innerText()
+    for (const key of settingsKeys) {
       if (!text.includes(dictionaries[dictionaryId][key])) {
         throw new Error(`${localeId}: settings missing ${key}`)
       }
     }
     if (localeId === 'ar') {
-      const dir = await settingsPanel.getAttribute('dir')
+      const dir = await page.locator('[data-testid="session-groups-settings-panel"]').first().getAttribute('dir')
       if (dir !== 'rtl') throw new Error(`ar: settings direction ${dir}`)
       await page.screenshot({ path: `${testHome}/rtl-settings.png`, fullPage: false })
     }
